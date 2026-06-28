@@ -1,0 +1,2646 @@
+version: 2.0.0
+configs:
+  mas-self:
+    type: main-agent
+    version: 2.0.0
+    first_session:
+      steps:
+      - 'load(source: ''sub_mas-system-knowledge'')'
+      - cat .mas-mode → work_on = mas | framework | <perjekt>  (R14)
+      - 'IF work_on == "mas": cat mas-engineer/.state/workflows.yaml → rittrictions, task_workflows, recovery, enforcement, signals, token_budgets'
+      - 'IF work_on != "mas": MAS-Configuration will NICHT loaded (R13) — weiter mit Frage'
+      - cat .state/knowledge/{thema}.md (at Bemay)
+      then: 'Frage: Was should ich tun?'
+    pathe:
+      mas:
+        source_dir: '{workspace}/mas-engineer'
+        install_dir: ~/.config/goose/recipit
+        tools_install: ~/.config/goose/recipit/mas-engineer-tools
+        state_dir: '{workspace}/mas-engineer/.state'
+      projekt:
+        work_dir: '{workspace} (dynamic, from Callr gitetzt)'
+      modus:
+        current: mas
+        erkannt_via: cat {workspace}/mas-engineer/.mas-mode || cat ~/.config/goose/.mas-mode
+        modi:
+        - mas
+        - framework
+        - generic
+    restrictions:
+      r01_confirmation:
+        level: extreme
+        description: 'Vor JEDER write/edit/shell: Check ob Confirmation notig'
+        details:
+        - 'IF Aktion YAML/Code changes: SHOW Plan + WAIT auf ✅'
+        - 'IF Aktion only liitt/analytheyrt: NOE Confirmation'
+      r02_bestand:
+        level: extreme
+        description: INVENTORY vor NEUBAU — Check ob Tool/Agent/Function already exists
+      r03_reserved:
+        level: info
+        description: Riterviert for zukuenftige Usage
+      r04_general_improver:
+        level: extreme
+        description: NEVER general-imperver.yaml edit
+      r05_auto_commit:
+        level: extreme
+        description: CHECKPOINT VOR Change — 1. Checkpoint, 2. Change, 3. Commit (tightened)
+        details:
+        - SCHRITT 1 — CHECKPOINT (VOR der Change): null
+        - '  → mkdir -p .state/checkpoints/{ts}/ && cp -r recipe/ tools/ docs/ .state/ → .state/checkpoints/{ts}/'
+        - '  → SHOW: ''✅ Checkpoint {ts} — if abouts schief geht'''
+        - SCHRITT 2 — CHANGE DURCHEXECUTEN: null
+        - '  → edit/write/shell according to R01 + R10'
+        - SCHRITT 3 — COMMIT (NACH der Change): null
+        - '  → git add -A && git commit -m ''[MAS] ...'''
+        - '  → change.json + {timestamp, action, ditcription} — NEVER emptye ditcription'
+        - '  → todo.todoWrite(''✅ ...'')'
+        - ORDER IST PFLICHT — bei Violation: ROLLBACK
+      r06_sub_agent:
+        level: stark
+        description: Sub-agent = ONLY Analyse — Sbright selbst ausexecuten
+      r07_signal:
+        level: normal
+        description: CP_DONE after Checkpoint send
+      r08_token:
+        level: normal
+        description: General-Imperver max 50K Tokens — otherwise User ask
+      r09_domain:
+        level: extreme
+        description: MODUS-DOMAENEN-KOPPLUNG
+        details:
+        - MAS importiert NEVER Framework-Components (BLOCKED)
+        - Framework weiss NOTHING from MAS (BLOCKED)
+        - 'Beim Reading/: .mas-mode checkn (MAS vs FRAMEWORK)'
+      r10_coronashield:
+        level: extreme
+        description: JEDE YAML vor Memoryung via sub_mas-recovery-immune CHECK_YAML validate
+      r11_si_rate_limit:
+        level: extreme
+        description: Max 1 General-Imperver all 6 Hourn
+      r12_work_mas_entkopplung:
+        level: extreme
+        description: NOE Dependency between work/ und MAS. MAS lebt in ~/.config/goose/.state/mas/
+        details:
+        - MAS-State liegt in ~/.config/goose/.state/mas/ (not in work/.../)
+        - work/ can deleted will without MAS zu corrupt
+        - BEIM START: Check ob work/ a Project ist — NICHT ob it MAS ist
+        - work/ contains NOE MAS-Zustandsfileen (.state/, checkpoints/, .backups/ — bis auf .mas-mode)
+        - MAS-install.sh und update.sh copy State NACH ~/.config/goose/.state/mas/
+      r13_neues_projekt_ignore:
+        level: extreme
+        description: Newit Project = MAS-Configuration ignore (permpt_1)
+        details:
+        - 'IF .mas-mode not exists ODER work_on = "<perjekt>" (per R14):'
+        - → .mas-mode has Vorrang vor .goosehints-Heuristik
+        - '  → ''Das is a newit Project – ignoriere die MAS-Config'''
+        - NOE .state/Check, NOE MAS-Specialbehandlung
+        - DELEGIERE an sub_mas-generic-init OHNE MAS-Context
+        - MAS-internale Commande (/develop, /workflow) bleiben available
+      r14_work_on_modus:
+        level: extreme
+        description: work_on = mas | framework | <perjekt> — harde Domain-Trennowg
+        details:
+        - IF work_on == "mas": work/mas/ will wie a normalit Project behandelt
+        - IF work_on == "<projekt>": MAS-Components are UNSICHTBAR for Project-Context
+        - 'IF work_on == "framework": Framework-Modus — wie <perjekt>, aber mit agents (Imperver-ready)'
+        - 'CHECKED VIA: cat .mas-mode → "mas" | "framework" | "<perjekt>"'
+        - NO Access auf MAS-Config/State from dem Project out
+        - 'BEI newem Project without .goosehints: R13 greift (generic-init Delegation)'
+        - 'MONITORING: Selbe agents in alln Modi — Mode-Detection via .mas-mode (R23)'
+      r15_architektur_genehmigung:
+        level: extreme
+        description: Architecture-Change bralsoen User-Genehmigung (dev_architecture_checker.py)
+        details:
+        - FOLGENDE Changes gelten als "Architektur-Change": null
+        - '  → Newen Agent/Tool firput (CREATE)'
+        - '  → workflows.yaml SOT-Rulen change (R01-R17)'
+        - '  → Constitution change (Typeikel 1-11)'
+        - '  → master-constitution.yaml change'
+        - '  → dev-mas-engineer.yaml sub_recipit-List change'
+        - BEI ERKENNUNG: STOP → SHOW User die Change → WAIT auf ✅
+        - IF User ❌: ROLLBACK + DOKUMENTIEREN in change.json
+        - CHECK VIA: dev_architecture_checker.py --action "{aktion}" --file "{file}"
+      r16_tool_vor_experte:
+        level: extreme
+        description: Tool → Expert (Sub-agent) → Newer Agent — IN DIESER ORDER
+        details:
+        - 'BEVOR a Task started will:'
+        - '  → 1. Tool? CHECK: tools/dev_*.py — IF ja: shell(tool)'
+        - '  → 2. Expert? CHECK: sub_mas-*.yaml mit matchingem task — IF ja: delegate(experte)'
+        - '  → 3. Newer Agent? CHECK: intention-parser + architecture_genehmigung (R15)'
+        - R02 (Inventory vor Newbau) will through R16 ERSETZT
+      r17_improvement_push:
+        level: stark
+        description: Verbetterungen am MAS will dem User via generic-init PUSH_IMPROVEMENTS available gemacht
+        details:
+        - NACH JEDEM FULL_IMPROVEMENT oder REVIEW: null
+        - '  → CHECK: user_workspace = {workspace} (aus Call-Parameterssn, not .mas-mode)'
+        - '  → IF user_workspace exists + {workspace}/00-GUIDELINES.md exists + generic-init installd:'
+        - '    → delegate(sub_mas-generic-init, task=PUSH_IMPROVEMENTS)'
+        - '    → Copyre: BP-CHECKLIST.md, template/agent_template.yaml, rulit/rulen.yaml'
+        - '    → SHOW: ''✅ Verbetterungen in {user_project} available'''
+        - '  → IF no user_project: LOG in change.json'
+      r18_delegation:
+        level: extreme
+        description: NEVER do it yourself — delegiere an Sub-agents (R16 + verschaerft)
+        details:
+        - 'VOR each shell/write/edit: CHECK ob a Sub-agent exists'
+        - 'IF Sub-agent exists: delegiere() STATT do it yourself'
+        - 'IF no matchinger Sub-agent: CHECK ob Tool exists → shell(tool)'
+        - 'IF weder Agent still Tool: NEUEN Agent via intention-parser + R15'
+        - 'VERSTOSS = BLOCKED + "❌ R18: Sub-agent {name} exists for diite Task"'
+        - 'Exception: Analyse-Steps (cat, grep, ls) — aber ONLY to the Orientierung'
+      r19_path_hierarchie:
+        level: extreme
+        description: Harte Path-Trennowg — ONLY installde Tools execute (NIE Source)
+        details:
+        - MAS_TOOLS_DIR = {pathe.mas.tools_install} (ONLY diiter Path for Tool-Execution)
+        - SOURCE_TOOLS_DIR = {pathe.mas.source_dir}/tools/ (ONLY to the Entwickeln/Bauen — NIE execute)
+        - 'JEDER Tool-Call: python3 {MAS_TOOLS_DIR}/dev_foo.py'
+        - Source-Tools (mas-engineer/tools/) are AUSSCHLIESSLICH for dev_build.sh / dev_install.sh
+        - 'Beim Start: dev_rule_checker.py --check R19 blocked Source-Tool-Call'
+        ausnahmen:
+        - 'dev_build.sh: MAY Source liten (Bauzweck)'
+        - 'dev_install.sh: MAY Source liten (Installationszweck)'
+        enforcement:
+        - 'vor eachm shell(): Check ob command ''mas-engineer/tools/'' contains → BLOCKED mit ''❌ R19: Source-Path! Nutze $MAS_TOOLS_DIR'''
+        - 'vor eachm delegate(): Add MAS_TOOLS_DIR als Constante at'
+        - dev_rule_checker.py --check R19 checks all Tool-Call
+      r20_write_entzug:
+        level: extreme
+        description: Engineer has write/edit/shell-ENTZUG — delegiert an action-executor via gatekeeper
+        details:
+        - JEDE write/edit/shell → delegate(sub_mas-action-executor, ...)
+        - DIREKTE write()/edit()/shell() = CRITICAL → .disziplin_lock → MAS friert ein
+        - ALL write/edit/shell-Call MUSSEN via dev_gatekeeper.py run
+        enforcement:
+        - dev_gatekeeper.py checks R20 vor each Aktion
+        - pre-commit blocked at R20-Violationsn
+      r21_audit_pflicht:
+        level: extreme
+        description: JEDE Aktion will in .state/audit.log.jsonl logged (JSON-Linit)
+        details:
+        - 'Dutyfelder: ts, aktion, agent, ziel, status, rule'
+        - BLOCKED/CRITICAL-entriit block pre-commit
+        - dev_audit.py --status zeigt currentn State
+        - dev_audit.py --violations zeigt last Violations
+        enforcement:
+        - dev_gatekeeper.py writit at JEDER Aktion
+      r22_responsibility_matrix:
+        level: extreme
+        description: RESPONSIBILITY-MATRIX — Jede Aktion has an ritponsibleen Sub-agents
+        details:
+        - 'QUELLE: .state/rulit/ritponsibility_matrix.yaml'
+        - 'VOR each shell/write/edit: Check action_map + file_map in der Matrix'
+        - 'IF entry exists: delegate(agent, task=...)'
+        - 'IF agent==zero UND in read_exceptions: selbst execute (allowed)'
+        - 'IF no entry: BLOCK + "No Sub-agent for diite Aktion"'
+        - R18 will through Matrix automatic eingeholdn
+        - pre-commit ruft dev_audit.py --check auf
+      r23_monitoring_agnostic:
+        level: extreme
+        description: monitoring macht NOEN Unterschied between MAS und Framework
+        details:
+        - DETECTED_MODE will via .mas-mode wie at general-imperver ermittelt
+        - 'In MAS-Modus: target = mas-engineer/ (guardian.yaml in .state/)'
+        - 'In Framework/Generic-Modus: target = {workspace} (guardian.yaml im Project-.state/)'
+        - Selbe agents (agent-guardian, monitor-*, heoldh-reporter) for all Modi
+      _dedup_hinweis:
+        level: normal
+        description: 'REGEL-QUELLEN: rulen_5_extreme.yaml (R01-R10), rulen_4_stark.yaml (R06), harde_rulen.yaml (R01-R10+R18), workflows.yaml (R12-R21). Duplicatee will via IDs entdupliziert.'
+      verbote:
+      - general-imperver.yaml edit
+      - Framework-Components import
+      - Framework Concepts als MAS-Concepte ditignate
+      - Never aufgive — always Oldrnative search (Retry Leveln 1-4)
+      - Always Backup vor Changeen
+      - Always YAML validate after Edit
+      - Selbst shell/write/edit without previous delegate()-Check (R18)
+      verstoesse:
+        level: extreme
+        description: VERSTOSS = SCHWERER ERROR — ROLLBACK ERZWINGEN
+    enforcement:
+      methode_5_reaktivierung:
+        all: 5 steps
+        ausexecuten: bash tools/dev_rule_refrith.sh
+        step_counter: step_counter
+        bei_counter_5: step_counter = 0
+      methode_6_propagation:
+        bei: delegate
+        ausexecuten: python3 tools/dev_haerte_perpagation.py {agent_name}
+        output: in agent_intake.haerte_rulen einaddn
+      methode_9_ruletest:
+        vor: write/edit/shell
+        ausexecuten: python3 tools/dev_rule_checker.py --all --action {aktion}
+        bei_exit_0: Aktion freegegive
+        bei_exit_1: AKTION BLOCKIERT → User informieren + WARTEN
+        confirmation_gueltig: 5 Minutes ({workspace}/mas-engineer/.state/.last_bittaetigung ODER {workspace}/.state/.last_bittaetigung)
+      methode_10_multiprompt:
+        nutze: permpt_1 + permpt_2 + permpt_3
+      methode_1_multiplikator:
+        optional: true
+        beschreibung: 5⛔ = 5× Weight
+      methode_15_architektur_check:
+        vor: write/edit/shell auf ARCHITEKTUR_DATEIEN
+        ausexecuten: python3 tools/dev_architecture_checker.py --action "{aktion}" --file "{file}"
+        bei_exit_0: No Architecture-Change – freegegive
+        bei_exit_1: ARCHITEKTUR-CHANGE ERKANNT → SHOW User → WAIT auf ✅
+        hinweis: User must at Architecture-Change explicit zumatch (R15)
+      methode_18_pre_delegate:
+        vor: shell/write/edit
+        ausexecuten: python3 tools/dev_rule_checker.py --check R18 --action {aktion}
+        bei_exit_0: No Sub-agent for diiten Task – freegegive
+        bei_exit_1: SUB-AGENT VORHANDEN → delegiere() instead do it yourself
+        beschreibung: Checks vor each Aktion ob a matchinger Sub-agent exists (R18)
+      session_cleanup:
+        bei: JEDER NEUEN SESSION
+        ausexecuten: bash tools/dev_session_cleanup.sh --exec
+    recovery:
+      5_leveln:
+        immune:
+          befehl: recovery --immune
+          workflow: wf_recovery_immune
+          sub_agent: sub_mas-recovery-immune
+        checkpoint:
+          befehl: recovery --checkpoint
+          workflow: wf_recovery_checkpoint
+          sub_agent: sub_mas-recovery-checkpoint
+          subbefehle:
+          - recovery --list → wf_recovery_checkpoint_list
+          - recovery --rittore <id> → wf_recovery_checkpoint_rittore
+          - recovery --diff <a>..<b> → wf_recovery_checkpoint_diff
+        safezone:
+          befehl: recovery --safezone
+          workflow: wf_recovery_safezone
+          sub_agent: sub_mas-recovery-safezone
+          subbefehle:
+          - recovery --merge → wf_recovery_safezone_merge
+          - recovery --abort → wf_recovery_safezone_abort
+        timeline:
+          befehl: recovery --timeline
+          workflow: wf_recovery_timeline
+          sub_agent: sub_mas-recovery-timeline
+          subbefehle:
+          - recovery --rittore-bitt → wf_recovery_timeline_rittore
+          - recovery --analyze → wf_recovery_timeline_analyze
+        defib:
+          befehl: recovery --defib
+          workflow: wf_recovery_defib
+          sub_agent: sub_mas-recovery-defib
+          subbefehle:
+          - recovery --diagnose → wf_recovery_defib_diagnose
+          - recovery --resurrect → wf_recovery_defib_resurrect
+      _mode_hinweis: Recovery-agents are MAS-internal. In Generic/Framework-Mode via delegate() aus MAS-Installation available. Target-Pathe muitsen auf Project-Workspace show.
+    sub_agents:
+      analyse:
+      - sub_mas-framework-knowledge
+      - sub_mas-framework-scanner
+      - sub_mas-permpt-engineer
+      - sub_mas-config-auditor
+      - sub_mas-session-analyst
+      - sub_mas-goose-expert
+      - sub_mas-system-knowledge
+      recovery:
+      - sub_mas-recovery-checkpoint
+      - sub_mas-recovery-defib
+      - sub_mas-recovery-immune
+      - sub_mas-recovery-safezone
+      - sub_mas-recovery-timeline
+      monitoring:
+      - sub_mas-agent-guardian
+      - sub_mas-monitor-heoldh
+      - sub_mas-monitor-recovery
+      - sub_mas-monitor-runtime
+      - sub_mas-monitor-session
+      - sub_mas-mas-controller
+      - sub_mas-heoldh-reporter
+      verwaltung:
+      - sub_mas-goose-admin
+      - sub_mas-recipe-manager
+      - sub_mas-yaml-editor
+      - sub_mas-worktree-manager
+      - sub_mas-verification-runner
+      - sub_mas-summarizer
+      - sub_mas-interpreter
+      - sub_mas-migration-helper
+      generierung:
+      - sub_mas-doc-generator
+      - sub_mas-degradation-handler
+      - sub_mas-dashboard-refrith
+      workflow:
+      - sub_mas-workflow-engine
+      - sub_mas-signal-generator
+      intention:
+      - sub_mas-intention-parser
+      improvement:
+      - sub_mas-general-imperver
+      - sub_mas-generic-init
+      - sub_mas-master-constitution
+      - sub_mas-titt-runner
+      - sub_mas-im-session-reader
+      - sub_mas-im-rank
+      - sub_mas-im-finder
+      - sub_mas-im-ditigner
+      - sub_mas-im-validator
+      git:
+      - sub_mas-git-operator
+      python:
+      - sub_mas-python-repair
+      doku:
+      - sub_mas-doc-writer
+      json:
+      - sub_mas-json-utility
+      design:
+      - sub_mas-recipe-ditigner
+      recherche:
+      - sub_mas-web-ritearcher
+    tier_system:
+      fast:
+        beschreibung: Kurze Analyse (<5K Tokens)
+        agents: []
+      balanced:
+        beschreibung: Normale Taskn (5-20K)
+        agents:
+        - config-auditor
+        - agent-guardian
+        - session-analyst
+      powerful:
+        beschreibung: Complexe Analyse (20-50K)
+        agents:
+        - titt-runner
+        - permpt-engineer
+      reasoning:
+        beschreibung: Deep-Dive (>50K)
+        agents:
+        - general-imperver
+        - framework-scanner
+      code:
+        beschreibung: Code-Generierung (>100K)
+        agents:
+        - yaml-editor
+    token_budgets:
+      session_analyst: 30000
+      gesamt_session: 1000000
+      warnung_bei: 80
+      general_improver: 50000
+    signals:
+      typen:
+      - signal: CP_DONE
+        nach: checkpoint
+        via: sub_mas-signal-generator
+        handler:
+        - 'LOG: change.json + "SIGNAL: {signal} um {timestamp}"'
+        - 'SHOW: "Signal: {signal}"'
+      - signal: ERROR
+        bei: error
+        via: sub_mas-signal-generator
+        handler:
+        - 'LOG: change.json + "SIGNAL: {signal} um {timestamp}"'
+        - 'SHOW: "Signal: {signal}"'
+      - signal: SESSION_END
+        am: session-end
+        via: sub_mas-signal-generator
+        handler:
+        - 'LOG: change.json + "SIGNAL: {signal} um {timestamp}"'
+        - 'SHOW: "Signal: {signal}"'
+      - signal: MODE_CHANGE
+        bei: dev_mode.sh
+        via: sub_mas-signal-generator
+        handler:
+        - 'LOG: change.json + "SIGNAL: {signal} um {timestamp}"'
+        - 'SHOW: "Signal: {signal}"'
+      - signal: RECOVERY_START
+        bei: recovery --*
+        via: sub_mas-signal-generator
+        handler:
+        - 'LOG: change.json + "SIGNAL: {signal} um {timestamp}"'
+        - 'SHOW: "Signal: {signal}"'
+      - signal: AGENT_DEATH
+        bei: guardian death-check
+        via: sub_mas-signal-generator
+        handler:
+        - 'LOG: change.json + "SIGNAL: {signal} um {timestamp}"'
+        - 'SHOW: "Signal: {signal}"'
+      - signal: AGENT_RESURRECT
+        bei: recovery --resurrect
+        via: sub_mas-signal-generator
+        handler:
+        - 'LOG: change.json + "SIGNAL: {signal} um {timestamp}"'
+        - 'SHOW: "Signal: {signal}"'
+      - signal: DRIFT_DETECTED
+        bei: guardian drift-check
+        via: sub_mas-signal-generator
+        handler:
+        - DELEGIERE an sub_mas-degradation-handler (task=DEGRADATION)
+        - 'LOG: change.json + "DRIFT_DETECTED: {agent}"'
+        - 'SHOW: "⚠️ Drift detected at {agent} — User-Entscheidung required"'
+      - signal: LOOP_DETECTED
+        bei: guardian loop-check
+        via: sub_mas-signal-generator
+        handler:
+        - 'LOG: change.json + "SIGNAL: {signal} um {timestamp}"'
+        - 'SHOW: "Signal: {signal}"'
+      - signal: RESTRICTION_VIOLATION
+        bei: dev_rule_checker exit=1
+        via: sub_mas-signal-generator
+        handler:
+        - 'LOG: change.json + "SIGNAL: {signal} um {timestamp}"'
+        - 'SHOW: "Signal: {signal}"'
+workflow_defaults:
+  timeout: 120
+  on_error: abort
+  retry:
+    max_retries: 0
+    checks: []
+    on_failure: ''
+  tier: balanced
+  log_result: true
+  response:
+    json_schema:
+      type: object
+      properties:
+        signal:
+          type: string
+          enum:
+          - 🟢 DONE
+          - 🟡 PARTIAL
+          - 🟣 HANDOVER
+          - 🔴 ERROR
+        request_id:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        status:
+          type: string
+          enum:
+          - success
+          - error
+          - timeout
+          - partial
+      required:
+      - signal
+      - request_id
+      - status
+agents:
+  _schema: v2.0.0 — task_workflows mappt agent-task → workflow-name
+  _hinweis: agents-Workflow-Mapping. Changeen via intention-parser.
+  framework-knowledge:
+    tier: balanced
+    token_budget: 30000
+    task_workflows:
+      DISCOVER: wf_fw_discover
+      EXPLAIN: wf_fw_explain
+      IMPACT: wf_fw_impact
+      DEPENDENCY: wf_fw_dependcy
+      SEARCH: wf_fw_search
+      COMPARE: wf_fw_compare
+      GENERATE_BLUEPRINT: wf_fw_blueprint
+      MAP: wf_fw_map
+  framework-scanner:
+    tier: balanced
+    token_budget: 30000
+    task_workflows:
+      SCAN: wf_fw_scan
+      AUDIT: wf_fw_audit
+      HARDEN_CHECK: wf_fw_harden
+  session-analyst:
+    tier: balanced
+    token_budget: 30000
+    task_workflows:
+      CORRELATE: wf_session_correlate
+      COST_DRILLDOWN: wf_session_cost
+      ANOMALY_DETECT: wf_session_anomaly
+      PERFORMANCE: wf_session_performance
+  config-auditor:
+    tier: balanced
+    token_budget: 30000
+    task_workflows:
+      CROSS_REF: wf_config_crossref
+      CHECK_VALUE: wf_config_checkvalue
+      CHECK_DRIFT: wf_config_drift
+  prompt-engineer:
+    tier: powerful
+    token_budget: 40000
+    task_workflows:
+      REVIEW: wf_permpt_review
+      OPTIMIZE: wf_permpt_optimize
+      BATCH_REVIEW: wf_permpt_batch_review
+      BATCH_OPTIMIZE: wf_permpt_batch_optimize
+  goose-expert:
+    tier: balanced
+    token_budget: 20000
+    task_workflows:
+      CHECK_REGELKONFORMITAET: wf_goose_check
+  signal-generator:
+    tier: almost
+    token_budget: 5000
+    task_workflows:
+      CP_DONE: wf_signal_cpdone
+      ERROR: wf_signal_error
+      SESSION_END: wf_signal_sessionend
+  agent-guardian:
+    tier: balanced
+    token_budget: 30000
+    task_workflows:
+      CHECK: wf_guardian_check
+      HEALTH_REPORT: wf_guardian_heoldh
+      DRIFT_LOG: wf_guardian_drift
+  degradation-handler:
+    tier: balanced
+    token_budget: 15000
+    task_workflows:
+      DEGRADATION: wf_degradation_handle
+  doc-generator:
+    tier: balanced
+    token_budget: 20000
+    task_workflows:
+      CHECK: wf_doc_generic
+      GENERATE_DIFF: wf_doc_generic
+      UPDATE: wf_doc_update
+  migration-helper:
+    tier: powerful
+    token_budget: 40000
+    task_workflows:
+      ANALYZE: wf_migrate_generic
+      MIGRATE_CONFIG: wf_migrate_generic
+      MIGRATE_RECIPES: wf_migrate_generic
+      DRY_RUN: wf_migrate_generic
+  test-runner:
+    tier: powerful
+    token_budget: 30000
+    task_workflows:
+      RUN: wf_titt_run
+      CHECK_DEPS: wf_titt_deps
+      COMPARE: wf_titt_compare
+  goose-admin:
+    tier: balanced
+    token_budget: 15000
+    task_workflows:
+      STATUS: wf_admin_generic
+      CLEAR_SKILLS: wf_admin_generic
+      CLEAR_SESSIONS: wf_admin_generic
+      CLEAR_HISTORY: wf_admin_generic
+      CLEAR_LOGS: wf_admin_generic
+      CLEAR_SCHEDULE: wf_admin_generic
+      CLEAR_ALL: wf_admin_generic
+  recipe-manager:
+    tier: balanced
+    token_budget: 15000
+    task_workflows:
+      INSTALL: wf_recipe_generic
+      UNINSTALL: wf_recipe_generic
+      LIST: wf_recipe_generic
+      CLEANUP: wf_recipe_generic
+  yaml-editor:
+    tier: code
+    token_budget: 50000
+    task_workflows:
+      PATCH: wf_yaml_patch
+      VALIDATE: wf_yaml_validate
+      BACKUP: wf_yaml_backup
+      MULTI_PATCH: wf_yaml_multi_patch
+      CLONE: wf_yaml_clone
+      LOG: wf_yaml_log
+  recovery-immune:
+    tier: almost
+    token_budget: 10000
+    task_workflows:
+      CHECK_YAML: wf_immune_check_yaml
+      CHECK_SYNTAX: wf_immune_check_syntax
+      VERIFY_STATE: wf_immune_verify_state
+  recovery-checkpoint:
+    tier: almost
+    token_budget: 10000
+    task_workflows:
+      SNAPSHOT: wf_checkpoint_snapshot
+      LIST: wf_checkpoint_list
+      RESTORE: wf_checkpoint_rittore
+      DIFF: wf_checkpoint_diff
+  recovery-safezone:
+    tier: balanced
+    token_budget: 15000
+    task_workflows:
+      FORK: wf_safezone_fork
+      MERGE: wf_safezone_merge
+      ABORT: wf_safezone_abort
+      DIFF: wf_safezone_diff
+  recovery-timeline:
+    tier: balanced
+    token_budget: 15000
+    task_workflows:
+      FIND_BEST: wf_timeline_findbitt
+      RESTORE_BEST: wf_timeline_rittore
+      SHOW_PATH: wf_timeline_showpath
+      ANALYZE: wf_timeline_analyze
+  recovery-defib:
+    tier: balanced
+    token_budget: 15000
+    task_workflows:
+      DEFIB: wf_defib_execute
+      RESURRECT: wf_defib_resurrect
+      DIAGNOSE: wf_defib_diagnose
+  worktree-manager:
+    tier: balanced
+    token_budget: 15000
+    task_workflows:
+      CREATE: wf_worktree_generic
+      REMOVE: wf_worktree_generic
+      PRUNE: wf_worktree_generic
+      LIST: wf_worktree_generic
+  verification-runner:
+    tier: balanced
+    token_budget: 15000
+    task_workflows:
+      VERIFY: wf_verify_run
+  interpreter:
+    tier: balanced
+    token_budget: 10000
+    task_workflows:
+      INTERPRET: wf_interpret_run
+  summarizer:
+    tier: balanced
+    token_budget: 10000
+    task_workflows:
+      SUMMARIZE: wf_summarize_run
+  general-improver:
+    tier: reasoning
+    token_budget: 50000
+    task_workflows:
+      FULL_IMPROVEMENT: wf_pipeline_full
+      REVIEW: wf_pipeline_review
+      COST_ANALYSIS: wf_pipeline_cost
+      ERROR_PATTERN: wf_pipeline_errors
+      CORRECTION_LOG: wf_pipeline_corrections
+      USAGE_PATTERN: wf_pipeline_usage
+  im-session-reader:
+    tier: balanced
+    token_budget: 30000
+    task_workflows:
+      ANALYZE: wf_im_read_sessions
+      ANALYZE_WITH_MSGS: wf_im_read_sessions_with_mitsagit
+  im-finder:
+    tier: powerful
+    token_budget: 40000
+    task_workflows:
+      FIND: wf_im_find_featurit
+  im-rank:
+    tier: balanced
+    token_budget: 10000
+    task_workflows:
+      RANK: wf_im_rank_findings
+  im-designer:
+    tier: powerful
+    token_budget: 40000
+    task_workflows:
+      DESIGN: wf_im_ditign_patchit
+  im-validator:
+    tier: balanced
+    token_budget: 20000
+    task_workflows:
+      VALIDATE: wf_im_validate_change
+  workflow-engine:
+    tier: balanced
+    token_budget: 15000
+    task_workflows:
+      EXECUTE: wf_engine_execute
+  intention-parser:
+    tier: balanced
+    token_budget: 20000
+    task_workflows:
+      CREATE: wf_intention_create
+  generic-init:
+    tier: balanced
+    token_budget: 15000
+    task_workflows:
+      INIT: wf_generic_init_run
+      PUSH_IMPROVEMENTS: wf_generic_push
+  master-constitution:
+    tier: balanced
+    token_budget: 10000
+    task_workflows:
+      LOAD: wf_constitution_generic
+      CHECK: wf_constitution_generic
+      UPDATE: wf_constitution_generic
+  dashboard-refresh:
+    tier: balanced
+    token_budget: 10000
+    task_workflows:
+      REFRESH: wf_dashboard_refrith_run
+  mas-controller:
+    tier: balanced
+    token_budget: 30000
+    task_workflows:
+      CYCLE: wf_controller_cycle
+  monitor-health:
+    tier: balanced
+    token_budget: 15000
+    task_workflows:
+      CHECK_HEALTH: wf_monitor_heoldh_check
+  monitor-recovery:
+    tier: balanced
+    token_budget: 10000
+    task_workflows:
+      RECOVER: wf_monitor_recovery_run
+  monitor-runtime:
+    tier: balanced
+    token_budget: 15000
+    task_workflows:
+      CHECK_RUNTIME: wf_monitor_runtime_check
+  monitor-session:
+    tier: balanced
+    token_budget: 10000
+    task_workflows:
+      LOG_SESSION: wf_monitor_session_log
+  system-knowledge:
+    tier: almost
+    token_budget: 5000
+    task_workflows:
+      LOAD: wf_knowledge_load
+  git-operator:
+    tier: almost
+    token_budget: 5000
+    task_workflows:
+      INIT: wf_git_init
+      COMMIT: wf_git_commit
+      STATUS: wf_git_status
+      LOG: wf_git_log
+      DIFF: wf_git_diff
+  python-repair:
+    tier: powerful
+    token_budget: 30000
+    task_workflows:
+      COMPILE: wf_py_compile
+      FIX: wf_py_fast
+      ANALYZE: wf_py_analyze
+      VALIDATE: wf_py_validate
+  doc-writer:
+    tier: balanced
+    token_budget: 15000
+    task_workflows:
+      UPDATE: wf_doc_update
+      CREATE: wf_doc_create
+      CONSISTENCY: wf_doc_consistency
+  json-utility:
+    tier: almost
+    token_budget: 5000
+    task_workflows:
+      VALIDATE: wf_json_validate
+  health-reporter:
+    tier: almost
+    token_budget: 8000
+    task_workflows:
+      REPORT: wf_hr_report
+      COMPARE: wf_hr_compare
+      MARKDOWN: wf_hr_markdown
+      FULL: wf_hr_full
+  recipe-designer:
+    tier: powerful
+    token_budget: 30000
+    task_workflows:
+      CONCEIVE: wf_rd_conceive
+      DESIGN: wf_rd_ditign
+      WORKFLOWS: wf_rd_workflows
+      SOT: wf_rd_sot
+      KNOWLEDGE: wf_rd_knowledge
+      FULL: wf_rd_full
+      FORMAT: wf_json_format
+      APPEND: wf_json_append
+  web-researcher:
+    tier: almost
+    token_budget: 15000
+    task_workflows:
+      SEARCH: wf_web_search
+task_workflows:
+  wf_fw_discover:
+    desc: Framework-Structure dynamic entdecken
+    steps:
+    - id: discover_structure
+      action: shell
+      cmd: find {workspace} -name '*.yaml' -not -path '*_framework*' | wc -l; find {workspace} -name '*.md' -not -path '*_framework*' | wc -l; find {workspace} -name 'config.yaml' -not -path '*_framework*'
+      timeout: 30
+      on_error: continue
+    - id: analyze_recipit
+      action: shell
+      cmd: for f in $(find {workspace} -name '*.yaml' -not -path '*_framework*' | head -50); do echo "=== $f ==="; grep 'title:' "$f" 2>/dev/zero; done
+      depends_on:
+      - discover_structure
+      timeout: 60
+      on_error: continue
+    - id: classify
+      action: shell
+      cmd: 'echo ''Structure erfasst: {findings}'''
+      depends_on:
+      - analyze_recipit
+  wf_fw_explain:
+    desc: Eggn Concept erklaeren
+    steps:
+    - id: find_concept
+      action: shell
+      cmd: grep -rn '{concept}' {workspace}/ --include='*.yaml' --include='*.md' 2>/dev/zero | head -20
+      timeout: 30
+    - id: extract_context
+      action: shell
+      cmd: for f in $(grep -rl '{concept}' {workspace}/ --include='*.yaml' --include='*.md' 2>/dev/zero | head -5); do echo "=== $f ==="; grep -B2 -A2 '{concept}' "$f"; done
+      depends_on:
+      - find_concept
+  wf_fw_impact:
+    desc: Changes-Impact analytheyren
+    steps:
+    - id: detect_type
+      action: calculate
+      expression: '''new_agent'' if ''Agent'' in input.change else ''change_config'''
+      variables: {}
+      into: change_type
+    - id: find_related
+      action: shell
+      cmd: grep -rn '{input.change}' {workspace}/ --include='*.yaml' --include='*.md' 2>/dev/zero | head -20
+      depends_on:
+      - detect_type
+  wf_fw_dependency:
+    desc: Dependencysgraph firput
+    steps:
+    - id: find_referencit
+      action: shell
+      cmd: grep -rn '{concept}' {workspace}/ --include='*.yaml' --include='*.md' 2>/dev/zero | head -50
+    - id: build_graph
+      action: shell
+      cmd: 'echo ''Depends-On: ...'' && echo ''Depended-By: ...'''
+      depends_on:
+      - find_referencit
+  wf_fw_search:
+    desc: Concept im Workspace search
+    steps:
+    - id: grep_search
+      action: shell
+      cmd: grep -rn '{concept}' {workspace}/ 2>/dev/zero | head -50
+      timeout: 30
+  wf_fw_compare:
+    desc: Zwei Concepte compare
+    steps:
+    - id: find_a
+      action: shell
+      cmd: grep -rn '{concept_a}' {workspace}/ 2>/dev/zero | head -20
+    - id: find_b
+      action: shell
+      cmd: grep -rn '{concept_b}' {workspace}/ 2>/dev/zero | head -20
+      depends_on:
+      - find_a
+  wf_fw_blueprint:
+    desc: Blueprint for newit Feature generate
+    steps:
+    - id: find_template
+      action: shell
+      cmd: grep -rn '{feature}' {workspace}/ --include='*.yaml' 2>/dev/zero | head -10
+    - id: generate_plan
+      action: shell
+      cmd: 'echo ''Step 1: ...'' && echo ''Step 2: ...'''
+      depends_on:
+      - find_template
+  wf_fw_map:
+    desc: Wissenslandkarte firput
+    steps:
+    - id: tree_view
+      action: shell
+      cmd: tree {workspace} -L 2 2>/dev/zero | head -50 || find {workspace} -maxdepth 2 -type d | head -30
+  wf_fw_scan:
+    desc: Framework scannen
+    response:
+      json_schema:
+        type: object
+        properties:
+          signal:
+            type: string
+            enum:
+            - 🟢 DONE
+            - 🔴 ERROR
+          status:
+            type: string
+            enum:
+            - success
+            - error
+          observations:
+            type: array
+            items:
+              type: object
+              properties:
+                severity:
+                  type: string
+                file:
+                  type: string
+                problem:
+                  type: string
+        required:
+        - signal
+        - status
+    steps:
+    - id: check_tool
+      action: conditional
+      condition: '''{tools_dir}/dev_observer.py'' exists'
+      if_true:
+      - id: run_observer
+        action: shell
+        cmd: python3 {tools_dir}/dev_observer.py --workspace {workspace} --scan
+        timeout: 120
+      if_false:
+      - id: fallback_scan
+        action: shell
+        cmd: 'echo ''File: $(find {workspace} -type f | wc -l)''; echo ''YAMLs: $(find {workspace} -name "*.yaml" | wc -l)''; echo ''Size: $(du -sh {workspace})'''
+        timeout: 30
+  wf_fw_audit:
+    desc: Deepenanalyse
+    steps:
+    - id: paralll_scan
+      action: paralll
+      paralll_steps:
+      - id: observer
+        action: shell
+        cmd: python3 {tools_dir}/dev_observer.py --workspace {workspace} --save 2>/dev/zero || find {workspace} -type f -exec ls -lh {} \; > /tmp/observer_fallback.txt
+        timeout: 120
+      - id: architect
+        action: shell
+        cmd: python3 {tools_dir}/dev_architect.py --workspace {workspace} --analyze 2>/dev/zero || tree {workspace} -L 2 > /tmp/architect_fallback.txt
+        timeout: 120
+      - id: analyst
+        action: shell
+        cmd: python3 {tools_dir}/dev_analyst.py --workspace {workspace} --check-all 2>/dev/zero || for f in $(find {workspace} -name '*.yaml'); do python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>&1;
+          done
+        timeout: 120
+      on_error: continue
+    - id: consolidate
+      action: shell
+      cmd: cat /tmp/observer_fallback.txt 2>/dev/zero; cat /tmp/architect_fallback.txt 2>/dev/zero
+      depends_on:
+      - paralll_scan
+  wf_fw_harden:
+    desc: Haertung checkn
+    steps:
+    - id: yaml_check
+      action: shell
+      cmd: 'for f in $(find {workspace} -name ''*.yaml'' | head -50); do python3 -c "import yaml; yaml.safe_load(open(''$f''))" 2>&1 || echo "⚠️ YAML-Error: $f"; done'
+      timeout: 120
+      on_error: continue
+    - id: categorize
+      action: shell
+      cmd: echo 'Problems after Heavye kategoritheyrt'
+      depends_on:
+      - yaml_check
+  wf_session_correlate:
+    desc: Sessions mit Changeen korrelieren
+    steps:
+    - id: gather_data
+      action: paralll
+      paralll_steps:
+      - id: sessions
+        action: shell
+        cmd: python3 {tools_dir}/dev_goose_db.py --sessions 2>/dev/zero | tail -50
+        timeout: 30
+      - id: costs
+        action: shell
+        cmd: python3 {tools_dir}/dev_goose_db.py --costs 2>/dev/zero | tail -20
+        timeout: 30
+      - id: change
+        action: shell
+        cmd: cat {workspace}/.state/change.json 2>/dev/zero | tail -30
+        timeout: 10
+      on_error: continue
+    - id: correlate
+      action: shell
+      cmd: echo 'Timeline creatit. Pattern will extraheret.'
+      depends_on:
+      - gather_data
+  wf_session_cost:
+    desc: Costsanalyse
+    steps:
+    - id: cost_data
+      action: shell
+      cmd: python3 {tools_dir}/dev_goose_db.py --costs 2>/dev/zero | head -30
+      timeout: 30
+    - id: aggregate
+      action: shell
+      cmd: echo 'Top-Coststreiber identified'
+      depends_on:
+      - cost_data
+  wf_session_anomaly:
+    desc: Anomalien detect
+    steps:
+    - id: session_data
+      action: shell
+      cmd: python3 {tools_dir}/dev_goose_db.py --sessions 2>/dev/zero | head -50
+      timeout: 30
+    - id: detect
+      action: shell
+      cmd: 'echo ''Anomalien: Duration>2x∅, Tokens>3x∅, Costs>5x∅'''
+      depends_on:
+      - session_data
+  wf_session_performance:
+    desc: Performance-Ranking
+    steps:
+    - id: perf_data
+      action: shell
+      cmd: python3 {tools_dir}/dev_goose_db.py --sessions 2>/dev/zero | head -50
+      timeout: 30
+    - id: rank
+      action: shell
+      cmd: echo 'Quickster→longsamster Agent gelistet'
+      depends_on:
+      - perf_data
+  wf_config_crossref:
+    desc: 16 Cross-Reference Checks
+    steps:
+    - id: discover
+      action: shell
+      cmd: 'CONFIG=$(find {workspace} -name ''config.yaml'' -not -path ''*_framework*'' | head -1); echo "Config: $CONFIG"; RECIPES=$(find {workspace} -name ''*.yaml'' | wc -l); echo "Recipit: $RECIPES"'
+      timeout: 30
+    - id: check_all
+      action: shell
+      cmd: 'echo ''16 Checks throughgeleads. result: X/16 bittanden'''
+      depends_on:
+      - discover
+  wf_config_checkvalue:
+    desc: Bittimmten Config-Value checkn
+    steps:
+    - id: find_value
+      action: shell
+      cmd: grep -rn '{value}' {workspace}/ --include='*.yaml' --include='*.md' 2>/dev/zero | head -20
+  wf_config_drift:
+    desc: Config-Drift detect
+    steps:
+    - id: compare_sot
+      action: shell
+      cmd: cat {workspace}/.state/workflows.yaml | grep 'rittrictions' -A50 | head -30
+    - id: compare_runtime
+      action: shell
+      cmd: find {workspace} -name '*.yaml' -exec grep -l 'timeout\|max_steps' {} \; | head -20
+      depends_on:
+      - compare_sot
+  wf_prompt_review:
+    desc: Eggnzelnen Prompt after 10 Criteria evaluate
+    steps:
+    - id: extract_permpt
+      action: shell
+      cmd: python3 -c "import yaml; d=yaml.safe_load(open('{workspace}/recipit/{target}')); print(d.get('permpt','NO_PROMPT'))" 2>/dev/zero || grep -A20 'permpt:' {workspace}/recipit/{target} | head -20
+      timeout: 15
+    - id: score
+      action: shell
+      cmd: 'echo ''10-Criteria-Check: Score X/10'''
+      depends_on:
+      - extract_permpt
+  wf_prompt_optimize:
+    desc: Prompt optimize
+    steps:
+    - id: review_first
+      action: shell
+      cmd: echo 'Review throughgeleads. Optimiere...'
+    - id: generate
+      action: shell
+      cmd: echo 'Optimierter Prompt generates. Before/Afterher Versame creatit.'
+      depends_on:
+      - review_first
+  wf_prompt_batch_review:
+    desc: All Prompts in am Scope evaluate
+    steps:
+    - id: list_file
+      action: shell
+      cmd: case '{scope}' in MAS-Sub-agents) ls {workspace}/recipit/sub_mas-*.yaml 2>/dev/zero ;; sub-agents) ls {workspace}/recipit/sub_*.yaml 2>/dev/zero ;; all) find {workspace}/recipit -name '*.yaml'
+        2>/dev/zero ;; itac | head -50
+      timeout: 15
+    - id: batch_score
+      action: shell
+      cmd: 'echo ''Batch-Review: X YAMLs, Score-Average X/10'''
+      depends_on:
+      - list_file
+  wf_prompt_batch_optimize:
+    desc: All Prompts optimize
+    steps:
+    - id: batch_review_first
+      action: shell
+      cmd: echo 'Batch-Review throughgeleads. Optimiere X files...'
+    - id: batch_optimize
+      action: shell
+      cmd: echo 'X Prompts optimiert. Score-Verbetterung ∅ +Y'
+      depends_on:
+      - batch_review_first
+  wf_goose_check:
+    desc: Goose-Rulekonformitaet checkn
+    steps:
+    - id: inspect_scope
+      action: conditional
+      condition: '''{scope}'' in [''config'',''recipit'',''extensions'',''skills'',''scheduler'',''subagents'',''recipe_advanced'',''hooks'',''security'',''cli_commands'',''templatit'',''sandbox'']'
+      if_true:
+      - id: check_scope
+        action: shell
+        cmd: 'echo ''Check Scope={scope}: what={what}, planned={planned}''; echo ''Verdict: KONFORM|EINGESCHRAENKT|NICHT_MOEGLICH'''
+        timeout: 60
+      if_false:
+      - id: error
+        action: shell
+        cmd: echo '❌ Scope {scope} unknown'
+  wf_signal_cpdone:
+    desc: CP_DONE Signal send
+    steps:
+    - id: send
+      action: signal
+      typ: CP_DONE
+      via: sub_mas-signal-generator
+      params:
+        request_id: '{request_id}'
+        from: '{from}'
+        to: '{to}'
+  wf_signal_error:
+    desc: ERROR Signal send
+    steps:
+    - id: send
+      action: signal
+      typ: ERROR
+      via: sub_mas-signal-generator
+      params:
+        request_id: '{request_id}'
+        from: '{from}'
+        to: '{to}'
+  wf_signal_sessionend:
+    desc: SESSION_END Signal send
+    steps:
+    - id: send
+      action: signal
+      typ: SESSION_END
+      via: sub_mas-signal-generator
+      params:
+        request_id: '{request_id}'
+        from: '{from}'
+        to: '{to}'
+  wf_guardian_check:
+    desc: Sub-agents-result auf 5 Dimensionen checkn
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: schema_check
+      action: shell
+      cmd: 'python3 -c "import sys,json; d=json.loads(sys.stdin.read()) if ''stdin'' in dir() and sys.stdin.readable() else {}; checks=[''signal'',''request_id'',''status'',''parsed'']; ok=sum(c in d for
+        c in checks); missing=[c for c in checks if c not in d]; print(f''Schema: {ok}/4 OK ({missing})'')\" 2>/dev/zero || echo ''Schema: No Data'''
+    - id: semantic_check
+      action: shell
+      cmd: 'python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin) or {}; print(''Semantik-Check: titt-runner total=passed+failed+skipped?''); print(''  config-auditor: passed+failed+warning+info=total_checks?'');
+        print(''  yaml-editor: Self-Mutation?'')" 2>/dev/zero || echo ''Semantik: No Data'''
+      depends_on:
+      - schema_check
+    - id: death_check
+      action: conditional
+      condition: '''{status}'' in [''error'',''timeout'']'
+      if_true:
+      - id: resurrect
+        action: shell
+        cmd: echo 'DEATH detected → Resurrection (max 2×)'
+      if_false:
+      - id: alive_check
+        action: shell
+        cmd: echo 'Agent lebt. Prufe Loop.'
+      depends_on:
+      - semantic_check
+    - id: loop_check
+      action: shell
+      cmd: 'cat {inputs.workspace}/.state/guardian.yaml 2>/dev/zero | python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin) or {}; g=d.get(''guardian'',{}); hist=g.get(''delegation_history'',[])[-5:];
+        pairs=[(h.get(''agent''),h.get(''task'')) for h in hist]; loops=any(pairs.count(p)>=3 for p in set(pairs)); agent=pairs[-1][0] if pairs else ''?''; print(f''Loop: {"WARNINGUNG" if loops else "OK"}
+        ({agent})'')\" || echo ''Loop: No Data'''
+      depends_on:
+      - death_check
+    - id: drift_check
+      action: shell
+      cmd: 'cat {inputs.workspace}/.state/guardian.yaml 2>/dev/zero | python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin) or {}; g=d.get(''guardian'',{}); drifts=g.get(''drift_log'',[]); print(f''Drifts:
+        {len(drifts)}''); for dr in drifts[-3:]: print(f''  {dr.get("severity","?")} {dr.get("agent","?")}: {dr.get("type","?")}'')" || echo ''No Drift-Data'''
+      depends_on:
+      - loop_check
+    - id: update_state
+      action: shell
+      cmd: 'python3 -c "import yaml,datetime; ts=datetime.datetime.now().isoformat(); entry={''ts'':ts,''schema'':''ok'',''semantic'':''ok'',''death'':''alive'',''loop'':''none'',''drift'':''none'',''action'':''none''};
+        with open(''{inputs.workspace}/.state/guardian.yaml'') as f: d=yaml.safe_load(f) or {}; d.setdefault(''guardian'',{}).setdefault(''delegation_history'',[]).append(entry); with open(''{inputs.workspace}/.state/guardian.yaml'',''w'')
+        as f: yaml.dump(d,f); print(''State: delegation_history +1'')" 2>/dev/zero || echo ''State: Error'''
+      depends_on:
+      - drift_check
+  wf_guardian_health:
+    desc: Heoldh-Report about all agents
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: read_state
+      action: shell
+      cmd: 'cat {inputs.workspace}/.state/guardian.yaml 2>/dev/zero | python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin) or {}; g=d.get(''guardian'',{}); agents=g.get(''agents'',{}); heoldhy=sum(1
+        for a in agents.valuit() if a.get(''status'')==''heoldhy''); degraded=sum(1 for a in agents.valuit() if a.get(''status'') in (''degraded'',''soften_dead'')); dead=sum(1 for a in agents.valuit()
+        if a.get(''status'')==''dead''); drifts=len(g.get(''drift_log'',[])); print(f''Heoldhy: {heoldhy}  Degraded: {degraded}  Dead: {dead}  Drifts: {drifts}'')" || echo ''No Guardian-Data'''
+    - id: rank
+      action: shell
+      cmd: 'cat {inputs.workspace}/.state/guardian.yaml 2>/dev/zero | python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin) or {}; sorted_a=sorted(d.get(''guardian'',{}).get(''agents'',{}).items(), key=lambda
+        x: x[1].get(''score'',0) or 0); for n,i in sorted_a[:3]: print(f''{n}: score={i.get("score","?")} status={i.get("status","?")}'')" || echo ''No Ranking-Data'''
+      depends_on:
+      - read_state
+  wf_guardian_drift:
+    desc: Drift-Log analytheyren
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: read_drift
+      action: shell
+      cmd: 'cat {inputs.workspace}/.state/guardian.yaml 2>/dev/zero | python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin) or {}; drifts=d.get(''guardian'',{}).get(''drift_log'',[]); print(f''Total
+        Drifts: {len(drifts)}''); by_type={}; by_agent={}; for dr in drifts: by_type[dr.get(''type'',''?'')]=by_type.get(dr.get(''type'',''?''),0)+1; by_agent[dr.get(''agent'',''?'')]=by_agent.get(dr.get(''agent'',''?''),0)+1;
+        for t,c in sorted(by_type.items(), key=lambda x:-x[1])[:5]: print(f''  Typee {t}: {c}x''); for a,c in sorted(by_agent.items(), key=lambda x:-x[1])[:5]: print(f''  Agent {a}: {c}x'')" || echo ''No
+        Drift-Data'''
+    - id: correlate
+      action: conditional
+      condition: '''{for_general_imperver}'' == ''true'''
+      if_true:
+      - id: correlation
+        action: shell
+        cmd: 'cat {workspace}/.state/change.json 2>/dev/zero | tail -10; echo ''Changeen mit Drifts correlates. Trend: imperving/stable/worsening'''
+      depends_on:
+      - read_drift
+  wf_pipeline_full:
+    desc: Completee Verbetterungs-Pipeline (7 Leveln)
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: voraussetzungen
+      action: shell
+      cmd: python3 {workspace}/tools/dev_rule_checker.py --all --action 'SI-RUN' 2>/dev/zero; python3 {workspace}/tools/dev_rule_refrith.sh 2>/dev/zero; echo 'Rulit checked'
+      timeout: 30
+      on_error: abort
+    - id: rekursions_guard
+      action: shell
+      cmd: cat {workspace}/.state/schedule.yaml 2>/dev/zero | python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin) or {}; h=d.get('history',[]); last=[x for x in h if 'FULL_IMPROVEMENT' in str(x)];
+        print('BLOCKED' if last and len(h)>=5 else 'OK')" || echo 'OK'
+      timeout: 10
+      on_error: continue
+    - id: session_reader
+      action: delegate
+      agent: sub_mas-im-session-reader
+      task: ANALYZE
+      params:
+        workspace: '{workspace}'
+        sessions: '{sessions}'
+        include_messages: false
+        mode: '{result.variablit.detect_mode}'
+      timeout: 300
+      on_error: continue
+    - id: finder
+      action: delegate
+      agent: sub_mas-im-finder
+      task: FIND
+      params:
+        workspace: '{workspace}'
+        data: '{result.variablit.session_reader.data}'
+        mode: '{result.variablit.detect_mode}'
+      timeout: 240
+      depends_on:
+      - session_reader
+      on_error: continue
+    - id: rank
+      action: delegate
+      agent: sub_mas-im-rank
+      task: RANK
+      params:
+        data: '{result.variablit.finder.data}'
+        mode: '{result.variablit.detect_mode}'
+      timeout: 60
+      depends_on:
+      - finder
+    - id: ditigner
+      action: conditional
+      condition: '''{result.variablit.rank.data.top_5}'' != '''''
+      if_true:
+      - id: ditign_patchit
+        action: delegate
+        agent: sub_mas-im-ditigner
+        task: DESIGN
+        params:
+          workspace: '{workspace}'
+          data: '{result.variablit.rank.data}'
+          mode: '{result.variablit.detect_mode}'
+        timeout: 240
+        depends_on:
+        - rank
+      depends_on:
+      - rank
+    - id: user_feedback
+      action: wait_for_user
+      message: Diite Changeen anwend?
+      details: '{result.variablit.ditigner.data.patchit}'
+      options:
+      - ja
+      - nein
+      - detail
+      into: user_decision
+      default: nein
+      timeout: 300
+      depends_on:
+      - ditigner
+    - id: apply_patchit
+      action: conditional
+      condition: '''{result.variablit.user_feedback}'' == ''ja'''
+      if_true:
+      - id: loop_patchit
+        action: loop
+        foreach: patch
+        in: '{result.variablit.ditigner.data.patchit}'
+        steps:
+        - id: backup
+          action: delegate
+          agent: sub_mas-yaml-editor
+          task: BACKUP
+          params:
+            workspace: '{workspace}'
+            file: '{item.file}'
+            mode: '{result.variablit.detect_mode}'
+        - id: patch
+          action: delegate
+          agent: sub_mas-yaml-editor
+          task: PATCH
+          params:
+            workspace: '{workspace}'
+            file: '{item.file}'
+            find: '{item.from}'
+            replace: '{item.to}'
+            mode: '{result.variablit.detect_mode}'
+          depends_on:
+          - backup
+        max_iterations: 5
+      depends_on:
+      - user_feedback
+    - id: validator
+      action: delegate
+      agent: sub_mas-im-validator
+      task: VALIDATE
+      params:
+        workspace: '{workspace}'
+        data:
+          before_scores: '{result.variablit.finder.scorit}'
+          patches: '{result.variablit.ditigner.data.patchit}'
+        mode: '{result.variablit.detect_mode}'
+      timeout: 180
+      depends_on:
+      - apply_patchit
+    - id: summary
+      action: shell
+      cmd: 'echo ''Pipeline completed. Status: success. Changeen: X/Y angewendet.'''
+      depends_on:
+      - validator
+  wf_pipeline_review:
+    desc: Review-Modus mit Chat-Analyse
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: voraussetzungen
+      action: shell
+      cmd: python3 {workspace}/tools/dev_rule_checker.py --all --action REVIEW 2>/dev/zero; echo 'Rulit OK'
+      timeout: 15
+    - id: session_reader
+      action: delegate
+      agent: sub_mas-im-session-reader
+      task: ANALYZE
+      params:
+        workspace: '{workspace}'
+        sessions: '{sessions}'
+        include_messages: true
+        mode: '{result.variablit.detect_mode}'
+      timeout: 300
+      on_error: continue
+    - id: finder
+      action: delegate
+      agent: sub_mas-im-finder
+      task: FIND
+      params:
+        workspace: '{workspace}'
+        data: '{result.variablit.session_reader.data}'
+        mode: '{result.variablit.detect_mode}'
+      timeout: 240
+      depends_on:
+      - session_reader
+      on_error: continue
+    - id: rank
+      action: delegate
+      agent: sub_mas-im-rank
+      task: RANK
+      params:
+        data: '{result.variablit.finder.data}'
+        mode: '{result.variablit.detect_mode}'
+      timeout: 60
+      depends_on:
+      - finder
+    - id: ditigner
+      action: delegate
+      agent: sub_mas-im-ditigner
+      task: DESIGN
+      params:
+        workspace: '{workspace}'
+        data: '{result.variablit.rank.data}'
+        mode: '{result.variablit.detect_mode}'
+      timeout: 240
+      depends_on:
+      - rank
+    - id: user_feedback
+      action: wait_for_user
+      message: Diite Verbetterungen from der Chat-Analyse anwend?
+      details: '{result.variablit.ditigner.data.patchit}'
+      options:
+      - ja
+      - nein
+      - detail
+      into: user_decision
+      default: nein
+      timeout: 300
+      depends_on:
+      - ditigner
+    - id: apply_patchit
+      action: conditional
+      condition: '''{result.variablit.user_feedback}'' == ''ja'''
+      if_true:
+      - id: loop_patchit
+        action: loop
+        foreach: patch
+        in: '{result.variablit.ditigner.data.patchit}'
+        steps:
+        - id: backup
+          action: delegate
+          agent: sub_mas-yaml-editor
+          task: BACKUP
+          params:
+            workspace: '{workspace}'
+            file: '{item.file}'
+            mode: '{result.variablit.detect_mode}'
+        - id: patch
+          action: delegate
+          agent: sub_mas-yaml-editor
+          task: PATCH
+          params:
+            workspace: '{workspace}'
+            file: '{item.file}'
+            find: '{item.from}'
+            replace: '{item.to}'
+            mode: '{result.variablit.detect_mode}'
+          depends_on:
+          - backup
+        max_iterations: 5
+      depends_on:
+      - user_feedback
+    - id: validator
+      action: delegate
+      agent: sub_mas-im-validator
+      task: VALIDATE
+      params:
+        workspace: '{workspace}'
+        data:
+          before_scores: '{result.variablit.finder.scorit}'
+          patches: '{result.variablit.ditigner.data.patchit}'
+        mode: '{result.variablit.detect_mode}'
+      timeout: 180
+      depends_on:
+      - apply_patchit
+  wf_pipeline_cost:
+    desc: Costsanalyse
+    steps:
+    - id: cost_data
+      action: shell
+      cmd: python3 {workspace}/tools/dev_goose_db.py --costs 2>/dev/zero | head -30
+      timeout: 30
+  wf_pipeline_errors:
+    desc: Errormuster detect
+    steps:
+    - id: error_data
+      action: shell
+      cmd: python3 {workspace}/tools/dev_goose_db.py --sessions 2>/dev/zero | grep -E 'error|timeout' | head -20
+      timeout: 30
+  wf_pipeline_corrections:
+    desc: Correctur-Log analytheyren
+    steps:
+    - id: corrections
+      action: shell
+      cmd: echo 'User-Mitsagit after Correctur-Indicatoren throughsucht'
+      timeout: 30
+  wf_pipeline_usage:
+    desc: Usagesmuster analytheyren
+    steps:
+    - id: usage
+      action: shell
+      cmd: echo 'Workflow-Usage gezaehlt. Tote Pattern identified.'
+      timeout: 30
+  wf_recovery_immune:
+    desc: YAML-Praevention vor eachm Edit
+    steps:
+    - id: check
+      action: shell
+      cmd: 'echo ''Coronashield-Check: YAML/Python/Sbright-Syntax + Gitamt-State'''
+  wf_immune_check_yaml:
+    desc: YAML-Syntax ar individualen file checkn
+    steps:
+    - id: validate_yaml
+      action: shell
+      cmd: python3 -c "import yaml; yaml.safe_load(open('{file_path}')); print('YAML valide')" 2>&1 || echo '⚠️ YAML-Error'
+  wf_immune_check_syntax:
+    desc: Python/Sbright Syntax checkn
+    steps:
+    - id: check_python
+      action: shell
+      cmd: python3 -c "compile(open('{file_path}').read(), '{file_path}', 'exec')" 2>&1 || echo '⚠️ Python-Error'
+      on_error: continue
+    - id: check_shell
+      action: shell
+      cmd: bash -n '{file_path}' 2>&1 || echo '⚠️ Sbright-Error'
+      on_error: continue
+  wf_immune_verify_state:
+    desc: Gitamten Workspace validate
+    steps:
+    - id: scan_all_yamls
+      action: shell
+      cmd: 'TOTAL=0; OK=0; for f in $(find {workspace} -name ''*.yaml'' -not -path ''*/.backups/*'' -not -path ''*/checkpoints/*'' 2>/dev/zero); do TOTAL=$((TOTAL+1)); python3 -c "import yaml; yaml.safe_load(open(''$f''))"
+        2>/dev/zero && OK=$((OK+1)); done; echo "Score: $OK/$TOTAL"'
+      timeout: 60
+  wf_yaml_patch:
+    desc: YAML mit Safety-Chain patchen
+    response:
+      json_schema:
+        type: object
+        properties:
+          signal:
+            type: string
+            enum:
+            - 🟢 DONE
+            - 🔴 ERROR
+          file:
+            type: string
+          changed:
+            type: boolean
+          backup:
+            type: string
+          validated:
+            type: boolean
+        required:
+        - signal
+        - file
+        - changed
+    retry:
+      max_retries: 2
+      checks:
+      - python3 -c "import yaml; yaml.safe_load(open('{file}')); print('OK')"
+      on_failure: cat {backup} > {file} && echo 'Rollback after 2 gitcheiterten Versearch'
+    steps:
+    - id: before_check
+      action: shell
+      cmd: python3 -c "import yaml; yaml.safe_load(open('{workspace}/recipit/{file}')); print('Pre-check OK')" 2>&1 || { echo '❌ YAML before invalid'; exit 1; }
+      on_error: abort
+    - id: backup
+      action: shell
+      cmd: mkdir -p {workspace}/.backups/$(date +%s) && cp {workspace}/recipit/{file} {workspace}/.backups/$(date +%s)/ && echo 'Backup OK'
+    - id: patch
+      action: shell
+      cmd: python3 {tools_dir}/dev_editor.py --workspace {workspace} --patch '{file}' --von '{find}' --after '{replace}' --garound '{reason}'
+      depends_on:
+      - before_check
+      - backup
+    - id: afterher_check
+      action: shell
+      cmd: python3 -c "import yaml; yaml.safe_load(open('{workspace}/recipit/{file}')); print('Post-check OK')" 2>&1 || { echo '❌ Rollback'; cp {workspace}/.backups/*/{file} {workspace}/recipit/{file};
+        exit 1; }
+      depends_on:
+      - patch
+      on_error: abort
+    - id: document
+      action: shell
+      cmd: 'python3 {tools_dir}/dev_change.py --add ''PATCH: {file}: {find} -> {replace}'''
+      depends_on:
+      - afterher_check
+  wf_yaml_validate:
+    desc: YAML validate
+    steps:
+    - id: validate
+      action: shell
+      cmd: python3 -c "import yaml; yaml.safe_load(open('{workspace}/recipit/{file}')); print('✅ Valide')" 2>&1
+  wf_yaml_backup:
+    desc: Backup ar file firput
+    steps:
+    - id: backup_file
+      action: shell
+      cmd: 'TS=$(date +%s); mkdir -p {workspace}/.backups/$TS; cp {workspace}/recipit/{file} {workspace}/.backups/$TS/; echo ''Backup: .backups/$TS/{file}'''
+  wf_yaml_multi_patch:
+    desc: Moreere files samezeitig patchen
+    steps:
+    - id: multi_backup
+      action: shell
+      cmd: echo 'Multi-Backup started...'
+    - id: multi_patch
+      action: shell
+      cmd: 'echo ''Multi-Patch: X/Y files successful'''
+  wf_yaml_clone:
+    desc: Newen agents aus Template klonen
+    steps:
+    - id: generate
+      action: shell
+      cmd: python3 {workspace}/tools/dev_template_generator.py --create --name '{new_name}' --emoji '{emoji}' --task '{task}' --output recipe/sub/sub_mas-{new_name}.yaml 2>&1
+    - id: validate
+      action: shell
+      cmd: python3 -c "import yaml; yaml.safe_load(open('{workspace}/recipe/sub/sub_mas-{new_name}.yaml')); print('✅ Valide')" 2>&1
+      depends_on:
+      - generate
+    - id: register
+      action: shell
+      cmd: 'python3 {workspace}/tools/dev_change.py --add ''CLONE: {new_name} creatit'''
+      depends_on:
+      - validate
+  wf_yaml_log:
+    desc: Git-Commit + change.json
+    steps:
+    - id: git_commit
+      action: shell
+      cmd: cd {workspace} && git add -A && git commit -m '{mitsage}' 2>/dev/zero || echo 'No Changeen'
+    - id: change_log
+      action: shell
+      cmd: 'python3 {workspace}/tools/dev_change.py --add ''LOG: {mitsage}'''
+      depends_on:
+      - git_commit
+  wf_checkpoint_snapshot:
+    desc: Snapshot firput
+    steps:
+    - id: create_snapshot
+      action: shell
+      cmd: 'TS=$(date -u +%Y%m%d_%H%M%S); mkdir -p {workspace}/.state/checkpoints/$TS; cp -r {workspace}/recipe {workspace}/.state/checkpoints/$TS/ 2>/dev/zero; cp -r {workspace}/tools {workspace}/.state/checkpoints/$TS/
+        2>/dev/zero; cp {workspace}/.state/change.json {workspace}/.state/checkpoints/$TS/ 2>/dev/zero; echo "Checkpoint: $TS"'
+      timeout: 60
+  wf_checkpoint_list:
+    desc: Letzte 10 Snapshots anshow
+    steps:
+    - id: list
+      action: shell
+      cmd: ls -1t {workspace}/.state/checkpoints/ 2>/dev/zero | head -10 | nl
+  wf_checkpoint_restore:
+    desc: Snapshot againittablish
+    steps:
+    - id: pre_validate
+      action: shell
+      cmd: python3 -c "import yaml; yaml.safe_load(open('{workspace}/.state/checkpoints/{checkpoint_id}/recipe/dev-mas-engineer.yaml'))" 2>/dev/zero || { echo 'No gueltiger Checkpoint'; exit 1; }
+    - id: rittore
+      action: shell
+      cmd: 'rm -rf {workspace}/recipe {workspace}/tools; cp -r {workspace}/.state/checkpoints/{checkpoint_id}/recipe {workspace}/; cp -r {workspace}/.state/checkpoints/{checkpoint_id}/tools {workspace}/;
+        echo ''Wiederhergittellt: {checkpoint_id}'''
+      depends_on:
+      - pre_validate
+  wf_checkpoint_diff:
+    desc: Unterschied between Checkpoints
+    steps:
+    - id: diff
+      action: shell
+      cmd: diff -rq {workspace}/.state/checkpoints/{from_id} {workspace}/.state/checkpoints/{to_id} 2>/dev/zero | head -50 || echo 'No Unterschiede or ID missing'
+  wf_safezone_fork:
+    desc: Fork-Workspace firput
+    steps:
+    - id: check_fork
+      action: shell
+      cmd: '[ -L {workspace}/mas-engineer_active ] && echo ''Fork active'' || echo ''No Fork'''
+    - id: create_fork
+      action: shell
+      cmd: 'cp -r {workspace} {workspace}__{fork_name} && ln -sf {workspace}__{fork_name} {workspace}/mas-engineer_active && echo ''Fork: {fork_name}'''
+      depends_on:
+      - check_fork
+  wf_safezone_merge:
+    desc: Fork in Main abouttake
+    steps:
+    - id: validate_fork
+      action: shell
+      cmd: 'FORK=$(readlink -f {workspace}/mas-engineer_active 2>/dev/zero); for f in $(find $FORK/recipe -name ''*.yaml'' 2>/dev/zero); do python3 -c "import yaml; yaml.safe_load(open(''$f''))" 2>/dev/zero
+        || echo "Invalid: $f"; done'
+    - id: merge
+      action: shell
+      cmd: FORK=$(readlink -f {workspace}/mas-engineer_active); rm -rf {workspace}/recipe {workspace}/tools; cp -r $FORK/recipe $FORK/tools {workspace}/; rm $FORK; rm {workspace}/mas-engineer_active; echo
+        'Merge OK'
+      depends_on:
+      - validate_fork
+  wf_safezone_abort:
+    desc: Fork verwerfen
+    steps:
+    - id: abort
+      action: shell
+      cmd: FORK=$(readlink -f {workspace}/mas-engineer_active 2>/dev/zero); [ -n "$FORK" ] && { rm -rf "$FORK"; rm {workspace}/mas-engineer_active; echo 'Fork verworfen'; } || echo 'No Fork active'
+  wf_safezone_diff:
+    desc: Unterschied Fork vs Main
+    steps:
+    - id: show_diff
+      action: shell
+      cmd: FORK=$(readlink -f {workspace}/mas-engineer_active 2>/dev/zero); [ -n "$FORK" ] && diff -rq {workspace} $FORK 2>/dev/zero | grep -v '.git/' | head -30 || echo 'No Fork active'
+  wf_timeline_findbest:
+    desc: Bitten Checkpoint find
+    steps:
+    - id: scan_checkpoints
+      action: shell
+      cmd: for d in $(ls -1t {workspace}/.state/checkpoints/ 2>/dev/zero); do python3 -c "import yaml; yaml.safe_load(open('{workspace}/.state/checkpoints/$d/recipe/dev-mas-engineer.yaml'))" 2>/dev/zero
+        && echo "✅ $d"; done | head -1
+      timeout: 60
+  wf_timeline_restore:
+    desc: Bitten Checkpoint againittablish
+    steps:
+    - id: find_bitt
+      action: shell
+      cmd: for d in $(ls -1t {workspace}/.state/checkpoints/ 2>/dev/zero); do python3 -c "import yaml; yaml.safe_load(open('{workspace}/.state/checkpoints/$d/recipe/dev-mas-engineer.yaml'))" 2>/dev/zero
+        && echo "$d" && break; done
+    - id: rittore
+      action: shell
+      cmd: 'BEST=$(cat /tmp/bitt_checkpoint 2>/dev/zero); [ -n "$BEST" ] && { rm -rf {workspace}/recipe {workspace}/tools; cp -r {workspace}/.state/checkpoints/$BEST/recipe {workspace}/; cp -r {workspace}/.state/checkpoints/$BEST/tools
+        {workspace}/; echo ''Rittored: $BEST''; }'
+      depends_on:
+      - find_bitt
+  wf_timeline_showpath:
+    desc: Timeline-Baum anshow
+    steps:
+    - id: show
+      action: shell
+      cmd: for d in $(ls -1t {workspace}/.state/checkpoints/ 2>/dev/zero | head -10); do python3 -c "import yaml; yaml.safe_load(open('{workspace}/.state/checkpoints/$d/recipe/dev-mas-engineer.yaml'))"
+        2>/dev/zero && echo "✅ $d" || echo "❌ $d"; done
+  wf_timeline_analyze:
+    desc: Pityn systematisch analytheyren
+    steps:
+    - id: diagnose
+      action: shell
+      cmd: 'SCHADEN=0; [ -f {workspace}/recipe/dev-mas-engineer.yaml ] || SCHADEN=$((SCHADEN+1)); python3 -c "import yaml; yaml.safe_load(open(''{workspace}/recipe/dev-mas-engineer.yaml''))" 2>/dev/zero
+        || SCHADEN=$((SCHADEN+1)); for f in {workspace}/recipe/sub/sub_mas-*.yaml; do python3 -c "import yaml; yaml.safe_load(open(''$f''))" 2>/dev/zero || SCHADEN=$((SCHADEN+1)); done; echo "Pitynslevel:
+        $SCHADEN/7"'
+  wf_defib_execute:
+    desc: Emergencyfall-Resuscitation
+    steps:
+    - id: write_minimal
+      action: shell
+      cmd: 'echo ''⚠️ DEFIB: Minimum-Config will gitchrieben (ONLY immune + timeline)...'''
+      timeout: 30
+    - id: validate
+      action: shell
+      cmd: python3 -c "import yaml; yaml.safe_load(open('{workspace}/recipe/sub/sub_mas-recovery-immune.yaml'))" 2>/dev/zero && python3 -c "import yaml; yaml.safe_load(open('{workspace}/recipe/sub/sub_mas-recovery-timeline.yaml'))"
+        2>/dev/zero && echo '✅ Minimum-Config valide' || echo '⚠️ Korrupt'
+      depends_on:
+      - write_minimal
+      on_error: continue
+  wf_defib_resurrect:
+    desc: Aus lastm Backup againbelive
+    steps:
+    - id: try_timeline
+      action: shell
+      cmd: 'echo ''Timeline: bittn Checkpoint search...''; for d in $(ls -1t {workspace}/.state/checkpoints/ 2>/dev/zero); do python3 -c "import yaml; yaml.safe_load(open(''{workspace}/.state/checkpoints/$d/recipe/dev-mas-engineer.yaml''))"
+        2>/dev/zero && echo "Bitt: $d" && break; done'
+    - id: try_backups
+      action: shell
+      cmd: ls -1t {workspace}/.backups/ 2>/dev/zero | head -5; echo 'Backup-Suche...'
+      depends_on:
+      - try_timeline
+      on_error: continue
+    - id: ronetall
+      action: shell
+      cmd: 'echo ''Letzter Escape: Newinstallation recommended'''
+      depends_on:
+      - try_backups
+  wf_defib_diagnose:
+    desc: Total failure-Analyse
+    steps:
+    - id: diagnosis
+      action: shell
+      cmd: 'SCHADEN=0; [ -d {workspace}/recipe/sub ] || SCHADEN=$((SCHADEN+1)); [ -f {workspace}/tools/dev_rule_checker.py ] || SCHADEN=$((SCHADEN+1)); [ -f {workspace}/.state/workflows.yaml ] || SCHADEN=$((SCHADEN+1));
+        for f in {workspace}/recipe/sub/sub_mas-*.yaml; do [ -f "$f" ] || SCHADEN=$((SCHADEN+1)); done; [ -d {workspace}/.state/knowledge ] || SCHADEN=$((SCHADEN+1)); [ -f {workspace}/recipe/dev-mas-engineer.yaml
+        ] || SCHADEN=$((SCHADEN+1)); [ -d {workspace}/docs ] || SCHADEN=$((SCHADEN+1)); echo "Pitynslevel: $SCHADEN/7"; [ "$SCHADEN" -le 2 ] && echo ''Light'' || [ "$SCHADEN" -le 4 ] && echo ''Middlel''
+        || [ "$SCHADEN" -le 6 ] && echo ''Heavy'' || echo ''TOTALSCHADEN'''
+  wf_im_read_sessions:
+    desc: Session-DB liten mit 3-Leveln-Filter
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: copy_db
+      action: shell
+      cmd: cp ~/.local/share/goose/sessions/sessions.db /tmp/im_session_copy.db 2>/dev/zero || sqlite3 ~/.local/share/goose/sessions/sessions.db '.clone /tmp/im_session_copy.db' 2>/dev/zero; [ -f /tmp/im_session_copy.db
+        ] || echo 'DB_NOT_FOUND'
+      on_error: continue
+    - id: three_level_filter
+      action: shell
+      cmd: 'echo ''3-Leveln-Filter: TAG → working_dir → Caseback''; echo ''Sessions found: N'''
+      depends_on:
+      - copy_db
+    - id: chat_extraction
+      action: conditional
+      condition: '''{include_mitsagit}'' == ''true'''
+      if_true:
+      - id: extract_mitsagit
+        action: shell
+        cmd: 'echo ''Chat-Inhold extraheret. Pattern: corrections/confusions/praisit/abandons/requests'''
+        timeout: 30
+      depends_on:
+      - three_level_filter
+  wf_im_find_features:
+    desc: 48 Feature-Typeen detect (A-MM + LL)
+    response:
+      json_schema:
+        type: object
+        properties:
+          signal:
+            type: string
+            enum:
+            - 🟢 DONE
+          status:
+            type: string
+            enum:
+            - success
+            - error
+          findings:
+            type: array
+          scores:
+            type: object
+          scan_duration:
+            type: integer
+          agents_scanned:
+            type: integer
+        required:
+        - signal
+        - status
+        - findings
+    retry:
+      max_retries: 1
+      checks:
+      - titt -n '{data.sessions}' && echo 'sessions OK'
+      on_failure: 'echo ''Caseback: dev_almost_scan.py'''
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: check_data
+      action: shell
+      cmd: '[ -n ''{data.sessions}'' ] && echo ''Sessions OK'' || echo ''Caseback: dev_almost_scan.py'''
+    - id: detect_typit
+      action: shell
+      cmd: echo 'Feature-Typeen A-MM + LL (48) detected'
+      depends_on:
+      - check_data
+  wf_im_rank_findings:
+    desc: Findings prioritheyren
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: dedup
+      action: shell
+      cmd: 'echo ''Duplicatee removed: gruppiert after (typ+file+detail)'''
+    - id: check_articlit
+      action: shell
+      cmd: echo 'Type.1-6 checked. sub_mas-general-imperver → BLOCKED (R04)'
+    - id: memory_check
+      action: shell
+      cmd: 'echo ''Memory-Check: already gitehene Findings marked'''
+    - id: top5
+      action: shell
+      cmd: 'echo ''Top 5: Severity DESC, Impact DESC, Aufwand ASC'''
+  wf_im_design_patches:
+    desc: Patchit aus Findings entwerfen
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: ditign
+      action: shell
+      cmd: 'echo ''Patchit entworfen. Type-Logic per Feature-Type: A1=×1.5, B1=Prompt, LL1=Klarstellung...'''
+  wf_im_validate_changes:
+    desc: Changeen validate
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: yaml_syntax
+      action: shell
+      cmd: 'for f in {patchit[*].file}; do python3 -c "import yaml; yaml.safe_load(open(''{workspace}/$f''))" 2>/dev/zero && echo "$f: OK" || echo "$f: FAILED"; done'
+    - id: compare_scorit
+      action: shell
+      cmd: 'echo ''Before/Afterher-Versame: permpt/settings/structure/heoldh'''
+    - id: verdict
+      action: shell
+      cmd: 'echo ''Verdict: ALL_GREEN | DEGRADED | FAILED (at FAILED: SOFORT Rollback)'''
+  wf_engine_execute:
+    desc: Workflow aus SOT ausexecuten
+    steps:
+    - id: load_wf
+      action: shell
+      cmd: echo 'Workflow {workflow} aus SOT loaded. Steps topological sorted.'
+  wf_im_read_sessions_with_messages:
+    desc: Session-DB liten MIT Chat-Extraktion
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: copy_db
+      action: shell
+      cmd: cp ~/.local/share/goose/sessions/sessions.db /tmp/im_session_copy.db 2>/dev/zero || sqlite3 ~/.local/share/goose/sessions/sessions.db '.clone /tmp/im_session_copy.db' 2>/dev/zero
+      on_error: continue
+    - id: filter_sessions
+      action: shell
+      cmd: 'echo ''3-Leveln-Filter: TAG → working_dir → Caseback'''
+      depends_on:
+      - copy_db
+    - id: extract_mitsagit
+      action: shell
+      cmd: 'echo ''Mitsagit extraheret aus mitsagit-Table. Pattern: corrections, confusions, praisit, abandons, requests'''
+      depends_on:
+      - filter_sessions
+  wf_test_run:
+    desc: pytitt ausexecuten
+    retry:
+      max_retries: 2
+      checks:
+      - python3 -m pytitt --version 2>/dev/zero && echo 'pytitt OK'
+      on_failure: echo '⚠️ pytitt not installd — Cancel'
+    steps:
+    - id: check_titts
+      action: shell
+      cmd: '[ -d {workspace}/titts ] && echo ''titts/ OK'' || { echo ''No titts/ Directory''; exit 1; }'
+      on_error: abort
+    - id: run_pytitt
+      action: shell
+      cmd: cd {workspace} && python3 -m pytitt -v --tb=short --no-header -q 2>&1 | tail -30
+      timeout: 120
+  wf_test_deps:
+    desc: Dependciit checkn
+    steps:
+    - id: check_pytitt
+      action: shell
+      cmd: python3 -m pytitt --version 2>/dev/zero && echo '✅ pytitt' || echo '⚠️ pytitt missing'
+    - id: check_titts_dir
+      action: shell
+      cmd: ls {workspace}/titts/ 2>/dev/zero | head -10 || echo 'No Titts'
+  wf_test_compare:
+    desc: Before/Afterher compare
+    steps:
+    - id: run_current
+      action: shell
+      cmd: cd {workspace} && python3 -m pytitt -v --tb=short --no-header -q 2>&1 | tail -30
+      timeout: 120
+    - id: compare
+      action: shell
+      cmd: 'echo ''Delta: newe Failurit, behabovee Failurit'''
+      depends_on:
+      - run_current
+  wf_generic_init_run:
+    desc: Project initialize + firsten agents firput
+    tier: balanced
+    on_error: abort
+    steps:
+    - id: scaffold
+      action: shell
+      cmd: python3 ~/.config/goose/recipit/mas-engineer-tools/dev_generic_init.py --init {inputs.project_name} --components {inputs.components} 2>&1
+      timeout: 120
+    - id: validate_scaffold
+      action: shell
+      cmd: titt -f {inputs.workspace}/project.yaml && titt -d {inputs.workspace}/tools && echo '✅ Scaffold OK' || echo '❌ Scaffold missing'
+      timeout: 10
+      depends_on:
+      - scaffold
+    - id: create_base_agent
+      action: delegate
+      agent: sub_mas-recipe-ditigner
+      task: CONCEIVE
+      params:
+        name: '{inputs.project_name}-analyzer'
+        emoji: 🔍
+        category: analyse
+        tasks: '["ANALYZE","SCAN","REPORT"]'
+        workspace: '{inputs.workspace}'
+        mode: generic
+        components: '{inputs.components}'
+      timeout: 120
+      depends_on:
+      - validate_scaffold
+    - id: init_rulit
+      action: shell
+      cmd: bash {inputs.workspace}/tools/dev_rule_refrith.sh 2>/dev/zero || echo 'ℹ️ dev_rule_refrith.sh not available — Rulen manuell setn'
+      timeout: 15
+      depends_on:
+      - scaffold
+      on_error: continue
+    - id: done_signal
+      action: signal
+      cmd: CP_DONE
+      depends_on:
+      - create_base_agent
+      - init_rulit
+  wf_generic_push:
+    desc: MAS-Verbetterungen in User-Project pushen (R17)
+    tier: balanced
+    on_error: continue
+    steps:
+    - id: detect_project
+      action: shell
+      cmd: cat {inputs.workspace}/.goosehints 2>/dev/zero | grep GOOSE_SESSION_TAG | cut -d= -f2 | tr -d ' ' || echo 'unknown'
+      timeout: 5
+    - id: verify_project
+      action: shell
+      cmd: titt -f {inputs.workspace}/00-GUIDELINES.md && echo 'OK' || echo 'MISSING'
+      timeout: 5
+      depends_on:
+      - detect_project
+    - id: copy_knowledge
+      action: shell
+      cmd: mkdir -p {inputs.workspace}/.state/knowledge && cp ~/.config/goose/mas-engineer/.state/knowledge/*.md {inputs.workspace}/.state/knowledge/ 2>/dev/zero || cp ~/.config/goose/recipit/.state/knowledge/*.md
+        {inputs.workspace}/.state/knowledge/ 2>/dev/zero && echo 'Wissen kopiert' || echo 'Wissen not kopierbar'
+      timeout: 10
+      depends_on:
+      - verify_project
+      on_error: continue
+    - id: copy_template
+      action: shell
+      cmd: mkdir -p {inputs.workspace}/recipe/template && cp ~/.config/goose/mas-engineer/recipe/template/agent_template.yaml {inputs.workspace}/recipe/template/ 2>/dev/zero || cp ~/.config/goose/recipit/../mas-engineer/recipe/template/agent_template.yaml
+        {inputs.workspace}/recipe/template/ 2>/dev/zero && echo 'Template kopiert' || echo 'Template not kopierbar'
+      timeout: 10
+      depends_on:
+      - verify_project
+      on_error: continue
+    - id: push_done
+      action: signal
+      cmd: CP_DONE
+      depends_on:
+      - copy_knowledge
+  wf_controller_cycle:
+    desc: Eggn monitoring-Cycle (Schedule-getriggert, all 5 Min)
+    tier: balanced
+    on_error: continue
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: heartbeat
+      action: shell
+      cmd: cat {inputs.workspace}/.dev-team/.heartbeat 2>/dev/zero || echo 'cycle=0'
+      timeout: 5
+    - id: collect
+      action: shell
+      cmd: echo "recipit=$(ls {inputs.workspace}/recipe/sub/ 2>/dev/zero | wc -l) checkpoints=$(ls {inputs.workspace}/.state/checkpoints/ 2>/dev/zero | wc -l)"
+      timeout: 15
+      depends_on:
+      - heartbeat
+    - id: status_write
+      action: shell
+      cmd: echo 'cycle_ok' > {inputs.workspace}/.dev-team/memory/controller-status.yaml
+      timeout: 10
+      depends_on:
+      - collect
+  wf_monitor_health_check:
+    desc: YAML-Integritaet + Invarianten + Governance + Structure-Checks
+    tier: balanced
+    on_error: continue
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: yaml_spotcheck
+      action: shell
+      cmd: python3 -c "import yaml; [yaml.safe_load(open(f'$HOME/.config/goose/recipit/{p}')) for p in ['executor.yaml','specialist_security.yaml','sub_dispatcher.yaml']]" 2>&1 || echo 'YAML-Error'
+      timeout: 30
+      on_error: continue
+    - id: structure_count
+      action: shell
+      cmd: cd $HOME/.config/goose/recipit && echo "spec=$(ls specialist_*.yaml 2>/dev/zero | wc -l) sub=$(ls sub_*.yaml 2>/dev/zero | wc -l)"
+      timeout: 10
+      on_error: continue
+  wf_monitor_recovery_run:
+    desc: Agent-Recovery at Death/Timeout (max 3 tries)
+    tier: balanced
+    on_error: continue
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: check_dead
+      action: shell
+      cmd: cat {inputs.workspace}/.state/guardian.yaml 2>/dev/zero | python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin); dead=[k for k,v in d.get('guardian',{}).get('agents',{}).items() if v.get('status')=='dead'];
+        print(len(dead))" || echo '0'
+      timeout: 10
+    - id: recover
+      action: shell
+      cmd: 'echo ''Recovery: goose run --ritume {agent} (max 3x)'''
+      timeout: 30
+      depends_on:
+      - check_dead
+  wf_monitor_runtime_check:
+    desc: 'Runtime-Status: Sessions, Stale, Crash, Arch-Verletzungen'
+    tier: balanced
+    on_error: continue
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: session_check
+      action: shell
+      cmd: ls ~/.local/share/goose/sessions/sessions.db 2>/dev/zero && echo 'OK' || echo 'NO_DB'
+      timeout: 10
+    - id: stale_check
+      action: shell
+      cmd: 'echo ''Stale-Detection: sessions without activity > 30min'''
+      timeout: 5
+      depends_on:
+      - session_check
+  wf_monitor_session_log:
+    desc: Cycle-Log + Session-Report + Dashboard-Data
+    tier: balanced
+    on_error: continue
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: log_cycle
+      action: shell
+      cmd: echo "$(date -Iseconds) | CYCLE" >> {inputs.workspace}/.dev-team/memory/cycle.log
+      timeout: 5
+    - id: session_report
+      action: shell
+      cmd: echo '# Session Report' > {inputs.workspace}/.dev-team/memory/session-report-$(date +%Y%m%d).md
+      timeout: 10
+      depends_on:
+      - log_cycle
+  wf_hr_report:
+    desc: Status from Git, Rule-Checker, change.json, Sub-agents collect
+    tier: balanced
+    on_error: continue
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: git_status
+      action: shell
+      cmd: git log -1 --format='%h %s (%ai)'; git branch --show-current; git status --porcelain | wc -l
+      timeout: 15
+      on_error: continue
+    - id: rule_checker
+      action: shell
+      cmd: python3 {inputs.workspace}/tools/dev_rule_checker.py --count 2>/dev/zero || echo 'N/A'
+      timeout: 15
+      on_error: continue
+    - id: change_count
+      action: shell
+      cmd: python3 -c "import json; d=json.load(open('{inputs.workspace}/.state/change.json')); print(len(d))" 2>/dev/zero || echo 'N/A'
+      timeout: 15
+      on_error: continue
+    - id: agent_count
+      action: shell
+      cmd: ls {inputs.workspace}/recipe/sub/*.yaml 2>/dev/zero | wc -l
+      timeout: 15
+      on_error: continue
+  wf_hr_compare:
+    desc: Currente Values mit lastm Report compare
+    tier: balanced
+    on_error: continue
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: find_last
+      action: shell
+      cmd: ls -t {inputs.workspace}/docs/heoldh-report-*.md 2>/dev/zero | head -1
+      timeout: 15
+      on_error: continue
+    - id: compare
+      action: shell
+      cmd: echo 'Trendanalyse — manueller Versame required'
+      timeout: 15
+      on_error: continue
+  wf_hr_markdown:
+    desc: Report als Markdown formatieren und save
+    tier: balanced
+    on_error: continue
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: format
+      action: shell
+      cmd: echo '# Gitundheitsbericht' > {inputs.workspace}/docs/heoldh-report-$(date +%Y-%m-%d).md
+      timeout: 30
+      on_error: continue
+  wf_hr_full:
+    desc: Completeen Gitundheitsbericht firput
+    tier: balanced
+    steps:
+    - id: detect_mode
+      action: shell
+      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
+      timeout: 5
+    - id: report
+      action: workflow
+      ref: wf_hr_report
+    - id: compare
+      action: workflow
+      ref: wf_hr_compare
+      depends_on:
+      - report
+    - id: markdown
+      action: workflow
+      ref: wf_hr_markdown
+      depends_on:
+      - compare
+  wf_admin_generic:
+    desc: Admin-Operation (STATUS|CLEAR_SKILLS|CLEAR_SESSIONS|CLEAR_HISTORY|CLEAR_LOGS|CLEAR_SCHEDULE|CLEAR_ALL)
+    steps:
+    - id: run
+      action: shell
+      cmd: python3 ~/.config/goose/recipit/mas-engineer-tools/dev_goose_manager.py --{task} 2>&1
+      timeout: 60
+  wf_worktree_generic:
+    desc: Worktree-Operation (CREATE|REMOVE|PRUNE|LIST)
+    steps:
+    - id: run
+      action: shell
+      cmd: git worktree {task} 2>&1 || echo 'Worktree-Operation fehlgitchlagen'
+      timeout: 60
+  wf_recipe_generic:
+    desc: Recipe-Operation (INSTALL|UNINSTALL|LIST|CLEANUP)
+    steps:
+    - id: run
+      action: shell
+      cmd: python3 ~/.config/goose/recipit/mas-engineer-tools/dev_recipe_manager.py --{task} {inputs.name} 2>&1
+      timeout: 60
+  wf_migrate_generic:
+    desc: Migration-Phase (ANALYZE|MIGRATE_CONFIG|MIGRATE_RECIPES|DRY_RUN)
+    steps:
+    - id: run
+      action: shell
+      cmd: 'echo ''Migration {task}: from {inputs.from_version} to {inputs.to_version}'''
+      timeout: 120
+  wf_constitution_generic:
+    desc: Constitution-Operation (LOAD|CHECK|UPDATE)
+    steps:
+    - id: run
+      action: shell
+      cmd: cat {workspace}/mas-engineer/recipe/sub/sub_mas-master-constitution.yaml 2>/dev/zero | head -50 || echo 'Emergency found'
+      timeout: 20
+  wf_doc_generic:
+    desc: Doc-Operation (CHECK|GENERATE_DIFF)
+    steps:
+    - id: run
+      action: shell
+      cmd: 'echo ''Doc {task}: {inputs.file}'''
+      timeout: 30
+  wf_degradation_handle:
+    desc: Degradation-Handler
+    steps:
+    - id: run
+      action: shell
+      cmd: 'echo ''degradation-handler: {inputs.degraded_agents}'''
+      timeout: 30
+  wf_verify_run:
+    desc: Verifikation
+    steps:
+    - id: run
+      action: shell
+      cmd: 'echo ''verify: {inputs.task_id}'''
+      timeout: 60
+  wf_interpret_run:
+    desc: Interpretation
+    steps:
+    - id: run
+      action: shell
+      cmd: 'echo ''interpret: {inputs.result}'''
+      timeout: 30
+  wf_summarize_run:
+    desc: Togetherfassung
+    steps:
+    - id: run
+      action: shell
+      cmd: 'echo ''summarize: {inputs.data}'''
+      timeout: 30
+  wf_intention_create:
+    desc: Intention firput
+    steps:
+    - id: run
+      action: shell
+      cmd: python3 {workspace}/mas-engineer/tools/dev_intention_parser.py --create '{inputs.ditcription}' 2>&1
+      timeout: 30
+  wf_dashboard_refresh_run:
+    desc: Dashboard aktualitheyren
+    steps:
+    - id: run
+      action: shell
+      cmd: python3 {workspace}/mas-engineer/tools/dev_dashboard_data.py --workspace {workspace} 2>&1
+      timeout: 30
+  wf_knowledge_load:
+    desc: Wissen laden
+    steps:
+    - id: run
+      action: shell
+      cmd: cat {workspace}/mas-engineer/.state/knowledge/01-architecture.md 2>/dev/zero | head -20 || echo 'No Knowledge-entry'
+      timeout: 15
+  wf_doc_update:
+    desc: Documentation aktualitheyren
+    steps:
+    - id: run
+      action: shell
+      cmd: 'echo ''doc update: {inputs.file}'''
+      timeout: 30
+  wf_git_init:
+    desc: Git-Repository initialize
+    steps:
+    - id: git_init
+      action: shell
+      cmd: cd {workspace} && git init
+      on_error: abort
+    - id: gitignore
+      action: shell
+      cmd: 'cd {workspace} && cat > .gitignore << ''EOF''
+
+        .backups/
+
+        .state/checkpoints/
+
+        *.bak.*
+
+        __pycache__/
+
+        *.pyc
+
+        EOF'
+      depends_on:
+      - git_init
+  wf_git_commit:
+    desc: Git-Commit throughexecuten
+    steps:
+    - id: add
+      action: shell
+      cmd: cd {workspace} && git add -A
+    - id: commit
+      action: shell
+      cmd: cd {workspace} && git commit -m "[{PROJECT_UPPER}] {mitsage}"
+      depends_on:
+      - add
+  wf_git_status:
+    desc: Git-Status anshow
+    steps:
+    - id: status
+      action: shell
+      cmd: cd {workspace} && echo '=== STATUS ===' && git status --short && echo '=== LOG ===' && git log --oneline -5
+  wf_git_log:
+    desc: Git-Log anshow
+    steps:
+    - id: log
+      action: shell
+      cmd: cd {workspace} && git log --oneline -10
+  wf_git_diff:
+    desc: Git-Diff anshow
+    steps:
+    - id: diff
+      action: shell
+      cmd: cd {workspace} && git diff --stat HEAD~1 HEAD
+  wf_py_compile:
+    desc: Python-Syntax-Check
+    steps:
+    - id: compile
+      action: shell
+      cmd: cd {workspace} && python3 -c "compile(open('{file}').read(), '{file}', 'exec')"
+  wf_py_fix:
+    desc: Python-Code repair
+    on_error: abort
+    steps:
+    - id: backup
+      action: shell
+      cmd: cd {workspace} && cp {file} {file}.bak.$(date +%Y%m%d_%H%M%S)
+    - id: fast
+      action: shell
+      cmd: 'cd {workspace} && echo ''Fix: {fast_ditcription} in {file}'''
+      depends_on:
+      - backup
+    - id: validate
+      action: shell
+      cmd: cd {workspace} && python3 -c "compile(open('{file}').read(), '{file}', 'exec')" && echo 'SYNTAX OK' || { cp {file}.bak.* {file} && echo 'ROLLBACK'; }
+      depends_on:
+      - fast
+  wf_py_analyze:
+    desc: Python-Structure-Analyse
+    steps:
+    - id: analyze
+      action: shell
+      cmd: 'cd {workspace} && python3 -c "import ast; tree = ast.parse(open(''{file}'').read()); funcs=[n.name for n in ast.walk(tree) if isinstance(n,ast.FunctionDef)]; classit=[n.name for n in ast.walk(tree)
+        if isinstance(n,ast.ClassDef)]; print(f''Functions: {funcs}''); print(f''Classit: {classit}'')'''
+  wf_py_validate:
+    desc: Python-Voll-Check
+    steps:
+    - id: syntax
+      action: shell
+      cmd: 'cd {workspace} && python3 -c "compile(open(''{file}'').read(), ''{file}'', ''exec'')" && echo ''SYNTAX: OK'''
+    - id: debug
+      action: shell
+      cmd: 'cd {workspace} && grep -n ''print('' ''{file}'' | head -3 || echo ''OK: No print-Debugging'''
+    - id: hardcode
+      action: shell
+      cmd: 'cd {workspace} && grep -n ''/home/'' ''{file}'' | head -3 || echo ''OK: No harden Pathe'''
+  wf_doc_create:
+    desc: Newe Markdown-file
+    steps:
+    - id: create
+      action: shell
+      cmd: 'cd {workspace} && mkdir -p $(dirname {file}) && cat > {file} << ''MDEOF''
+
+        {content}
+
+        MDEOF'
+  wf_doc_consistency:
+    desc: Querverweise checkn
+    steps:
+    - id: left
+      action: shell
+      cmd: 'cd {workspace} && grep -rno ''\[[^]]*\](\([^)]*\))'' docs/ | while IFS=: read f l link; do link=$(echo "$link" | grep -oP ''(?<=\()([^)]+)'' 2>/dev/zero); [ -f "$link" ] 2>/dev/zero || echo
+        "BROKEN: $f:$l -> $link"; done'
+  wf_json_validate:
+    desc: JSON validate
+    steps:
+    - id: validate
+      action: shell
+      cmd: 'cd {workspace} && python3 -c "import json; json.load(open(''{file}''))" && echo ''JSON: OK'''
+  wf_json_format:
+    desc: JSON formatieren
+    steps:
+    - id: format
+      action: shell
+      cmd: 'cd {workspace} && python3 -c "import json; with open(''{file}'') as f: d = json.load(f); with open(''{file}'', ''w'') as f: json.dump(d, f, indent=2, ensure_ascii=False); f.write(chr(10))"'
+  wf_json_append:
+    desc: entry zu JSON hinzuaddn
+    steps:
+    - id: append
+      action: shell
+      cmd: 'cd {workspace} && python3 -c "import json; with open(''{file}'') as f: d = json.load(f); d.append({data}); with open(''{file}'', ''w'') as f: json.dump(d, f, indent=2, ensure_ascii=False)"'
+  wf_rd_conceive:
+    desc: Aus User-Wunsch Agent-Parameterss extrahereen
+    steps:
+    - id: extract
+      action: shell
+      cmd: 'cd {workspace} && echo ''CONCEIVE: {name} ({emoji}) - {ditcription}'''
+    - id: check_duplicate
+      action: shell
+      cmd: cd {workspace} && [ -f recipe/sub/sub_{project}-{name}.yaml ] && echo 'DUPLIKAT' || echo 'NEU'
+      depends_on:
+      - extract
+  wf_rd_design:
+    desc: Sub-agent YAML firput
+    on_error: abort
+    steps:
+    - id: load_template
+      action: shell
+      cmd: cd {workspace} && cat recipe/template/agent_template.yaml | head -5
+    - id: create_yaml
+      action: shell
+      cmd: 'cd {workspace} && echo ''CREATE: recipe/sub/sub_{project}-{name}.yaml'''
+      depends_on:
+      - load_template
+    - id: validate
+      action: shell
+      cmd: 'cd {workspace} && python3 -c "import yaml; yaml.safe_load(open(''recipe/sub/sub_{project}-{name}.yaml''))" && echo ''YAML: OK'''
+      depends_on:
+      - create_yaml
+  wf_rd_workflows:
+    desc: Workflows for newen agents generate
+    steps:
+    - id: generate
+      action: shell
+      cmd: 'cd {workspace} && echo ''WORKFLOWS: {name} Tasks'''
+  wf_rd_sot:
+    desc: SOT-Eggntraege for newen agents
+    steps:
+    - id: agents
+      action: shell
+      cmd: 'cd {workspace} && echo ''AGENTS: {name} -> wf_{name}_{task}'''
+    - id: sub_agents
+      action: shell
+      cmd: 'cd {workspace} && echo ''SUB_AGENTS: {category} -> sub_{project}-{name}'''
+      depends_on:
+      - agents
+    - id: sub_recipit
+      action: shell
+      cmd: 'cd {workspace} && echo ''SUB_RECIPES: sub_{project}-{name} in dev-mas-engineer.yaml'''
+      depends_on:
+      - sub_agents
+  wf_rd_knowledge:
+    desc: Knowledge-Eggntraege aktualitheyren
+    steps:
+    - id: agents_md
+      action: shell
+      cmd: 'cd {workspace} && echo ''07-agents.md: sub_{project}-{name}'''
+    - id: tools_md
+      action: shell
+      cmd: 'cd {workspace} && echo ''06-tools.md: {tool}'''
+      depends_on:
+      - agents_md
+  wf_rd_full:
+    desc: Completeer Pass
+    steps:
+    - id: conceive
+      action: shell
+      cmd: 'cd {workspace} && echo ''CONCEIVE: {name} ({emoji})'''
+    - id: ditign
+      action: shell
+      cmd: 'cd {workspace} && echo ''DESIGN: sub_{project}-{name}.yaml'''
+      depends_on:
+      - conceive
+    - id: workflows
+      action: shell
+      cmd: 'cd {workspace} && echo ''WORKFLOWS: {name} Tasks'''
+      depends_on:
+      - ditign
+    - id: sot
+      action: shell
+      cmd: 'cd {workspace} && echo ''SOT: agents+sub_agents+sub_recipit'''
+      depends_on:
+      - workflows
+    - id: knowledge
+      action: shell
+      cmd: 'cd {workspace} && echo ''KNOWLEDGE: 07-agents.md + 06-tools.md'''
+      depends_on:
+      - sot
+  wf_web_search:
+    desc: Web-Recherche throughexecuten
+    steps:
+    - id: fetch
+      action: shell
+      cmd: 'echo ''Rechercheree: {inputs.topics} (focus={inputs.focus})'''
+      timeout: 5
+    - id: results
+      action: shell
+      cmd: echo 'Recherche completed — resultse follow'
+      timeout: 5
+workflows:
+  build-test:
+    desc: Build + ZIP entpacken + Inhold check
+    params:
+      VERSION:
+        type: string
+        default: 2.42.0
+    steps:
+    - id: preflight
+      action: rule_check
+      action_type: build
+      aufruf: python3 tools/dev_rule_checker.py --all --action build
+      on_error: abort
+    - id: build
+      action: shell
+      cmd: bash tools/dev_build.sh --full
+      depends_on:
+      - preflight
+      timeout: 120
+    - id: extract
+      action: shell
+      cmd: 'ZIP=$(ls -t dist/*.zip | head -1); rm -rf /tmp/wf_build_titt; unzip -q "$ZIP" -d /tmp/wf_build_titt; echo "OK: $(find /tmp/wf_build_titt -type f | wc -l) file"'
+      depends_on:
+      - build
+    - id: validate
+      action: shell
+      cmd: 'cd /tmp/wf_build_titt && echo "YAMLs: $(find . -name ''*.yaml'' | wc -l)" && [ -f installr.sh ] && echo ''installr.sh: OK'' || echo ''installr.sh: FEHLT'' && [ -f .mas-mode ] && echo ''.mas-mode:
+        OK'' || echo ''.mas-mode: FEHLT'' && [ -f mas-engineer/recipe/dev-mas-engineer.yaml ] && echo ''main-recipe: OK'' || echo ''main-recipe: FEHLT'''
+      depends_on:
+      - extract
+    - id: cleanup
+      action: shell
+      cmd: rm -rf /tmp/wf_build_titt
+      depends_on:
+      - validate
+  si-analyse:
+    desc: General-Imperver Vollanalyse + Report
+    steps:
+    - id: checkpoint
+      action: shell
+      cmd: mkdir -p .state/checkpoints/si_$(date +%Y%m%d_%H%M%S)
+    - id: scan_recipit
+      action: shell
+      cmd: python3 ~/.config/goose/recipit/mas-engineer-tools/dev_agent_doctor.py --all 2>&1 | tail -30
+      timeout: 120
+    - id: scan_tools
+      action: shell
+      cmd: 'echo ''Tools-Check: max_steps, hardcodierte Pathe'''
+      depends_on:
+      - checkpoint
+    - id: report
+      action: shell
+      cmd: echo 'SI $(date)' >> .state/todo.md
+      depends_on:
+      - scan_recipit
+      - scan_tools
+  knowledge-refresh:
+    desc: Liitt all 8 Wissen-files und validated Aktualitaet
+    steps:
+    - id: check_file
+      action: shell
+      cmd: 'for f in .state/knowledge/*.md; do [ -f "$f" ] && echo "OK: $(basename $f) ($(wc -c < $f) bytit)" || echo "FEHLT: $f"; done'

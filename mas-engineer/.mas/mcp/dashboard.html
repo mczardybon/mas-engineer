@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Framework Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  /* __WORKSPACE_PLACEHOLDER__ */
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 16px; min-height: 100vh;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    body.light { background: #f5f5f7; color: #1d1d1f; }
+    body.dark { background: #0d1117; color: #c9d1d9; }
+    .container { max-width: 900px; margin: 0 auto; }
+
+    #topbar {
+      display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+      border-radius: 12px; margin-bottom: 16px;
+    }
+    body.light #topbar { background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    body.dark #topbar { background: #161b22; border: 1px solid #30363d; }
+    .logo { font-weight: 700; font-size: 18px; }
+    #status-led { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .led-green { background: #3fb950; box-shadow: 0 0 6px #3fb950; }
+    .led-red { background: #f85149; box-shadow: 0 0 6px #f85149; }
+    .led-yellow { background: #d29922; box-shadow: 0 0 6px #d29922; }
+    #timestamp-label { color: #8b949e; font-size: 13px; flex: 1; }
+    #project-name { font-weight: 600; }
+    #refresh-btn {
+      background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
+      padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;
+    }
+    #refresh-btn:hover { background: #30363d; }
+    #refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .panel {
+      border-radius: 12px; padding: 16px; min-height: 200px;
+    }
+    body.light .panel { background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    body.dark .panel { background: #161b22; border: 1px solid #30363d; }
+    .panel-header { font-weight: 600; font-size: 14px; margin-bottom: 12px; opacity: 0.9; }
+    .stat-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .stat {
+      padding: 8px 12px; border-radius: 8px; flex: 1; text-align: center; min-width: 60px;
+    }
+    body.light .stat { background: #f5f5f7; }
+    body.dark .stat { background: #0d1117; }
+    .num { font-size: 22px; font-weight: 700; display: block; }
+    .lbl { font-size: 11px; opacity: 0.7; }
+    canvas { max-width: 100%; max-height: 160px; margin: 8px 0; }
+
+    .change-item {
+      padding: 4px 0; font-size: 12px; border-bottom: 1px solid transparent;
+    }
+    body.light .change-item { border-color: #e5e5e7; }
+    body.dark .change-item { border-color: #21262d; }
+    .change-ts { opacity: 0.6; font-family: monospace; font-size: 11px; }
+    .badge {
+      display: inline-block; padding: 1px 6px; border-radius: 4px;
+      font-size: 10px; font-weight: 600; margin-left: 4px;
+    }
+    .badge-green { background: rgba(63,185,80,0.15); color: #3fb950; }
+    .badge-orange { background: rgba(210,153,34,0.15); color: #d29922; }
+    .badge-blue { background: rgba(88,166,255,0.15); color: #58a6ff; }
+    .badge-red { background: rgba(248,81,73,0.15); color: #f85149; }
+    .badge-gray { background: rgba(139,148,158,0.15); color: #8b949e; }
+
+    .agent-score-row {
+      display: flex; justify-content: space-between; padding: 2px 0; font-size: 12px;
+    }
+
+    #actions {
+      display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 16px;
+      padding: 12px; border-radius: 12px;
+    }
+    body.light #actions { background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    body.dark #actions { background: #161b22; border: 1px solid #30363d; }
+    .action-btn {
+      background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
+      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
+    }
+    .action-btn:hover { background: #30363d; }
+
+    .empty-state { color: #8b949e; font-size: 12px; text-align: center; padding: 20px; }
+    .detail-row { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; }
+    .detail-row .val { font-weight: 600; }
+
+    @media (max-width: 600px) { #grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body class="dark">
+  <div class="container">
+    <div id="topbar">
+      <span id="status-led" class="led-green"></span>
+      <span class="logo">📊</span>
+      <span id="project-name">Framework</span>
+      <span id="timestamp-label">—</span>
+      <button id="refresh-btn" onclick="doRefresh()">🔄 Refresh</button>
+    </div>
+
+    <div id="grid">
+      <div class="panel" id="panel-agents">
+        <div class="panel-header">🧠 Agenten</div>
+        <div class="stat-row">
+          <div class="stat"><span class="num" id="ag-total">—</span><span class="lbl">Total</span></div>
+          <div class="stat"><span class="num" id="ag-healthy">—</span><span class="lbl" style="color:#3fb950">Healthy</span></div>
+          <div class="stat"><span class="num" id="ag-degraded">—</span><span class="lbl" style="color:#d29922">Degr.</span></div>
+          <div class="stat"><span class="num" id="ag-score">—</span><span class="lbl">⌀ Score</span></div>
+        </div>
+        <canvas id="chart-donut"></canvas>
+        <div id="agent-scores-list"></div>
+      </div>
+
+      <div class="panel" id="panel-health">
+        <div class="panel-header">📈 Health & Trends</div>
+        <canvas id="chart-line"></canvas>
+        <div id="health-details"></div>
+      </div>
+
+      <div class="panel" id="panel-changes">
+        <div class="panel-header">📝 Änderungen</div>
+        <div class="stat-row">
+          <div class="stat"><span class="num" id="ch-total">—</span><span class="lbl">Total</span></div>
+          <div class="stat"><span class="num" id="ch-types">—</span><span class="lbl">Typen</span></div>
+        </div>
+        <div id="changes-list"></div>
+      </div>
+
+      <div class="panel" id="panel-system">
+        <div class="panel-header">⚙️ System</div>
+        <div id="system-details"></div>
+      </div>
+    </div>
+
+    <div id="actions">
+      <button class="action-btn" onclick="doAction('/develop --test')">🧪 Test</button>
+      <button class="action-btn" onclick="doAction('/develop --build')">📦 Build</button>
+      <button class="action-btn" onclick="doAction('/develop --improve')">🔄 SI-RUN</button>
+      <button class="action-btn" onclick="doAction('/develop --config-audit')">🔍 Audit</button>
+      <button class="action-btn" onclick="doAction('/develop --guardian-check')">🛡️ Guardian</button>
+      <button class="action-btn" onclick="doAction('/workflow state')">📋 Status</button>
+    </div>
+  </div>
+
+  <script>
+    class McpAppClient {
+      constructor() {
+        this.pendingRequests = new Map();
+        this.requestId = 0;
+        this.initialized = false;
+        this.hostContext = null;
+        window.addEventListener('message', (e) => this.handleMessage(e));
+        this.initialize();
+      }
+      async initialize() {
+        try {
+          const result = await this.request('ui/initialize', {});
+          this.hostContext = result.hostContext;
+          this.initialized = true;
+          if (this.hostContext?.theme) this.applyTheme(this.hostContext.theme);
+          this.notify('ui/notifications/initialized', {});
+          this.reportSize();
+        } catch (e) { console.error('Init failed', e); }
+      }
+      handleMessage(event) {
+        const data = event.data;
+        if (!data || typeof data !== 'object') return;
+        if ('id' in data && this.pendingRequests.has(data.id)) {
+          const { resolve, reject } = this.pendingRequests.get(data.id);
+          this.pendingRequests.delete(data.id);
+          data.error ? reject(new Error(data.error.message)) : resolve(data.result);
+          return;
+        }
+        if (data.method === 'ui/notifications/host-context-changed') {
+          if (data.params?.theme) this.applyTheme(data.params.theme);
+        }
+      }
+      request(method, params) {
+        return new Promise((resolve, reject) => {
+          const id = ++this.requestId;
+          this.pendingRequests.set(id, { resolve, reject });
+          window.parent.postMessage({ jsonrpc: '2.0', id, method, params }, '*');
+          setTimeout(() => {
+            if (this.pendingRequests.has(id)) {
+              this.pendingRequests.delete(id);
+              reject(new Error('Request timed out'));
+            }
+          }, 30000);
+        });
+      }
+      notify(method, params) {
+        window.parent.postMessage({ jsonrpc: '2.0', method, params }, '*');
+      }
+      applyTheme(theme) { document.body.className = theme; }
+      reportSize() {
+        this.notify('ui/notifications/size-changed', { height: document.body.scrollHeight });
+      }
+      async sendMessageToChat(text) {
+        return this.request('ui/message', { content: { type: 'text', text } });
+      }
+    }
+
+    const mcpApp = new McpAppClient();
+    let DASH_DATA = null;
+    let donutChart = null;
+    let lineChart = null;
+
+    async function loadData() {
+      // In production, data comes from dev_dashboard_data.py via data.json
+      // We try to fetch it via the MCP bridge. For now, we request the agent to provide it.
+      try {
+        const resp = await fetch('/data.json');
+        if (resp.ok) return await resp.json();
+      } catch(e) {}
+      return null;
+    }
+
+    function render(data) {
+      DASH_DATA = data;
+      if (!data) {
+        document.querySelectorAll('.num').forEach(el => el.textContent = '—');
+        document.getElementById('changes-list').innerHTML = '<div class="empty-state">Keine Daten</div>';
+        document.getElementById('agent-scores-list').innerHTML = '';
+        document.getElementById('health-details').innerHTML = '<div class="empty-state">Warte auf Daten...</div>';
+        document.getElementById('system-details').innerHTML = '<div class="empty-state">Warte auf Daten...</div>';
+        return;
+      }
+
+      // Top bar
+      const led = document.getElementById('status-led');
+      if (data.agents.degraded > 0 || data.agents.dead > 0) {
+        led.className = data.agents.dead > 0 ? 'led-red' : 'led-yellow';
+      } else {
+        led.className = 'led-green';
+      }
+      document.getElementById('project-name').textContent = data.project_name || data.workspace?.split('/').pop() || 'Framework';
+      document.getElementById('timestamp-label').textContent = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '—';
+
+      // Agents panel
+      const a = data.agents;
+      document.getElementById('ag-total').textContent = a.total ?? '—';
+      document.getElementById('ag-healthy').textContent = a.healthy ?? '—';
+      document.getElementById('ag-degraded').textContent = a.degraded ?? '—';
+      document.getElementById('ag-score').textContent = a.avg_score ?? '—';
+
+      // Donut chart
+      const ctx1 = document.getElementById('chart-donut').getContext('2d');
+      if (donutChart) donutChart.destroy();
+      donutChart = new Chart(ctx1, {
+        type: 'doughnut',
+        data: {
+          labels: ['Healthy', 'Degraded', 'Dead'],
+          datasets: [{
+            data: [a.healthy || 0, a.degraded || 0, a.dead || 0],
+            backgroundColor: ['#3fb950', '#d29922', '#f85149'],
+            borderWidth: 0,
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+
+      // Agent scores list
+      const scoresEl = document.getElementById('agent-scores-list');
+      if (a.scores && a.scores.length > 0) {
+        let html = '';
+        const top = a.scores.slice(0, 10);
+        top.forEach(s => {
+          const color = s.status === 'healthy' ? '#3fb950' : s.status === 'degraded' ? '#d29922' : '#f85149';
+          html += `<div class="agent-score-row"><span>${s.name.replace('sub_mas-','')}</span><span style="color:${color}">${s.score}</span></div>`;
+        });
+        if (a.scores.length > 10) {
+          html += `<div class="agent-score-row" style="opacity:0.6">⋯ +${a.scores.length - 10} weitere</div>`;
+        }
+        scoresEl.innerHTML = html;
+      }
+
+      // Health panel
+      if (a.guardian_scan) {
+        document.getElementById('health-details').innerHTML = `
+          <div class="detail-row"><span>Letzter Scan</span><span class="val">${a.guardian_scan}</span></div>
+          <div class="detail-row"><span>Issues</span><span class="val">${a.issues?.total ?? 0}</span></div>
+        `;
+      }
+
+      // Line chart (health trend)
+      const trend = data.health_trend || [];
+      const ctx2 = document.getElementById('chart-line').getContext('2d');
+      if (lineChart) lineChart.destroy();
+      if (trend.length > 0) {
+        lineChart = new Chart(ctx2, {
+          type: 'line',
+          data: {
+            labels: trend.map(t => t.time),
+            datasets: [{
+              label: 'Health',
+              data: trend.map(t => t.score),
+              borderColor: '#3fb950',
+              backgroundColor: 'rgba(63,185,80,0.1)',
+              tension: 0.3,
+              fill: true,
+              pointRadius: 2,
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { color: '#8b949e', font: { size: 9 } } },
+              y: { min: 0, max: 100, ticks: { color: '#8b949e', font: { size: 9 } } }
+            }
+          }
+        });
+      }
+
+      // Changes panel
+      const ch = data.changes;
+      document.getElementById('ch-total').textContent = ch.total ?? 0;
+      const types = ch.by_type || {};
+      document.getElementById('ch-types').textContent = Object.keys(types).length || 0;
+
+      const changesEl = document.getElementById('changes-list');
+      if (ch.last_10 && ch.last_10.length > 0) {
+        let html = '';
+        ch.last_10.forEach(c => {
+          const desc = (c.desc || '').substring(0, 55);
+          html += `<div class="change-item"><span class="change-ts">${c.ts}</span> ${desc}</div>`;
+        });
+        changesEl.innerHTML = html;
+      } else {
+        changesEl.innerHTML = '<div class="empty-state">Keine Änderungen</div>';
+      }
+
+      // System panel
+      const imp = data.improvement || {};
+      const disp = data.dispatch || {};
+      const build = data.build || {};
+      document.getElementById('system-details').innerHTML = `
+        <div class="detail-row"><span>🔄 Dispatch Calls</span><span class="val">${disp.total ?? 0}</span></div>
+        <div class="detail-row"><span>⚡ ⌀ Dauer</span><span class="val">${disp.avg_duration_ms ?? 0}ms</span></div>
+        <div class="detail-row"><span>🔧 SI-Runs</span><span class="val">${imp.total_runs ?? 0}</span></div>
+        <div class="detail-row"><span>⏱ SI-Status</span><span class="val">${imp.schedule_status ?? 'n/a'}</span></div>
+        <div class="detail-row"><span>📦 Builds</span><span class="val">${build.total_count ?? 0}</span></div>
+        ${build.latest_name ? `<div class="detail-row"><span>Letzter Build</span><span class="val">${build.latest_date}</span></div>` : ''}
+      `;
+
+      mcpApp.reportSize();
+    }
+
+    async function doRefresh() {
+      const btn = document.getElementById('refresh-btn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Lade...';
+
+      // Send message to goose to re-run the dashboard tool
+      try {
+        await mcpApp.sendMessageToChat('refresh dashboard');
+      } catch(e) {
+        console.error('Refresh failed', e);
+      }
+
+      btn.disabled = false;
+      btn.textContent = '🔄 Refresh';
+    }
+
+    function doAction(cmd) {
+      mcpApp.sendMessageToChat(cmd).catch(console.error);
+    }
+
+    // Initial render with empty state
+    render(null);
+  </script>
+</body>
+</html>

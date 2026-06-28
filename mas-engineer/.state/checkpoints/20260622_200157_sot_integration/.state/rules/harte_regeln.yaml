@@ -1,0 +1,91 @@
+haerte_stufen:
+  extrem_stark:
+    beschreibung: Wird NIE geloescht. Blockiert bei Verstoss.
+    farbe: 🔴
+    level: 5
+    symbol: ⛔⛔⛔⛔⛔
+    token_reserve: 800
+  normal:
+    beschreibung: Kann verschwinden wenn Kontext voll.
+    farbe: 🟡
+    level: 2
+    symbol: ⛔
+    token_reserve: 300
+  schwach:
+    beschreibung: Optional. Wird nur bei freiem Kontext geladen.
+    farbe: ⚪
+    level: 1
+    symbol: ⚠️
+    token_reserve: 100
+  stark:
+    beschreibung: Bleibt bis Turn-Ende. Kein Block, aber Warnung.
+    farbe: 🟠
+    level: 4
+    symbol: ⛔⛔⛔
+    token_reserve: 500
+last_updated: '2026-06-15T14:47:00'
+regeln:
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R09 --action {aktion}
+  haerte: 5
+  id: R09
+  name: MODUS_DOMAENEN_KOPPLUNG
+  prompt_text: MODUS-DOMAENEN-KOPPLUNG — Modus bestimmt Domain. MAS-NUR mas-engineer/.
+    Framework-NUR framework/. Generic-NUR eigene Domain. Importe verboten. Lesen in
+    andere Domain OK.
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R01 --action {aktion}
+  haerte: 5
+  id: R01
+  name: BESTAETIGUNGSPFLICHT
+  prompt_text: BESTAETIGUNG vor write/edit — Plan zeigen + WARTEN auf ✅
+- block: true
+  check: null
+  haerte: 5
+  id: R02
+  name: BESTAND_PRUFUNG
+  prompt_text: BESTAND vor NEUBAU — existiert bereits? User fragen
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R04 --action {aktion}
+  haerte: 5
+  id: R04
+  name: GENERAL_IMPROVER_SCHUTZ
+  prompt_text: NIEMALS general-improver.yaml editieren (keine Rekursion)
+- block: true
+  check: null
+  haerte: 5
+  id: R05
+  name: AUTO_COMMIT
+  prompt_text: AUTO-COMMIT nach Aenderung — git+checkpoint+changes.json+todo
+- block: false
+  check: null
+  haerte: 4
+  id: R06
+  name: SUB_AGENT_CONTAINMENT
+  prompt_text: Sub-Agent = NUR Analyse — Shell selbst ausfuehren
+- block: false
+  check: null
+  haerte: 2
+  id: R07
+  name: SIGNAL_CP_DONE
+  prompt_text: CP_DONE nach Checkpoint
+- block: false
+  check: null
+  haerte: 2
+  id: R08
+  name: TOKEN_BUDGET
+  prompt_text: Self-Improver max 50K — sonst User fragen
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R18 --action {aktion}
+  haerte: 5
+  id: R18
+  name: DELEGATIONSPFLICHT
+  prompt_text: 'DELEGATIONSPFLICHT — NIEMALS selbst shell/write/edit wenn Sub-Agent existiert. delegiere() STATT selbst machen. Ausnahme: cat/grep/ls zur Orientierung.'
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R10 --action {aktion}
+  haerte: 5
+  id: R10
+  name: CORONASHIELD
+  prompt_text: CORONASHIELD — JEDE YAML wird vor Speicherung via sub_mas-recovery-immune
+    CHECK_YAML validiert
+version: 1.0.0

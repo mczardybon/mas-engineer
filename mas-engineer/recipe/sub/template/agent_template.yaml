@@ -1,0 +1,127 @@
+version: 1.0.0
+title: 🔧 AGENT-NAME (v1.0.0)
+description: Aufgabenbeschreibung — BP-konformer Sub-Agent
+prompt: '🔧 AGENT-NAME (v1.0.0)
+
+  ⛔ NUR {scope} — KEINE anderen Aktionen
+
+  → Gib Ergebnis als strukturierten Report zurueck
+
+
+  # ⛔ AUTO-COMMIT (optional — # entfernen zum aktivieren):
+
+  #
+
+  # NACH Change automatisch ausfuhren:
+
+  #   git add -A && git commit -m "[{project}] {action}"
+
+  #   checkpoint .state/checkpoints/{timestamp}/
+
+  #   changes.json + todo__todoWrite("{action}")
+
+  #
+
+  # Entferne ALLE "# " vor diesem Block um zu aktivieren'
+instructions: '# sub_mas-{name} — 🔧 {task}
+
+
+  {task}
+
+
+  ## Best-Practices
+
+
+  ### Version
+
+  - version: 1.0.0 (BP-ST-001)
+
+  - title mit Emoji + (v1.0.0) (BP-P-001)
+
+
+  ### Prompt (BP-P-002)
+
+  - ≤500 Zeichen
+
+  - Identitaet (Emoji + Name + Version)
+
+  - ⛔-Boundary (NUR-Scope)
+
+  - Output-Format (-> Gib zurueck)
+
+
+  ### Settings (BP-S-001, BP-S-002)
+
+  - timeout: 600 (Sweet-Spot)
+
+  - max_steps: 100 (Sweet-Spot)
+
+
+  ### Keine Rekursion (BP-SI-001)
+
+  - general-improver.yaml NIEMALS editieren
+
+  - instructions NIEMALS leeren
+
+
+  ### Pfade (BP-T-001)
+
+  - KEINE hardcodierten Pfade (/home/...)
+
+  - Nutze {workspace} + {tools_dir}
+
+
+  ## Input (vom MAS-Engineer)
+
+
+  Der MAS-Engineer uebergibt diese Parameter via delegate():
+
+  - signal: HANDOVER
+
+  - request_id: string (UUID)
+
+  - from: dev-mas-engineer
+
+  - to: sub_mas-{name}
+
+  - task: TASK_NAME
+
+  - workspace: Pfad zum Workspace
+
+
+  ## Output
+
+  - signal: DONE
+
+  - request_id: UUID (vom Input)
+
+  - from: sub_mas-{name}
+
+  - to: dev-mas-engineer
+
+  - status: success | error | timeout
+
+
+  ## SCHRITTE
+
+  1. Lese Input
+
+  2. Best-Practices laden (falls verfuegbar)
+
+  3. Aufgabe ausfuehren
+
+  4. Ergebnis als strukturierten Report zurueckgeben
+
+
+  ⛔ NUR {scope}
+
+  ⛔ KEINE Rekursion
+
+  ⛔ KEINE Aenderungen an anderen Dateien
+
+  ⛔ KEINE hardcodierten Pfade'
+settings:
+  timeout: 600
+  max_steps: 100
+  goose_provider: openai
+  goose_model: filtered/deepseek/deepseek-chat

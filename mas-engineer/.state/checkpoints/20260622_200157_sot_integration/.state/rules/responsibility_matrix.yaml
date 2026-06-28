@@ -1,0 +1,184 @@
+# ════════════════════════════════════════════
+# RESPONSIBILITY-MATRIX v1.0.0
+# SOT für: "Wer macht was im MAS?"
+# Jede Aktion → Sub-Agent → delegate()
+# ════════════════════════════════════════════
+version: 1.0.0
+created: "2026-06-18"
+letzte_pruefung: "2026-06-18"
+
+# Jeder Aktionstyp → zuständiger Sub-Agent
+action_map:
+  build:
+    agent: sub_mas-recipe-manager
+    task: BUILD
+    tool: dev_build.sh
+    beschreibung: "MAS bauen (ZIP erstellen)"
+
+  deploy:
+    agent: sub_mas-recipe-manager
+    task: INSTALL
+    tool: install.sh
+    beschreibung: "MAS deployen (~/.config/goose/)"
+
+  yaml_edit:
+    agent: sub_mas-yaml-editor
+    task: PATCH
+    tool: dev_editor.py
+    vor_aktion: "sub_mas-recovery-immune → CHECK_YAML"
+    beschreibung: "YAML-Dateien editieren"
+
+  yaml_validate:
+    agent: sub_mas-recovery-immune
+    task: CHECK_YAML
+    tool: "python3 -c 'import yaml; yaml.safe_load(...)'"
+    beschreibung: "YAML vor Speicherung validieren"
+
+  py_edit:
+    agent: sub_mas-python-repair
+    task: FIX
+    tool: dev_editor.py
+    beschreibung: "Python-Tools editieren"
+
+  doc_edit:
+    agent: sub_mas-doc-writer
+    task: UPDATE
+    beschreibung: "Dokumentation aktualisieren"
+
+  shell_read:
+    agent: null
+    ausnahme: true
+    beschreibung: "MAS selbst erlaubt (ls, cat, grep, find, echo, tree, pwd, which, head, tail)"
+
+  shell_write:
+    agent: sub_mas-git-operator
+    task: COMMIT
+    beschreibung: "Git-Operationen (commit, add, push)"
+
+  git_status:
+    agent: sub_mas-git-operator
+    task: STATUS
+    beschreibung: "Git-Status anzeigen"
+
+  analyze_scan:
+    agent: sub_mas-framework-scanner
+    task: SCAN
+    tool: dev_observer.py
+    beschreibung: "MAS-Struktur scannen"
+
+  analyze_audit:
+    agent: sub_mas-framework-scanner
+    task: AUDIT
+    tool: dev_observer.py + dev_architect.py + dev_analyst.py
+    beschreibung: "Tiefenanalyse"
+
+  analyze_harden:
+    agent: sub_mas-framework-scanner
+    task: HARDEN_CHECK
+    tool: dev_analyst.py
+    beschreibung: "Härtung check"
+
+  test:
+    agent: sub_mas-test-runner
+    task: RUN
+    beschreibung: "Tests execute"
+
+  improve:
+    agent: sub_mas-general-improver
+    task: FULL_IMPROVEMENT
+    rate_limit: "max 1x alle 6h (R11)"
+    beschreibung: "Self-Improvement-Pipeline"
+
+  recovery_checkpoint:
+    agent: sub_mas-recovery-checkpoint
+    task: SNAPSHOT
+    beschreibung: "Snapshot erstellen"
+
+  recovery_immune:
+    agent: sub_mas-recovery-immune
+    task: CHECK_YAML
+    beschreibung: "YAML-Coronashield"
+
+  recovery_safezone:
+    agent: sub_mas-recovery-safezone
+    task: FORK
+    beschreibung: "Safezone-Fork"
+
+  recovery_timeline:
+    agent: sub_mas-recovery-timeline
+    task: FIND_BEST
+    beschreibung: "Besten Checkpoint finden"
+
+  recovery_defib:
+    agent: sub_mas-recovery-defib
+    task: DEFIB
+    beschreibung: "Notfall-Wiederbelebung"
+
+  monitor_health:
+    agent: sub_mas-monitor-health
+    task: CHECK_HEALTH
+    beschreibung: "Gesundheitscheck"
+
+  monitor_runtime:
+    agent: sub_mas-monitor-runtime
+    task: CHECK_RUNTIME
+    beschreibung: "Laufzeit überwachen"
+
+  monitor_session:
+    agent: sub_mas-monitor-session
+    task: LOG_SESSION
+    beschreibung: "Session loggen"
+
+  verify:
+    agent: sub_mas-verification-runner
+    task: VERIFY
+    beschreibung: "Verifikation"
+
+  knowledge_load:
+    agent: sub_mas-system-knowledge
+    task: LOAD
+    beschreibung: "Systemwissen laden"
+
+  framework_discover:
+    agent: sub_mas-framework-knowledge
+    task: DISCOVER
+    beschreibung: "Framework-Struktur entdecken"
+
+  framework_explain:
+    agent: sub_mas-framework-knowledge
+    task: EXPLAIN
+    beschreibung: "Konzept erclarify"
+
+  framework_impact:
+    agent: sub_mas-framework-knowledge
+    task: IMPACT
+    beschreibung: "Changes-Impact analysieren"
+
+# Datei-Pfad → Sub-Agent (Präzisierung/Override)
+file_map:
+  "recipe/dev-mas-engineer.yaml":
+    edit: sub_mas-yaml-editor
+    validate: sub_mas-recovery-immune
+  "recipe/sub/sub_mas-*.yaml":
+    edit: sub_mas-yaml-editor
+    validate: sub_mas-recovery-immune
+  "tools/dev_*.py":
+    edit: sub_mas-python-repair
+    validate: sub_mas-python-repair
+  "tools/dev_*.sh":
+    edit: sub_mas-python-repair
+  ".state/workflows.yaml":
+    edit: sub_mas-yaml-editor
+    validate: sub_mas-recovery-immune
+  ".state/rules/*.yaml":
+    edit: sub_mas-yaml-editor
+    validate: sub_mas-recovery-immune
+  "docs/*.md":
+    edit: sub_mas-doc-writer
+
+# R18-Ausnahmen (selbst execute erlaubt)
+read_exceptions:
+  - action: shell
+    cmds: ["ls", "cat", "grep", "find", "head", "tail", "echo", "tree", "pwd", "which", "date"]
+  - action: load
+  - action: delegate

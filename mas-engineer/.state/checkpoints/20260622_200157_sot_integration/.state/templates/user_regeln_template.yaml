@@ -1,0 +1,59 @@
+# 📝 USER-REGELN — Generic-Improver
+# ════════════════════════════════════════════
+# Härte-Stufen:
+#   5 = ⛔⛔⛔⛔⛔  EXTREM: Aktion wird BLOCKIERT bis Bestätigung
+#   4 = ⛔⛔⛔       STARK: Warnung bei Verstoss, kein Block
+#   2 = ⛔          NORMAL: Hinweis, wird bei vollem Kontext entfernt
+#   1 = ⚠️         SCHWACH: Optional, nur bei freiem Kontext
+#
+# So nutzen:
+#   1. Kopiere diese Datei nach .state/rules/regeln.yaml
+#   2. Passe die Regeln an Dein Projekt an
+#   3. dev_rule_refresh_generic.sh lädt sie automatisch alle 5 Schritte
+#   4. dev_rule_checker_generic.py blockt bei Härte-5-Verstoss
+# ════════════════════════════════════════════
+
+version: "1.0.0"
+last_updated: "2026-06-14T22:17:00"
+
+regeln:
+  # ── EXTREM-STARK (5) — BLOCKIERT Aktionen ──────────
+  - id: "G01"
+    name: "README_GESCHUETZT"
+    haerte: 5
+    prompt_text: "Niemals README.md oder CHANGELOG.md automatisch ueberschreiben"
+    block: true
+    blocked_files: ["README.md", "CHANGELOG.md"]
+
+  - id: "G02"
+    name: "REQUIREMENTS_GESCHUETZT"
+    haerte: 5
+    prompt_text: "requirements.txt/pyproject.toml nur mit User-Bestaetigung aendern"
+    block: true
+    blocked_files: ["requirements.txt", "pyproject.toml", "Cargo.toml", "package.json", "Cargo.lock"]
+
+  # ── STARK (4) — Warnung ohne Block ────────────────
+  - id: "G03"
+    name: "BACKUP_VOR_AENDERUNG"
+    haerte: 4
+    prompt_text: "Backup vor jeder write/edit Aktion via cp datei datei.bak.{timestamp}"
+    block: false
+
+  - id: "G04"
+    name: "KEIN_FREMDSYSTEM_ZUGRIFF"
+    haerte: 4
+    prompt_text: "Kein curl/wget auf unbekannte URLs ohne Bestaetigung"
+    block: false
+
+  # ── NORMAL (2) — Hinweis ──────────────────────────
+  - id: "G05"
+    name: "COMMIT_PROJEKT_SPEZIFISCH"
+    haerte: 2
+    prompt_text: "Commit-Nachricht enthaelt Projektnamen als Prefix"
+    block: false
+
+  - id: "G06"
+    name: "MAX_TOKENS_PRO_AKTION"
+    haerte: 2
+    prompt_text: "max 50K Tokens pro Aktion — bei Ueberschreitung abbrechen und User fragen"
+    block: false

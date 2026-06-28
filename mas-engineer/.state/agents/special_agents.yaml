@@ -1,0 +1,28 @@
+version: 1.0.0
+description: Spezial-Agents die NICHT im sub_recipes der Main-Recipe aufgeleads are
+agents:
+  sub_mas-dashboard-live:
+    type: background_poller
+    invoke: task
+    description: Dashboard-Monitor, all 15 Minuten per Cron
+    reason: No Sub-Ref — will per Schedule/Task aufgerufen
+  sub_mas-degradation-handler:
+    type: api_handler
+    invoke: signal
+    description: Degradation-Recovery via API
+    reason: No Sub-Ref — will from Guardian per API aufgerufen
+  sub_mas-signal-generator:
+    type: signal_handler
+    invoke: signal
+    description: Signal-Generator after Checkpoint
+    reason: No Sub-Ref — will after Checkpoint automatically getriggert
+types:
+  background_poller:
+    description: Runs periodisch per Cron/Schedule
+    invoke: task
+  api_handler:
+    description: Will per API von anderen Sub-Agents aufgerufen
+    invoke: signal
+  signal_handler:
+    description: Reagiert auf Signale (CP_DONE, etc.)
+    invoke: signal

@@ -1,0 +1,68 @@
+version: 3.0.0
+constitution: sub_mas-master-constitution.yaml
+title: 🌍 GENERIC-INIT (v1.0.0)
+description: 'v3.0.0 | NO agent copies — symlink + guidelines + remote analysis'
+instructions: "# sub_mas-generic-init — \U0001F30D Generic-Improver Initialization (v3)\nv3.0.0 — NO agent copies anymore.\nCreates only configuration + symlink for external projects.\nThe im-* analysis runs remote from the MAS installation.\nTools are symlinks: project/tools → MAS tools installation.\n\n\
+  \n╔══════════════════════════════════════════════╗\n║  SOT WORKFLOW CONTROL                       ║\n║  → workflows.yaml → agents.generic-init     ║\n║     .task_workflows.INIT                   ║\n╚══════════════════════════════════════════════╝\n\
+  ## Input (from MAS-Engineer)\n- task: INIT\n- signal: HANDOVER\n- request_id: string (UUID)\n- from: dev-mas-engineer\n- to: sub_mas-generic-init\n- project_name: Name of the external project\n- project_path: Path to external project (optional)\n\
+  \n## ⛔ STEP 0 — MODE SELECTION (framework creation only)\n1. CHECK whether caller passed mode parameters:\n   IF mode == \"auto\" OR components parameter: \"\U0001F680 Auto mode\"\n   IF NO mode parameter:\
+   \ ASK User:\n     \"How should the project be initialized?\"\n     Option 1: \"\U0001F680 Auto — All MAS components (Rules, Knowledge, Recovery, State, Monitoring)\"\n     Option 2: \"\U0001F9E9 Component-wise\
+   \ — Choose yourself\"\n     IF Option 1 (Auto): SET components = \"all\"\n     IF Option 2 (Component-wise):\n\
+   \       ASK: \"\U0001F4CB Rules + Hardness levels (R01-R23)? [Y/n]\"\n       ASK: \"\U0001F4CA State tracking (changes/guardian/schedule/audit)? [Y/n]\"\n       ASK: \"\U0001F4DA Knowledge base (9 files)?\
+   \ [Y/n]\"\n       ASK: \"\U0001F4DC Constitution (11 articles)? [Y/n]\"\n       ASK: \"\U0001F691 Recovery (5 templates)? [Y/n]\"\n       ASK: \"\U0001F441️  Monitoring (health report)? [Y/n]\"\n    \
+   \   SET components = selected components (e.g. \"rules,state,knowledge\")\n   NOTE: For deploying MAS-Engineer as a standalone distribution\n         (all 48 agents + 50 tools copied), use\n         delegate(sub_mas-bootstrap, task=DEPLOY) instead.\n\
+   \   OPTIONAL:\n   \"Should I search for current techniques via sub_mas-web-researcher\n\
+   \    before creating the framework? (approx. 30s)\"\n   IF Yes:\n     → DELEGATE to sub_mas-web-researcher (task=SEARCH, focus=\"all\")\n     → WAIT for findings\n     → SHOW top findings (high/medium/info)\n\
+   \     → ASK: \"Which findings to integrate?\"\n     → INTEGRATE selected findings\n\
+  \n## STEP 1 — PREREQUISITES\n1. CHECK: sub_mas-general-improver.yaml exists in ~/.config/goose/recipes/sub/\n   IF NO: \"⛔ MAS installation incomplete — im-* agents missing\"\n\
+  2. CHECK: ~/.config/goose/recipes/tools/dev_generic_init.py exists?\n   IF NO: \"⛔ dev_generic_init.py missing — tool not available\"\n\
+  3. CHECK: {project_name} directory already exists?\n   IF YES: \"⚠️ Project already exists — update mode\"\n   IF NO: \"✅ New project — fresh init\"\n\
+  \n## STEP 1 — INITIALIZE PROJECT\nEXECUTE:\
+   \ python3 ~/.config/goose/recipes/tools/dev_generic_init.py --init {project_path or project_name} --components {components}\n\
+  SHOW the tool output (step by step):\n\
+  \nExpected output:\n  - ✅ Symlink: project/tools → MAS installation\n  - ✅ project.yaml (project metadata)\n  - ✅ 00-GUIDELINES.md (building instructions)\n  - ✅ BP-CHECKLIST.md (37 feature types)\n\
+  \  - ✅ rules/regeln.yaml (rule system)\n  - ✅ recipe/template/agent_template.yaml\n  - ✅ tests/ (test scaffold)\n  - ✅ workflows.yaml (skeleton)\n  - ✅ .gitignore + .gitattributes\n\
+  \  - ✅ .goosehints (Goose integration)\n  - ✅ .mas-mode (mode file with project name)\n  - ✅ .mas/dashboards/ (dashboard data + MCP app)\n  - ✅ Extended components per selection:\n\
+  \    • rules:    Rules R01-R23 + hardness levels + responsibility matrix\n    • state:    changes.json + guardian.yaml + schedule.yaml + audit.log\n\
+  \    • knowledge: 9 knowledge files (architecture, tools, rules, ...)\n    • constitution: 11 articles (sub_mas-master-constitution.yaml)\n\
+  \    • recovery: immune/checkpoint/safezone/timeline/defib (templates)\n    • monitoring: health-report.json + health-history.json\n\
+  \n## STEP 1a — CREATE BASE AGENT (via recipe-designer)\nDELEGATE to sub_mas-recipe-designer (task=CONCEIVE):\n- name: {project_name}-analyzer\n- emoji: \U0001F50D\n\
+  \ - category: analysis\n- tasks: [\"ANALYZE\", \"SCAN\", \"REPORT\"]\n- workspace: {project_path or project_name}\n- mode: generic\nSHOW: \"✅ Base agent '{project_name}-analyzer' created\"\n\
+  \n## STEP 2 — VALIDATE INTEGRATION\n1. CHECK: Symlink project/tools → MAS installation\n   IF yes: \"✅ tools/ connected — MAS tools available\"\n\
+  \   IF no: \"⛔ Symlink missing — dev_generic_init.py --repair-symlinks\"\n\n\
+  2. CHECK: ~/.config/goose/recipes/sub/sub_mas-general-improver.yaml exists\n   IF yes: \"✅ im-* agents available (remote analysis)\"\n   IF no: \"⛔ MAS installation missing — analysis not available\"\n\n\
+  3. CHECK: dev_template_generator.py works\n   python3 ~/.config/goose/recipes/tools/dev_template_generator.py --help\n\
+  \   IF exit=0: \"✅ Template generator available\"\n   IF exit!=0: \"⛔ Template generator broken — dev_build.sh --project execute\"\n\
+  \n## STEP 2a — SESSION TAGGING NOTE\nSHOW:\n\"\U0001F4CB Session tagging:\n\
+  \   The Generic-Improver (im-session-reader) analyzes ONLY sessions\n   that belong to your project. Start each session with:\n\
+  \     [{project_name}] My analysis session\n   GOOSE_SESSION_TAG=[{project_name}] was set in .goosehints.\n\
+  \   Without tag: fallback to working_dir or last non-MAS sessions.\"\n\
+  \n## STEP 3 — SHOW GUIDELINES\nSHOW:\n\"\U0001F4CB Project '{project_name}' initialized — next steps:\n\n\
+  \  \U0001F527 Tools:     Symlink to MAS installation (tools/)\n                47 dev_*.py tools available (always current)\n\n\
+  \  \U0001F4DD Agents:   Create with dev_template_generator.py --create\n                Or build yourself: recipe/template/agent_template.yaml\n\n\
+  \  \U0001F52C Analysis:  Remote via sub_mas-general-improver\n                No agent copy needed — im-* read remotely\n\n\
+  \  ✅ Rules:    .state/rules/regeln.yaml (adapt to your project)\n                3 default rules (R01, R04, R09) — in auto mode: R01-R23 + hardness levels\n\n\
+  \  \U0001F4CA Checklist: BP-CHECKLIST.md (37 feature types)\n                Check each type when building\n\n\
+  \  \U0001F9EA Tests:    tests/test_agent_syntax.py (YAML validation)\n                Extend as needed\n\n\
+  \  \U0001F4E6 Distribution:\
+   \ dev_build.sh --project {project_name}\n                  → Resolve symlink → standalone ZIP without MAS\n                  → Installable on any Goose system\"\n\
+  \n## Output (to MAS-Engineer)\nReturn via stdout as YAML struct:\n- signal: DONE\n- request_id: UUID\n- from: sub_mas-generic-init\n- to: {caller}\n\
+  \ - status: success | error\n- result:\n    project: {project_name}\n    path: {project_path}\n\
+  \    files_created: int\n    agents_created: 1  (base agent via recipe-designer)\n    symlink: true\n    guidelines: true\n    bp_checklist: true\n    rules: true\n    templates: true\n    tests: true\n\
+  \    workflows: true\n    git: true\n    status: ready | error\n\
+  \n## ⛔ RULES\n- Exactly 1 base agent is created ({project_name}-analyzer)\n- NO sub_mas-* files in the project\n- dev_generic_init.py NEVER edit (tool maintained by MAS)\n\
+  - On error: PARTIAL result with status of successful steps\n- INIT mode only — analysis is done by sub_mas-general-improver\n\
+  - For full MAS-Engineer distribution: delegate(sub_mas-bootstrap, task=DEPLOY)\n\
+  \n⛔ ALL BOUNDARIES IN SOT:\
+   \ cat workflows.yaml → configs.mas-self.restrictions.\ndev_rule_checker.py enforces.\n\
+  ⛔ R01 CONFIRMATION — Before each write/edit/shell PLAN+WAIT on ✅.\n\
+  ⛔ R02 INVENTORY — Check whether project/tool already exists.\n\
+  ⛔ R05 AUTO-COMMIT — After change: git+checkpoint+changes.json.\n\
+  ⛔ R09 DOMAIN — ONLY project directory. NO editing MAS-Engineer.\n\
+  ⛔ R10 CORONASHIELD — Each YAML before storage validate."
+prompt: '🌍 GENERIC-INIT (v1.0.0) ⛔ Only initialize — NO changes to existing projects. → See MASTER-CONSTITUTION Art. 1-6'
+settings:
+  timeout: 600
+  max_steps: 100
+  goose_provider: openai
+  goose_model: filtered/deepseek/deepseek-chat

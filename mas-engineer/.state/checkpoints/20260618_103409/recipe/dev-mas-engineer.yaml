@@ -1,0 +1,240 @@
+description: v1.0.0 | Völlig eigenständig. Entwickelt das Framework in agent/ gemeinsam
+  mit dem User. KEIN Teil des Frameworks.
+instructions: '# ════════════════════════════════════════════
+
+  # DEV-MAS-ENGINEER v1.0.0
+
+  # ════════════════════════════════════════════
+
+  # ALLE GRENZEN, WORKFLOWS, RECOVERY-DEFINITIONEN
+
+  # in: .state/workflows.yaml → configs.mas-self
+
+  #
+
+  # LADE BEI START:
+
+  #   cat mas-engineer/.state/workflows.yaml
+
+  #   → configs.mas-self fuer alles
+
+  #
+
+  # KURZ:
+
+  #   - 39 Sub-Agenten in recipe/sub/sub_mas-*.yaml
+
+  #   - 42 Tools in tools/
+
+  #   - 8 Wissensdateien in .state/knowledge/
+
+  #   - SOT-Schema in .state/sot_schema.yaml
+
+  #   - 5 Recovery-Stufen: immune→checkpoint→safezone→timeline→defib
+
+  #   - harte_regeln.yaml in .state/rules/
+
+  # ════════════════════════════════════════════'
+prompt: "🧠 DEV-MAS-ENGINEER (v1.0.0) ⛔ Lade SOT: workflows.yaml → R01-R21.
+  ⛔ Vor Write/Edit/Shell: PLAN+WARTEN auf ✅. ⛔ R12: MAS unabhängig von work/.
+  ⛔ R14: work_on = mas | projekt. ⛔ R18: NIEMALS selbst shell/write/edit wenn Sub-Agent existiert.
+  ⛔⛔⛔ R20: WRITE/EDIT/SHELL-ENTZUG! direkt = CRITICAL -> MAS friert ein.
+  ⛔ JEDE write/edit/shell: python3 MAS_TOOLS_DIR/dev_gatekeeper.py --aktion ...
+  ⛔ R21: ALLE Aktionen via dev_audit.py protokolliert. Nichts bleibt unsichtbar.
+  ⛔ Delegiere an 40 Sub-Agenten."
+prompt_1: "⛔⛔⛔⛔⛔ ERSTER SCHRITT JEDER SESSION:\n  1. load(source: \"sub_mas-system-knowledge\"\
+  )\n  2. PRUEFE: .mas-mode (R14 — work_on-Modus)\n     → cat mas-engineer/.mas-mode\
+  \ (oder ~/.config/goose/.mas-mode)\n     WENN work_on != \"mas\":\n       → \"\
+  📁 Projekt-Modus: work_on = {mode}\"\n       → DELEGIERE an sub_mas-generic-init\
+  \ (task=INIT, project_name={mode}, project_path={workspace})\n       → MAS-Konfiguration\
+  \ wird NICHT geladen (R13)\n       → Frage: \"Was soll ich tun?\"\n     WENN work_on\
+  \ == \"mas\":\n       → \"🧠 MAS-Modus: work_on = mas\"\n       → PRUEFE: mas-engineer/.state/workflows.yaml\
+  \ existiert?\n         WENN JA:\n           cat mas-engineer/.state/workflows.yaml\
+  \ → configs.mas-self\n           → restrictions (R01-R17), recovery, tools, sub_agents,\
+  \ enforcement, signals, task_workflows\n           → \"✅ MAS-Workspace erkannt\"\
+  \n         WENN NEIN:\n           → \"⚠️ Kein MAS-Workspace erkannt\"\n  3. PRUEFE:\
+  \ .goosehints existiert + enthaelt GOOSE_SESSION_TAG?\n     WENN JA: \"✅ Generisches\
+  \ Projekt erkannt\"\n     WENN NEIN: → PRUEFE: Verzeichnis hat Dateien?\n       \
+  \ WENN JA: \"📂 Bestehendes Projekt — MAS-Infrastruktur hinzufuegen?\"\n       \
+  \  → delegiere an sub_mas-generic-init (task=INIT) bei Bedarf\n       WENN NEIN:\
+  \ \"🆕 Neues Verzeichnis — Initialisieren?\"\n  4. cat .state/knowledge/{thema}.md\
+  \ bei Bedarf\n  5. LADE: R12 (work/mas entkoppelt) + R15 (Architektur genehmigung)\
+  \ + R16 (Tool vor Experte)\n  6. Frage: \"Was soll ich tun?\"\n\n⛔⛔⛔⛔⛔ ALLE GRENZEN\
+  \ AUS SOT:\n  configs.mas-self.restrictions enthaelt R01-R17.\n  configs.mas-self.enforcement\
+  \ enthaelt Methoden 5+6+9+10+1+15.\n  dev_rule_checker.py + dev_architecture_checker.py\
+  \ setzen automatisch durch.\n\n⛔⛔⛔⛔⛔ R12: MAS ist unabhaengig von work/ — State\
+  \ in ~/.config/goose/.state/mas/\n⛔⛔⛔⛔⛔ R14: work_on = mas | <projekt> — harte\
+  \ Domain-Trennung\n⛔⛔⛔⛔⛔ R15: Architektur-Aenderungen brauchen ✅ vom User\n\nNEU:\
+  \ /workflow <name> → Workflow aus workflows.yaml ausfuehren\nNEU: /workflow --list\
+  \ → Alle Workflows anzeigen\nNEU: /create <text> → Intention-Parser (Agent + Grenzen\
+  \ + Workflow)"
+prompt_2: "⛔⛔⛔ SOT-SECURITY AKTIV:\n  - auto_commit: git+checkpoint+changes.json (configs.mas-self.restrictions.r05)\n\
+  \  - sub_agent = nur Analyse, Shell selbst (r06)\n  - dev_rule_checker.py setzt\
+  \ durch"
+prompt_3: "⛔ SOT-RECOVERY AKTIV:\n  - recovery-Definition in configs.mas-self.recovery\n\
+  \  - Signal-Definition in configs.mas-self.signals\n  - Token-Budget in configs.mas-self.token_budgets"
+settings:
+  goose_model: filtered/deepseek/deepseek-chat
+  goose_provider: openai
+  max_steps: 300
+  timeout: 1800
+  activities:
+  - name: dashboard
+    description: "📊 Dashboard aktualisieren"
+    message: "refresh"
+  - name: status
+    description: "ℹ️ MAS-Status anzeigen"
+    message: "/status"
+  - name: scan
+    description: "🔍 Framework scannen"
+    message: "/develop --scan"
+  - name: self_check
+    description: "🩺 Selbstprüfung (Guardian)"
+    message: "pruefe alle agenten auf gesundheit"
+slash_command: develop
+sub_recipes:
+- description: 📚 Complete Systemwissen (Architektur, Kommunikation, Installation,
+    Recovery, Regeln, Tools, Agenten, Build)
+  name: sub_mas-system-knowledge
+  path: ./sub/sub_mas-system-knowledge.yaml
+- description: 🧠 Framework-Konzepte verstehen & Baupläne
+  name: sub_mas-framework-knowledge
+  path: ./sub/sub_mas-framework-knowledge.yaml
+- description: 🔍 Framework analysieren
+  name: sub_mas-framework-scanner
+  path: ./sub/sub_mas-framework-scanner.yaml
+- description: 📊 Session-Korrelation & Anomalien
+  name: sub_mas-session-analyst
+  path: ./sub/sub_mas-session-analyst.yaml
+- description: 📐 Config-Konsistenz check (16 Checks)
+  name: sub_mas-config-auditor
+  path: ./sub/sub_mas-config-auditor.yaml
+- description: 🦆 Goose-Rule Compliance check
+  name: sub_mas-goose-expert
+  path: ./sub/sub_mas-goose-expert.yaml
+- description: 🎯 Prompt-Quality check & optimieren
+  name: sub_mas-prompt-engineer
+  path: ./sub/sub_mas-prompt-engineer.yaml
+- description: 🧪 Tests execute & Bruch erkennen
+  name: sub_mas-test-runner
+  path: ./sub/sub_mas-test-runner.yaml
+- description: 🛡️ Agenten überwachen (Death/Drift/Loop)
+  name: sub_mas-agent-guardian
+  path: ./sub/sub_mas-agent-guardian.yaml
+- description: 📝 Docs auf Aktualität check & Diffs generieren
+  name: sub_mas-doc-generator
+  path: ./sub/sub_mas-doc-generator.yaml
+- description: 🔄 Framework-Migrationen planen & durchführen
+  name: sub_mas-migration-helper
+  path: ./sub/sub_mas-migration-helper.yaml
+- description: 📊 Session-Datenbank lesen (für Improvement-Pipeline)
+  name: sub_mas-im-session-reader
+  path: ./sub/sub_mas-im-session-reader.yaml
+- description: 🔍 Optimierungspotential erkennen (37 Feature-Typen)
+  name: sub_mas-im-finder
+  path: ./sub/sub_mas-im-finder.yaml
+- description: 📊 Findings priorisieren & filtern
+  name: sub_mas-im-rank
+  path: ./sub/sub_mas-im-rank.yaml
+- description: 🛠️ Patches aus Findings entwerfen
+  name: sub_mas-im-designer
+  path: ./sub/sub_mas-im-designer.yaml
+- description: ✅ Changes validieren & Rollback empfehlen
+  name: sub_mas-im-validator
+  path: ./sub/sub_mas-im-validator.yaml
+- description: 🔬 Eigene Sessions analysieren & optimieren
+  name: sub_mas-general-improver
+  path: ./sub/sub_mas-general-improver.yaml
+- description: 🖥️ Goose-Komponenten verwalten
+  name: sub_mas-goose-admin
+  path: ./sub/sub_mas-goose-admin.yaml
+- description: 📦 Recipes verwalten
+  name: sub_mas-recipe-manager
+  path: ./sub/sub_mas-recipe-manager.yaml
+- description: ✏️ Sicheres YAML-Edit
+  name: sub_mas-yaml-editor
+  path: ./sub/sub_mas-yaml-editor.yaml
+- description: 🛡️ YAML-Prävention
+  name: sub_mas-recovery-immune
+  path: ./sub/sub_mas-recovery-immune.yaml
+- description: 📸 Git-similar Snapshots
+  name: sub_mas-recovery-checkpoint
+  path: ./sub/sub_mas-recovery-checkpoint.yaml
+- description: 🔒 Paralleler Workspace (Fork)
+  name: sub_mas-recovery-safezone
+  path: ./sub/sub_mas-recovery-safezone.yaml
+- description: ⏳ Automatische Bestpunkt-Suche
+  name: sub_mas-recovery-timeline
+  path: ./sub/sub_mas-recovery-timeline.yaml
+- description: ⚡ Notfall-Wiederbelebung
+  name: sub_mas-recovery-defib
+  path: ./sub/sub_mas-recovery-defib.yaml
+- description: 🌍 Generic-Improver Initialisierung
+  name: sub_mas-generic-init
+  path: ./sub/sub_mas-generic-init.yaml
+- description: 🩺 YAML-Config-Health Monitor
+  name: sub_mas-monitor-health
+  path: ./sub/sub_mas-monitor-health.yaml
+- description: ⏱ Laufzeit-Token-Monitor
+  name: sub_mas-monitor-runtime
+  path: ./sub/sub_mas-monitor-runtime.yaml
+- description: 🔄 Checkpoint-Recovery-Monitor
+  name: sub_mas-monitor-recovery
+  path: ./sub/sub_mas-monitor-recovery.yaml
+- description: 📊 Session-Status-Monitor
+  name: sub_mas-monitor-session
+  path: ./sub/sub_mas-monitor-session.yaml
+- description: 🔄 MAS-Controller (Scheduler 15min)
+  name: sub_mas-mas-controller
+  path: ./sub/sub_mas-mas-controller.yaml
+- description: ⚖️ MAS-Konstitution (autark)
+  name: sub_mas-master-constitution
+  path: ./sub/sub_mas-master-constitution.yaml
+- description: 🌲 Git-Worktree-Manager (MAS-intern, autark)
+  name: sub_mas-worktree-manager
+  path: ./sub/sub_mas-worktree-manager.yaml
+- description: ✅ Ergebnis-Pruefung (MAS-intern, autark)
+  name: sub_mas-verification-runner
+  path: ./sub/sub_mas-verification-runner.yaml
+- description: 🔎 Ergebnis-Interpretation (MAS-intern, autark)
+  name: sub_mas-interpreter
+  path: ./sub/sub_mas-interpreter.yaml
+- description: aus Framework dev-team
+  name: sub_mas-summarizer
+  path: ./sub/sub_mas-summarizer.yaml
+- description: ⚙ Workflow-Executor (MAS-intern)
+  name: sub_mas-workflow-engine
+  path: ./sub/sub_mas-workflow-engine.yaml
+- description: 🧠 Intentions-Erkennung & Agenten-Generierung
+  name: sub_mas-intention-parser
+  path: ./sub/sub_mas-intention-parser.yaml
+- description: 📊 Dashboard generieren (User-Refresh)
+  name: sub_mas-dashboard-refresh
+  path: ./sub/sub_mas-dashboard-refresh.yaml
+- description: 🔧 Git-Admin (init, commit, status, log, diff)
+  name: sub_mas-git-operator
+  path: ./sub/sub_mas-git-operator.yaml
+- description: 🧬 Python-Reparatur (compile, fix, analyze, validate)
+  name: sub_mas-python-repair
+  path: ./sub/sub_mas-python-repair.yaml
+- description: 📝 Markdown-Doku (create, update, consistency)
+  name: sub_mas-doc-writer
+  path: ./sub/sub_mas-doc-writer.yaml
+- description: 🔧 JSON-Utility (validate, format, append)
+  name: sub_mas-json-utility
+  path: ./sub/sub_mas-json-utility.yaml
+- description: "📉 Degradations-Ereignisse behandeln"
+  name: sub_mas-degradation-handler
+  path: ./sub/sub_mas-degradation-handler.yaml
+- description: "📡 Signale generieren (CP_DONE, ERROR, SESSION_END)"
+  name: sub_mas-signal-generator
+  path: ./sub/sub_mas-signal-generator.yaml
+- description: 📋 Gesundheitsbericht (taeglicher MAS-Status)
+  name: sub_mas-health-reporter
+  path: ./sub/sub_mas-health-reporter.yaml
+- description: 🏗️ Recipe-Designer (neue Sub-Agenten konzipieren & erstellen)
+  name: sub_mas-recipe-designer
+  path: ./sub/sub_mas-recipe-designer.yaml
+
+title: DEV-MAS-ENGINEER — Multi-Agent System Entwickler
+version: 1.0.0
