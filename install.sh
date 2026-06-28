@@ -218,10 +218,10 @@ install_mas() {
     
     # 4. .mas-mode setzen
     if [ "$DRY_RUN" = true ]; then
-        dry ".mas-mode = MAS setzen"
+        dry ".mas-mode = framework setzen"
     else
-        echo "MAS" > "$INSTALL_DIR/.mas-mode" 2>/dev/null || true
-        ok ".mas-mode = MAS"
+        echo "framework" > "$INSTALL_DIR/.mas-mode" 2>/dev/null || true
+        ok ".mas-mode = framework"
     fi
     
     # 5. Zusammenfassung
