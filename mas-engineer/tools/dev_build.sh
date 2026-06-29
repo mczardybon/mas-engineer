@@ -203,7 +203,7 @@ build_project_zip() {
 
 main() {
     parse_args "$@"
-    [ -z "$VERSION" ] && VERSION="2.42.0"
+    [ -z "$VERSION" ] && VERSION="1.0.0"
 
     echo ""
     echo -e "${BOLD}╔══════════════════════════════════════════════╗${NC}"

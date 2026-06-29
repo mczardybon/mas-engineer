@@ -1,7 +1,6 @@
 # MAS-Engineer
 
 **Version:** v1.0.0  
-**Framework Version:** v2.42.0  
 **Sub-Agents:** 48  
 **Tools:** 50
 

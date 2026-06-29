@@ -2,7 +2,7 @@
 
 ## ZIP-Bau (dev_build.sh)
 cd ~/agent_test/work && bash mas-engineer/tools/dev_build.sh
-→ dist/mas-framework-v2.42.0_TIMESTAMP.zip (287 files, ~700 KB)
+→ dist/mas-framework-v1.0.0_TIMESTAMP.zip (287 files, ~700 KB)
 
 ### Was passiert:
 1. __pycache__ + .backups + .state/checkpoints will vor Build deleted

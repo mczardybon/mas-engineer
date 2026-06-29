@@ -168,7 +168,7 @@ The 5-stage recovery activates automatically or on command:
 **Dialog:**
 
 ```
-You: "Migrate from v2.42.0 to v2.43.0"
+You: "Migrate from v1.0.0 to v2.43.0"
 Engineer: "Analyzing breaking changes..."
 
 [delegates to sub_mas-migration-helper]

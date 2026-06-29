@@ -12,7 +12,7 @@
            │ delegate()
            ▼
 ┌──────────────────────────────────────────────────┐
-│  FRAMEWORK v2.42.0                               │
+│  FRAMEWORK v1.0.0                               │
 │  - 4 Core-Recipes (executor, planner, ...)       │
 │  - 47 Specialists (sicherheit, backend, ...)     │
 │  - 44 Sub-Agents (sub_dispatcher, ...)          │

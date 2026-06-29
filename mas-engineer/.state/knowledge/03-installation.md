@@ -1,7 +1,7 @@
 # Installation — ZIP-Struktur und Zielorte
 
 ## ZIP-Struktur (1:1 Workspace)
-mas-framework-v2.42.0_TIMESTAMP.zip
+mas-framework-v1.0.0_TIMESTAMP.zip
 ├── framework/
 │   └── dev-team/
 │       ├── config.yaml
