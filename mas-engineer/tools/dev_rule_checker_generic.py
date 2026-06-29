@@ -5,20 +5,20 @@ Will VOR jeder write/edit/shell Aktion aufgerufen.
 Blocked Aktionen bei Hardening 5 ohne Confirmation.
 Exit-Code 0 = OK, Exit-Code 1 = BLOCKED
 
-Generic: No MAS-Dependencies. Loads User-Rulen aus .state/rules/rulen.yaml.
+Generic: No MAS-Dependencies. Loads User-Rulen aus .state/rules/rules.yaml.
 """
 import sys, os, yaml, time, json, argparse
 
-REGEL_DATEI = ".state/rules/rulen.yaml"
+REGEL_DATEI = ".state/rules/rules.yaml"
 CONFIRMATION_DATEI = ".state/.last_confirmation"
 
-def load_rulen():
+def load_rules():
     if not os.path.exists(REGEL_DATEI):
         return []
     try:
         with open(REGEL_DATEI) as f:
             data = yaml.safe_load(f)
-        return data.get("rulen", [])
+        return data.get("rules", [])
     except: return []
 
 def check_confirmation():
@@ -73,8 +73,8 @@ def _get_project_profile(action=""):
     return "large", total
 
 
-def _check_profile_rule(rule_id, haerte):
-    """Checks ob Rule for aktuelles Profil active ist."""
+def _check_profile_rule(rule_id, hardness):
+    """Check if rule is active for current profile."""
     profile, total = _get_project_profile()
     # small: only R01+R09
     if profile == "small":
@@ -85,24 +85,24 @@ def _check_profile_rule(rule_id, haerte):
     # large: all
     return True
 
-def check_rule(rule, aktion=""):
+def check_rule(rule, action=""):
     name = rule.get("name", "")
-    haerte = rule.get("haerte", 1)
+    hardness = rule.get("hardness", 1)
     block = rule.get("block", False)
     rule_id = rule.get("id", "")
-    akt = aktion.lower()
+    akt = action.lower()
     
-    # Scale-Profile: Only aktive Rulen checkn
-    if not _check_profile_rule(rule_id, haerte):
-        return {"verletzt": False, "rule": name, "haerte": haerte, "aktion": "SKIPPED (profil)"}
+    # Scale-Profile: Only check active rules
+    if not _check_profile_rule(rule_id, hardness):
+        return {"violation": False, "rule": name, "hardness": hardness, "action": "SKIPPED (profile)"}
     
-    # R01: CONFIRMATIONSPFLICHT (Generic: always if block=True)
+    # R01: CONFIRMATION_REQUIRED (Generic: always if block=True)
     if rule_id == "R01" and block:
         if not check_confirmation():
-            return {"verletzt": True, "rule": name, "haerte": haerte,
-                    "detail": "No Confirmation in den letzten 5 Minuten", "aktion": "BLOCKED"}
+            return {"violation": True, "rule": name, "hardness": hardness,
+                    "detail": "No confirmation in the last 5 minutes", "action": "BLOCKED"}
     
-    # R02: BESTAND_PRUFUNG  
+    # R02: INVENTORY_CHECK  
     if rule_id == "R02":
         import os as _os, yaml as _yaml
         path = None
@@ -115,7 +115,7 @@ def check_rule(rule, aktion=""):
             cwd = _os.getcwd()
             full_path = _os.path.join(cwd, path) if not _os.path.isabs(path) else path
             
-            # Check special_agents.yaml (User-Projekt)
+            # Check special_agents.yaml (User project)
             special_path = _os.path.join(cwd, ".state/agents/special_agents.yaml")
             if _os.path.exists(special_path):
                 with open(special_path) as _f:
@@ -124,29 +124,29 @@ def check_rule(rule, aktion=""):
                     fname = _os.path.basename(path)
                     base_name = fname.replace(".yaml", "")
                     if base_name in special["agents"]:
-                        return {"verletzt": False, "rule": name, "haerte": haerte,
-                                "detail": f"Spezial-Agent: {base_name}", "aktion": "OK"}
+                        return {"violation": False, "rule": name, "hardness": hardness,
+                                "detail": f"Special agent: {base_name}", "action": "OK"}
             
             if _os.path.exists(full_path) and "force" not in akt:
-                return {"verletzt": True, "rule": name, "haerte": haerte,
-                        "detail": f"Target exists already: {path}", "aktion": "BLOCKED"}
-    rulen = load_rulen()
-    ergebnisse = [check_rule(r, aktion) for r in rulen]
-    blocked = [r for r in ergebnisse if r.get("aktion") == "BLOCKED"]
-    print(f"=== ⛔ REGEL-CHECK (Generic) ===")
-    print(f"Aktion: {aktion or '(no)'}")
-    print(f"Gechecks: {len(ergebnisse)} Rulen")
-    for r in ergebnisse:
-        if r.get("verletzt"):
-            h = r.get("haerte", 1)
+                return {"violation": True, "rule": name, "hardness": hardness,
+                        "detail": f"Target already exists: {path}", "action": "BLOCKED"}
+    rules = load_rules()
+    results = [check_rule(r, action) for r in rules]
+    blocked = [r for r in results if r.get("action") == "BLOCKED"]
+    print(f"=== ⛔ RULE CHECK (Generic) ===")
+    print(f"Action: {action or '(none)'}")
+    print(f"Checked: {len(results)} rules")
+    for r in results:
+        if r.get("violation"):
+            h = r.get("hardness", 1)
             sym = "⛔⛔⛔⛔⛔" if h >= 5 else "⛔⛔⛔" if h >= 4 else "⛔"
-            print(f"{sym} {r['rule']}: {r['aktion']} — {r.get('detail','')}")
+            print(f"{sym} {r['rule']}: {r['action']} — {r.get('detail','')}")
         else:
             print(f"  ✅ {r['rule']}: OK")
     if blocked:
-        print(f"\n⛔ {len(blocked)} BLOCKED — Aktion gestoppt")
+        print(f"\n⛔ {len(blocked)} BLOCKED — Action stopped")
         return False
-    print(f"\n✅ All Rulen eingehalten — Aktion approved")
+    print(f"\n✅ All rules followed — Action approved")
     return True
 
 
@@ -156,16 +156,16 @@ def cmd_health():
     status = {"status": "healthy", "checks": [], "timestamp": _t.strftime("%Y-%m-%dT%H:%M:%S")}
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
-    reg_path = os.path.join(base, ".state/rules/rulen.yaml")
+    reg_path = os.path.join(base, ".state/rules/rules.yaml")
     if os.path.exists(reg_path):
-        status["checks"].append({"name": "rulen_exists", "ok": True})
+        status["checks"].append({"name": "rules_exists", "ok": True})
         try:
             yaml.safe_load(open(reg_path))
-            status["checks"].append({"name": "rulen_valid", "ok": True})
+            status["checks"].append({"name": "rules_valid", "ok": True})
         except:
-            status["checks"].append({"name": "rulen_valid", "ok": False})
+            status["checks"].append({"name": "rules_valid", "ok": False})
     else:
-        status["checks"].append({"name": "rulen_exists", "ok": False})
+        status["checks"].append({"name": "rules_exists", "ok": False})
     
     conf_path = os.path.join(base, ".state/.last_confirmation")
     if os.path.exists(conf_path):
@@ -206,13 +206,13 @@ def _run_main_safe():
 
 
 def cmd_undo_last_rule():
-    """Removed die zuletzt generierte Rule aus rulen.yaml."""
+    """Remove the last auto-generated rule from rules.yaml."""
     import json as _j, shutil as _sh, time as _t
     
-    # Read Strikes-Log
+    # Read strikes log
     strike_file = os.path.expanduser("~/.config/goose/.rule_strikes.json")
     if not os.path.exists(strike_file):
-        print("❌ No generierten Rulen found")
+        print("❌ No generated rules found")
         return 1
     
     with open(strike_file) as f:
@@ -220,41 +220,41 @@ def cmd_undo_last_rule():
     
     generated = strikes.get("generated_rules", [])
     if not generated:
-        print("❌ No generierten Rulen im Log")
+        print("❌ No generated rules in log")
         return 1
     
     last = generated[-1]
     rid = last["id"]
-    atype = last.get("action_type", "unbekannt")
+    atype = last.get("action_type", "unknown")
     
-    # Check ob Backup exists
-    reg_path = ".state/rules/rulen.yaml"
+    # Check if backup exists
+    reg_path = ".state/rules/rules.yaml"
     backup_path = reg_path + ".bak.auto"
     
     if os.path.exists(backup_path):
-        # Stelle Backup again her
+        # Restore backup
         _sh.copy2(backup_path, reg_path)
         os.remove(backup_path)
-        print(f"🔄 Backup againhergestellt — {rid} removed")
+        print(f"🔄 Backup restored — {rid} removed")
     else:
-        # Fallback: Read rulen.yaml und remove Rule manuell
+        # Fallback: read rules.yaml and remove rule manually
         import yaml
         with open(reg_path) as f:
-            data = yaml.safe_load(f) or {"version": "1.0.0", "rulen": []}
+            data = yaml.safe_load(f) or {"version": "1.0.0", "rules": []}
         
-        data["rulen"] = [r for r in data["rulen"] if r.get("id") != rid]
+        data["rules"] = [r for r in data["rules"] if r.get("id") != rid]
         with open(reg_path, 'w') as f:
             yaml.dump(data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-        print(f"🔄 Rule {rid} aus rulen.yaml removed")
+        print(f"🔄 Rule {rid} removed from rules.yaml")
     
-    # Remove aus Log
+    # Remove from log
     generated.pop()
     strikes["generated_rules"] = generated
     with open(strike_file, 'w') as f:
         _j.dump(strikes, f, indent=2)
     
     print(f"  Reason: {atype}")
-    print(f"  Still im Log: {len(generated)} Rulen")
+    print(f"  Still in log: {len(generated)} rules")
     return 0
 
 def main():
@@ -286,25 +286,25 @@ def main():
             sys.exit(1)
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", help="Rule-ID")
-    parser.add_argument("--action", default="", help="Geplante Aktion")
-    parser.add_argument("--all", action="store_true", help="All Rulen")
+    parser.add_argument("--action", default="", help="Planned action")
+    parser.add_argument("--all", action="store_true", help="All rules")
     parser.add_argument("--confirm", action="store_true", help="Confirmation save")
     args = parser.parse_args()
 
     if args.confirm:
         with open(CONFIRMATION_DATEI, "w") as f:
             f.write(str(int(time.time())))
-        print("✅ Confirmation saved (5 Minuten gueltig)")
+        print("✅ Confirmation saved (5 minutes valid)")
         sys.exit(0)
 
     if args.action:
         check_strikes(args.action)
 
     if args.check:
-        for r in load_rulen():
+        for r in load_rules():
             if r.get("id") == args.check:
                 e = check_rule(r, args.action)
-                if e.get("verletzt"):
+                if e.get("violation"):
                     print(f"⛔ {e['rule']}: {e['detail']}"); sys.exit(1)
                 print(f"✅ {e['rule']}: OK"); sys.exit(0)
         print(f"❌ Rule '{args.check}' not found"); sys.exit(1)
@@ -318,7 +318,7 @@ def main():
 STRIKE_FILE = os.path.expanduser("~/.config/goose/.rule_strikes.json")
 
 def check_strikes(action):
-    """Zaehlt 3 gleiche Blockierungen -> automatische Rule."""
+    """Counts 3 identical blockages -> auto rule."""
     if not os.path.exists(STRIKE_FILE):
         strikes = {}
         with open(STRIKE_FILE, 'w') as f:
@@ -330,20 +330,20 @@ def check_strikes(action):
     except:
         strikes = {}
     
-    aktion_type = analyse_action_type(action)
-    if not aktion_type:
+    action_type = analyse_action_type(action)
+    if not action_type:
         return
     
-    strikes[aktion_type] = strikes.get(aktion_type, 0) + 1
+    strikes[action_type] = strikes.get(action_type, 0) + 1
     with open(STRIKE_FILE, 'w') as f:
         json.dump(strikes, f)
     
-    if strikes[aktion_type] >= 3:
-        generiere_rule(aktion_type)
-        del strikes[aktion_type]
+    if strikes[action_type] >= 3:
+        generiere_rule(action_type)
+        del strikes[action_type]
         with open(STRIKE_FILE, 'w') as f:
             json.dump(strikes, f)
-        print(f"  ✅ Auto-Rule generates fuer: {aktion_type}")
+        print(f"  ✅ Auto-Rule generated for: {action_type}")
 
 def analyse_action_type(action):
     act = action.lower()
@@ -357,66 +357,66 @@ def analyse_action_type(action):
         return "temp_files"
     return None
 
-def generiere_rule(aktion_type):
-    # Rule-Snapshot: Backup vor Change
-    reg_path = ".state/rules/rulen.yaml"
+def generiere_rule(action_type):
+    # Rule snapshot: backup before change
+    reg_path = ".state/rules/rules.yaml"
     if os.path.exists(reg_path):
         import shutil as _sh
         _sh.copy2(reg_path, reg_path + ".bak.auto")
     
     rule_map = {
-        "system_config": ("R-GEN-001", "System-Configuration blocked", 5, "Write NEVER in /etc/"),
-        "forbidden_import": ("R-GEN-002", "Import-Kontrolle verschaerft", 5, "Importiere NEVER os/subprocess"),
-        "network_import": ("R-GEN-003", "Netzwerk-Import blocked", 5, "No Netzwerk-Imports erlaubt"),
-        "temp_files": ("R-GEN-004", "Temp-files blocked", 4, "Temp-files only mit Confirmation"),
+        "system_config": ("R-GEN-001", "System configuration blocked", 5, "Write NEVER in /etc/"),
+        "forbidden_import": ("R-GEN-002", "Import control tightened", 5, "NEVER import os/subprocess"),
+        "network_import": ("R-GEN-003", "Network import blocked", 5, "No network imports allowed"),
+        "temp_files": ("R-GEN-004", "Temp files blocked", 4, "Temp files only with confirmation"),
     }
-    if aktion_type not in rule_map:
+    if action_type not in rule_map:
         return
     
-    rid, name, haerte, text = rule_map[aktion_type]
+    rid, name, hardness, text = rule_map[action_type]
     
-    # Read rulen.yaml
-    reg_path = ".state/rules/rulen.yaml"
+    # Read rules.yaml
+    reg_path = ".state/rules/rules.yaml"
     if not os.path.exists(reg_path):
         return
     
     with open(reg_path) as f:
-        data = yaml.safe_load(f) or {"version": "1.0.0", "rulen": []}
+        data = yaml.safe_load(f) or {"version": "1.0.0", "rules": []}
     
-    # Check ob Rule already exists
-    existing = [r for r in data.get("rulen", []) if r.get("id") == rid]
+    # Check if rule already exists
+    existing = [r for r in data.get("rules", []) if r.get("id") == rid]
     if existing:
-        # Erhoehe Haerte
-        for r in data["rulen"]:
+        # Increase hardness
+        for r in data["rules"]:
             if r["id"] == rid:
-                r["haerte"] = min(r.get("haerte", 3) + 1, 5)
+                r["hardness"] = min(r.get("hardness", 3) + 1, 5)
                 break
-        print(f"  ⬆️  {rid}: Haerte increased auf {min(existing[0].get('haerte',3)+1,5)}")
+        print(f"  ⬆️  {rid}: Hardness increased to {min(existing[0].get('hardness',3)+1,5)}")
     else:
-        data["rulen"].append({
-            "id": rid, "name": name, "haerte": haerte,
+        data["rules"].append({
+            "id": rid, "name": name, "hardness": hardness,
             "text": f"⛔⛔⛔⛔⛔ {name}",
             "prompt_text": text,
             "block": True,
-            "check": f"python3 tools/dev_rule_checker_generic.py --check {rid} --action {{aktion}}"
+            "check": f"python3 tools/dev_rule_checker_generic.py --check {rid} --action {{action}}"
         })
-        print(f"  ➕ {rid}: {name} (H={haerte})")
+        print(f"  ➕ {rid}: {name} (H={hardness})")
     
     with open(reg_path, 'w') as f:
         yaml.dump(data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
 def check_user_imports(action):
-    """Blockt gefaehrliche Imports for User-Framework."""
+    """Block dangerous imports for user framework."""
     allowed = ['json', 'yaml', 'datetime', 'os.path', 'typing', 're']
     blocked = ['os', 'subprocess', 'requests', 'socket', 'http',
                'shutil', 'glob', 'sys', 'multiprocessing', 'threading']
     
     if 'import ' not in action and 'from ' not in action:
-        return True, 'KEIN IMPORT'
+        return True, 'NO IMPORT'
     
     for imp in blocked:
         if f'import {imp}' in action or f'from {imp}' in action:
-            return False, f'IMPORT BLOCKED: {imp} ist not erlaubt'
+            return False, f'IMPORT BLOCKED: {imp} is not allowed'
     
     for w in allowed:
         if f'import {w}' in action or f'from {w}' in action:
@@ -428,12 +428,12 @@ def check_user_imports(action):
         if part.startswith('import'):
             imp = part.replace('import', '').strip()
             if imp and imp not in allowed and imp not in blocked:
-                return False, f'IMPORT NICHT IN WHITELIST: {imp}'
+                return False, f'IMPORT NOT IN WHITELIST: {imp}'
     
     return True, 'OK'
 
-def check_domain_isolation_generic(aktion):
-    """R09 for Generic: Checks ob Aktion eine fremde Domain betrifft."""
+def check_domain_isolation_generic(action):
+    """R09 for Generic: Check if action affects a foreign domain."""
     import os, yaml
     reg_path = os.path.expanduser("~/.config/goose/.active_domain")
     if not os.path.exists(reg_path):
@@ -447,15 +447,15 @@ def check_domain_isolation_generic(aktion):
     with open(registry) as f:
         reg = yaml.safe_load(f) or {}
     
-    akt = aktion.lower()
+    akt = action.lower()
     for dname, dconf in reg.get("domains", {}).items():
         if dname == active:
             continue
         dp = dconf.get("path", dname).rstrip("/").lower()
         if f"import {dname}" in akt or f"from {dname}" in akt:
-            return False, f"Generic importiert {dname} — FORBIDDEN!"
+            return False, f"Generic imports {dname} — FORBIDDEN!"
         if dp in akt and any(x in akt for x in ["write ", "edit ", "cp ", "mv ", "rm ", ">"]):
-            return False, f"Generic schreibt in {dname} — FORBIDDEN!"
+            return False, f"Generic writes to {dname} — FORBIDDEN!"
     return True, "OK"
 
 

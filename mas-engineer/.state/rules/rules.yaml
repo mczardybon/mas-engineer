@@ -1,0 +1,82 @@
+hardness_levels:
+  extreme:
+    description: Will NEVER be deleted. Blocks on violation.
+    color: 🔴
+    level: 5
+    symbol: ⛔⛔⛔⛔⛔
+    token_reserve: 800
+  normal:
+    description: Can disappear if context is full.
+    color: 🟡
+    level: 2
+    symbol: ⛔
+    token_reserve: 300
+  weak:
+    description: Optional. Only loaded when context has room.
+    color: ⚪
+    level: 1
+    symbol: ⚠️
+    token_reserve: 100
+  strong:
+    description: Stays until turn end. No block, but warning.
+    color: 🟠
+    level: 4
+    symbol: ⛔⛔⛔
+    token_reserve: 500
+last_updated: '2026-06-14T22:00:00'
+rules:
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R09 --action {aktion}
+  hardness: 5
+  id: R09
+  name: MODE_DOMAIN_COUPLING
+  prompt_text: MODE-DOMAIN-COUPLING — Mode determines domain. MAS-ONLY mas-engineer/. Framework-ONLY framework/. Generic-ONLY own domain. Imports forbidden. Read in other domain OK.
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R01 --action {aktion}
+  hardness: 5
+  id: R01
+  name: CONFIRMATION_REQUIRED
+  prompt_text: CONFIRMATION before write/edit — Show plan + WAIT for ✅
+- block: true
+  check: null
+  hardness: 5
+  id: R02
+  name: INVENTORY_CHECK
+  prompt_text: INVENTORY before new build — exists already? User ask
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R04 --action {aktion}
+  hardness: 5
+  id: R04
+  name: GENERAL_IMPROVER_PROTECTION
+  prompt_text: NEVER edit general-improver.yaml (no recursion)
+- block: true
+  check: null
+  hardness: 5
+  id: R05
+  name: AUTO_COMMIT
+  prompt_text: AUTO-COMMIT after Change — git+checkpoint+changes.json+todo
+- block: false
+  check: null
+  hardness: 4
+  id: R06
+  name: SUB_AGENT_CONTAINMENT
+  prompt_text: Sub-Agent = ONLY analysis — Execute shell yourself
+- block: false
+  check: null
+  hardness: 2
+  id: R07
+  name: SIGNAL_CP_DONE
+  prompt_text: CP_DONE after Checkpoint
+- block: false
+  check: null
+  hardness: 2
+  id: R08
+  name: TOKEN_BUDGET
+  prompt_text: Self-Improver max 50K — else User ask
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R10 --action {aktion}
+  hardness: 5
+  id: R10
+  name: CORONASHIELD
+  prompt_text: CORONASHIELD — Every YAML must be validated via sub_mas-recovery-immune CHECK_YAML before saving
+version: 1.0.0

@@ -8,7 +8,7 @@
 #   ./install.sh              → MAS installieren (Default)
 #   ./install.sh --mas        → MAS installieren (explizit)
 #   ./install.sh --status     → Status anzeigen
-#   ./install.sh --dry-run    → Nur prüfen, nichts kopieren
+#   ./install.sh --dry-run    → Only check, don't copy
 #   ./install.sh --help       → Diese Hilfe
 # =====================================
 
@@ -55,7 +55,7 @@ error()   { echo -e "${RED}${BOLD}FEHLER${NC} $1"; ERRORS=$((ERRORS + 1)); }
 header()  { echo -e "\n${BLUE}${BOLD}━━━ $1 ━━━${NC}"; }
 dry()     { echo -e "  ${YELLOW}[DRY-RUN]${NC} $1"; }
 ok()      { echo -e "  ${GREEN}✔${NC} $1"; }
-skip()    { echo -e "  ${YELLOW}→${NC} $1 (übersprungen)"; }
+skip()    { echo -e "  ${YELLOW}→${NC} $1 (skipped)"; }
 
 validate_yaml() {
     python3 -c "import yaml, sys
@@ -97,7 +97,7 @@ copy_file() {
 
 copy_dir() {
     local src_dir="$1"; local dst_dir="$2"; local pattern="${3:-*}"; local label="${4:-}"
-    if ! [ -d "$src_dir" ]; then warn "Quelle nicht gefunden: $src_dir (übersprungen)"; return 0; fi
+    if ! [ -d "$src_dir" ]; then warn "Source not found: $src_dir (skipped)"; return 0; fi
     if [ "$DRY_RUN" = true ]; then
         local count; count=$(find "$src_dir" -maxdepth 1 -name "$pattern" -type f 2>/dev/null | wc -l)
         dry "$label $count Dateien → $dst_dir/"; COPIED=$((COPIED + count)); return
@@ -133,7 +133,7 @@ validate_all() {
     for f in "$SRC_MAS_TOOLS"/dev_*.py; do [ -f "$f" ] && py_count=$((py_count+1)) && validate_python "$f" && py_ok=$((py_ok+1)) || errors=$((errors+1)); done
     for f in "$SRC_MAS_TOOLS"/*.sh; do [ -f "$f" ] && sh_count=$((sh_count+1)); done
     ok "$py_ok/$py_count Python-Tools valide"
-    ok "$sh_count Shell-Tools (Syntax geprüft)"
+    ok "$sh_count shell tools (syntax checked)"
     
     # SOT-Workflows
     if [ -f "$SRC_MAS_STATE/workflows.yaml" ]; then
@@ -144,7 +144,7 @@ validate_all() {
         error "$errors Validierungsfehler — Installation nicht sicher!"
         return 1
     fi
-    info "Alle Prüfungen bestanden. Installation kann fortfahren."
+    info "All checks passed. Installation can proceed."
     return 0
 }
 
@@ -165,7 +165,7 @@ install_mas() {
     backup "$DST_MAS_RECIPE"
     backup "$DST_MAS_TOOLS"
     backup "$DST_MAS_DOCS"
-    [ "$DRY_RUN" = false ] && [ -d "$HOME/.config/goose/.backups/${TIMESTAMP}_pre_install" ] && ok "Backup erstellt" || dry "Backup würde erstellt"
+    [ "$DRY_RUN" = false ] && [ -d "$HOME/.config/goose/.backups/${TIMESTAMP}_pre_install" ] && ok "Backup created" || dry "Backup would be created"
     echo ""
     
     # 3. Kopieren
@@ -226,12 +226,12 @@ install_mas() {
     
     # 5. Zusammenfassung
     if [ "$DRY_RUN" = false ]; then
-        info "Installation abgeschlossen: $COPIED kopiert, $SKIPPED übersprungen"
+        info "Installation complete: $COPIED copied, $SKIPPED skipped"
         echo ""
         echo -e "${YELLOW}${BOLD}⚠️  NEUSTART ERFORDERLICH${NC}"
         echo -e "${YELLOW}MAS wurde installiert. Starte Goose neu.${NC}"
         echo ""
-        echo "Danach: ./update.sh --mas für Updates"
+        echo "Then: ./update.sh --mas for updates"
     fi
 }
 
@@ -274,7 +274,7 @@ show_help() {
     echo -e "${BOLD}Nutzung:${NC}"
     echo "  ./install.sh              → Installieren (Default)"
     echo "  ./install.sh --status     → Status anzeigen"
-    echo "  ./install.sh --dry-run    → Nur prüfen, nichts kopieren"
+    echo "  ./install.sh --dry-run    → Only check, don't copy"
     echo "  ./install.sh --help       → Diese Hilfe"
     echo ""
 }

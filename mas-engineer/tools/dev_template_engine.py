@@ -22,8 +22,8 @@ def load_best_practices(path):
     return {}
 
 def extract_rules(bp, kategorie, max_rules=3):
-    rulen = bp.get(kategorie, [])
-    return [r.get('rule', '?') for r in rulen[:max_rules]]
+    rules = bp.get(kategorie, [])
+    return [r.get('rule', '?') for r in rules[:max_rules]]
 
 def generate_yaml(name, emoji, task, output, workspace, mode='mas', auto_commit=False):
     bp = load_best_practices(workspace)

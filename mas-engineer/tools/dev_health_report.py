@@ -9,11 +9,11 @@ def calculate_score(target):
     checks = []
     
     # 1. Rules-Aktivierung (R01-R09)
-    reg_path = os.path.join(target, '.state/rules/rulen.yaml')
+    reg_path = os.path.join(target, '.state/rules/rules.yaml')
     if os.path.exists(reg_path):
         try:
             data = yaml.safe_load(open(reg_path))
-            rules = data.get('rulen', [])
+            rules = data.get('rules', [])
             total = len(rules)
             active = sum(1 for r in rules if r.get('block', False) and r.get('haerte', 0) >= 3)
             checks.append({"name": "rules_active", "ok": True, "detail": f"{active}/{total}"})

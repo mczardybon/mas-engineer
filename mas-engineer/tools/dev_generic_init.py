@@ -119,7 +119,7 @@ def create_project_config(project_path, project_name, dry_run=False):
         "structure": {
             "tools": "symlink (no Kopie)",
             "agents": "selbst creates (dev_template_generator.py --create)",
-            "rules": ".state/rules/rulen.yaml",
+            "rules": ".state/rules/rules.yaml",
             "templates": "recipe/template/agent_template.yaml",
         },
     }
@@ -132,11 +132,11 @@ def create_project_config(project_path, project_name, dry_run=False):
 def create_rules(project_path, dry_run=False):
     """Kopiert leeres Rule-System — overwrites NEVER bestehende."""
     rules_dir = os.path.join(project_path, ".state", "rules")
-    rules_file = os.path.join(rules_dir, "rulen.yaml")
-    template_file = os.path.join(STATE_TEMPLATES, "user_rulen_template.yaml")
+    rules_file = os.path.join(rules_dir, "rules.yaml")
+    template_file = os.path.join(STATE_TEMPLATES, "user_rules_template.yaml")
 
     if os.path.exists(rules_file):
-        info(f"rules/rulen.yaml exists already — skipped")
+        info(f"rules.yaml exists already — skipped")
         return
 
     if not dry_run:
@@ -145,33 +145,33 @@ def create_rules(project_path, dry_run=False):
     if os.path.exists(template_file):
         if not dry_run:
             shutil.copy2(template_file, rules_file)
-        ok(f"rules/rulen.yaml (Template)")
+        ok(f"rules.yaml (Template)")
     else:
         # Fallback: eigenes Default-Rulewerk
         default_rules = {
             "version": "1.0.0",
             "rules": {
                 "R01": {
-                    "name": "CONFIRMATIONSPFLICHT",
-                    "haerte": "EXTREM-STARK",
-                    "beschreibung": "No write/edit/shell ohne User-Confirmation",
+                    "name": "CONFIRMATION_REQUIRED",
+                    "hardness": "EXTREME-STRONG",
+                    "description": "No write/edit/shell without user confirmation",
                 },
                 "R04": {
-                    "name": "REKURSIONS-SCHUTZ",
-                    "haerte": "EXTREM-STARK",
-                    "beschreibung": "Never den eigenen Agent edit",
+                    "name": "RECURSION_PROTECTION",
+                    "hardness": "EXTREME-STRONG",
+                    "description": "Never edit your own agent",
                 },
                 "R09": {
-                    "name": "DOMAENEN-TRENNUNG",
-                    "haerte": "EXTREM-STARK",
-                    "beschreibung": "Only im eigenen Projekt-Directory write",
+                    "name": "DOMAIN_SEPARATION",
+                    "hardness": "EXTREME-STRONG",
+                    "description": "Only write in own project directory",
                 },
             },
         }
         if not dry_run:
             with open(rules_file, "w") as f:
                 yaml.dump(default_rules, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
-        ok(f"rules/rulen.yaml (Default, {len(default_rules['rules'])} Rulen)")
+        ok(f"rules.yaml (Default, {len(default_rules['rules'])} rules)")
 
 
 def create_guidelines(project_path, project_name_clean, dry_run=False):
@@ -578,13 +578,13 @@ def resolve_components(comp_str):
 def copy_rules_full(project_path, dry_run=False):
     """Kopiert all MAS-Rule-files (R01-R23 + Haerte-Leveln + Responsibility-Matrix)."""
     if dry_run:
-        info("[DRY-RUN] .state/rules/: 6 files (rulen, harte_rulen, rulen_2/4/5_extrem, responsibility_matrix)")
+        info("[DRY-RUN] .state/rules/: 6 files (rulen, hard_rules, rulen_2/4/5_extrem, responsibility_matrix)")
         return
     mas_rules = os.path.join(MAS_CONFIG, "..", "mas-engineer", ".state", "rules")
     dest_rules = os.path.join(project_path, ".state", "rules")
     os.makedirs(dest_rules, exist_ok=True)
-    rule_files = ["rulen.yaml", "harte_rulen.yaml", "rulen_2_normal.yaml",
-                  "rulen_4_stark.yaml", "rulen_5_extrem.yaml", "responsibility_matrix.yaml"]
+    rule_files = ["rules.yaml", "hard_rules.yaml", "rules_2_normal.yaml",
+                  "rules_4_strong.yaml", "rules_5_extreme.yaml", "responsibility_matrix.yaml"]
     copied = 0
     for rf in rule_files:
         src = os.path.join(mas_rules, rf)

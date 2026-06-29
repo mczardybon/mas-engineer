@@ -39,11 +39,11 @@ import os, shutil
 base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 path = os.path.expanduser('$2')
 if os.path.exists(path):
-    # rulen.yaml
-    dst = path + '/rulen.yaml'
+    # rules.yaml
+    dst = path + '/rules.yaml'
     if not os.path.exists(dst):
-        shutil.copy2(base + '/.state/templates/user_rulen_template.yaml', dst)
-        print('  ✅ rulen.yaml kopiert')
+        shutil.copy2(base + '/.state/templates/user_rules_template.yaml', dst)
+        print('  ✅ rules.yaml kopiert')
     # .goosehints
     dst2 = path + '/.goosehints'
     if not os.path.exists(dst2):
@@ -65,7 +65,7 @@ if os.path.exists(path):
     subprocess.run(['python3', d + '/dev_yaml_generator.py', '--target', path], capture_output=True)
     print('  ✅ Initiale YAMLs aus SOT generates')
     print('  📋 GENERIC-HAERTUNG + SOT INSTALLIERT')
-    print('     - rulen.yaml (6 Rulen)')
+    print('     - rules.yaml (6 Rulen)')
     print('     - .goosehints (Rule-Refresh)')
     print('     - dev_rule_checker.py (Checker (--mode generic)')
     print('     - dev_yaml_generator.py (Massen-Changeen aus SOT)')

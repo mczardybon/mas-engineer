@@ -80,10 +80,10 @@ def main():
     if '--apply' in sys.argv and suggestions:
         # Add zu .state/rules/rulen.yaml hinzu
         import yaml
-        reg_path = os.path.join(target, '.state/rules/rulen.yaml')
+        reg_path = os.path.join(target, '.state/rules/rules.yaml')
         if os.path.exists(reg_path):
             data = yaml.safe_load(open(reg_path)) or {}
-            rules = data.get('rulen', [])
+            rules = data.get('rules', [])
             for r in rules:
                 if r.get('id') == 'R09-GEN':
                     existing = set(r.get('allow_imports', []))
