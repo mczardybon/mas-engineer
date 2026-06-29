@@ -1,0 +1,399 @@
+#!/bin/bash
+# dev_autobuild.sh — Automatischer Distribution-Builder
+# =======================================================
+# v1.0.0 — 2026-06-14
+#
+# Wird nach jedem git commit automatisch gestartet.
+# Prüft ob sich MAS/Framework geändert hat und baut ggf. ZIP.
+#
+# Nutzung:
+#   ./mas-engineer/tools/dev_autobuild.sh                  → Auto-Build (prüft + baut)
+#   ./mas-engineer/tools/dev_autobuild.sh --force          → Immer bauen (auch ohne Änderungen)
+#   ./mas-engineer/tools/dev_autobuild.sh --status         → Nur prüfen, nichts bauen
+#   ./mas-engineer/tools/dev_autobuild.sh --install        → Bauen + update.sh --mas
+#   ./mas-engineer/tools/dev_autobuild.sh --help           → Hilfe
+# =======================================================
+
+set -euo pipefail
+
+# ─── Konfiguration ──────────────────────────────────────────
+WORKSPACE="$(cd "$(dirname "$0")/../.." && pwd)"
+DIST_DIR="$WORKSPACE/dist"
+TOOLS_DIR="$WORKSPACE/mas-engineer/tools"
+CHANGES_FILE="$WORKSPACE/mas-engineer/.state/changes.json"
+GIT_DIR="$WORKSPACE/.git"
+
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; BOLD='\033[1m'; NC='\033[0m'
+ok()   { echo -e "  ${GREEN}✔${NC} $1"; }
+warn() { echo -e "  ${YELLOW}⚠${NC} $1"; }
+info() { echo -e "  ${BLUE}ℹ${NC} $1"; }
+err()  { echo -e "  ${RED}✘${NC} $1"; }
+
+# ─── Hilfsfunktionen ────────────────────────────────────────
+
+show_help() {
+    cat <<'HELP'
+🔧 dev_autobuild.sh — Automatischer Distribution-Builder
+==========================================================
+v1.0.0 — 2026-06-14
+
+Nutzung:
+  ./mas-engineer/tools/dev_autobuild.sh                    Auto-Build (prüft + baut)
+  ./mas-engineer/tools/dev_autobuild.sh --force            Immer bauen
+  ./mas-engineer/tools/dev_autobuild.sh --status           Nur prüfen
+  ./mas-engineer/tools/dev_autobuild.sh --install          Bauen + update.sh --mas
+  ./mas-engineer/tools/dev_autobuild.sh --help             Diese Hilfe
+
+Optionen:
+  --force     ZIP auch bauen wenn keine Änderungen seit letztem Commit
+  --status    Nur prüfen ob Build nötig wäre (kein ZIP)
+  --install   Nach Build automatisch update.sh --mas ausführen
+  --help      Diese Hilfe anzeigen
+
+Ablauf:
+  1. Prüft ob git-commit seit letztem Build existiert
+  2. Validiert alle YAMLs, Python, Bash
+  3. Baut ZIP mit Timestamp
+  4. Prüft ob ZIP vollständig ist
+  5. Dokumentiert in changes.json
+  6. Optionale: update.sh --mas
+HELP
+}
+
+# ─── Prüfung: Ist ein Build nötig? ─────────────────────────
+
+needs_build() {
+    # Prüft ob es Commits seit dem letzten Build gibt
+    local latest_build_zip
+    latest_build_zip=$(ls -t "$DIST_DIR"/mas-framework-*.zip 2>/dev/null | head -1)
+
+    if [ -z "$latest_build_zip" ]; then
+        # Kein ZIP vorhanden → Build nötig
+        return 0
+    fi
+
+    # Letzten Commit ermitteln
+    local last_commit
+    last_commit=$(git -C "$WORKSPACE" log -1 --format=%ct 2>/dev/null || echo "0")
+
+    # Build-Zeit aus Dateinamen extrahieren (Timestamp im ZIP-Namen)
+    local build_name
+    build_name=$(basename "$latest_build_zip")
+    # Format: mas-framework-v2.42.0_20260614_043925.zip
+    local build_date_str
+    build_date_str=$(echo "$build_name" | sed 's/.*_\([0-9]\{8\}\)_\([0-9]\{6\}\)\..*/\1 \2/')
+    local build_ts
+    build_ts=$(date -d "$build_date_str" +%s 2>/dev/null || echo "0")
+
+    if [ "$last_commit" -gt "$build_ts" ]; then
+        # Neuer Commit seit letztem Build → Build nötig
+        return 0
+    fi
+
+    # Kein neuer Commit
+    return 1
+}
+
+# ─── Validierung ────────────────────────────────────────────
+
+validate_all() {
+    local errors=0
+    echo ""
+    echo "  ─── Validierung ───"
+
+    # YAMLs validieren
+    while IFS= read -r -d '' f; do
+        if python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
+            ok "YAML: $(basename "$f")"
+        else
+            err "YAML: $(basename "$f")"
+            errors=$((errors + 1))
+        fi
+    done < <(find "$WORKSPACE/mas-engineer" -name '*.yaml' -not -name '*.bak' -print0 2>/dev/null || true)
+
+    # Python-Syntax prüfen
+    while IFS= read -r -d '' f; do
+        if python3 -c "compile(open('$f').read(), '$f', 'exec')" 2>/dev/null; then
+            ok "Python: $(basename "$f")"
+        else
+            err "Python: $(basename "$f")"
+            errors=$((errors + 1))
+        fi
+    done < <(find "$TOOLS_DIR" -name 'dev_*.py' -print0 2>/dev/null || true)
+
+    # Bash-Syntax prüfen
+    while IFS= read -r -d '' f; do
+        if bash -n "$f" 2>/dev/null; then
+            ok "Bash: $(basename "$f")"
+        else
+            err "Bash: $(basename "$f")"
+            errors=$((errors + 1))
+        fi
+    done < <(find "$TOOLS_DIR" -name 'dev_*.sh' -print0 2>/dev/null || true)
+
+    # Sub-Recipe-Referenzen prüfen
+    python3 -c "
+import yaml
+with open('$WORKSPACE/mas-engineer/recipe/dev-mas-engineer.yaml') as f:
+    data = yaml.safe_load(f)
+for sr in data.get('sub_recipes', []):
+    p = '$WORKSPACE/mas-engineer/recipe/' + sr['path']
+    import os
+    if os.path.exists(p):
+        print(f'  ✔ Sub: {sr[\"name\"]}')
+    else:
+        print(f'  ✘ Sub: {sr[\"name\"]} -> FEHLT!')
+        exit(1)
+" 2>/dev/null && ok "Sub-Referenzen vollständig" || err "Sub-Referenzen unvollständig"
+
+    echo ""
+    if [ "$errors" -gt 0 ]; then
+        err "$errors Fehler — Build abgebrochen"
+        return 1
+    fi
+    ok "Validierung bestanden — 0 Fehler"
+    return 0
+}
+
+# ─── Build ausführen ────────────────────────────────────────
+
+do_build() {
+    echo ""
+    echo "  ─── Build ───"
+
+    # Timestamp
+    local now
+    now=$(date +%Y%m%d_%H%M%S)
+
+    # Version aus git oder default
+    local version
+    version=$(git -C "$WORKSPACE" describe --tags 2>/dev/null || echo "v2.42.0")
+
+    local zip_name="mas-framework-${version}_${now}.zip"
+    local zip_path="$DIST_DIR/$zip_name"
+
+    # dist/ anlegen
+    mkdir -p "$DIST_DIR"
+
+    # Build-Verzeichnis
+    local build_dir
+    build_dir=$(mktemp -d)
+    trap 'rm -rf "$build_dir"' EXIT
+
+    echo "  Erstelle: $zip_name"
+    echo ""
+
+    # ── Dateien kopieren ──
+    # MAS-Rezept
+    cp "$WORKSPACE/mas-engineer/recipe/dev-mas-engineer.yaml" "$build_dir/"
+    ok "dev-mas-engineer.yaml"
+
+    # MAS-Sub-Agenten (14 + ggf. template)
+    if [ -d "$WORKSPACE/mas-engineer/recipe/sub" ]; then
+        mkdir -p "$build_dir/sub"
+        for f in "$WORKSPACE/mas-engineer/recipe/sub"/sub_mas-*.yaml; do
+            [ -f "$f" ] && cp "$f" "$build_dir/sub/"
+        done
+        ok "Sub-Agenten ($(ls "$build_dir/sub/" 2>/dev/null | wc -l))"
+    fi
+
+    # Template
+    if [ -d "$WORKSPACE/mas-engineer/recipe/template" ]; then
+        mkdir -p "$build_dir/template"
+        cp "$WORKSPACE/mas-engineer/recipe/template"/*.yaml "$build_dir/template/" 2>/dev/null || true
+        ok "Template"
+    fi
+
+    # MAS-Tools
+    if [ -d "$TOOLS_DIR" ]; then
+        mkdir -p "$build_dir/tools"
+        for f in "$TOOLS_DIR"/dev_*.py "$TOOLS_DIR"/dev_*.sh; do
+            [ -f "$f" ] && cp "$f" "$build_dir/tools/"
+        done
+        ok "Tools ($(ls "$build_dir/tools/" 2>/dev/null | wc -l))"
+    fi
+
+    # MAS-Docs
+    if [ -d "$WORKSPACE/mas-engineer/docs" ]; then
+        mkdir -p "$build_dir/docs"
+        for f in "$WORKSPACE/mas-engineer/docs"/*.md; do
+            [ -f "$f" ] && cp "$f" "$build_dir/docs/"
+        done
+        ok "Docs ($(ls "$build_dir/docs/" 2>/dev/null | wc -l))"
+    fi
+
+    # .state (nur best-practices.yaml + schedule.yaml — KEINE guardian.yaml mit Live-Daten)
+    if [ -d "$WORKSPACE/mas-engineer/.state" ]; then
+        mkdir -p "$build_dir/.state"
+        [ -f "$WORKSPACE/mas-engineer/.state/best-practices.yaml" ] && \
+            cp "$WORKSPACE/mas-engineer/.state/best-practices.yaml" "$build_dir/.state/"
+        [ -f "$WORKSPACE/mas-engineer/.state/schedule.yaml" ] && \
+            cp "$WORKSPACE/mas-engineer/.state/schedule.yaml" "$build_dir/.state/"
+        ok "State-Dateien (best-practices, schedule)"
+    fi
+
+    # Framework-Rezepte
+    if [ -d "$WORKSPACE/framework/recipes" ]; then
+        mkdir -p "$build_dir/framework/recipes"
+        cp -r "$WORKSPACE/framework/recipes"/* "$build_dir/framework/recipes/" 2>/dev/null || true
+        ok "Framework-Rezepte"
+    fi
+
+    # Framework-Docs
+    if [ -d "$WORKSPACE/framework/docs" ]; then
+        mkdir -p "$build_dir/framework/docs"
+        cp "$WORKSPACE/framework/docs"/*.md "$build_dir/framework/docs/" 2>/dev/null || true
+        ok "Framework-Docs"
+    fi
+
+    # Installer + Update
+    if [ -f "$WORKSPACE/installer.sh" ]; then
+        cp "$WORKSPACE/installer.sh" "$build_dir/"
+        ok "installer.sh"
+    fi
+    if [ -f "$WORKSPACE/update.sh" ]; then
+        cp "$WORKSPACE/update.sh" "$build_dir/"
+        ok "update.sh"
+    fi
+
+    # ── ZIP erstellen ──
+    echo ""
+    cd "$build_dir"
+    zip -rq "$zip_path" .
+    cd "$WORKSPACE"
+
+    local zip_size
+    zip_size=$(du -h "$zip_path" | cut -f1)
+    local zip_count
+    zip_count=$(unzip -l "$zip_path" 2>/dev/null | tail -1 | awk '{print $2}')
+
+    ok "ZIP erstellt: $zip_path ($zip_count Dateien, $zip_size)"
+
+    # ── Bereinigung ──
+    rm -rf "$build_dir"
+    trap - EXIT
+
+    # ── Dokumentieren ──
+    local commit_hash
+    commit_hash=$(git -C "$WORKSPACE" log -1 --format=%h 2>/dev/null || echo "none")
+    local total_commits
+    total_commits=$(git -C "$WORKSPACE" log --oneline 2>/dev/null | wc -l || echo "0")
+
+    # changes.json Eintrag
+    mkdir -p "$(dirname "$CHANGES_FILE")"
+    if [ ! -f "$CHANGES_FILE" ]; then
+        echo '{"changes":[]}' > "$CHANGES_FILE"
+    fi
+    python3 -c "
+import json, datetime
+try:
+    with open('$CHANGES_FILE') as f:
+        data = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+    data = {'changes': []}
+data['changes'].append({
+    'id': 'auto_build_${now}',
+    'timestamp': datetime.datetime.now().isoformat(),
+    'type': 'build',
+    'datei': '$zip_name',
+    'von': '-',
+    'nach': '$zip_path',
+    'grund': 'Auto-Build nach Commit $commit_hash'
+})
+with open('$CHANGES_FILE', 'w') as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+" 2>/dev/null || true
+
+    echo ""
+    echo "  ─── Zusammenfassung ───"
+    ok "ZIP: $zip_name ($zip_count Dateien, $zip_size)"
+    ok "Commit: $commit_hash (${total_commits} total)"
+    ok "ZIPs im dist/: $(ls "$DIST_DIR"/mas-framework-*.zip 2>/dev/null | wc -l)"
+}
+
+# ─── Status ──────────────────────────────────────────────────
+
+show_status() {
+    echo ""
+    echo "  ─── Auto-Build Status ───"
+
+    # Letztes ZIP
+    local latest_zip
+    latest_zip=$(ls -t "$DIST_DIR"/mas-framework-*.zip 2>/dev/null | head -1)
+    if [ -n "$latest_zip" ]; then
+        local zip_name
+        zip_name=$(basename "$latest_zip")
+        local zip_size
+        zip_size=$(du -h "$latest_zip" | cut -f1)
+        local zip_count
+        zip_count=$(unzip -l "$latest_zip" 2>/dev/null | tail -1 | awk '{print $2}')
+        ok "Letztes ZIP: $zip_name ($zip_count Dateien, $zip_size)"
+    else
+        warn "Kein ZIP vorhanden"
+    fi
+
+    # Total ZIPs
+    local total_zips
+    total_zips=$(ls "$DIST_DIR"/mas-framework-*.zip 2>/dev/null | wc -l)
+    ok "ZIPs gesamt: $total_zips"
+
+    # Git-Status
+    local total_commits
+    total_commits=$(git -C "$WORKSPACE" log --oneline 2>/dev/null | wc -l || echo "0")
+    ok "Commits: $total_commits"
+
+    # Build nötig?
+    if needs_build; then
+        local last_commit_msg
+        last_commit_msg=$(git -C "$WORKSPACE" log -1 --format=%s 2>/dev/null || echo "?")
+        warn "Build nötig! Letzter Commit: $last_commit_msg"
+    else
+        ok "Kein Build nötig — letzter Commit ist bereits gebaut"
+    fi
+}
+
+# ─── Main ────────────────────────────────────────────────────
+
+# Farben für das Banner
+echo ""
+echo -e "${BLUE}╔════════════════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}║     🔧 Auto-Distribution-Builder v1.0.0           ${NC}"
+echo -e "${BLUE}╚════════════════════════════════════════════════════╝${NC}"
+echo ""
+
+MODE="${1:-auto}"
+
+case "$MODE" in
+    --help|-h)
+        show_help
+        ;;
+    --status)
+        show_status
+        ;;
+    --force)
+        echo "  🔨 Force-Build (überspringe Prüfung)"
+        validate_all && do_build
+        ;;
+    --install)
+        validate_all && do_build
+        echo ""
+        echo "  ─── Installiere via update.sh --mas ───"
+        bash "$WORKSPACE/update.sh" --mas
+        ;;
+    auto|--auto)
+        if needs_build || [ "${1:-}" = "--force" ]; then
+            local last_commit_msg
+            last_commit_msg=$(git -C "$WORKSPACE" log -1 --format=%s 2>/dev/null || echo "?")
+            echo "  🔨 Build nötig: Letzter Commit \"$last_commit_msg\""
+            validate_all && do_build
+        else
+            ok "Kein Build nötig — alle Commits bereits gebaut"
+            show_status
+        fi
+        ;;
+    *)
+        echo "❌ Unbekannte Option: $1"
+        echo "Verwendung: $0 [--force|--status|--install|--help]"
+        exit 1
+        ;;
+esac
