@@ -7,6 +7,8 @@
 - **Node.js 18+** (optional, for dashboard)
 - **Git** (optional, for auto-commit)
 
+> **Note on model configuration:** The recipes use `goose_model: filtered/deepseek/deepseek-chat` with `goose_provider: openai`. The `filtered/` prefix is a routing directive for the OpenAI-compatible API proxy — it is **not** a bug or placeholder. If your provider uses a different model, update both fields in `mas-engineer/recipe/dev-mas-engineer.yaml` and the sub-agent YAMLs.
+
 ## Install from Distribution
 
 ```bash
