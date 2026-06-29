@@ -6,24 +6,20 @@ MAS-Engineer's self-improvement system is an **8-stage pipeline** orchestrated b
 
 ## Pipeline Overview
 
-```
-STEP 0 — Prerequisites Check
-  ↓
-STEP 1 — Session Data Read  (im-session-reader)
-  ↓
-STEP 2 — Finding Detection   (im-finder — 53 feature types)
-  ↓
-STEP 3 — Prioritization      (im-rank — Constitution check)
-  ↓
-STEP 4 — Patch Design        (im-designer → type-specific logic)
-  ↓
-STEP 5 — User Review + Apply (yaml-editor applies patches)
-  ↓
-STEP 6 — Validation          (im-validator → prompt-engineer + agent-guardian)
-  ↓
-STEP 7 — Summary + Install
-  ↓
-STEP 8 — Push Improvements   (generic-init PUSH_IMPROVEMENTS)
+```mermaid
+flowchart TD
+    S0["STEP 0\nPrerequisites Check\nMode · Rules · Rate Limit · Recursion Guard"] --> S1
+    S1["STEP 1\nSession Data Read\nim-session-reader"] --> S2
+    S2["STEP 2\nFinding Detection\nim-finder · 53 feature types"] --> S3
+    S3["STEP 3\nPrioritization\nim-rank · Constitution check"] --> S4
+    S4["STEP 4\nPatch Design\nim-designer · type-specific logic"] --> S5
+    S5["STEP 5\nUser Review + Apply\nyaml-editor"] --> S6
+    S6["STEP 6\nValidation\nim-validator · prompt-engineer\nagent-guardian"] --> S7
+    S7["STEP 7\nSummary + Install"] --> S8
+    S8["STEP 8\nPush Improvements\ngeneric-init PUSH_IMPROVEMENTS"]
+
+    S6 -.->|rollback| S5
+    S3 -.->|"constitution\nviolation"| S2
 ```
 
 ---
@@ -42,6 +38,21 @@ Before the pipeline starts:
 ### STEP 1 — Session Data Read
 
 `sub_mas-im-session-reader` reads the Goose session database (SQLite):
+
+```mermaid
+flowchart TD
+    DB["Goose Session DB\n(SQLite)"] --> COPY["Copy DB\n(avoid SQLITE_BUSY)"]
+    COPY --> FILTER["3-Level Project Filter"]
+    FILTER --> L1{"Level 1:\nGOOSE_SESSION_TAG\nin .goosehints?"}
+    L1 -->|yes| TAG["Filter by tag"]
+    L1 -->|no| L2{"Level 2:\nWorking directory\nmatches?"}
+    L2 -->|yes| DIR["Filter by directory"]
+    L2 -->|no| L3["Level 3:\nLast N non-MAS\nsessions"]
+    TAG --> PARSE
+    DIR --> PARSE
+    L3 --> PARSE
+    PARSE["Parse messages\nAggregate metrics\nTokens · Costs · Duration"] --> OUTPUT["Filtered session data\nfor im-finder"]
+```
 
 1. Copies the DB (to avoid SQLITE_BUSY)
 2. Applies a **3-level project filter**:
@@ -71,6 +82,27 @@ Before the pipeline starts:
 
 `sub_mas-im-rank`:
 
+```mermaid
+flowchart TD
+    FINDINGS["Raw findings\nfrom im-finder"] --> DEDUP["1. Remove duplicates\ngroup by file+field"]
+    DEDUP --> SORT["2. Sort by severity\ncritical → medium → low"]
+    SORT --> CONSTITUTION["3. Constitution check\nArticles 1-6"]
+    CONSTITUTION --> ART1{"Art.1:\nChanges Constitution?"}
+    ART1 -->|yes| BLOCKED1["⛔ BLOCKED"]
+    ART1 -->|no| ART2{"Art.2:\nSecurity holes?"}
+    ART2 -->|yes| BLOCKED2["⛔ BLOCKED"]
+    ART2 -->|no| ART4{"Art.4:\nEndangers\nstability?"}
+    ART4 -->|yes| BLOCKED3["⛔ BLOCKED"]
+    ART4 -->|no| ART5{"Art.5:\nExcessive\ntoken cost?"}
+    ART5 -->|yes| WARN["⚠️ Warning"]
+    ART5 -->|no| MEMORY["4. Memory check\nskip already-seen"]
+    WARN --> MEMORY
+    MEMORY --> TOP5["5. Select top 5 findings"]
+    BLOCKED1 --> REJECT["Rejected findings"]
+    BLOCKED2 --> REJECT
+    BLOCKED3 --> REJECT
+```
+
 1. **Removes duplicates** (groups by file+field)
 2. **Sorts by severity** (critical → medium → low)
 3. **Checks against Constitution** (Articles 1-6):
@@ -82,6 +114,22 @@ Before the pipeline starts:
 5. **Selects top 5** findings max per run
 
 ### STEP 4 — Patch Design
+
+```mermaid
+flowchart TD
+    PATCHES["Top 5 findings"] --> DESIGNER["im-designer"]
+    DESIGNER --> CAT{"Finding\ncategory?"}
+
+    CAT -->|Prompt| PROMPT["Rewite prompt\nShorten · Add ⛔\nSort commands"]
+    CAT -->|Settings| SETTINGS["Adjust timeout\nCalibrate max_steps"]
+    CAT -->|Instructions| INSTRUCTIONS["Add rules\nClarify steps\nUpdate references"]
+    CAT -->|Health| HEALTH["Increase timeout\nFix loops\nResurect agents"]
+    CAT -->|Structure| STRUCTURE["Add constitution\nEmoji · Version\nDescription"]
+    CAT -->|Framework| FW["Fix prompts\nSettings · Structure\nTests"]
+
+    PROMPT & SETTINGS & INSTRUCTIONS & HEALTH & STRUCTURE & FW --> PATCH["YAML patch defined\nfile · field · from→to\nreason · priority"]
+    PATCH --> USER["Shown to user for\nreview (STEP 5)"]
+```
 
 `sub_mas-im-designer` has **type-specific patch logic** for ALL 53+ feature types:
 
@@ -159,6 +207,59 @@ The `PUSH_IMPROVEMENTS` task copies improvements to user projects:
 ---
 
 ## 53 Feature Types
+
+```mermaid
+mindmap
+  root((53 Feature Types))
+    Settings & Calibration
+      A1-A3 : Timeout calibration
+      Q1-Q3 : Oversize check
+      FF1-FF4 : Settings unification
+    Prompt Quality
+      B1-B4 : Quality check
+      E1-E4 : Emoji/version/boundaries
+      I1-I5 : Identity & length
+      Z1-Z2 : Prompt churn
+    Instructions & Structure
+      C1-C4 : Completeness
+      D1-D4 : Question clarity
+      O1-O4 : Deep structure
+      MM0-MM6 : YAML validation
+    Agent Health
+      G1-G4 : Degradation/death
+      H1-H4 : Anomalies
+      F1-F4 : Command formatting
+      U1-U2 : Success rate trends
+    Code & Config
+      J1-J2 : Config optimization
+      P1-P2 : Syntax errors
+      M1-M2 : Migration checks
+      N1-N3 : Dependency audit
+    Tests & Docs
+      V1-V3 : Test coverage
+      K1-K2 : Documentation gaps
+      S1-S2 : Agent ranking
+    Infrastructure
+      L1-L3 : Goose infrastructure
+      W1-W3 : Version compatibility
+      HH1-HH3 : Backup management
+      JJ1-JJ2 : Installation drift
+    Analysis
+      T1-T3 : User sentiment
+      X1-X3 : Documentation audit
+      Y1-Y2 : Recovery efficiency
+      AA1-AA2 : Duration prediction
+      EE1-EE4 : Database patterns
+    User Interaction
+      LL1-LL5 : Corrections, confusion, praise
+      BB1-BB3 : Framework tests
+      CC1-CC2 : System health
+      DD1-DD2 : Plugin/extension
+    Governance
+      KK1-KK6 : SOT/rules compliance
+      GG1-GG3 : YAML structure
+      R1-R5 : Code metrics
+```
 
 The im-finder detects 53 distinct optimization categories across these groups:
 

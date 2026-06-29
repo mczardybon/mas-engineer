@@ -6,33 +6,29 @@ Every framework created or initialized by MAS-Engineer can have its own **MCP-ba
 
 ## Architecture
 
-```
-┌─────────────────────────────────────┐
-│     Goose Desktop                   │
-│  ┌──────────────────────────────┐   │
-│  │  MCP App: Framework Dashboard│   │
-│  │  ┌────────────────────────┐  │   │
-│  │  │ server.js (Node.js)   │  │   │
-│  │  │ → reads data.json     │  │   │
-│  │  │ → serves HTML         │  │   │
-│  │  └────────────────────────┘  │   │
-│  │  ┌────────────────────────┐  │   │
-│  │  │ dashboard.html         │  │   │
-│  │  │ → framework health     │  │   │
-│  │  │ → agent status         │  │   │
-│  │  │ → change history       │  │   │
-│  │  │ → performance metrics  │  │   │
-│  │  └────────────────────────┘  │   │
-│  └──────────────────────────────┘   │
-└─────────────────────────────────────┘
-         ▲
-         │ reads every 5 min
-         ▼
-┌─────────────────────────────────────┐
-│  Scheduler: dashboard-data-refresh  │
-│  → runs dev_dashboard_data.py        │
-│  → writes .mas/dashboards/data.json  │
-└─────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph GOOSE_DESKTOP["Goose Desktop"]
+        subgraph MCP_APP["MCP App: Framework Dashboard"]
+            SERVER["server.js\nNode.js MCP server\nreads data.json · serves HTML"]
+            HTML["dashboard.html\nHealth · Agents · Changes\nPerformance"]
+        end
+    end
+
+    subgraph SCHEDULER["Scheduler (every 5 min)"]
+        REFRESH["dashboard-data-refresh recipe"]
+        DATA_PY["dev_dashboard_data.py"]
+    end
+
+    subgraph DATA["Dashboard Data"]
+        JSON["data.json\n.mas/dashboards/"]
+    end
+
+    DATA_PY -->|writes| JSON
+    JSON -->|read by| SERVER
+    SERVER -->|serves| HTML
+    REFRESH -->|triggers| DATA_PY
+    GOOSE_DESKTOP -->|extension registration| MCP_APP
 ```
 
 ---
@@ -42,6 +38,30 @@ Every framework created or initialized by MAS-Engineer can have its own **MCP-ba
 ```bash
 # Set up the dashboard for the CURRENT framework
 goose run --recipe recipe/setup-dashboard.yaml
+```
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant G as Goose
+    participant S as setup-dashboard.yaml
+    participant NPM as npm
+    participant CFG as config.yaml
+    participant SCH as Scheduler
+    participant DP as dev_dashboard_data.py
+
+    U->>G: goose run --recipe\nsetup-dashboard.yaml
+    G->>S: execute setup recipe
+    S->>NPM: npm install in .mas/mcp/
+    NPM-->>S: dependencies installed
+    S->>CFG: register MCP extension\nframework-dashboard
+    CFG-->>S: extension registered
+    S->>SCH: schedule add\ndashboard-data-refresh\ncron: */5 * * * *
+    SCH-->>S: scheduler active
+    S->>DP: python3 dev_dashboard_data.py\n--workspace {workspace}
+    DP-->>S: initial data.json created
+    S-->>G: setup complete
+    G-->>U: ✅ Dashboard active
 ```
 
 The setup recipe:
@@ -88,6 +108,34 @@ Every 5 minutes, the scheduler runs `dev_dashboard_data.py` which collects:
 ---
 
 ## Dashboard Components
+
+```mermaid
+flowchart LR
+    subgraph HEALTH["🩺 Health Panel"]
+        H1["Score: 0-100"]
+        H2["Agents: 🟢🟡🔴"]
+        H3["Failures: count"]
+        H4["Staleness: indicator"]
+    end
+    subgraph AGENTS["🤖 Agents Panel"]
+        A1["🟢 healthy"]
+        A2["🟡 degraded"]
+        A3["🔴 dead"]
+        A4["Quick details"]
+    end
+    subgraph CHANGES["📝 Changes Panel"]
+        C1["Recent changes"]
+        C2["Before/after diff"]
+        C3["Rollback option"]
+    end
+    subgraph PERF["📈 Performance Panel"]
+        P1["Token trends"]
+        P2["Session costs"]
+        P3["Anomaly warnings"]
+    end
+
+    HEALTH --> AGENTS --> CHANGES --> PERF
+```
 
 ### Health Panel
 - Overall score (0-100)

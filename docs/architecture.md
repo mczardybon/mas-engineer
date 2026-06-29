@@ -2,6 +2,33 @@
 
 MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 48 specialized sub-agents, 50 Python/shell tools, and a workflow engine driven by a Single Source of Truth (SOT).
 
+```mermaid
+flowchart TB
+    subgraph LLM["LLM Provider"]
+        L1["OpenAI / Anthropic / Ollama / Groq"]
+    end
+    subgraph GOOSE["Goose Runtime"]
+        G1["MCP Agent Platform"]
+        G2["Session Management"]
+    end
+    subgraph ENGINEER["MAS-Engineer"]
+        E1["dev-mas-engineer.yaml\nNatural Language Interface"]
+        E2["48 Sub-Agents\n7 categories"]
+        E3["50 Tools\nPython / Shell"]
+        E4[".state/\nSOT · Rules · Knowledge"]
+    end
+    subgraph USER["User Framework"]
+        U1["Your Multi-Agent System\nYour Agents · Your Workflows"]
+    end
+
+    L1 --> GOOSE
+    GOOSE --> ENGINEER
+    ENGINEER --> USER
+    E1 --> E2
+    E2 --> E3
+    E3 --> E4
+```
+
 ---
 
 ## Agent Hierarchy
@@ -84,6 +111,30 @@ MAS-Engineer (dev-mas-engineer)
 
 All agent-to-agent and agent-to-MAS-Engineer communication uses **structured YAML** with the following signal types:
 
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant E as MAS-Engineer
+    participant A1 as Sub-Agent
+    participant A2 as Another Agent
+    participant T as Tools
+
+    U->>E: 💬 "Improve my agents"
+    E->>A1: 🔵 HANDOVER { task: "improve" }
+    A1->>A2: 🔵 HANDOVER { task: "analyze session" }
+    A2->>T: execute analysis
+    T-->>A2: result
+    A2-->>A1: 🟢 DONE { result }
+    A1->>T: apply patches
+    T-->>A1: result
+    alt validation fails
+        A1-->>E: 🟣 HANDOVER { status: "rollback" }
+    else success
+        A1-->>E: 🟢 DONE { improvements: 3 }
+    end
+    E-->>U: ✅ 3 patches applied
+```
+
 | Signal | Meaning | Used When |
 |--------|---------|-----------|
 | `🟢 DONE` | Success | Task completed successfully |
@@ -107,6 +158,19 @@ parsed: { task: "...", result: {...} }
 ## The SOT (Single Source of Truth)
 
 The `workflows.yaml` file in `.state/` is the central registry:
+
+```mermaid
+graph TD
+    SOT["workflows.yaml\n.state/workflows.yaml"] --> RULES["23 Rules\nR01-R23"]
+    SOT --> SIGNALS["10 Signal Types\nDONE · ERROR · HANDOVER · DRIFT · RESURRECTED"]
+    SOT --> WORKFLOWS["116+ Workflow Bodies\nAll possible operations"]
+    SOT --> MODES["20+ detect_mode Workflows\nMode awareness"]
+    SOT --> AGENTS["Agent Definitions\nTiers · Token budgets · Task bindings"]
+
+    RULES --> CHECKER["dev_rule_checker.py\nRuntime enforcement"]
+    CHECKER --> BLOCK["⛔ BLOCK\nOn violation"]
+    CHECKER --> PASS["✅ PASS\nOn compliance"]
+```
 
 - **116+ workflow bodies** defining all possible operations
 - **23 rules** (R01-R23) with hardness levels
@@ -139,6 +203,33 @@ framework  → Framework mode: work on user's system
 
 All agents follow the **Constitution** (11 articles in `sub_mas-master-constitution.yaml`) and **23 hard rules** enforced by `dev_rule_checker.py`:
 
+```mermaid
+flowchart TD
+    ACTION["Agent attempts\nwrite/edit/shell action"] --> CHECKER["dev_rule_checker.py\nintercepts"]
+    CHECKER --> R09{"R09\nDomain\nSeparation?"}
+    R09 -->|violation| BLOCKED["⛔ BLOCKED\nDomain conflict"]
+
+    CHECKER --> R01{"R01\nConfirmation\nwithin 5 min?"}
+    R01 -->|no| BLOCKED1["⛔ BLOCKED\nNo confirmation"]
+
+    CHECKER --> R10{"R10\nCoronashield\nYAML valid?"}
+    R10 -->|invalid| BLOCKED2["⛔ BLOCKED\nInvalid YAML"]
+
+    CHECKER --> R18{"R18\nSub-agent\nexists?"}
+    R18 -->|yes| BLOCKED3["⛔ BLOCKED\nMust delegate"]
+
+    CHECKER --> R05{"R05\nCheckpoint\nbefore change?"}
+    R05 -->|no| BLOCKED4["⛔ BLOCKED\nNo checkpoint"]
+
+    CHECKER -->|all pass| APPROVED["✅ Action approved"]
+
+    BLOCKED --> USER[("User notified")]
+    BLOCKED1 --> USER
+    BLOCKED2 --> USER
+    BLOCKED3 --> USER
+    BLOCKED4 --> USER
+```
+
 | Rule | Name | Hardness | Description |
 |:----:|------|:--------:|-------------|
 | R01 | Confirmation | 🔴 Blocking | Before write/edit/shell: PLAN+WAIT for user OK |
@@ -156,6 +247,27 @@ All agents follow the **Constitution** (11 articles in `sub_mas-master-constitut
 ## The 50 Tools
 
 All Python and shell tools live in `tools/` and are managed by `dev_workspace.py`. Key categories:
+
+```mermaid
+flowchart LR
+    subgraph AGENTS["Agents That Use Tools"]
+        A1["yaml-editor\npython-repair\nframework-scanner"]
+        A2["general-improver\ndoc-writer\ndashboard-refresh"]
+        A3["session-analyst\ngoose-admin\nworkflow-engine"]
+    end
+    subgraph TOOLS["50 Tools by Category"]
+        T1["⚙️ Hardening\ndev_rule_checker\ndev_rule_refresh\ndev_haerte_propagation"]
+        T2["🔨 Build\ndev_build.sh\ndev_autobuild.sh\ndev_mode.sh"]
+        T3["🔍 Analysis\ndev_observer\ndev_architect\ndev_analyst"]
+        T4["📝 YAML\ndev_editor\ndev_changes\ndev_yaml_generator"]
+        T5["📊 Dashboard\ndev_app_builder\ndev_dashboard_live\ndev_dashboard_poller"]
+        T6["🔧 Utilities\ndev_session_cleanup\ndev_parallel\ndev_recipe_manager"]
+    end
+
+    A1 --> T1 & T2 & T4
+    A2 --> T3 & T5
+    A3 --> T6
+```
 
 | Category | Tools | Purpose |
 |----------|-------|---------|

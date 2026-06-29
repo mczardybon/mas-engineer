@@ -19,13 +19,25 @@ On first load, the Engineer:
 
 ## Creating a New Multi-Agent System
 
-**Dialog:**
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant E as MAS-Engineer
+    participant GI as generic-init
+    participant RD as recipe-designer
+    participant WR as web-researcher
+    participant PY as dev_generic_init.py
 
-```
-You:  "Create a new multi-agent system for customer support"
-Engineer: "How should the project be initialized?"
-  Option 1: Auto — All MAS components
-  Option 2: Component-wise — Choose yourself
+    U->>E: 💬 "Create a system for\ncustomer support"
+    E->>GI: HANDOVER { task: "init" }
+    GI->>PY: dev_generic_init.py\n--init <project>
+    PY-->>GI: Project structure\n+ symlinks
+    GI->>RD: HANDOVER { task: "create base agent" }
+    RD-->>GI: Base agent YAML
+    GI->>WR: HANDOVER { task: "search techniques" }
+    WR-->>GI: Findings (optional)
+    GI-->>E: 🟢 DONE
+    E-->>U: ✅ Project created.\nReady to add agents.
 ```
 
 MAS delegates to `sub_mas-generic-init`, which:
@@ -42,13 +54,29 @@ MAS delegates to `sub_mas-generic-init`, which:
 
 ## Adding Agents to Your System
 
-**Dialog:**
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant E as MAS-Engineer
+    participant IP as intention-parser
+    participant RD as recipe-designer
+    participant TG as dev_template_generator.py
+    participant YE as yaml-editor
+    participant SOT as workflows.yaml
 
-```
-You: "I need a researcher agent that searches the web"
-Engineer: "Let me create that..."
-
-[delegates to sub_mas-intention-parser → sub_mas-recipe-designer]
+    U->>E: 💬 "I need a researcher\nagent"
+    E->>IP: HANDOVER\n{ task: "parse intention" }
+    IP->>TG: dev_template_generator.py\n--create
+    TG-->>IP: Agent YAML draft
+    IP-->>E: 🟢 DONE { parsed }
+    E->>RD: HANDOVER { task: "create agent" }
+    RD->>YE: Fill template\nwith specifications
+    YE->>YE: Backup → Edit → Validate
+    YE-->>RD: Agent YAML ready
+    RD->>SOT: Register in sub_recipes
+    SOT-->>RD: Registered
+    RD-->>E: 🟢 DONE { agent: "researcher" }
+    E-->>U: ✅ Agent created and registered
 ```
 
 The `intention-parser`:
@@ -156,11 +184,19 @@ The migration helper:
 
 ## Deploying MAS-Engineer Standalone
 
-**Dialog:**
-
-```
-You: "Create a standalone distribution of MAS-Engineer"
-Engineer: "This will copy all 48 agents and 50 tools. Continue?"
+```mermaid
+flowchart TD
+    USER["User: 'Create a standalone\ndistribution'"] --> ENGINEER["MAS-Engineer"]
+    ENGINEER --> BOOTSTRAP["sub_mas-bootstrap"]
+    BOOTSTRAP --> GEN["1. dev_generic_init.py\n--init --components all"]
+    GEN --> AGENTS["2. Copy 48 agents\n→ recipe/sub/"]
+    AGENTS --> TOOLS["3. Copy 50 tools\n→ tools/"]
+    TOOLS --> MCP["4. Copy MCP dashboard\n.mas/mcp/"]
+    MCP --> NPM["5. npm install\n.mas/mcp/"]
+    NPM --> RECOVERY["6. Copy recovery\nagents + templates"]
+    RECOVERY --> MODE["7. Set .mas-mode"]
+    MODE --> DONE["✅ Standalone distribution\ncomplete"]
+    DONE --> INSTALL["On target machine:\n./install.sh"]
 ```
 
 MAS delegates to `sub_mas-bootstrap`, which:
@@ -177,11 +213,40 @@ MAS delegates to `sub_mas-bootstrap`, which:
 
 MAS-Engineer has 3 operating modes controlled by `.mas-mode`:
 
-| Mode | File Content | What Changes |
-|------|-------------|--------------|
-| MAS | `mas` | All 21 rules active. Self-improvement. |
-| Framework | `framework` | Works on user's framework. |
-| Generic | `<project>` | Creates new multi-agent systems. |
+```mermaid
+stateDiagram-v2
+    state "MAS Mode" as MAS
+    state "Framework Mode" as FW
+    state "Generic Mode" as GEN
+
+    [*] --> MAS
+
+    MAS --> FW: echo "framework" > .mas-mode
+    FW --> MAS: echo "mas" > .mas-mode
+    FW --> GEN: echo "<project>" > .mas-mode
+    GEN --> FW: echo "framework" > .mas-mode
+
+    note right of MAS
+        Target: mas-engineer/
+        Agents: sub_mas-*
+        Rules: all 23
+        Self-improvement
+    end note
+
+    note right of FW
+        Target: ./
+        Agents: sub_*-*
+        Rules: user subset
+        Scan + patch
+    end note
+
+    note right of GEN
+        Target: new project dir
+        Agents: sub_{project}-*
+        Rules: minimal subset
+        Init + generate
+    end note
+```
 
 The user switches modes by changing `.mas-mode`:
 

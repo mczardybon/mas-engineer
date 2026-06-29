@@ -48,24 +48,17 @@ goose run --recipe recipe/dev-mas-engineer.yaml
 
 ## Architecture
 
-```
-                   ┌─────────────────────────────┐
-                   │     MAS-Engineer             │
-                   │  (dev-mas-engineer.yaml)     │
-                   │  Natural Language Interface   │
-                   └──────────┬──────────────────┘
-                              │ delegates (R18)
-              ┌───────────────┼───────────────────┐
-              │               │                    │
-     ┌────────▼──────┐  ┌────▼────────┐  ┌──────▼────────┐
-     │ Framework     │  │ Improvement │  │ Monitoring    │
-     │ Builder      │  │ Pipeline    │  │ & Recovery    │
-     │ (8 agents)   │  │ (8 agents)  │  │ (12 agents)   │
-     └───────────────┘  └─────────────┘  └───────────────┘
-     ┌───────────────┐  ┌─────────────┐  ┌───────────────┐
-     │ Utility       │  │ Analysis    │  │ Management    │
-     │ (7 agents)    │  │ (4 agents)  │  │ (9 agents)    │
-     └───────────────┘  └─────────────┘  └───────────────┘
+```mermaid
+flowchart TD
+    YOU["You\n🗣️ Natural Language"] --> ENGINEER["MAS-Engineer\ndev-mas-engineer.yaml"]
+    ENGINEER --> FB["Framework Builders\n6 agents"]
+    ENGINEER --> IP["Improvement Pipeline\n7 agents"]
+    ENGINEER --> MON["Monitoring\n7 agents"]
+    ENGINEER --> REC["Recovery\n5 agents"]
+    ENGINEER --> UT["Utility\n10 agents"]
+    ENGINEER --> AN["Analysis\n7 agents"]
+    ENGINEER --> MG["Management\n6 agents"]
+    FB & IP & MON & REC & UT & AN & MG --> TOOLS["50 Python/Shell Tools"]
 ```
 
 ## Key Concepts
@@ -77,6 +70,22 @@ goose run --recipe recipe/dev-mas-engineer.yaml
 - **R10 — Coronashield**: Every YAML is validated before storage
 
 ## Documentation Index
+
+```mermaid
+flowchart TD
+    INDEX["📚 index.md\nStart Here"] --> INST["installation.md\nSetup & Install"]
+    INDEX --> ARCH["architecture.md\nSystem Architecture"]
+    INDEX --> USAGE["usage.md\nHow to Use"]
+    INDEX --> AGENTS["agents.md\nAgent Catalog"]
+    INDEX --> IMPROVE["improvement-pipeline.md\nSelf-Improvement"]
+    INDEX --> RECOVERY["recovery-system.md\nRecovery"]
+    INDEX --> DASH["dashboard.md\nDashboard"]
+
+    USAGE --> IMPROVE
+    USAGE --> RECOVERY
+    ARCH --> AGENTS
+    ARCH --> IMPROVE
+```
 
 | Document | Description |
 |----------|-------------|

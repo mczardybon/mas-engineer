@@ -49,6 +49,19 @@ Git-like snapshots in `.state/checkpoints/TIMESTAMP/`:
 **Timeout:** 300s  
 **Action:** For high-risk changes
 
+```mermaid
+stateDiagram-v2
+    [*] --> FORK
+    FORK --> MODIFY: Copy workspace\nto /tmp/mas-fork-{PID}/
+    MODIFY --> VALIDATE: Changes applied\nin isolation
+    VALIDATE --> MERGE: All YAMLs pass\nvalidation
+    VALIDATE --> ABORT: Invalid YAML\nor user abort
+    MERGE --> [*]: Symlink updated\nmas-engineer_active
+    ABORT --> [*]: Fork discarded\nno changes
+    ABORT --> DIFF: Show diff
+    DIFF --> [*]
+```
+
 Creates a complete copy of the workspace:
 
 1. **FORK**: Copies everything to a temporary directory
@@ -66,6 +79,19 @@ The fork is tracked via a symlink: `mas-engineer_active → /tmp/mas-fork-{PID}/
 **Agent:** `sub_mas-recovery-timeline`  
 **Timeout:** 120s  
 **Action:** When corruption is detected
+
+```mermaid
+flowchart TD
+    CORRUPTION["Corruption detected"] --> SCAN["1. Scan ALL checkpoints\n.state/checkpoints/*/"]
+    SCAN --> VALIDATE["2. Validate YAML syntax\nfor each checkpoint"]
+    VALIDATE --> SELECT["3. Select youngest\nvalid checkpoint"]
+    SELECT --> SHOW["4. Show path from\ncurrent → best state"]
+    SHOW --> ASK{"Best checkpoint\nfound?"}
+    ASK -->|yes| RESTORE["5. RESTORE via\nrecovery-checkpoint"]
+    ASK -->|no| DEFIB["Escalate to\nStage 5: Defib"]
+    RESTORE --> DIAGNOSE["6. Damage diagnosis\n7 questions"]
+    DIAGNOSE --> RESULT["✅ System restored"]
+```
 
 Finds the best checkpoint automatically:
 
@@ -91,6 +117,30 @@ Finds the best checkpoint automatically:
 **Agent:** `sub_mas-recovery-defib`  
 **Timeout:** 120s (minimal config)  
 **Action:** When NOTHING works
+
+```mermaid
+flowchart TD
+    TRIGGER["Failure detected"] --> IMMUNE{"Stage 1\nImmune\nValid syntax?"}
+    IMMUNE -->|valid| CHANGE["Apply change"]
+    IMMUNE -->|invalid| BLOCKED["⛔ CHANGE BLOCKED"]
+    CHANGE --> OK{"Change\nsuccessful?"}
+    OK -->|yes| DONE["✅ Done"]
+    OK -->|no| CHECKPOINT{"Stage 2\nCheckpoint\nSnapshot exists?"}
+    CHECKPOINT -->|yes| RESTORE["Restore from snapshot"]
+    CHECKPOINT -->|no| SAFEZONE{"Stage 3\nSafezone\nHigh-risk?"}
+    SAFEZONE -->|yes| FORK["Fork workspace\nApply in isolation"]
+    FORK --> VALIDATE{"Fork\nvalidated?"}
+    VALIDATE -->|yes| MERGE["Merge changes"]
+    VALIDATE -->|no| ABORT["Abort fork"]
+    ABORT --> TIMELINE{"Stage 4\nTimeline\nBest checkpoint?"}
+    SAFEZONE -->|no| TIMELINE
+    RESTORE --> TIMELINE
+    TIMELINE -->|found| RECOVER["Restore best\ncheckpoint"]
+    TIMELINE -->|none found| DEFIB{"Stage 5\nDefib\nEmergency config"}
+    RECOVER --> RECOVERED["🔄 Resurrected"]
+    DEFIB -->|"immune + timeline only"| RESURRECT["DEFIB → RESURRECT\nMinimal config loaded"]
+    RESURRECT --> RECOVERED
+```
 
 The LAST resort. Loads a **minimal emergency config**:
 

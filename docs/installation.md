@@ -18,6 +18,18 @@ cd ~/mas-engineer
 ./install.sh
 ```
 
+```mermaid
+flowchart TD
+    START["./install.sh"] --> VALIDATE["1. Validate\nAll YAMLs · Python · Shell"]
+    VALIDATE -->|errors| FAIL["❌ Installation aborted\nFix errors & retry"]
+    VALIDATE -->|pass| BACKUP["2. Backup existing\n→ .backups/TIMESTAMP/"]
+    BACKUP --> COPY["3. Copy files\n→ ~/.config/goose/"]
+    COPY --> MODE["4. Set .mas-mode\n= framework"]
+    MODE --> VERIFY["5. Verify installation"]
+    VERIFY -->|pass| DONE["✅ Installation complete"]
+    VERIFY -->|fail| FAIL
+```
+
 The `install.sh` script:
 
 1. **Validates** all YAMLs, Python files, and shell scripts
@@ -28,10 +40,34 @@ The `install.sh` script:
    - 50 tools → `~/.config/goose/recipes/mas-engineer-tools/`
    - Docs → `~/.config/goose/docs/mas-engineer/`
    - Knowledge + SOT → `~/.config/goose/.state/`
-4. **Sets** `.mas-mode = MAS`
+4. **Sets** `.mas-mode = framework`
 5. **Validates** the installation
 
 The installer auto-detects the directory structure:
+
+```mermaid
+flowchart LR
+    subgraph SOURCE["Distribution (mas-engineer/)"]
+        S1["recipe/\ndev-mas-engineer.yaml"]
+        S2["recipe/sub/\nsub_mas-*.yaml (48)"]
+        S3["tools/\ndev_*.py/.sh (50)"]
+        S4[".state/workflows.yaml\nknowledge/\n rules/"]
+        S5["docs/\n*.md"]
+    end
+    subgraph DEST["Installed (~/.config/goose/)"]
+        D1["recipes/\ndev-mas-engineer.yaml"]
+        D2["recipes/sub/\nsub_mas-*.yaml"]
+        D3["recipes/mas-engineer-tools/\ndev_*.py/.sh"]
+        D4[".state/\nworkflows.yaml\nknowledge/ rules/"]
+        D5["docs/mas-engineer/\n*.md"]
+    end
+
+    S1 --> D1
+    S2 --> D2
+    S3 --> D3
+    S4 --> D4
+    S5 --> D5
+```
 
 ```
 Port-Modus (flat):                    Traditional:

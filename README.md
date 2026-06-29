@@ -60,6 +60,30 @@ goose run --recipe dev-mas-engineer  # → Start talking
 
 **Time to first result: 1 workday → 1 coffee break.**
 
+```mermaid
+gantt
+    title Before vs After — What Changes
+    dateFormat mm
+    axisFormat %m min
+
+    section Code-Based Frameworks
+    Install + configure docs     :a1, 0, 30
+    Write first agent class      :a2, after a1, 45
+    Build all agents             :a3, after a2, 180
+    Set up monitoring/logging    :a4, after a3, 120
+    Build recovery/retry logic   :a5, after a4, 120
+    Set up dashboard             :a6, after a5, 60
+    Done                         :milestone, after a6, 0
+
+    section MAS-Engineer
+    ./install.sh                 :b1, 0, 1
+    "Create me a system"          :b2, after b1, 2
+    Add researcher + writer       :b3, after b2, 2
+    Set up dashboard              :b4, after b3, 1
+    Improve performance           :b5, after b4, 5
+    Done                          :milestone, after b5, 0
+```
+
 ---
 
 ## ❌ What You Never Need to Touch
@@ -225,52 +249,44 @@ The same result. **Done through conversation.**
 
 ## 🧠 How It Works
 
-```
-                   ┌──────────────────────────────┐
-                   │        YOU                    │
-                   │  Natural Language Request     │
-                   └──────────────┬───────────────┘
-                                  │ delegates (R18)
-              ┌───────────────────┼───────────────────┐
-              │                   │                    │
-     ┌────────▼──────┐    ┌──────▼────────┐   ┌──────▼────────┐
-     │ Framework     │    │ Improvement   │   │ Monitoring    │
-     │ Builders      │    │ Pipeline      │   │ & Recovery    │
-     │ (8 agents)    │    │ (7 agents)    │   │ (12 agents)   │
-     └───────────────┘    └───────────────┘   └───────────────┘
-     ┌───────────────┐    ┌───────────────┐   ┌───────────────┐
-     │ Utility       │    │ Analysis      │   │ Management    │
-     │ (10 agents)   │    │ (7 agents)    │   │ (4 agents)    │
-     └───────────────┘    └───────────────┘   └───────────────┘
-
-                                     ┌──────────────────────┐
-                                     │   50 Python/Shell    │
-                                     │   Tools              │
-                                     └──────────────────────┘
+```mermaid
+flowchart TD
+    YOU["You\n🗣️ Natural Language"] --> ENGINEER["MAS-Engineer\ndev-mas-engineer.yaml"]
+    ENGINEER --> FB["Framework Builders\n6 agents"]
+    ENGINEER --> IP["Improvement Pipeline\n7 agents"]
+    ENGINEER --> MON["Monitoring\n7 agents"]
+    ENGINEER --> REC["Recovery\n5 agents"]
+    ENGINEER --> UT["Utility\n10 agents"]
+    ENGINEER --> AN["Analysis\n7 agents"]
+    ENGINEER --> MG["Management\n6 agents"]
+    FB & IP & MON & REC & UT & AN & MG --> TOOLS["50 Python/Shell\nTools"]
 ```
 
 ---
 
 ## 🧩 Where MAS-Engineer Fits in Your Stack
 
-```
-┌──────────────────────────────────────────────────────┐
-│              YOUR MULTI-AGENT SYSTEM                  │
-│  ┌───────────┐ ┌───────────┐ ┌───────────┐          │
-│  │Researcher │ │  Writer   │ │ Reviewer  │   ...    │
-│  └───────────┘ └───────────┘ └───────────┘          │
-├──────────────────────────────────────────────────────┤
-│                 MAS-ENGINEER                          │
-│      Builds · Improves · Monitors · Recovers         │
-│      Natural language interface · 48 sub-agents      │
-├──────────────────────────────────────────────────────┤
-│                   GOOSE                               │
-│      MCP agent platform (runtime)                    │
-│      Provider-agnostic (OpenAI, Anthropic, Ollama)   │
-├──────────────────────────────────────────────────────┤
-│              YOUR LLM PROVIDER                        │
-│      OpenAI · Anthropic · Ollama · Groq · etc.       │
-└──────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph LLM["LLM Provider"]
+        L1["OpenAI / Anthropic / Ollama / Groq / ..."]
+    end
+    subgraph GOOSE["Goose — MCP Agent Runtime"]
+        G1["Provider-agnostic platform"]
+        G2["Session management · Scheduling · Extensions"]
+    end
+    subgraph ENGINEER["MAS-Engineer"]
+        E1["🧠 Natural Language Interface"]
+        E2["48 Sub-Agents · 50 Tools"]
+        E3["8-Stage Self-Improvement · 5-Stage Recovery"]
+        E4["23 Enforced Rules · SOT Registry"]
+    end
+    subgraph SYSTEM["Your Multi-Agent System"]
+        S1["Your agents · Your rules · Your workflows"]
+    end
+    L1 --> G1 --> E1
+    E1 --> E2 & E3 & E4
+    E2 & E3 & E4 --> SYSTEM
 ```
 
 MAS-Engineer sits between your LLM provider and your multi-agent system. Goose handles runtime. MAS-Engineer handles **creation, optimization, monitoring, and recovery** through natural language.
@@ -279,11 +295,36 @@ MAS-Engineer sits between your LLM provider and your multi-agent system. Goose h
 
 ## 🔄 Three Operating Modes
 
-| Mode | What the Engineer Does |
-|------|-----------------------|
-| 🔧 **MAS Mode** | **Improves itself** — analyzes its own sessions, finds optimization potential, patches its own agents. The framework evolves autonomously. |
-| 🟢 **Framework Mode** | **Works on YOUR system** — scans for issues, patches problems, hardens security, monitors health. Your multi-agent system, maintained by AI. |
-| 📁 **Generic Mode** | **Creates NEW projects** — initializes, generates agents, sets up monitoring infrastructure. A complete multi-agent system from scratch. |
+```mermaid
+stateDiagram-v2
+    direction LR
+    state ".mas-mode = mas" as MAS
+    state ".mas-mode = framework" as FW
+    state ".mas-mode = <project>" as GEN
+
+    [*] --> MAS
+    MAS --> FW: echo "framework" > .mas-mode
+    FW --> GEN: echo "<project>" > .mas-mode
+    GEN --> FW: echo "framework" > .mas-mode
+    FW --> MAS: echo "mas" > .mas-mode
+    GEN --> MAS: echo "mas" > .mas-mode
+
+    state MAS {
+        M1 : Analyzes own sessions
+        M2 : Optimizes own agents
+        M3 : All 23 rules active
+    }
+    state FW {
+        F1 : Scans user framework
+        F2 : Patches & hardens
+        F3 : Monitors health
+    }
+    state GEN {
+        G1 : Initializes project
+        G2 : Generates agents
+        G3 : Sets up infrastructure
+    }
+```
 
 One tool. Three completely different jobs. All through natural language.
 
@@ -306,6 +347,24 @@ goose run --recipe dev-mas-engineer
 # → "Create a new multi-agent system"
 # → "Add a researcher agent"
 # → "Set up the dashboard"
+```
+
+```mermaid
+flowchart LR
+    subgraph INSTALL["1. Install"]
+        A["./install.sh\n10 seconds"] --> B["goose run --recipe\ndev-mas-engineer"]
+    end
+    subgraph TALK["2. Talk"]
+        B --> C["💬 'Create a system\nfor my startup'"]
+        C --> D["💬 'Add a researcher\nand writer agent'"]
+        D --> E["💬 'Set up\nthe dashboard'"]
+    end
+    subgraph IMPROVE["3. Optimize"]
+        E --> F["💬 'Improve my agents'\nperformance'"]
+    end
+    F --> G[✅ Multi-agent\nsystem running]
+    style A fill:#4CAF50,color:#fff
+    style G fill:#2196F3,color:#fff
 ```
 
 ---
@@ -395,13 +454,47 @@ A: Yes. Standard Goose setup. Provider-agnostic. Configured via `~/.config/goose
 
 ---
 
-## 🗺️ Roadmap
+## 🗺️ Current Feature Set
 
-| Phase | What's Coming |
-|:-----:|---------------|
-| ✅ **Now** | 48 agents, 50 tools, 8-stage improvement, 5-stage recovery, dashboard per project |
-| 🔜 **Next** | Community agent marketplace, pre-built system templates (RAG, support, analytics), one-click deploy to cloud |
-| 🎯 **Future** | Visual agent builder, multi-user collaboration, enterprise RBAC, observability integrations (Datadog, Grafana) |
+```mermaid
+mindmap
+  root((MAS-Engineer))
+    48 Sub-Agents
+      Framework Builders
+      Improvement Pipeline
+      Monitoring
+      Recovery
+      Analysis
+      Utility
+      Management
+    50 Tools
+      Rule Enforcement
+      YAML Operations
+      Build & Deploy
+      Analysis & Audit
+      Dashboard
+      Utilities
+    Self-Improvement
+      8-Stage Pipeline
+      53 Feature Types
+      Rate Limited R11
+    Recovery
+      5-Stage Phoenix
+      Immune Prevention
+      Checkpoint Snapshots
+      Safezone Fork
+      Timeline Search
+      Defib Emergency
+    Governance
+      23 Enforced Rules
+      11-Article Constitution
+      Mode System
+      Domain Separation
+    Dashboard
+      MCP App per Project
+      Auto-Refresh 5min
+      Health & Performance
+```
 
 ---
 
