@@ -95,7 +95,7 @@ gantt
 | 🔧 Editing config files | Conversation → automatic generation. |
 | 📊 Dashboard setup | One command. Per project. Forever. |
 | 🔄 CI/CD for agents | Auto-commit, auto-checkpoint, auto-improve. |
-| 🧪 Writing tests | Test runner + verification agent included. |
+| 🧪 Writing tests | Test runner + verification agent included (add your own test suites). |
 | 📚 Framework tutorials | Just talk to it. It explains itself. |
 
 ---
@@ -170,8 +170,8 @@ The same result. **Done through conversation.**
 │                                                │
 ├─ MAS-Engineer ─────────────────────────────────┤
 │                                                │
-│   📊 Dashboard active. Auto-refreshes every    │
-│      5 minutes. Health, agents, changes visible.│
+│   📊 Dashboard active. Refreshable via Goose   │
+│      scheduler. Health, agents, changes visible. │
 │                                                │
 ├─ You ─────────────────────────────────────────┤
 │                                                │
@@ -224,7 +224,7 @@ The same result. **Done through conversation.**
 | **Agents out of the box** | **0** — you build everything | **49** — production-ready |
 | **Self-improvement** | ❌ Your system stays the same forever | ✅ Analyzes itself, improves its agents |
 | **Recovery from failure** | `max_retry_limit=2` | ✅ 5 stages: Immune→Checkpoint→Safezone→Timeline→Defib |
-| **Per-project dashboard** | Enterprise plan 💰 | ✅ Free, auto-refreshing, every project |
+| **Per-project dashboard** | Enterprise plan 💰 | ✅ Free, refreshable, every project |
 | **Enforced governance** | Manual coding of guardrails | ✅ 11-article Constitution + 10 active Rules |
 | **Framework generator** | ❌ | ✅ `--bootstrap` → standalone system in one command |
 | **Who it's for** | Python developers who love APIs | **Anyone who needs an agent system** |
@@ -376,7 +376,7 @@ flowchart LR
 | 🛡️ | **49 Sub-Agents** | Monitoring, Recovery, Improvement, Analysis, Management, Documentation, Utilities — all YAML-defines, all tested, all ready |
 | 🔄 | **8-Stage Self-Improvement** | IM pipeline: Read sessions → Detect issues (53 documented patterns) → Rank → Design patches → Apply → Validate → Push improvements |
 | 🏥 | **5-Stage Phoenix Recovery** | Immune (prevention) → Checkpoint (snapshots) → Safezone (isolated fork) → Timeline (best-point search) → Defib (emergency minimal config) |
-| 📊 | **Per-Project Dashboard** | MCP app with health status, agent list, change history, performance metrics. Auto-refreshes every 5 minutes. Free. |
+| 📊 | **Per-Project Dashboard** | MCP app with health status, agent list, change history, performance metrics. Refreshable via Goose scheduler. Free. |
 | 📜 | **Constitution + Rules** | 11 articles governing ALL agents + 10 enforced rules with hardness levels (R01-R23) |
 | 🚀 | **Bootstrap Deployment** | `--bootstrap` creates a standalone MAS-Engineer distribution. All 49 agents + 52 tools + dashboard + recovery. Installable anywhere. |
 | 🔍 | **Web Research** | Before creating or improving, searches goose-docs.ai, GitHub, and PyPI for current best practices |
@@ -492,7 +492,7 @@ mindmap
       Domain Separation
     Dashboard
       MCP App per Project
-      Auto-Refresh 5min
+       Scheduled Refresh
       Health & Performance
 ```
 

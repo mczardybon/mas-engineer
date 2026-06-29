@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_audit.py — Audit-Log-System + Lock + Pre-Commit-Check
 Aufruf: dev_audit.py --log --aktion WRITE --agent gatekeeper --ziel path --status OK

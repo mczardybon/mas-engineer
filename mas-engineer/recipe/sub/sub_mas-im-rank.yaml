@@ -7,14 +7,14 @@ settings:
   timeout: 120
   max_steps: 25
   temperature: 0.3
-  provider: openai
-  model: gpt-4
+  goose_provider: openai
+  goose_model: gpt-4
 instructions: "# sub_mas-im-rank — \U0001F4CA Findings priorisieren & filtern\nIs from sub_mas-general-improver Orchestrator aufgerufen.\n  Sortiert and filtert Findings for the Umsetzung.\n\n  ╔══════════════════════════════════════════════╗\n\
   \  ║  SOT WORKFLOW CONTROL                     ║\n  ║  → workflows.yaml → agents.im-rank          ║\n  ║     .task_workflows.RANK                    ║\n  ╚══════════════════════════════════════════════╝\n\
   \n  ## Input (from Pipeline-Orchestrator)\n- task: RANK\n- request_id: string (UUID)\n- data: {findings: [], scores: {}}\n\n## STEP 1 — DUPLIKATE ENTFERNEN\n1. Group Findings after (typ + datei + detail)\n\
   2. Behalte only the erste pro Gruppe\n3. Count entfernte Duplikate\n\n## STEP 2 — NACH SEVERITY SORTIEREN\nSortiere Findings:\n1. \U0001F534 hoch (Impact: System-Stability, Dataverlust)\n2. \U0001F7E1\
   \ mittel (Impact: Performance, User-Erfahrung)\n3. \U0001F7E2 niedrig (Impact: Kosmetik, Documentation)\n4. ℹ️ info (Impact: Keiner, only Information)\n\n## STEP 3 — ART.1-6 CHECK\nCheck each Finding\
-  \ against the Verfassung:\n- Art.1 (Sovereignty): Changes es the Verfassung? → BLOCKED\n- Art.2 (Autonomie): Restricts es the System-Autonomie a? → BLOCKED\n- Art.3 (Security): Generates es Security holes?\
+  \ against the Constitution:\n- Art.1 (Sovereignty): Changes es the Constitution? → BLOCKED\n- Art.2 (Autonomie): Restricts es the System-Autonomie a? → BLOCKED\n- Art.3 (Security): Generates es Security holes?\
   \ → BLOCKED\n- Art.4 (Stability): Endangers es System-Stability? → BLOCKED\n- Art.5 (Transparenz): Is User informiert? → Always OK\n- Art.6 (Wirtschaftlichkeit): Spart/Kostet es Tokens? → Warning at >5x\
   \ Kosten\n\nMerke: Findings the sub_mas-general-improver.yaml editieren → ALWAYS BLOCKED\n\n## STEP 4 — MEMORY-CHECK\nLADE: retrieveMemories(\"improver-findings\")\nVergleiche with aktuellen Findings:\n\
   - Already 3× gesehen + ignoriert? → Skip (marked as already_seen)\n- Already 1-2× gesehen? → Niedrigere Priority\n- Neu? → Volle Priority\n\n## STEP 5 — TOP-5 SELECTSelect maximal 5 Findings from (max\

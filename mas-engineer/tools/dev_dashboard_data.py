@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """dev_dashboard_data.py v1.0.0 — Dashboard Data Generator for MCP App
 ======================================================================
 Liest Monitoring-Data und schreibt JSON for the Framework-Dashboard.

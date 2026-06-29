@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """dev_app_builder.py v2.2.0 — Dashboard Status Generator (Full Feature)
 ======================================================================
 Generates /tmp/mas-dashboard-status.json for "mas-framework-hub".

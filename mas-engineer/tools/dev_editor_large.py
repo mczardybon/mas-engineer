@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_editor_large.py — Zeilen-basiertes Edit for files >1000 Zeilen
 Replaces YAML-Blocks zwischen zwei Zeilen-Nummern.

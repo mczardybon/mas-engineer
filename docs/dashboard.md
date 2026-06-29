@@ -94,7 +94,7 @@ The setup recipe:
 
 ## Data Collected
 
-Every 5 minutes, the scheduler runs `dev_dashboard_data.py` which collects:
+When triggered, the scheduler runs `dev_dashboard_data.py` which collects:
 
 | Category | Data | Source |
 |----------|------|--------|

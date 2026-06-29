@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """dev_pattern_apply.py — Wendet high-confidence Patterns auf Framework an.
 Usage: dev_pattern_apply.py --registry <path> --project <name> --threshold 0.3
 Output: {applied: [{pattern, agent, action}], skipped: int}"""

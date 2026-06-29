@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """dev_dashboard_refresh.py v1.0.0 — On-Demand Dashboard Generator
 =================================================================
 Will NUR auf User-Refresh aufgerufen. KEIN Daemon. KEIN Polling.

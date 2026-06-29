@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_editor.py — ✏️ Die Hand des dev-mas-engineer
 =================================================

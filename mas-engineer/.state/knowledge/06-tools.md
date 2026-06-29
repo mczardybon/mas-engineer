@@ -1,4 +1,4 @@
-# MAS-Tools (43) in mas-engineer/tools/
+# MAS-Tools (47) in mas-engineer/tools/
 
 ## Hardening-Tools (Methods 5+6+9)
 | Tool | Method | lines | Zweck |
@@ -37,12 +37,11 @@
 | Tool | lines | Zweck |
 |:-----|:------:|:------|
 | dev_app_builder.py | 541 | Dashboard-Status-Generator (v2.2.0) |
-| dev_dashboard_live.py | 90 | Live-Dashboard-Generator |
-| dev_dashboard_poller.py | 206 | Polling-Daemon (3s) |
+| dev_dashboard_refresh.py | 353 | On-Demand Dashboard Generator |
+| dev_dashboard_data.py | 272 | Dashboard Data Generator for MCP App |
 | dev_workload_monitor.py | 238 | Workload-Analyse + Relief-Deployment |
 | dev_health_report.py | 133 | Health-Score + Trend |
 | dev_dispatch_tracer.py | 239 | Dispatch-Tracing (NDJSON-Log) |
-| start_dashboard.sh | 56 | Poller-Daemon mit --daemon/stop/status |
 
 ## Weitere (30+)
 | Tool | lines | Zweck |

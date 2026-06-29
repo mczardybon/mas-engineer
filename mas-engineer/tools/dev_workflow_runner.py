@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_workflow_runner.py — Workflow CLI
 

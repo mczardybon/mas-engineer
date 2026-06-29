@@ -1,4 +1,4 @@
-#!/am/bash
+#!/bin/bash
 # dev_build.sh — Distribution Builder v3.0.0
 # ==============================================================
 # Baut ZIP 1:1 aus Workspace-Struktur.

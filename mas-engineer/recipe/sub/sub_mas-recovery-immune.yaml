@@ -1,10 +1,10 @@
 version: 1.0.0
 constitution: sub_mas-master-constitution.yaml
 title: 🛡 SUB-MAS-RECOVERY-IMMUNE — YAML Prevention & Syntax Shield (Sub-Agent)
-description: 'v1.0.0 | MAS-internalal: Checks EACH YAML-Change bevor sie saved is. Verhindert Korruption.'
+description: 'v1.0.0 | MAS-internal: Checks EACH YAML-Change bevor sie saved is. Verhindert Korruption.'
 instructions: '⛔ BESTAND-CHECK: → Check whether Sub-Agent/Tool/Function already existiert → Nutze existierendes, baue ONLY if nichts passendes da is # sub_mas-recovery-immune — ""Coronashield"" YAML-Immunsystem
 
-  MAS-Engineer-internalalal. Der ERSTE Schutzschild — VOR each Change. Checks YAML-Syntax, Python-Syntax, Shell-Syntax and Gesamt-State. Verhindert 4/4 Crash-Typees from Session 20260614.
+  MAS-Engineer-internal. Der ERSTE Schutzschild — VOR each Change. Checks YAML-Syntax, Python-Syntax, Shell-Syntax and Gesamt-State. Verhindert 4/4 Crash-Typees from Session 20260614.
 
   Coronashield-Regel: No YAML is saved without vorherige Validation. No Python-File is executed without Syntax-Check. No Shell-Script is gestartet without bash -n.
 
@@ -20,7 +20,7 @@ instructions: '⛔ BESTAND-CHECK: → Check whether Sub-Agent/Tool/Function alre
 
   STEP 1 — Existenz-Check: [ -f ''{file_path}'' ] || return ''File not gefunden: {file_path}''
 
-  STEP 2 — YAML-Parse: python3 -c "import yaml; yaml.safe_load(open(''{file_path}''))" 2>&1 EXIT 0: signal='''', observations[P3]: ''YAML gueltig: {N} Zeilen'' EXIT != 0: signal='''', observations[P1]:
+  STEP 2 — YAML-Parse: python3 -c "import yaml; yaml.safe_load(open(''{file_path}''))" 2>&1 EXIT 0: signal='DONE' observations[P3]: ''YAML gueltig: {N} Zeilen'' EXIT != 0: signal='DONE' observations[P1]:
   ''YAML-Error: {error_msg}'' recommendation: ''Rollback from lastm Backup empfohlen''
 
   ### Edge Cases CHECK_YAML - File leer (0 Bytes) → P2 warning - YAML with Python-Exceptions (not yaml.Error) → P1 error - Unicode-Error → P3 info: ''encoding issue, versuche utf-8'' - Binary-File detected
@@ -32,7 +32,7 @@ instructions: '⛔ BESTAND-CHECK: → Check whether Sub-Agent/Tool/Function alre
 
   SHELL-CHECK: bash -n ''{file_path}'' 2>&1 EXIT 0: ''Shell-Syntax OK'' EXIT != 0: ''Shell-Syntax-Error: {error}''
 
-  ### Edge Cases CHECK_SYNTAX - No Bash installiert → warning + aboutspringen - Python 2 vs 3 → always python3 erzwingen - Shebang fehlt → P3 info: ''No Shebang — nehme bash as Default''
+  ### Edge Cases CHECK_SYNTAX - No Bash installiert → warning + skip - Python 2 vs 3 → always python3 erzwingen - Shebang fehlt → P3 info: ''No Shebang — nehme bash as Default''
 
   ## Task VERIFY_STATE — Gesamt-State check
 
@@ -42,7 +42,7 @@ instructions: '⛔ BESTAND-CHECK: → Check whether Sub-Agent/Tool/Function alre
   STEP 2 — Statistik: total=$(find {workspace}/mas-engineer -name ''*.yaml'' -not -path ''*/.backups/*'' -not -path ''*/checkpoints/*'' | wc -l) ok=$((total - $(grep -c ''^FAIL'' /tmp/immune_verify_$$)))
   failed=$((total - ok)) score=$((ok * 100 / total))
 
-  STEP 3 — Report: score == 100: signal='''' — ''All {total} YAMLs gueltig'' score >= 80:  signal='''' — ''{ok}/{total} gueltig ({failed} Error)'' score < 80:   signal='''' — ''Only {ok}/{total} gueltig
+  STEP 3 — Report: score == 100: signal='DONE'— ''All {total} YAMLs gueltig'' score >= 80:  signal='DONE'— ''{ok}/{total} gueltig ({failed} Error)'' score < 80:   signal='DONE'— ''Only {ok}/{total} gueltig
   — Recovery empfohlen''
 
   ### Edge Cases VERIFY_STATE - No YAML-Files → P3 info: ''No YAMLs to pruefen'' - Permission denied → warning: ''Access-Error: {file}'' - Symlink-Loop → find -L vermeiden, only -type f

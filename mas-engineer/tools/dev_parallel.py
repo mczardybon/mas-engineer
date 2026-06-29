@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """dev_paralll.py — Paralll-Pool-Manager v2.1.0
 ================================================
 Thread-based paralll pool for agent dispatches.

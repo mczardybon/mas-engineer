@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_workspace.py — 📁 Workspace-Manager des dev-mas-engineer
 ===========================================================
@@ -39,10 +39,8 @@ GOOSE_FRAMEWORK_DIR = Path.home() / ".local" / "share" / "goose" / "_framework"
 GOOSE_DOCS = Path.home() / ".config" / "goose" / "docs"
 GOOSE_CONFIG = Path.home() / ".config" / "goose" / "config.yaml"
 
-# Source-Repo for Python-Skripte, Tests, Projekt-files
-AGENT_REPO = Path(__file__).parent.parent.parent.resolve()
-if not (AGENT_REPO / "install_framework.py").exists():
-    AGENT_REPO = Path.home() / ".config" / "goose" / "recipes"
+# Source-Repo for Python scripts, tests, project files
+AGENT_REPO = Path.home() / ".config" / "goose" / "recipes"
 
 # Was will NICHT in den Workspace kopiert
 EXCLUDE_RECIPES = {"dev-mas-engineer.yaml"}

@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """dev_dispatch_tracker.py — Dispatch Tree Tracker v1.0.0
 ========================================================
 Trackt jeden delegate()-Aufruf und baut a Dispatch-Tree.

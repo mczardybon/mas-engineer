@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_audit_deps.py — Dependency-Analyse for Generic-Projekte
 Scannt all Python-files after Imports und generates Whitelist-Suggestion.

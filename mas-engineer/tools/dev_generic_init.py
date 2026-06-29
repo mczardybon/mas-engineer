@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """dev_generic_init.py — Generic-Init Tool v1.0.0
 Initializes external projects WITHOUT agent copy.
 Creates: Configuration + symlink to MAS tools + guidelines.

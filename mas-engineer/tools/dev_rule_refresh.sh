@@ -1,4 +1,4 @@
-#!/am/bash
+#!/bin/bash
 # dev_rule_refresh.sh — Methode 5: Reaktivierungs-Anker (MAS + Generic)
 # Will all 5 Steps aufgerufen. Loads Rulen frisch aus file.
 # --mode mas     → MAS-eigene Rulen (harte_rulen.yaml → rulen_5/4/2_*.yaml)

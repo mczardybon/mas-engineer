@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_haerte_propagation.py — Methode 6: Hardening propagation in Sub-Agenten
 Will bei JEDEM delegate()-Aufruf executed.

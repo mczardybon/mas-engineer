@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_yaml_generator_generic.py — Generic-Version des YAML-Generators
 Generates sub_mas-*.yaml aus agent_schema.yaml (SOT) for User-Projekte.

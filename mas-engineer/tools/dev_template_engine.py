@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_template_engine.py — Creates BP-konforme Sub-Agent YAMLs
 """

@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_rule_checker.py — Method 9: Deterministic rule test
 Called BEFORE every write/edit/shell action.

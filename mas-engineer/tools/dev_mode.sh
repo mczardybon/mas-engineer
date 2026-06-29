@@ -1,4 +1,4 @@
-#!/am/bash
+#!/bin/bash
 # dev_mode.sh — MAS-Modus-Wechsel
 # ================================
 # Nutzung:

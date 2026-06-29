@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_architecture_checker.py — Checks ob eine Change die MAS-Architektur betrifft (R15).
 Will von dev_rule_checker.py bei --check-architecture aufgerufen.

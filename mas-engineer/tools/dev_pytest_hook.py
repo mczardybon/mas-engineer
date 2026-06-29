@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_pytest_hook.py — Checker-Hook for pytest
 Aktiviert: pytest --checker-hook

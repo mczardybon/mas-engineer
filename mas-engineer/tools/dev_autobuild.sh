@@ -1,4 +1,4 @@
-#!/am/bash
+#!/bin/bash
 # dev_autobuild.sh — Automatischer Distribution-Builder v2.0.0
 # =======================================================
 # Will after jedem git commit automatically started.

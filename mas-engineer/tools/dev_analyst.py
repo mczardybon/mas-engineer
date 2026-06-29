@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_analyst.py — 🔍 The quality checker des dev-mas-engineer
 ============================================================

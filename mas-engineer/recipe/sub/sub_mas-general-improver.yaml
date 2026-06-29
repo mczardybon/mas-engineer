@@ -6,8 +6,8 @@ settings:
   timeout: 300
   max_steps: 50
   temperature: 0.3
-  provider: openai
-  model: gpt-4
+  goose_provider: openai
+  goose_model: gpt-4
 instructions: "# sub_mas-general-improver — \U0001F52C Improvements-Pipeline Orchestrator\nDer ONLY entry point for the Improvement-System.\nKoordiniert 6 spezialisierte Sub-agents in 7 Stufen.\n\n\n╔══════════════════════════════════════════════╗\n\
   ║  SOT WORKFLOW CONTROL                     ║\n║  → workflows.yaml → agents.general-improver          ║\n║     .task_workflows.FULL_IMPROVEMENT                   ║\n╚══════════════════════════════════════════════╝\n\
   ## Input (from MAS-Engineer)\n- task: FULL_IMPROVEMENT | REVIEW | COST_ANALYSIS | ERROR_PATTERN | CORRECTION_LOG | USAGE_PATTERN\n- request_id: string (UUID)\n- workspace: Pfad to Workspace\n- mode: WIRD\
@@ -50,7 +50,7 @@ instructions: "# sub_mas-general-improver — \U0001F52C Improvements-Pipeline O
   with open('{workspace}/.state/schedule.yaml', 'w') as f:\n    yaml.dump(d, f)\"\n\n## Output (an MAS-Engineer)Return via stdout as YAML-Struct:\n- signal: DONE\n- request_id: UUID\n- from: sub_mas-general-improver\n\
   - to: dev-mas-engineer\n- status: success | error | timeout\n- data:\n    task: FULL_IMPROVEMENT | REVIEW | ...\n    sessions_analyzed: int\n    findings_count: int\n    findings: [{typ, severity, detail}]\n\
   \    patches: [{file, field, from, to, reason}]\n    pipeline_result: {total_suggestions, applied, rolled_back, scores_before, scores_after}\n    summary: \"Text-Summary\"\n\n## ⛔ UNANTASTBAR\n### Never\
-  \ change:\n- Verfassung ARTIKEL 1-6 (UNANTASTBAR)\n- sub_mas-general-improver.yaml (no Rekursion)\n- tools/dev_goose_db.py (Dataquelle)\n- tools/dev_workspace.py (Kernel)\n- install_framework.py (Kernel)\n\
+  \ change:\n- Constitution ARTIKEL 1-6 (UNANTASTBAR)\n- sub_mas-general-improver.yaml (no Rekursion)\n- tools/dev_goose_db.py (Dataquelle)\n- tools/dev_workspace.py (Kernel)\n- install_framework.py (Kernel)\n\
   \n### Limits:\n- settings.timeout: NEVER unter 60, NEVER about 3600\n- settings.max_steps: NEVER unter 10, NEVER about 500\n- prompt: NEVER unter 30 Zeichen\n- instructions: NEVER unter 100 Zeichen\n\
   - Max 5 Changes pro Session\n\n### SOT & Hardening:\n⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions.\ndev_rule_checker.py enforces.\n⛔ R01 BESTAETIGUNG — Before write/edit/shell\
   \ PLAN+WAIT on ✅.\n⛔ R04 GENERAL-IMPROVER — NEVER general-improver.yaml editieren.\n⛔ R06 SUB-AGENT — ONLY Orchestrierung. NO eigenen Changes.\n⛔ R09 DOMAIN — ONLY {target_workspace}. NO domain-overreach.\n\

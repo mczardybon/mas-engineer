@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_yaml_generator_core.py — Gemeinsamer Kern for YAML-Generierung
 Contains generate_agent_yaml() und validate_generated() for beide Varianten.

@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_workload_monitor.py — Workload-Analyse for MAS-Agenten
 Erkennt aboutlastete Agenten und deployt Relief-Agents via SOT+Generator.

@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_yaml_generator.py — Generates sub_mas-*.yaml aus agent_schema.yaml (SOT)
 Aufruf:

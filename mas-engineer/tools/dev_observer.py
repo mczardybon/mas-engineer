@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_observer.py — 📡 Das Auge des dev-mas-engineer
 ===================================================

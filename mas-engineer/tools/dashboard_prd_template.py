@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """dashboard_prd_template.py — Generates PRD for mas-framework-hub-dashboard
 =======================================================================
 Liest current Data aus /tmp/mas-dashboard-status.json und

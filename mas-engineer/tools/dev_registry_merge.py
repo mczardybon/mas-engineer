@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """dev_registry_merge.py — Extrahiert Muster aus Findings und merged in Registry.
 Usage: dev_registry_merge.py --findings <json-str> --registry <path> --project <name>
 Output: {new_patterns, merged_count, confidence_avg}"""

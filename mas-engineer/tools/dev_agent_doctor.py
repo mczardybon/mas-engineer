@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """dev_agent_doctor.py — Framework-Agent-Optimierer v1.0.0
 ============================================================
 Scant, bewertet und optimiert Framework-Agenten gegen Best-Practices.

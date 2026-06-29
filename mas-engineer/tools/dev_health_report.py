@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_health_report.py — Health-Report + Trend for Generic-Projekte
 Aufruf: python3 dev_health_report.py --target ~/my-project/

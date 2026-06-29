@@ -258,7 +258,7 @@ flowchart LR
         T2["🔨 Build\ndev_build.sh\ndev_autobuild.sh\ndev_mode.sh"]
         T3["🔍 Analysis\ndev_observer\ndev_architect\ndev_analyst"]
         T4["📝 YAML\ndev_editor\ndev_changes\ndev_yaml_generator"]
-        T5["📊 Dashboard\ndev_app_builder\ndev_dashboard_live\ndev_dashboard_poller"]
+        T5["📊 Dashboard\ndev_app_builder\ndev_dashboard_refresh\ndev_dashboard_data"]
         T6["🔧 Utilities\ndev_session_cleanup\ndev_parallel\ndev_recipe_manager"]
     end
 
@@ -273,5 +273,5 @@ flowchart LR
 | **Build** | `dev_build.sh` `dev_autobuild.sh` `dev_mode.sh` | ZIP distribution, mode switching |
 | **Analysis** | `dev_observer.py` `dev_architect.py` `dev_analyst.py` `dev_goose_db.py` | Framework analysis |
 | **YAML** | `dev_editor.py` `dev_changes.py` `dev_yaml_generator.py` | YAML operations |
-| **Dashboard** | `dev_app_builder.py` `dev_dashboard_live.py` `dev_dashboard_poller.py` | MCP dashboard |
+| **Dashboard** | `dev_app_builder.py` `dev_dashboard_refresh.py` `dev_dashboard_data.py` | MCP dashboard |
 | **Utilities** | `dev_session_cleanup.sh` `dev_parallel.py` `dev_recipe_manager.py` `dev_goose_manager.py` | Operations |

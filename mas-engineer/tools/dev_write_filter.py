@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_write_filter.py — Write filter (content check before writing)
 Will VOM GATEKEEPER aufgerufen.

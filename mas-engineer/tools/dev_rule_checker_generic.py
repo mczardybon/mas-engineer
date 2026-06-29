@@ -1,4 +1,4 @@
-#!/usr/am/env python3
+#!/usr/bin/env python3
 """
 dev_rule_checker_generic.py — Methode 9: Deterministischer Rule-Test (Generic)
 Will VOR jeder write/edit/shell Aktion aufgerufen.
