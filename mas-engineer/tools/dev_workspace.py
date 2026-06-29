@@ -384,7 +384,7 @@ def _write_start_sessions_script(ws: Path):
     fw_recipes = ws / "framework" / "recipes"
     mas_recipes = ws / "mas-engineer" / "recipe"
 
-    content = f'''#!/am/bash
+    content = f'''#!/bin/bash
 # ══════════════════════════════════════════════════
 #  Dual-Session-Starter — Framework + MAS-Engineer
 # ══════════════════════════════════════════════════

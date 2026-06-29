@@ -44,7 +44,7 @@ instructions: "# sub_mas-general-improver — \U0001F52C Improvements-Pipeline O
   \ REVIEW with Changes)\nIF task in (FULL_IMPROVEMENT, REVIEW) UND patches angewendet:\n  → Delegiere an sub_mas-im-validator (task=VALIDATE, data={vorher_scores, patches, workspace}, mode={DETECTED_MODE})\n\
   \  → WAIT (max 180s)\n  → IF FAILED: SOFORT ROLLBACK for all Changes\n  → IF DEGRADED: User fragen \"Trotzdem behalten? (j/N)\"\n  → IF ALL_GREEN: ✅ All Changes valide\n\n## STEP 7 — ZUSAMMENFASSUNG +\
   \ INSTALL\nSHOW:\n\"━━━ PIPELINE ABGESCHLOSSEN ━━━\n Runde: {next_round}\n Status: ✅ success\n Findings: {N} ({hoch}/{mittel}/{niedrig}/{info})\n Changes: {applied}/{total} angewendet\n Scores: {prompt_vorher}\
-  \ → {prompt_nachher} ({delta})\n Zeit: {dauer}s\"\n\nASK: \"Changes in Goose installieren? (j/N)\"\nIF ja:\n  IF DETECTED_MODE == \"mas\": bash {workspace}/mas-engineer/tools/update.sh --mas\n  IF DETECTED_MODE\
+  \ → {prompt_nachher} ({delta})\n Zeit: {dauer}s\"\n\nASK: \"Changes in Goose installieren? (j/N)\"\nIF ja:\n  IF DETECTED_MODE == \"mas\": bash {workspace}/install.sh\n  IF DETECTED_MODE\
   \ != \"mas\": \"\U0001F4E6 Schritt 8 PUSH_IMPROVEMENTS is executed\"\n  → \"✅ MAS aktualisiert — sofort aktiv\"\n\nTiming aktualisieren:\n  python3 -c \"\nimport yaml\nwith open('{workspace}/.state/schedule.yaml')\
   \ as f:\n    d = yaml.safe_load(f) or {{}}\nd.setdefault('history', []).append({{'round': len(d.get('history', [])) + 1, 'time': 'now', 'findings_count': {findings_count}, 'duration_sec': {duration}}})\n\
   with open('{workspace}/.state/schedule.yaml', 'w') as f:\n    yaml.dump(d, f)\"\n\n## Output (an MAS-Engineer)Return via stdout as YAML-Struct:\n- signal: DONE\n- request_id: UUID\n- from: sub_mas-general-improver\n\

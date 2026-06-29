@@ -17,7 +17,7 @@ instructions: '⛔ BESTAND-CHECK: → Check whether Sub-Agent/Tool/Function alre
   STEP 1 — All Checkpoints testen (juengster zuerst): checkpoint_dir={workspace}/mas-engineer/.state/checkpoints beste='''' for d in $(ls -t $checkpoint_dir 2>/dev/null); do python3 -c "import yaml; yaml.safe_load(open(''$checkpoint_dir/$d/recipe/dev-mas-engineer.yaml''))"
   2>/dev/null if [ $? -eq 0 ]; then beste=$d break fi done
 
-  STEP 2 — Result: if [ -n "$beste" ]; then label=$(cat $checkpoint_dir/$beste/.label 2>/dev/null || echo ''without Label'') signal='DONE' ''Bester Checkpoint: $beste — $label'' else signal='DONE' ''No gueltiger
+  STEP 2 — Result: if [ -n "$beste" ]; then label=$(cat $checkpoint_dir/$beste/.label 2>/dev/null || echo ''without Label'') signal=''DONE'' ''Bester Checkpoint: $beste — $label'' else signal=''DONE'' ''No gueltiger
   Checkpoint — Suche in .backups/'' # Fallback: Backups search for d in $(ls -t {workspace}/mas-engineer/.backups 2>/dev/null); do for f in {workspace}/mas-engineer/.backups/$d/*dev-mas-engineer*; do python3
   -c "import yaml; yaml.safe_load(open(''$f''))" 2>/dev/null && echo "$f" && break 2 done done fi
 
@@ -29,7 +29,7 @@ instructions: '⛔ BESTAND-CHECK: → Check whether Sub-Agent/Tool/Function alre
   {workspace}/mas-engineer/ cp -r {workspace}/mas-engineer/.state/checkpoints/$beste/tools  {workspace}/mas-engineer/ cp -r {workspace}/mas-engineer/.state/checkpoints/$beste/docs   {workspace}/mas-engineer/
 
   STEP 3 — Validation + Snapshot: python3 -c "import yaml; yaml.safe_load(open(''{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml''))" delegiere an sub_mas-recovery-checkpoint (task=SNAPSHOT, label=''nach_restore_best'')
-  signal='DONE' ''Wiederhergestellt on $beste — Neuer Snapshot: nach_restore_best''
+  signal=''DONE'' ''Wiederhergestellt on $beste — Neuer Snapshot: nach_restore_best''
 
   ### Edge Cases RESTORE_BEST - No bester Checkpoint → '''' error + ''Defib empfohlen'' - Wiederherstellung fehlgeschlagen → '''' error + manuellen Rollback vorschlagen
 
@@ -52,7 +52,7 @@ instructions: '⛔ BESTAND-CHECK: → Check whether Sub-Agent/Tool/Function alre
   STEP 2 — Schadensstufe: 0 Error: '''' — ''No Schaden'' 1-3 Error: '''' — ''Teilkorruption — restore-best'' 4-5 Error: '''' — ''Schwerer Schaden — resurrect'' 6-7 Error: '''' — ''Totalschaden — defib +
   --init''
 
-  STEP 3 — Recommendation: signal='DONE'or '''' or '''' je after Schadensstufe ''Diagnose: {fehler}/7 Error — Recommendation: {aktion}''
+  STEP 3 — Recommendation: signal=''DONE''or '''' or '''' je after Schadensstufe ''Diagnose: {fehler}/7 Error — Recommendation: {aktion}''
 
   CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.'
 prompt: '📦 SUB-MAS-RECOVERY-TIMELINE — Automatische Best-Point Search (Sub-Agent)

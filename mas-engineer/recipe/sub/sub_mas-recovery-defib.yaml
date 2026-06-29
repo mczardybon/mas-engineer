@@ -30,7 +30,7 @@ instructions: '⛔ BESTAND-CHECK: → Check whether Sub-Agent/Tool/Function alre
   STEP 2 — Sub-agents validieren: for agent in immune checkpoint safezone timeline; do path={workspace}/mas-engineer/recipe/sub/sub_mas-recovery-$agent.yaml if [ -f "$path" ]; then python3 -c "import yaml;
   yaml.safe_load(open(''$path''))" 2>/dev/null || echo ''WARN: $agent.yaml korrupt'' else echo ''WARN: $agent.yaml fehlt'' fi done
 
-  STEP 3 — Minimal-Config validieren + bestaetigen: python3 -c "import yaml; yaml.safe_load(open(''{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml''))" signal='DONE' ''Minimal-Config geladen — Recovery-Modus
+  STEP 3 — Minimal-Config validieren + bestaetigen: python3 -c "import yaml; yaml.safe_load(open(''{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml''))" signal=''DONE'' ''Minimal-Config geladen — Recovery-Modus
   aktiv'' ''Als naechstes: recovery --restore-best or recovery --resurrect''
 
   ### Edge Cases DEFIB - Schreibrechte fehlen → '''' error + ''chmod?'' - immune.yaml fehlt → '''' warning + only timeline laden - All Sub-agents fehlen → '''' error + only instructions (reine Text-Config)
@@ -41,12 +41,12 @@ instructions: '⛔ BESTAND-CHECK: → Check whether Sub-Agent/Tool/Function alre
   STEP 1 — Besten Checkpoint via timeline: delegiere an sub_mas-recovery-timeline (task=FIND_BEST) IF CHECKPOINT GEFUNDEN: delegiere an sub_mas-recovery-timeline (task=RESTORE_BEST)
 
   STEP 2 — NO Checkpoint: Backups search: IF NO CHECKPOINT: for d in $(ls -t {workspace}/mas-engineer/.backups 2>/dev/null); do python3 -c "import yaml; yaml.safe_load(open(''{workspace}/mas-engineer/.backups/$d/recipe_dev-mas-engineer.yaml''))"
-  2>/dev/null if [ $? -eq 0 ]; then cp {workspace}/mas-engineer/.backups/$d/recipe_dev-mas-engineer.yaml {workspace}/mas-engineer/recipe/dev-mas-engineer.yaml signal='DONE' ''Backup $d wiederhergestellt''
+  2>/dev/null if [ $? -eq 0 ]; then cp {workspace}/mas-engineer/.backups/$d/recipe_dev-mas-engineer.yaml {workspace}/mas-engineer/recipe/dev-mas-engineer.yaml signal=''DONE'' ''Backup $d wiederhergestellt''
   break fi done
 
-  STEP 3 — NICHTS gefunden: Neuinstallation vorschlagen: IF NICHTS FUNCTIONING: signal='DONE' ''No funktionierendes Backup — Neuinstallation empfohlen'' ''Fuehre: python3 dev_workspace.py --init {workspace}''
+  STEP 3 — NICHTS gefunden: Neuinstallation vorschlagen: IF NICHTS FUNCTIONING: signal=''DONE'' ''No funktionierendes Backup — Neuinstallation empfohlen'' ''Fuehre: python3 dev_workspace.py --init {workspace}''
 
-  STEP 4 — After Wiederherstellung: delegiere an sub_mas-recovery-checkpoint (task=SNAPSHOT, label=''nach_resurrection'') signal='DONE' ''revival abgeschlossen — Snapshot: nach_resurrection'' ''Fuehre
+  STEP 4 — After Wiederherstellung: delegiere an sub_mas-recovery-checkpoint (task=SNAPSHOT, label=''nach_resurrection'') signal=''DONE'' ''revival abgeschlossen — Snapshot: nach_resurrection'' ''Fuehre
   update --mas um neue Version to aktivieren''
 
   ### Edge Cases RESURRECT - Checkpoint existing but korrupt → skip, naechsten versuchen - Backup existing but unvollstaendig → '''' warning + manuelle Nacharbeit - Weder Checkpoint still Backup
@@ -61,7 +61,7 @@ instructions: '⛔ BESTAND-CHECK: → Check whether Sub-Agent/Tool/Function alre
   STEP 2 — Schadensstufe + Aktion: action='''' if [ $fehler -eq 0 ]; then  action=''No Recovery noetig'' elif [ $fehler -le 3 ]; then action=''recovery --restore-best'' elif [ $fehler -le 5 ]; then action=''recovery
   --resurrect'' else                        action=''recovery --defib -> --init'' fi
 
-  echo ''(fehler)/7 Error — Recommendation: $action'' signal='DONE'|'ERROR'|'WARNING' je after Stufe
+  echo ''(fehler)/7 Error — Recommendation: $action'' signal=''DONE''|''ERROR''|''WARNING'' je after Stufe
 
   CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.'
 prompt: '📦 SUB-MAS-RECOVERY-DEFIB — Notfall-revival (Sub-Agent)
