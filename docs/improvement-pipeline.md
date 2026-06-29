@@ -10,7 +10,7 @@ MAS-Engineer's self-improvement system is an **8-stage pipeline** orchestrated b
 flowchart TD
     S0["STEP 0\nPrerequisites Check\nMode · Rules · Rate Limit · Recursion Guard"] --> S1
     S1["STEP 1\nSession Data Read\nim-session-reader"] --> S2
-    S2["STEP 2\nFinding Detection\nim-finder · 53 feature types"] --> S3
+    S2["STEP 2\nFinding Detection\nim-finder · 53 documented patterns"] --> S3
     S3["STEP 3\nPrioritization\nim-rank · Constitution check"] --> S4
     S4["STEP 4\nPatch Design\nim-designer · type-specific logic"] --> S5
     S5["STEP 5\nUser Review + Apply\nyaml-editor"] --> S6
@@ -64,7 +64,7 @@ flowchart TD
 
 ### STEP 2 — Finding Detection
 
-`sub_mas-im-finder` applies **53 feature types** (A-KK + LL + MM) to detect:
+`sub_mas-im-finder` applies **53 documented patterns** (A-KK + LL + MM) to detect:
 
 - **Type A**: Timeout/max_steps too high or too low
 - **Type B**: Prompt too vague, too long, missing context
@@ -206,11 +206,11 @@ The `PUSH_IMPROVEMENTS` task copies improvements to user projects:
 
 ---
 
-## 53 Feature Types
+## 53 documented patterns
 
 ```mermaid
 mindmap
-  root((53 Feature Types))
+  root((53 documented patterns))
     Settings & Calibration
       A1-A3 : Timeout calibration
       Q1-Q3 : Oversize check

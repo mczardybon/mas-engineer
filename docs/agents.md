@@ -1,9 +1,9 @@
 # Agent Catalog
 
-MAS-Engineer contains 48 sub-agents, organized into functional categories.
+MAS-Engineer contains 49 sub-agents, organized into functional categories.
 
 ```mermaid
-pie title 48 Sub-Agents by Category
+pie title 49 Sub-Agents by Category
     "Framework Builders" : 6
     "Improvement Pipeline" : 7
     "Monitoring" : 7
@@ -47,7 +47,7 @@ flowchart LR
 | Agent | Task | Delegates To |
 |-------|------|:------------:|
 | `sub_mas-generic-init` | Initialize new projects (lightweight, symlink-based) | recipe-designer, web-researcher |
-| `sub_mas-bootstrap` | Deploy MAS-Engineer as standalone distribution (all 48 agents) | dev_generic_init.py |
+| `sub_mas-bootstrap` | Deploy MAS-Engineer as standalone distribution (all 49 agents) | dev_generic_init.py |
 | `sub_mas-intention-parser` | Parse natural language → agent YAML | dev_template_generator.py |
 | `sub_mas-recipe-designer` | Create new sub-agents from template | recovery-checkpoint |
 | `sub_mas-recipe-manager` | Install/uninstall/list recipes | dev_recipe_manager.py |
@@ -63,7 +63,7 @@ The self-improvement system. Analyzes sessions, detects issues, designs patches,
 |-------|------|:------------:|
 | `sub_mas-general-improver` | Orchestrate the 8-stage improvement pipeline | ALL im-* agents, yaml-editor, web-researcher, generic-init |
 | `sub_mas-im-session-reader` | Read Goose session DB with 3-level project filter | (none) |
-| `sub_mas-im-finder` | Detect optimization potential (53 feature types) | (none) |
+| `sub_mas-im-finder` | Detect optimization potential (53 documented patterns) | (none) |
 | `sub_mas-im-rank` | Prioritize findings, check Constitution, deduplicate | (none) |
 | `sub_mas-im-designer` | Convert findings into concrete YAML patches | (none) |
 | `sub_mas-im-validator` | Validate changes, compare before/after scores | prompt-engineer, agent-guardian |
@@ -136,7 +136,7 @@ Operational workhorses for common tasks.
 
 ---
 
-## Management (6 agents)
+## Management (7 agents)
 
 Administration and system operation.
 
@@ -144,7 +144,7 @@ Administration and system operation.
 |-------|------|:------------:|
 | `sub_mas-goose-admin` | Manage Goose components (sessions, skills, logs) | dev_goose_manager.py |
 | `sub_mas-workflow-engine` | Execute SOT workflows (11 action types) | ANY sub-agent |
-| `sub_mas-master-constitution` | Central rules for ALL 47 agents (11 articles) | (none) |
+| `sub_mas-master-constitution` | Central rules for ALL 49 agents (11 articles) | (none) |
 | `sub_mas-system-knowledge` | Auto-loaded system knowledge at startup | (none) |
 | `sub_mas-dashboard-refresh` | On-demand dashboard data generation | dev_dashboard_refresh.py |
 | `sub_mas-doc-generator` | Framework documentation currency checker | yaml-editor |
@@ -169,12 +169,7 @@ graph TD
         MA10["im-finder"]
         MA11["im-designer"]
     end
-    subgraph MODE_AGNOSTIC["Mode-Agnostic (3 agents)"]
-        AG1["health-reporter"]
-        AG2["agent-guardian"]
-        AG3["general-improver"]
-    end
-    subgraph INTERNAL["MAS-Internal (~34 agents)"]
+    subgraph INTERNAL["MAS-Internal (~38 agents)"]
         I1["recovery-*"]
         I2["utility tools"]
         I3["analysis agents"]
@@ -185,13 +180,13 @@ graph TD
 
 | Metric | Value |
 |--------|-------|
-| **Total sub-agents** | 48 |
+| **Total sub-agents** | 49 |
 | **Agents that delegate (R18)** | ~15 |
 | **Agents that work themselves** | ~33 |
-| **Mode-aware agents** | 11 |
-| **MAS-internal only** | ~37 |
-| **Mode-agnostic** | 3 (health-reporter, agent-guardian, general-improver) |
-| **Max delegation depth** | 4 levels |
+| **Mode-aware agents** | 11 (all others are internal-only) |
+| **MAS-internal only** | ~38 |
+
+| **Max observed delegation depth** | 4 levels |
 | **Timeouts range** | 30s (defib) to 600s (most agents) |
 | **max_steps range** | 10 (defib) to 200 (workflow-engine) |
 

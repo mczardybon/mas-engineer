@@ -38,7 +38,6 @@ else
     SRC_MAS_DOCS="$INSTALL_DIR/mas-engineer/docs"
     SRC_MAS_STATE="$INSTALL_DIR/mas-engineer/.state"
 fi
-SRC_UPDATE="$INSTALL_DIR/update.sh"
 
 # === ZIELE (~/.config/goose/) ===
 DST_MAS_RECIPE="$GOOSE_RECIPES/dev-mas-engineer.yaml"
@@ -201,18 +200,7 @@ install_mas() {
     # SOT workflows.yaml
     [ -f "$SRC_MAS_STATE/workflows.yaml" ] && copy_file "$SRC_MAS_STATE/workflows.yaml" "$DST_MAS_STATE/workflows.yaml" "📜 SOT:     "
     
-    # update.sh ins Ziel kopieren
-    if [ -f "$INSTALL_DIR/update.sh" ]; then
-        if [ "$DRY_RUN" = true ]; then
-            dry "update.sh → $DST_MAS_TOOLS/update.sh"
-            COPIED=$((COPIED + 1))
-        else
-            mkdir -p "$DST_MAS_TOOLS"
-            cp "$INSTALL_DIR/update.sh" "$DST_MAS_TOOLS/update.sh"
-            chmod +x "$DST_MAS_TOOLS/update.sh"
-            ok "update.sh → mas-engineer-tools/"
-        fi
-    fi
+
     
     echo ""
     
@@ -231,7 +219,7 @@ install_mas() {
         echo -e "${YELLOW}${BOLD}⚠️  NEUSTART ERFORDERLICH${NC}"
         echo -e "${YELLOW}MAS wurde installiert. Starte Goose neu.${NC}"
         echo ""
-        echo "Then: ./update.sh --mas for updates"
+        echo "Then: goose run --recipe dev-mas-engineer to start"
     fi
 }
 

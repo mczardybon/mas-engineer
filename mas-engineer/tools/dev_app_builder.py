@@ -290,7 +290,7 @@ def build_status(ws):
     # ═══════════════════════════════════════════════════
 
     result = {
-        'version': '2.2.0',
+        'version': '1.0.0',
         'timestamp': datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),
         'mode': mode,
         'mas': {

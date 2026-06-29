@@ -1,6 +1,6 @@
 # Architecture
 
-MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 48 specialized sub-agents, 50 Python/shell tools, and a workflow engine driven by a Single Source of Truth (SOT).
+MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 49 specialized sub-agents, 52 Python/shell tools, and a workflow engine driven by a Single Source of Truth (SOT).
 
 ```mermaid
 flowchart TB
@@ -13,8 +13,8 @@ flowchart TB
     end
     subgraph ENGINEER["MAS-Engineer"]
         E1["dev-mas-engineer.yaml\nNatural Language Interface"]
-        E2["48 Sub-Agents\n7 categories"]
-        E3["50 Tools\nPython / Shell"]
+        E2["49 Sub-Agents\n7 categories"]
+        E3["52 Tools\nPython / Shell"]
         E4[".state/\nSOT · Rules · Knowledge"]
     end
     subgraph USER["User Framework"]
@@ -97,9 +97,7 @@ MAS-Engineer (dev-mas-engineer)
 │   ├── sub_mas-system-knowledge  — Auto-loaded system knowledge
 │   ├── sub_mas-dashboard-refresh — On-demand dashboard generation
 │   ├── sub_mas-doc-generator     — Documentation currency checker
-│   ├── sub_mas-degradation-handler — Degraded agent treatment
-│   ├── sub_mas-generic-init      — Project initialization
-│   └── sub_mas-bootstrap         — MAS distribution deployment
+│   └── sub_mas-degradation-handler — Degraded agent treatment
 │
 └── TEMPLATES
     └── agent_template.yaml       — Base template for new agents
@@ -161,7 +159,7 @@ The `workflows.yaml` file in `.state/` is the central registry:
 
 ```mermaid
 graph TD
-    SOT["workflows.yaml\n.state/workflows.yaml"] --> RULES["23 Rules\nR01-R23"]
+    SOT["workflows.yaml\n.state/workflows.yaml"] --> RULES["10 Rules\nR01-R23"]
     SOT --> SIGNALS["10 Signal Types\nDONE · ERROR · HANDOVER · DRIFT · RESURRECTED"]
     SOT --> WORKFLOWS["116+ Workflow Bodies\nAll possible operations"]
     SOT --> MODES["20+ detect_mode Workflows\nMode awareness"]
@@ -173,7 +171,7 @@ graph TD
 ```
 
 - **116+ workflow bodies** defining all possible operations
-- **23 rules** (R01-R23) with hardness levels
+- **10 rules** (R01-R23) with hardness levels
 - **10 signal types** for event handling
 - **20+ detect_mode workflows** for mode awareness
 - **Agent definitions** with tiers, token budgets, and task bindings
@@ -201,7 +199,7 @@ framework  → Framework mode: work on user's system
 
 ## Rules System (R01-R23)
 
-All agents follow the **Constitution** (11 articles in `sub_mas-master-constitution.yaml`) and **23 hard rules** enforced by `dev_rule_checker.py`:
+All agents follow the **Constitution** (11 articles in `sub_mas-master-constitution.yaml`). **10 hard rules** are enforced by `dev_rule_checker.py` at runtime:
 
 ```mermaid
 flowchart TD
@@ -244,7 +242,7 @@ flowchart TD
 
 ---
 
-## The 50 Tools
+## The 52 Tools
 
 All Python and shell tools live in `tools/` and are managed by `dev_workspace.py`. Key categories:
 
@@ -255,7 +253,7 @@ flowchart LR
         A2["general-improver\ndoc-writer\ndashboard-refresh"]
         A3["session-analyst\ngoose-admin\nworkflow-engine"]
     end
-    subgraph TOOLS["50 Tools by Category"]
+    subgraph TOOLS["52 Tools by Category"]
         T1["⚙️ Hardening\ndev_rule_checker\ndev_rule_refresh\ndev_haerte_propagation"]
         T2["🔨 Build\ndev_build.sh\ndev_autobuild.sh\ndev_mode.sh"]
         T3["🔍 Analysis\ndev_observer\ndev_architect\ndev_analyst"]

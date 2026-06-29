@@ -1,8 +1,8 @@
 # MAS-Engineer
 
 **Version:** v1.0.0  
-**Sub-Agents:** 48  
-**Tools:** 50
+**Sub-Agents:** 49  
+**Tools:** 52
 
 ---
 
@@ -10,7 +10,7 @@
 
 MAS-Engineer is a **Goose-based Multi-Agent System generator** and **self-improving framework builder**. It helps you create, maintain, improve, monitor, and distribute multi-agent systems — all through natural language conversation.
 
-You talk to the Engineer. The Engineer delegates to its 48 specialized sub-agents. The result is a complete, production-ready multi-agent system.
+You talk to the Engineer. The Engineer delegates to its 49 specialized sub-agents. The result is a complete, production-ready multi-agent system.
 
 ## Three Operating Modes
 
@@ -43,7 +43,7 @@ goose run --recipe recipe/dev-mas-engineer.yaml
 | "Fix this agent's prompt" | `sub_mas-prompt-engineer` | Optimized prompt |
 | "Show me the health status" | `sub_mas-monitor-*` | Health report |
 | "Set up a dashboard" | Setup dashboard recipe | MCP dashboard app |
-| "Deploy MAS-Engineer standalone" | `sub_mas-bootstrap` | Complete distribution with all 48 agents |
+| "Deploy MAS-Engineer standalone" | `sub_mas-bootstrap` | Complete distribution with all 49 agents |
 
 ## Architecture
 
@@ -57,7 +57,7 @@ flowchart TD
     ENGINEER --> UT["Utility\n10 agents"]
     ENGINEER --> AN["Analysis\n7 agents"]
     ENGINEER --> MG["Management\n6 agents"]
-    FB & IP & MON & REC & UT & AN & MG --> TOOLS["50 Python/Shell Tools"]
+    FB & IP & MON & REC & UT & AN & MG --> TOOLS["52 Python/Shell Tools"]
 ```
 
 ## Key Concepts
@@ -91,7 +91,7 @@ flowchart TD
 | [installation.md](installation.md) | Install, update, uninstall |
 | [architecture.md](architecture.md) | Complete system architecture |
 | [usage.md](usage.md) | How to create, improve, monitor |
-| [agents.md](agents.md) | Catalog of all 48 sub-agents |
+| [agents.md](agents.md) | Catalog of all 49 sub-agents |
 | [improvement-pipeline.md](improvement-pipeline.md) | 8-stage self-improvement |
 | [recovery-system.md](recovery-system.md) | 5-stage Phoenix recovery |
 | [dashboard.md](dashboard.md) | Framework dashboard setup |
