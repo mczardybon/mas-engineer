@@ -357,6 +357,7 @@ MAS-Engineer is built on five beliefs:
 
 | Document | What It Covers |
 |----------|---------------|
+| [Documentation Index](docs/index.md) | All docs at a glance |
 | [Installation & Setup](docs/installation.md) | Install, configure, update, uninstall |
 | [Architecture Overview](docs/architecture.md) | Agent hierarchy, communication protocol, SOT, rules, tools |
 | [Usage Guide](docs/usage.md) | Create, improve, monitor, repair, migrate, deploy |
