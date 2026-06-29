@@ -10,7 +10,7 @@ pie title 49 Sub-Agents by Category
     "Recovery" : 5
     "Analysis" : 7
     "Utility" : 10
-    "Management" : 6
+    "Management" : 7
 ```
 
 ---
@@ -175,7 +175,6 @@ graph TD
         I3["analysis agents"]
     end
     MODE_AWARE -->|"detect mode at STEP 0"| INTERNAL
-    MODE_AGNOSTIC -->|"work same in all modes"| AG1 & AG2 & AG3
 ```
 
 | Metric | Value |

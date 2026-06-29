@@ -37,7 +37,7 @@ The `install.sh` script:
 3. **Copies** files to `~/.config/goose/`:
    - Main recipe → `~/.config/goose/recipes/dev-mas-engineer.yaml`
    - 49 sub-agents → `~/.config/goose/recipes/sub/`
-   - 52 tools → `~/.config/goose/recipes/mas-engineer-tools/`
+   - 47 tools → `~/.config/goose/recipes/mas-engineer-tools/`
    - Docs → `~/.config/goose/docs/mas-engineer/`
    - Knowledge + SOT → `~/.config/goose/.state/`
 4. **Sets** `.mas-mode = framework`
@@ -50,7 +50,7 @@ flowchart LR
     subgraph SOURCE["Distribution (mas-engineer/)"]
         S1["recipe/\ndev-mas-engineer.yaml"]
         S2["recipe/sub/\nsub_mas-*.yaml (49)"]
-        S3["tools/\ndev_*.py/.sh (52)"]
+        S3["tools/\ndev_*.py/.sh (47)"]
         S4[".state/workflows.yaml\nknowledge/\n rules/"]
         S5["docs/\n*.md"]
     end
@@ -118,7 +118,7 @@ goose run --recipe dev-mas-engineer
 "Create a standalone distribution of MAS-Engineer named my-mas"
 ```
 
-The Engineer delegates to `sub_mas-bootstrap` which copies all 49 agents, 52 tools, dashboard, and recovery templates into a new directory.
+The Engineer delegates to `sub_mas-bootstrap` which copies all 49 agents, 47 tools, dashboard, and recovery templates into a new directory.
 
 Then on the target machine:
 

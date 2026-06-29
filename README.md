@@ -21,7 +21,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/agents-49-success?style=for-the-badge" alt="Agents">
-  <img src="https://img.shields.io/badge/tools-52-success?style=for-the-badge" alt="Tools">
+  <img src="https://img.shields.io/badge/tools-47-success?style=for-the-badge" alt="Tools">
   <img src="https://img.shields.io/badge/self--improvement-8_stages-blue?style=for-the-badge" alt="Self-Improvement">
   <img src="https://img.shields.io/badge/recovery-5_stages-orange?style=for-the-badge" alt="Recovery">
   <img src="https://img.shields.io/badge/rules-10-red?style=for-the-badge" alt="Rules">
@@ -203,7 +203,7 @@ The same result. **Done through conversation.**
   <table>
     <tr>
       <td align="center"><h2>🛡️</h2><b>49</b><br>Ready-to-Use<br>Sub-Agents</td>
-      <td align="center"><h2>🔧</h2><b>52</b><br>Python/Shell<br>Tools</td>
+      <td align="center"><h2>🔧</h2><b>47</b><br>Python/Shell<br>Tools</td>
       <td align="center"><h2>🔄</h2><b>8</b><br>Stage Self-<br>Improvement</td>
       <td align="center"><h2>🏥</h2><b>5</b><br>Stage<br>Recovery</td>
       <td align="center"><h2>📊</h2><b>Free</b><br>Dashboard<br>Per Project</td>
@@ -221,7 +221,7 @@ The same result. **Done through conversation.**
 | | **Code-Based Frameworks** (CrewAI, AutoGPT, LangGraph) | **MAS-Engineer** |
 |---|---|---|
 | **How you build agents** | 🐍 Python: `Agent(role=..., goal=...)` | 🗣️ "Create me a researcher agent" |
-| **Agents out of the box** | **0** — you build everything | **49** — production-ready |
+| **Agents out of the box** | **0** — you build everything | **49** — POC-ready |
 | **Self-improvement** | ❌ Your system stays the same forever | ✅ Analyzes itself, improves its agents |
 | **Recovery from failure** | `max_retry_limit=2` | ✅ 5 stages: Immune→Checkpoint→Safezone→Timeline→Defib |
 | **Per-project dashboard** | Enterprise plan 💰 | ✅ Free, refreshable, every project |
@@ -259,7 +259,7 @@ flowchart TD
     ENGINEER --> UT["Utility\n10 agents"]
     ENGINEER --> AN["Analysis\n7 agents"]
     ENGINEER --> MG["Management\n6 agents"]
-    FB & IP & MON & REC & UT & AN & MG --> TOOLS["52 Python/Shell\nTools"]
+    FB & IP & MON & REC & UT & AN & MG --> TOOLS["47 Python/Shell\nTools"]
 ```
 
 ---
@@ -277,7 +277,7 @@ flowchart TB
     end
     subgraph ENGINEER["MAS-Engineer"]
         E1["🧠 Natural Language Interface"]
-        E2["49 Sub-Agents · 52 Tools"]
+        E2["49 Sub-Agents · 47 Tools"]
         E3["8-Stage Self-Improvement · 5-Stage Recovery"]
         E4["10 Active Rules · SOT Registry"]
     end
@@ -378,7 +378,7 @@ flowchart LR
 | 🏥 | **5-Stage Phoenix Recovery** | Immune (prevention) → Checkpoint (snapshots) → Safezone (isolated fork) → Timeline (best-point search) → Defib (emergency minimal config) |
 | 📊 | **Per-Project Dashboard** | MCP app with health status, agent list, change history, performance metrics. Refreshable via Goose scheduler. Free. |
 | 📜 | **Constitution + Rules** | 11 articles governing ALL agents + 10 enforced rules with hardness levels (R01-R23) |
-| 🚀 | **Bootstrap Deployment** | `--bootstrap` creates a standalone MAS-Engineer distribution. All 49 agents + 52 tools + dashboard + recovery. Installable anywhere. |
+| 🚀 | **Bootstrap Deployment** | `--bootstrap` creates a standalone MAS-Engineer distribution. All 49 agents + 47 tools + dashboard + recovery. Installable anywhere. |
 | 🔍 | **Web Research** | Before creating or improving, searches goose-docs.ai, GitHub, and PyPI for current best practices |
 | 🤝 | **R18 Delegation** | If a sub-agent can handle the task, the Engineer MUST delegate. No re-inventing wheels. |
 | 📝 | **Auto-Documentation** | Every change logged to `changes.json`. Every operation auto-committed to git. Every session analyzed for improvement. |
@@ -435,7 +435,7 @@ MAS-Engineer is built on five beliefs:
 A: CrewAI is a Python SDK. You write code. MAS-Engineer is a conversational assistant. You talk. If you love coding and want full API control, CrewAI is great. If you want results without coding, MAS-Engineer is the only option that works this way.
 
 **Q: Is this production-ready?**  
-A: Yes. 49 agents, 5-stage recovery, auto-commit, enforces rules, validates all YAML — built for reliability. However, MAS-Engineer runs on Goose (Anthropic's MCP framework) which is the runtime.
+A: This is a **proof of concept (POC)**. It demonstrates the architecture of a self-improving multi-agent system. While it installs and runs, it has not been hardened for production use. Contributions welcome.
 
 **Q: Can I use my own LLM?**  
 A: Yes. MAS-Engineer runs on Goose, which supports OpenAI, Anthropic Claude, Ollama (local), Groq, and any OpenAI-compatible provider.
@@ -467,7 +467,7 @@ mindmap
       Analysis
       Utility
       Management
-    52 Tools
+    47 Tools
       Rule Enforcement
       YAML Operations
       Build & Deploy

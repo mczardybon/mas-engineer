@@ -1,6 +1,6 @@
 # Architecture
 
-MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 49 specialized sub-agents, 52 Python/shell tools, and a workflow engine driven by a Single Source of Truth (SOT).
+MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 49 specialized sub-agents, 47 Python/shell tools, and a workflow engine driven by a Single Source of Truth (SOT).
 
 ```mermaid
 flowchart TB
@@ -14,7 +14,7 @@ flowchart TB
     subgraph ENGINEER["MAS-Engineer"]
         E1["dev-mas-engineer.yaml\nNatural Language Interface"]
         E2["49 Sub-Agents\n7 categories"]
-        E3["52 Tools\nPython / Shell"]
+        E3["47 Tools\nPython / Shell"]
         E4[".state/\nSOT · Rules · Knowledge"]
     end
     subgraph USER["User Framework"]
@@ -47,7 +47,7 @@ MAS-Engineer (dev-mas-engineer)
 ├── IMPROVEMENT PIPELINE (self-optimization)
 │   ├── sub_mas-general-improver — Orchestrator (8 stages)
 │   ├── sub_mas-im-session-reader — Read session database
-│   ├── sub_mas-im-finder        — Detect optimization potential (53 types)
+│   ├── sub_mas-im-finder        — Detect optimization potential (53 documented patterns)
 │   ├── sub_mas-im-rank          — Prioritize & filter findings
 │   ├── sub_mas-im-designer      — Convert findings to YAML patches
 │   ├── sub_mas-im-validator     — Validate changes, compare scores
@@ -242,7 +242,7 @@ flowchart TD
 
 ---
 
-## The 52 Tools
+## The 47 Tools
 
 All Python and shell tools live in `tools/` and are managed by `dev_workspace.py`. Key categories:
 
@@ -253,7 +253,7 @@ flowchart LR
         A2["general-improver\ndoc-writer\ndashboard-refresh"]
         A3["session-analyst\ngoose-admin\nworkflow-engine"]
     end
-    subgraph TOOLS["52 Tools by Category"]
+    subgraph TOOLS["47 Tools by Category"]
         T1["⚙️ Hardening\ndev_rule_checker\ndev_rule_refresh\ndev_haerte_propagation"]
         T2["🔨 Build\ndev_build.sh\ndev_autobuild.sh\ndev_mode.sh"]
         T3["🔍 Analysis\ndev_observer\ndev_architect\ndev_analyst"]

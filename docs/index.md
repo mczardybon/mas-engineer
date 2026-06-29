@@ -2,7 +2,7 @@
 
 **Version:** v1.0.0  
 **Sub-Agents:** 49  
-**Tools:** 52
+**Tools:** 47
 
 ---
 
@@ -10,7 +10,7 @@
 
 MAS-Engineer is a **Goose-based Multi-Agent System generator** and **self-improving framework builder**. It helps you create, maintain, improve, monitor, and distribute multi-agent systems — all through natural language conversation.
 
-You talk to the Engineer. The Engineer delegates to its 49 specialized sub-agents. The result is a complete, production-ready multi-agent system.
+You talk to the Engineer. The Engineer delegates to its 49 specialized sub-agents. This is a **proof of concept** demonstrating the architecture.
 
 ## Three Operating Modes
 
@@ -57,7 +57,7 @@ flowchart TD
     ENGINEER --> UT["Utility\n10 agents"]
     ENGINEER --> AN["Analysis\n7 agents"]
     ENGINEER --> MG["Management\n6 agents"]
-    FB & IP & MON & REC & UT & AN & MG --> TOOLS["52 Python/Shell Tools"]
+    FB & IP & MON & REC & UT & AN & MG --> TOOLS["47 Python/Shell Tools"]
 ```
 
 ## Key Concepts
