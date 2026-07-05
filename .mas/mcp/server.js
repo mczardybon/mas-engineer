@@ -42,10 +42,11 @@ app.get('/api/dashboard', async (req, res) => {
     const projectFile = path.join(DASHBOARD_DIR, 'project.json');
     const dataFile = path.join(DASHBOARD_DIR, 'data.json');
     let data = {};
-    if (await fs.pathExists(projectFile)) {
-      data = await fs.readJson(projectFile);
-    } else if (await fs.pathExists(dataFile)) {
+    // Priority: data.json (aktuell, live-generiert) > project.json (Framework-Snapshot)
+    if (await fs.pathExists(dataFile)) {
       data = await fs.readJson(dataFile);
+    } else if (await fs.pathExists(projectFile)) {
+      data = await fs.readJson(projectFile);
     }
     res.json({ success: true, data });
   } catch (err) {
