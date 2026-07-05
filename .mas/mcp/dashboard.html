@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAS Framework Dashboard</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --blue: #58a6ff;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 20px; color: var(--blue); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .card h2 { font-size: 1rem; margin-bottom: 12px; color: var(--text); opacity: 0.8; }
+    .stat { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.9rem; }
+    .stat .label { opacity: 0.7; }
+    .stat .value { font-weight: 600; }
+    .green { color: var(--green); }
+    .yellow { color: var(--yellow); }
+    .red { color: var(--red); }
+    .blue { color: var(--blue); }
+    .timestamp { font-size: 0.8rem; opacity: 0.5; margin-top: 20px; text-align: center; }
+    .change-item { font-size: 0.8rem; padding: 2px 0; opacity: 0.7; font-family: monospace; }
+    .trend-bar { display: flex; align-items: flex-end; gap: 2px; height: 60px; margin-top: 8px; }
+    .trend-bar .bar { width: 8px; background: var(--blue); border-radius: 2px 2px 0 0; min-height: 2px; opacity: 0.7; }
+    .error { color: var(--red); padding: 20px; text-align: center; }
+    .loading { text-align: center; padding: 40px; opacity: 0.5; }
+    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>📊 MAS Framework Dashboard</h1>
+  <div id="loading" class="loading">Loading dashboard data...</div>
+  <div id="content" style="display:none">
+    <div class="grid" id="cards"></div>
+    <div class="timestamp" id="timestamp"></div>
+  </div>
+  <script>
+    async function loadDashboard() {
+      try {
+        const res = await fetch('/api/dashboard');
+        const json = await res.json();
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+
+        if (!json.success) {
+          document.getElementById('cards').innerHTML = `<div class="card error">${json.error}</div>`;
+          return;
+        }
+
+        const d = json.data;
+        const a = d.agents || {};
+        const ch = d.changes || {};
+        const b = d.build || {};
+        const di = d.dispatch || {};
+        const si = d.self_improve || {};
+        const sess = d.sessions || {};
+        const hist = d.history || {};
+
+        const healthPct = a.total > 0 ? Math.round((a.healthy / a.total) * 100) : 0;
+        const healthColor = healthPct >= 80 ? 'green' : healthPct >= 50 ? 'yellow' : 'red';
+
+        let cards = '';
+
+        // Health Card
+        cards += `<div class="card">
+          <h2>🩺 Health</h2>
+          <div class="stat"><span class="label">Score</span><span class="value ${healthColor}">${healthPct}%</span></div>
+          <div class="stat"><span class="label">🤖 Agents</span><span class="value">${a.total || 0}</span></div>
+          <div class="stat"><span class="label">✅ Healthy</span><span class="value green">${a.healthy || 0}</span></div>
+          <div class="stat"><span class="label">⚠️ Degraded</span><span class="value yellow">${a.degraded || 0}</span></div>
+          <div class="stat"><span class="label">🔴 Critical</span><span class="value red">${a.critical || 0}</span></div>
+          <div class="stat"><span class="label">⌀ Score</span><span class="value">${a.avg_score || 0}</span></div>
+        </div>`;
+
+        // Changes Card
+        let changesHtml = '';
+        (ch.last_10 || []).slice(0, 5).forEach(c => {
+          changesHtml += `<div class="change-item">${c}</div>`;
+        });
+        cards += `<div class="card">
+          <h2>📝 Changes</h2>
+          <div class="stat"><span class="label">Total</span><span class="value">${ch.total || 0}</span></div>
+          ${changesHtml || '<div style="opacity:0.5;font-size:0.8rem">No changes yet</div>'}
+        </div>`;
+
+        // Build Card
+        const lb = b.latest || {};
+        cards += `<div class="card">
+          <h2>📦 Build</h2>
+          <div class="stat"><span class="label">Builds</span><span class="value">${b.count || 0}</span></div>
+          ${lb.name ? `<div class="stat"><span class="label">Latest</span><span class="value">${lb.date || '?'}</span></div>
+          <div class="stat"><span class="label">Size</span><span class="value">${lb.size_kb || '?'} KB</span></div>` : '<div style="opacity:0.5;font-size:0.8rem">No builds yet</div>'}
+          ${b.weekly_count ? `<div class="stat"><span class="label">This week</span><span class="value">${b.weekly_count}</span></div>` : ''}
+          ${(hist.build_size || []).length > 1 ? `<div class="trend-bar">${hist.build_size.map(p => `<div class="bar" style="height:${Math.max(3, (p.kb / Math.max(...hist.build_size.map(x=>x.kb))) * 55)}px"></div>`).join('')}</div>` : ''}
+        </div>`;
+
+        // Dispatch Card
+        cards += `<div class="card">
+          <h2>🔄 Dispatch</h2>
+          <div class="stat"><span class="label">Total</span><span class="value">${di.total || 0}</span></div>
+          <div class="stat"><span class="label">✅ Done</span><span class="value green">${di.done || 0}</span></div>
+          <div class="stat"><span class="label">❌ Failed</span><span class="value red">${di.failed || 0}</span></div>
+          <div class="stat"><span class="label">⏱️ Avg</span><span class="value">${di.avg_duration_ms || 0}ms</span></div>
+        </div>`;
+
+        // Self-Improve Card
+        cards += `<div class="card">
+          <h2>🔧 Self-Improve</h2>
+          <div class="stat"><span class="label">Runs</span><span class="value">${si.runs || 0}</span></div>
+          <div class="stat"><span class="label">Last</span><span class="value" style="font-size:0.8rem">${(si.last || 'None').substring(0, 40)}</span></div>
+        </div>`;
+
+        // Sessions Card
+        cards += `<div class="card">
+          <h2>📊 Sessions</h2>
+          <div class="stat"><span class="label">Total</span><span class="value">${sess.total || '?'}</span></div>
+          <div class="stat"><span class="label">Tokens</span><span class="value">${sess.tokens || '?'}</span></div>
+          ${sess.cost ? `<div class="stat"><span class="label">Cost</span><span class="value">${sess.cost}</span></div>` : ''}
+        </div>`;
+
+        // Tools Card
+        cards += `<div class="card">
+          <h2>🛠️ Tools</h2>
+          <div class="stat"><span class="label">Total</span><span class="value">${d.tools || 0}</span></div>
+        </div>`;
+
+        document.getElementById('cards').innerHTML = cards;
+        document.getElementById('timestamp').textContent = `Last updated: ${(d.generated_at || 'unknown').replace('T', ' ').substring(0, 19)} | Workspace: ${d.workspace || 'unknown'}`;
+      } catch (err) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+        document.getElementById('cards').innerHTML = `<div class="card error">Failed to load: ${err.message}</div>`;
+      }
+    }
+    loadDashboard();
+    setInterval(loadDashboard, 30000);
+  </script>
+</body>
+</html>
