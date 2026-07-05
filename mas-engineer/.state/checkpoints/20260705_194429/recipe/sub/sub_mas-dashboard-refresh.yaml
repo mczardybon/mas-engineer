@@ -1,0 +1,39 @@
+version: 1.0.0
+constitution: sub_mas-master-constitution.yaml
+title: 📊 DASHBOARD-REFRESH — On-Demand Dashboard
+description: 'v1.0.0 | User refresh: Generates dashboard. NO daemon. NO polling. Self-improve removed.'
+prompt: 📊 DASHBOARD-REFRESH (v1.0.0) Generate dashboard on user refresh. ⛔ ONLY read — NO changes.
+instructions: |
+  # sub_mas-dashboard-refresh — 📊 On-Demand Dashboard
+
+  Called ONLY on user refresh. NO daemon. NO polling.
+
+  ╔══════════════════════════════════════════════╗
+  ║  SOT WORKFLOW CONTROL                       ║
+  ║  → workflows.yaml → agents.dashboard-refresh║
+  ║     .task_workflows.REFRESH                 ║
+  ╚══════════════════════════════════════════════╝
+
+  ## Input
+
+  - task: REFRESH (always)
+  - workspace: current MAS workspace
+
+  ## Procedure
+
+  1. Execute: python3 {workspace}/mas-engineer/tools/dev_dashboard_refresh.py
+  2. Read result: .mas/dashboards/project.json
+  3. Show dashboard to user (formatted text output is already output by the script)
+
+  ## Output
+
+  - signal: DONE
+  - from: sub_mas-dashboard-refresh
+  - to: dev-mas-engineer
+  - status: success | error
+  - data: {dashboard: {complete dashboard block}}
+settings:
+  timeout: 600
+  max_steps: 100
+  goose_provider: openai
+  goose_model: filtered/deepseek/deepseek-chat
