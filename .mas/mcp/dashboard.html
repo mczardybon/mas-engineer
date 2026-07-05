@@ -1,159 +1,148 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MAS Framework Dashboard</title>
-  <style>
-    :root {
-      --bg: #0d1117;
-      --card: #161b22;
-      --border: #30363d;
-      --text: #c9d1d9;
-      --green: #3fb950;
-      --yellow: #d29922;
-      --red: #f85149;
-      --blue: #58a6ff;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      padding: 20px;
-    }
-    h1 { font-size: 1.5rem; margin-bottom: 20px; color: var(--blue); }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-    }
-    .card h2 { font-size: 1rem; margin-bottom: 12px; color: var(--text); opacity: 0.8; }
-    .stat { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.9rem; }
-    .stat .label { opacity: 0.7; }
-    .stat .value { font-weight: 600; }
-    .green { color: var(--green); }
-    .yellow { color: var(--yellow); }
-    .red { color: var(--red); }
-    .blue { color: var(--blue); }
-    .timestamp { font-size: 0.8rem; opacity: 0.5; margin-top: 20px; text-align: center; }
-    .change-item { font-size: 0.8rem; padding: 2px 0; opacity: 0.7; font-family: monospace; }
-    .trend-bar { display: flex; align-items: flex-end; gap: 2px; height: 60px; margin-top: 8px; }
-    .trend-bar .bar { width: 8px; background: var(--blue); border-radius: 2px 2px 0 0; min-height: 2px; opacity: 0.7; }
-    .error { color: var(--red); padding: 20px; text-align: center; }
-    .loading { text-align: center; padding: 40px; opacity: 0.5; }
-    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MAS Dispatch Tree Dashboard</title>
+<style>
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--green:#3fb950;--yellow:#d29922;--red:#f85149;--blue:#58a6ff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:monospace;background:var(--bg);color:var(--text);padding:20px;font-size:14px}
+h1{font-size:1.5rem;margin-bottom:20px;color:var(--blue)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px}
+.card h2{font-size:1rem;margin-bottom:12px;color:var(--text);opacity:0.8;border-bottom:1px solid var(--border);padding-bottom:8px}
+.loading{text-align:center;padding:40px;opacity:0.5}
+.error{color:var(--red);padding:20px;text-align:center}
+.tree-node{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:13px;line-height:1.5}
+.tree-indent{color:var(--border);white-space:pre}
+.tree-icon{width:20px;text-align:center}
+.tree-from{color:var(--blue);font-weight:600}
+.tree-arrow{color:var(--border)}
+.tree-to{font-weight:600}
+.tree-task{color:var(--yellow);background:rgba(210,153,34,0.1);padding:0 6px;border-radius:3px;font-size:11px}
+.tree-dur{color:var(--text);opacity:0.5;margin-left:auto;font-size:12px}
+.tree-reason{color:var(--text);opacity:0.6;font-size:12px;font-style:italic;padding-left:28px}
+.status-done{color:var(--green)}
+.status-running{color:var(--blue);animation:pulse 2s infinite}
+.status-error{color:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.summary-bar{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px;padding:8px 12px;background:rgba(88,166,255,0.05);border-radius:6px;font-size:13px}
+.summary-bar .num{font-weight:700;font-size:16px}
+.summary-bar .lbl{opacity:0.6}
+.timestamp{font-size:12px;opacity:0.5;margin-top:20px;text-align:center}
+.health-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.health-item{text-align:center;padding:8px;background:rgba(255,255,255,0.03);border-radius:6px}
+.health-item .num{font-size:24px;font-weight:700}
+.health-item .lbl{font-size:11px;opacity:0.6}
+.refresh-btn{background:var(--card);border:1px solid var(--border);color:var(--blue);padding:8px 16px;border-radius:6px;cursor:pointer;font-family:monospace;font-size:13px;margin-bottom:12px}
+.refresh-btn:hover{background:var(--border)}
+</style>
 </head>
 <body>
-  <h1>📊 MAS Framework Dashboard</h1>
-  <div id="loading" class="loading">Loading dashboard data...</div>
-  <div id="content" style="display:none">
-    <div class="grid" id="cards"></div>
-    <div class="timestamp" id="timestamp"></div>
+
+<h1>🌳 MAS Dispatch Tree</h1>
+
+<div id="loading" class="loading">Loading dispatch tree...</div>
+<div id="content" style="display:none">
+  <button class="refresh-btn" onclick="loadDashboard()">⟳ Refresh Now</button>
+  <div class="card">
+    <h2>📦 Dispatch Verlauf</h2>
+    <div id="summaryBar" class="summary-bar"></div>
+    <div id="treeContainer"></div>
   </div>
-  <script>
-    async function loadDashboard() {
-      try {
-        const res = await fetch('/api/dashboard');
-        const json = await res.json();
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('content').style.display = 'block';
 
-        if (!json.success) {
-          document.getElementById('cards').innerHTML = `<div class="card error">${json.error}</div>`;
-          return;
+  <div id="infoBar" class="timestamp"></div>
+</div>
+
+<script>
+async function loadDashboard() {
+  try {
+    const res = await fetch('/api/dashboard');
+    const json = await res.json();
+    document.getElementById('loading').style.display='none';
+    document.getElementById('content').style.display='block';
+    if(!json.success){document.getElementById('treeContainer').innerHTML='<div class="error">'+json.error+'</div>';return;}
+    
+    const d=json.data;
+    const di=d.dispatch||{};
+    const tree=di.tree||[];
+    const a=d.agents||{};
+    
+    // Summary Bar
+    document.getElementById('summaryBar').innerHTML=
+      '<span><span class="num">'+di.total+'</span> <span class="lbl">Total</span></span>'+
+      '<span><span class="num" style="color:var(--green)">'+di.done+'</span> <span class="lbl">Done</span></span>'+
+      '<span><span class="num" style="color:var(--blue)">'+di.active+'</span> <span class="lbl">Active</span></span>'+
+      '<span><span class="num" style="color:var(--red)">'+di.failed+'</span> <span class="lbl">Failed</span></span>'+
+      '<span><span class="num">'+di.avg_duration_ms+'</span> <span class="lbl">Avg ms</span></span>';
+    
+    // Health
+    const h=a.total>0?Math.round(a.healthy/a.total*100):0;
+    const hc=h>=80?'var(--green)':h>=50?'var(--yellow)':'var(--red)';
+
+
+    // BAUM RENDERN
+    function renderTree(entries,parentId,depth){
+      let html='';
+      const kids=entries.filter(e=>e.parent_id===parentId);
+      kids.forEach((k,i)=>{
+        const isLast=i===kids.length-1;
+        const connector=isLast?'└── ':'├── ';
+        const childConnector=isLast?'    ':'│   ';
+        const icon={'done':'✅','running':'⏳','error':'❌'}[k.status]||'⏹️';
+        const sc={'done':'status-done','running':'status-running','error':'status-error'}[k.status]||'';
+        const dur=k.duration_ms!=null?(k.duration_ms/1000).toFixed(1)+'s':'...';
+        const indent='  '.repeat(depth);
+        html+='<div class="tree-node">'+
+          '<span class="tree-indent">'+indent+connector+'</span>'+
+          '<span class="tree-icon">'+icon+'</span>'+
+          '<span class="tree-from">'+k.from+'</span>'+
+          '<span class="tree-arrow"> → </span>'+
+          '<span class="tree-to '+sc+'">'+k.to+'</span>'+
+          '<span class="tree-task">'+k.task+'</span>'+
+          '<span class="tree-dur">'+dur+'</span></div>';
+        if(k.reason){
+          html+='<div class="tree-reason">'+'  '.repeat(depth+1)+connector+' 💬 '+k.reason+'</div>';
         }
-
-        const d = json.data;
-        const a = d.agents || {};
-        const ch = d.changes || {};
-        const b = d.build || {};
-        const di = d.dispatch || {};
-        const si = d.self_improve || {};
-        const sess = d.sessions || {};
-        const hist = d.history || {};
-
-        const healthPct = a.total > 0 ? Math.round((a.healthy / a.total) * 100) : 0;
-        const healthColor = healthPct >= 80 ? 'green' : healthPct >= 50 ? 'yellow' : 'red';
-
-        let cards = '';
-
-        // Health Card
-        cards += `<div class="card">
-          <h2>🩺 Health</h2>
-          <div class="stat"><span class="label">Score</span><span class="value ${healthColor}">${healthPct}%</span></div>
-          <div class="stat"><span class="label">🤖 Agents</span><span class="value">${a.total || 0}</span></div>
-          <div class="stat"><span class="label">✅ Healthy</span><span class="value green">${a.healthy || 0}</span></div>
-          <div class="stat"><span class="label">⚠️ Degraded</span><span class="value yellow">${a.degraded || 0}</span></div>
-          <div class="stat"><span class="label">🔴 Critical</span><span class="value red">${a.critical || 0}</span></div>
-          <div class="stat"><span class="label">⌀ Score</span><span class="value">${a.avg_score || 0}</span></div>
-        </div>`;
-
-        // Changes Card
-        let changesHtml = '';
-        (ch.last_10 || []).slice(0, 5).forEach(c => {
-          changesHtml += `<div class="change-item">${c}</div>`;
-        });
-        cards += `<div class="card">
-          <h2>📝 Changes</h2>
-          <div class="stat"><span class="label">Total</span><span class="value">${ch.total || 0}</span></div>
-          ${changesHtml || '<div style="opacity:0.5;font-size:0.8rem">No changes yet</div>'}
-        </div>`;
-
-        // Build Card
-        const lb = b.latest || {};
-        cards += `<div class="card">
-          <h2>📦 Build</h2>
-          <div class="stat"><span class="label">Builds</span><span class="value">${b.count || 0}</span></div>
-          ${lb.name ? `<div class="stat"><span class="label">Latest</span><span class="value">${lb.date || '?'}</span></div>
-          <div class="stat"><span class="label">Size</span><span class="value">${lb.size_kb || '?'} KB</span></div>` : '<div style="opacity:0.5;font-size:0.8rem">No builds yet</div>'}
-          ${b.weekly_count ? `<div class="stat"><span class="label">This week</span><span class="value">${b.weekly_count}</span></div>` : ''}
-          ${(hist.build_size || []).length > 1 ? `<div class="trend-bar">${hist.build_size.map(p => `<div class="bar" style="height:${Math.max(3, (p.kb / Math.max(...hist.build_size.map(x=>x.kb))) * 55)}px"></div>`).join('')}</div>` : ''}
-        </div>`;
-
-        // Dispatch Card
-        cards += `<div class="card">
-          <h2>🔄 Dispatch</h2>
-          <div class="stat"><span class="label">Total</span><span class="value">${di.total || 0}</span></div>
-          <div class="stat"><span class="label">✅ Done</span><span class="value green">${di.done || 0}</span></div>
-          <div class="stat"><span class="label">❌ Failed</span><span class="value red">${di.failed || 0}</span></div>
-          <div class="stat"><span class="label">⏱️ Avg</span><span class="value">${di.avg_duration_ms || 0}ms</span></div>
-        </div>`;
-
-        // Self-Improve Card
-        cards += `<div class="card">
-          <h2>🔧 Self-Improve</h2>
-          <div class="stat"><span class="label">Runs</span><span class="value">${si.runs || 0}</span></div>
-          <div class="stat"><span class="label">Last</span><span class="value" style="font-size:0.8rem">${(si.last || 'None').substring(0, 40)}</span></div>
-        </div>`;
-
-        // Sessions Card
-        cards += `<div class="card">
-          <h2>📊 Sessions</h2>
-          <div class="stat"><span class="label">Total</span><span class="value">${sess.total || '?'}</span></div>
-          <div class="stat"><span class="label">Tokens</span><span class="value">${sess.tokens || '?'}</span></div>
-          ${sess.cost ? `<div class="stat"><span class="label">Cost</span><span class="value">${sess.cost}</span></div>` : ''}
-        </div>`;
-
-        // Tools Card
-        cards += `<div class="card">
-          <h2>🛠️ Tools</h2>
-          <div class="stat"><span class="label">Total</span><span class="value">${d.tools || 0}</span></div>
-        </div>`;
-
-        document.getElementById('cards').innerHTML = cards;
-        document.getElementById('timestamp').textContent = `Last updated: ${(d.generated_at || 'unknown').replace('T', ' ').substring(0, 19)} | Workspace: ${d.workspace || 'unknown'}`;
-      } catch (err) {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('content').style.display = 'block';
-        document.getElementById('cards').innerHTML = `<div class="card error">Failed to load: ${err.message}</div>`;
-      }
+        html+=renderTree(entries,k.id,depth+1);
+      });
+      return html;
     }
-    loadDashboard();
-    setInterval(loadDashboard, 30000);
-  </script>
+    
+    const roots=tree.filter(e=>!e.parent_id);
+    let treeHtml='';
+    roots.forEach(r=>{
+      const icon={'done':'✅','running':'⏳','error':'❌'}[r.status]||'⏹️';
+      const sc={'done':'status-done','running':'status-running','error':'status-error'}[r.status]||'';
+      const dur=r.duration_ms!=null?(r.duration_ms/1000).toFixed(1)+'s':'...';
+      treeHtml+='<div class="tree-node">'+
+        '<span class="tree-icon">'+icon+'</span>'+
+        '<span class="tree-from">'+r.from+'</span>'+
+        '<span class="tree-arrow"> → </span>'+
+        '<span class="tree-to '+sc+'">'+r.to+'</span>'+
+        '<span class="tree-task">'+r.task+'</span>'+
+        '<span class="tree-dur">'+dur+'</span></div>';
+      if(r.reason){
+        treeHtml+='<div class="tree-reason">💬 '+r.reason+'</div>';
+      }
+      treeHtml+=renderTree(tree,r.id,1);
+    });
+    
+    if(!treeHtml) treeHtml='<div style="opacity:0.5">No dispatch data yet.</div>';
+    document.getElementById('treeContainer').innerHTML=treeHtml;
+    
+    const ts=d.timestamp||d.generated_at||'unknown';
+    document.getElementById('infoBar').innerHTML=
+      '🕐 '+ts.replace('T',' ').substring(0,19)+
+      ' | 📂 '+d.workspace;
+  } catch(err) {
+    document.getElementById('loading').style.display='none';
+    document.getElementById('content').style.display='block';
+    document.getElementById('treeContainer').innerHTML='<div class="error">❌ '+err.message+'</div>';
+  }
+}
+loadDashboard();
+setInterval(loadDashboard,10000);
+</script>
 </body>
 </html>

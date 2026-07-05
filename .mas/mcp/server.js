@@ -102,9 +102,12 @@ rl.on('line', async (line) => {
         }
       });
     } else if (method === 'tools/list') {
+      const dataFile = path.join(DASHBOARD_DIR, 'data.json');
       const projectFile = path.join(DASHBOARD_DIR, 'project.json');
       let data = { agents: { total: 0, healthy: 0, degraded: 0 } };
-      if (await fs.pathExists(projectFile)) {
+      if (await fs.pathExists(dataFile)) {
+        data = await fs.readJson(dataFile);
+      } else if (await fs.pathExists(projectFile)) {
         data = await fs.readJson(projectFile);
       }
       const a = data.agents || {};
@@ -119,9 +122,12 @@ rl.on('line', async (line) => {
         }
       });
     } else if (method === 'tools/call') {
+      const dataFile = path.join(DASHBOARD_DIR, 'data.json');
       const projectFile = path.join(DASHBOARD_DIR, 'project.json');
       let data = {};
-      if (await fs.pathExists(projectFile)) {
+      if (await fs.pathExists(dataFile)) {
+        data = await fs.readJson(dataFile);
+      } else if (await fs.pathExists(projectFile)) {
         data = await fs.readJson(projectFile);
       }
       respond({
