@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 dev_gatekeeper.py — Pre-Execute-Hook (R01 + R18 + R19 + R20 + R10 + R05 + Matrix)
-Will VOR jeder write/edit/shell/delete-Aktion aufgerufen.
+Will VOR jeder write/edit/shell/delete-action aufgerufen.
 BLOCKED if eine Rule verletzt ist.
 
 Aufruf: python3 dev_gatekeeper.py --write path --content "..."
         python3 dev_gatekeeper.py --edit path --before "X" --after "Y"
         python3 dev_gatekeeper.py --shell "befehl"
         python3 dev_gatekeeper.py --delete path
-        python3 dev_gatekeeper.py --check-lock   # Lock-Status check
+        python3 dev_gatekeeper.py --check-lock   # Lock-status check
         python3 dev_gatekeeper.py --check-matrix   # Matrix-Check
           [--action shell] [--file path] [--cmd "befehl"]
 """
@@ -17,72 +17,72 @@ import sys, os, json, subprocess, time, datetime
 
 MAS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE_DIR = os.path.join(MAS_DIR, ".state")
-CONFIRMATION_DATEI = os.path.join(STATE_DIR, ".last_confirmation")
-AUDIT_DATEI = os.path.join(STATE_DIR, "audit.log.jsonl")
-LOCK_DATEI = os.path.join(STATE_DIR, ".disziplin_lock")
+CONFIRMATION_file = os.path.join(STATE_DIR, ".last_confirmation")
+AUDIT_file = os.path.join(STATE_DIR, "audit.log.jsonl")
+LOCK_file = os.path.join(STATE_DIR, ".disziplin_lock")
 
-def alog(aktion, agent, ziel, status, rule=""):
+def alog(action, agent, target, status, rule=""):
     """Audit-Log entry (JSON-Lines)"""
     os.makedirs(STATE_DIR, exist_ok=True)
-    e = {"ts": datetime.datetime.now().isoformat(), "aktion": aktion,
-         "agent": agent, "ziel": str(ziel)[:200], "status": status, "rule": rule}
-    with open(AUDIT_DATEI, 'a') as f:
+    e = {"ts": datetime.datetime.now().isoformat(), "action": action,
+         "agent": agent, "target": str(target)[:200], "status": status, "rule": rule}
+    with open(AUDIT_file, 'a') as f:
         f.write(json.dumps(e, ensure_ascii=False) + '\n')
     if status == "CRITICAL":
-        with open(LOCK_DATEI, 'w') as f:
-            f.write(f"CRITICAL: {rule} - {aktion} um {e['ts']}\n")
+        with open(LOCK_file, 'w') as f:
+            f.write(f"CRITICAL: {rule} - {action} um {e['ts']}\n")
 
 def check_lock():
-    if os.path.exists(LOCK_DATEI):
-        print(f"🔴 MAS GEFRIERT: {open(LOCK_DATEI).read().strip()}")
+    if os.path.exists(LOCK_file):
+        print(f"🔴 MAS GEFRIERT: {open(LOCK_file).read().strip()}")
         sys.exit(1)
 
 def check_r01():
-    if not os.path.exists(CONFIRMATION_DATEI):
+    if not os.path.exists(CONFIRMATION_file):
         return (False, "No .last_confirmation")
-    with open(CONFIRMATION_DATEI) as f:
+    with open(CONFIRMATION_file) as f:
         ts = int(f.read().strip())
     if int(time.time()) - ts > 300:
         return (False, "Confirmation >5 Min abgelaufen")
     return (True, "")
 
-def check_r18(aktion_str):
-    if not os.path.exists(AUDIT_DATEI):
+def check_r18(action_str):
+    if not os.path.exists(AUDIT_file):
         return (False, "No Audit-Log")
-    with open(AUDIT_DATEI) as f:
-        zeilen = [z for z in f.read().strip().split('\n') if z.strip()]
-    if not zeilen:
+    with open(AUDIT_file) as f:
+        lines = [z for z in f.read().strip().split('\n') if z.strip()]
+    if not lines:
         return (False, "Audit-Log empty")
-    letzter = json.loads(zeilen[-1])
-    if letzter.get("aktion") == "DELEGATE" and "action-executor" in letzter.get("ziel",""):
+    letzter = json.loads(lines[-1])
+    if letzter.get("action") == "DELEGATE" and "action-executor" in letzter.get("target",""):
         return (True, "")
-    return (False, f"Letzte Aktion: {letzter.get('aktion')}, not DELEGATE")
+    return (False, f"Letzte action: {letzter.get('action')}, not DELEGATE")
 
-def check_r19(aktion_str, at):
+def check_r19(action_str, at):
     if at in ("write","edit","delete"):
-        path = aktion_str.split()[-1]
+        path = action_str.split()[-1]
         if path.startswith("/home") and "mas-engineer" not in path:
             return (False, f"Target outside MAS: {path}")
         if ".git/" in path:
             return (False, ".git/ verboten")
         return (True, "")
     if at == "shell":
-        if "mas-engineer/tools/" in aktion_str and "dev_build" not in aktion_str and "dev_install" not in aktion_str:
+        if "mas-engineer/tools/" in action_str and "dev_build" not in action_str and "dev_install" not in action_str:
             return (False, "Source-Tool-Path — no Build/Install")
         return (True, "")
     return (True, "")
 
 def check_r20(at):
-    # Gatekeeper selbst may always (er ist System)
+    # Gatekeeper selbst may always (er ist system)
     return (True, "")
 
-def check_r10(at, aktion_str, inhalt=""):
+def check_r10(at, action_str, inhold=""):
     if at not in ("write","edit"): return (True, "")
-    ziel = aktion_str.split()[-1] if aktion_str else ""
-    if not ziel.endswith(('.yaml','.yml')): return (True, "")
-    if not inhalt: return (True, "")
+    target = action_str.split()[-1] if action_str else ""
+    if not target.endswith(('.yaml','.yml')): return (True, "")
+    if not inhold: return (True, "")
     try:
-        import yaml; yaml.safe_load(inhalt); return (True, "")
+        import yaml; yaml.safe_load(inhold); return (True, "")
     except Exception as e:
         return (False, f"YAML-Error: {e}")
 
@@ -100,11 +100,11 @@ def check_r05(at):
 
 def check_responsibility_matrix(action_type, filepath=None, cmd=None):
     """
-    Checks ob eine Aktion durch die Responsibility-Matrix abgedeckt ist.
+    Checks ob eine action durch die Responsibility-Matrix abgedeckt ist.
     
     Returns:
         (status, agent_name, task)
-        - ("delegate", "sub_mas-xxx", "TASK") → an thesen Agenten delegate
+        - ("delegate", "sub_mas-xxx", "TASK") → an thesen agents delegate
         - ("self", None, None) → selbst execute (read_exception)
         - ("blocked", None, None) → no Sub-Agent responsible
     """
@@ -148,7 +148,7 @@ def check_responsibility_matrix(action_type, filepath=None, cmd=None):
         return ("delegate", agent, entry.get("task"))
     
     # 4. Nothing found
-    return ("blocked", None, f"No Sub-Agent for Aktion '{action_type}'")
+    return ("blocked", None, f"No Sub-Agent for action '{action_type}'")
 
 PRUEF_MATRIX = {
     "write": ["R01","R18","R19","R20","R10","R05"],
@@ -160,12 +160,12 @@ PRUEF_MATRIX = {
 def main():
     check_lock()
     
-    # --check-lock Modus
+    # --check-lock mode
     if "--check-lock" in sys.argv:
         print("✅ Lock-Check: MAS not gefroren")
         sys.exit(0)
     
-    # --check-matrix Modus
+    # --check-matrix mode
     if "--check-matrix" in sys.argv:
         cmd_args = {}
         for i, a in enumerate(sys.argv[1:], 1):
@@ -189,27 +189,27 @@ def main():
 
     at = sys.argv[1].lstrip('-')
     if at not in ("write","edit","shell","delete"):
-        print(f"❌ Unbekannte Aktion: {at}"); sys.exit(1)
+        print(f"❌ Unbekannte action: {at}"); sys.exit(1)
 
-    global aktion_str; aktion_str = " ".join(sys.argv[2:])
-    inhalt = ""
+    global action_str; action_str = " ".join(sys.argv[2:])
+    inhold = ""
     if "--content" in sys.argv:
-        idx = sys.argv.index("--content"); inhalt = sys.argv[idx+1]
+        idx = sys.argv.index("--content"); inhold = sys.argv[idx+1]
     elif "--stdin" in sys.argv:
-        inhalt = sys.stdin.read()
+        inhold = sys.stdin.read()
 
     error = []
     for rule in PRUEF_MATRIX.get(at, []):
         if rule == "R01": ok, det = check_r01()
-        elif rule == "R18": ok, det = check_r18(aktion_str)
-        elif rule == "R19": ok, det = check_r19(aktion_str, at)
+        elif rule == "R18": ok, det = check_r18(action_str)
+        elif rule == "R19": ok, det = check_r19(action_str, at)
         elif rule == "R20": ok, det = check_r20(at)
-        elif rule == "R10": ok, det = check_r10(at, aktion_str, inhalt)
+        elif rule == "R10": ok, det = check_r10(at, action_str, inhold)
         elif rule == "R05": ok, det = check_r05(at)
         else: ok, det = True, ""
         if not ok:
             error.append(f"{rule}: {det}")
-            alog("BLOCKED", "gatekeeper", aktion_str, "BLOCKED", rule)
+            alog("BLOCKED", "gatekeeper", action_str, "BLOCKED", rule)
 
     if error:
         print(f"❌❌❌ GATEKEEPER BLOCKED: {len(error)} Violations")
@@ -217,7 +217,7 @@ def main():
         sys.exit(1)
 
     print(f"✅ Gatekeeper: {len(PRUEF_MATRIX.get(at,[]))} Rulen bestanden")
-    alog(at.upper(), "gatekeeper", aktion_str, "OK", "")
+    alog(at.upper(), "gatekeeper", action_str, "OK", "")
 
     if at == "shell":
         result = subprocess.run(sys.argv[2:], capture_output=True, text=True)
@@ -226,8 +226,8 @@ def main():
         sys.exit(result.returncode)
     elif at == "write":
         path = sys.argv[2]
-        with open(path, 'w') as f: f.write(inhalt)
-        print(f"✅ {path} written ({len(inhalt)} bytes)")
+        with open(path, 'w') as f: f.write(inhold)
+        print(f"✅ {path} written ({len(inhold)} bytes)")
     elif at == "edit":
         path = sys.argv[2]
         if "--before" in sys.argv and "--after" in sys.argv:

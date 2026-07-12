@@ -64,7 +64,7 @@ def warn(msg):
 
 
 def ensure_dir(path: Path):
-    """Stelle sicher dass a Directory exists."""
+    """Ensure dass a Directory exists."""
     path.mkdir(parents=True, exist_ok=True)
 
 
@@ -79,7 +79,7 @@ def validate_yaml(path: Path) -> tuple[bool, str]:
 
 
 def create_backup(rel_path: str) -> Path | None:
-    """Erstelle a Backup der file mit Zeitstempel."""
+    """Create a Backup der file mit Zeitstempel."""
     source = AGENT_DIR / rel_path
     if not source.exists():
         error(f"file not found: {source}")
@@ -93,7 +93,7 @@ def create_backup(rel_path: str) -> Path | None:
     shutil.copy2(source, target)
     
     if target.exists():
-        ok(f"Backup creates: {target}")
+        ok(f"Backup created: {target}")
         return backup_subdir
     else:
         error("Backup failed")
@@ -140,7 +140,7 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
     
     full_path = AGENT_DIR / rel_path
     
-    # ─── SCHRITT 1: VALIDATE (BEFORE) ───
+    # ─── step 1: VALIDATE (BEFORE) ───
     print(f"\n🔍 Check: {rel_path}")
     
     if not full_path.exists():
@@ -171,7 +171,7 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
     else:
         ok(f"'{von}' found (1x)")
     
-    # ─── SCHRITT 2: BACKUP ───
+    # ─── step 2: BACKUP ───
     backup_dir = create_backup(rel_path)
     if backup_dir:
         result["backup"] = str(backup_dir)
@@ -180,7 +180,7 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
         result["error"].append("Backup failed")
         return result
     
-    # ─── SCHRITT 2b: GIT PRE-EDIT COMMIT ───
+    # ─── step 2b: GIT PRE-EDIT COMMIT ───
     ws_root = AGENT_DIR
     if ws_root and (ws_root / ".git").exists():
         subprocess.run(["git", "-C", str(ws_root), "add", rel_path],
@@ -202,7 +202,7 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
         return result
     full_path.write_text(new_text)
     
-    # ─── SCHRITT 4: VALIDATE (AFTER) ───
+    # ─── step 4: VALIDATE (AFTER) ───
     yaml_ok2, yaml_msg2 = validate_yaml(full_path)
     if not yaml_ok2:
         result["status"] = "rolled_back"
@@ -216,7 +216,7 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
         return result
     ok(f"YAML after Change weiterhin valid")
     
-    # ─── SCHRITT 4b: GIT POST-EDIT COMMIT ───
+    # ─── step 4b: GIT POST-EDIT COMMIT ───
     if ws_root and (ws_root / ".git").exists():
         subprocess.run(["git", "-C", str(ws_root), "add", rel_path],
                        capture_output=True)
@@ -232,13 +232,13 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
     new_count = int(grep2.stdout.strip() or 0)
     if new_count == 0:
         result["status"] = "rolled_back"
-        result["error"].append("Neuer Value not in file → Rollback")
+        result["error"].append("newer Value not in file → Rollback")
         restore_backup(backup_dir, rel_path)
         return result
     
     ok(f"'{nach}' successful gesetzt")
     
-    # ─── SCHRITT 5: DOKUMENTIEREN ───
+    # ─── step 5: DOKUMENTIEREN ───
     result["status"] = "success"
     
     # dev_changes.py benachrichtigen
@@ -263,11 +263,11 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
     
     print("")
     print("┌─────────────────────────────────────────────┐")
-    print(f"│  ✅ CHANGE SUCCESSFULLY                     │")
+    print(f"│  ✅ CHANGE SUCCESSFUL                     │")
     print(f"│                                              │")
     print(f"│  file:  {rel_path}")
-    print(f"│  Von:    {von}")
-    print(f"│  Nach:   {nach}")
+    print(f"│  From:    {von}")
+    print(f"│  To:   {nach}")
     print(f"│  Reason:  {grund}")
     print(f"│  Backup: {backup_dir}")
     print(f"└─────────────────────────────────────────────┘")
@@ -412,7 +412,7 @@ def cmd_validate(args):
     out = []
     out.append(f"🔍 VALIDIERUNG: {rel_path}")
     out.append("━" * 50)
-    out.append(f"  size: {size} Bytes, {lines} Zeilen")
+    out.append(f"  size: {size} Bytes, {lines} lines")
     out.append(f"  YAML: {'✅ Valid' if ok else f'❌ Invalid: {yaml_msg}'}")
     out.append("")
     
@@ -459,8 +459,8 @@ def do_validate(rel_path: str) -> str:
     out = []
     out.append(f"🔍 VALIDIERUNG: {rel_path}")
     out.append("━" * 40)
-    out.append(f"  size: {full_path.stat().st_size} Bytes, {lines} Zeilen")
-    out.append(f"  Status: {'✅ Valid' if ok else '❌ Invalid'}")
+    out.append(f"  size: {full_path.stat().st_size} Bytes, {lines} lines")
+    out.append(f"  status: {'✅ Valid' if ok else '❌ Invalid'}")
     if not ok:
         out.append(f"  Error: {msg}")
     return "\n".join(out)
@@ -489,8 +489,8 @@ def main():
     import argparse
     parser = argparse.ArgumentParser(description="dev_editor.py — Framework-Editor")
     parser.add_argument("--patch", type=str, help="file (relativ zu agent/)")
-    parser.add_argument("--von", type=str, default="", help="Alter Value")
-    parser.add_argument("--nach", type=str, default="", help="Neuer Value")
+    parser.add_argument("--von", type=str, default="", help="older Value")
+    parser.add_argument("--nach", type=str, default="", help="newer Value")
     parser.add_argument("--grund", type=str, default="", help="Reason der Change")
     parser.add_argument("--user", type=str, default="Marius")
     parser.add_argument("--risk", type=str, default="niedrig")
@@ -522,7 +522,7 @@ def main():
             sys.exit(1)
         result = do_patch(args.patch, args.von, args.nach, args.grund, args.user, args.risk)
         if result["status"] != "success":
-            print(f"\n❌ Status: {result['status']}")
+            print(f"\n❌ status: {result['status']}")
             for f in result["error"]:
                 print(f"  • {f}")
             sys.exit(1)
@@ -530,7 +530,7 @@ def main():
     else:
         print("🔧 dev_editor.py — Framework-Editor")
         print("")
-        print("Verwendung:")
+        print("Usage:")
         print("  --patch <file> --von '<old>' --nach '<new>' --grund '<grund>'")
         print("  --validate <file>")
         print("  --backup <file>")

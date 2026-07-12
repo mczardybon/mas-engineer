@@ -9,7 +9,7 @@ Dokumentiert JEDE Change am agent/ Framework.
 Enables Rollback. Zeigt Historie.
 
 VERWENDUNG:
-    python3 dev_changes.py --status                  # Aktuellen Status show
+    python3 dev_changes.py --status                  # Aktuellen status show
     python3 dev_changes.py --history                 # All Changes show
     python3 dev_changes.py --add <json>              # Change add
     python3 dev_changes.py --get <id>                # Eine determinese Change
@@ -36,7 +36,7 @@ CHANGES_FILE = STATE_DIR / "changes.json"
 
 
 def init_state():
-    """Erstelle leere changes.json falls not present."""
+    """Create leere changes.json falls not present."""
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     if not CHANGES_FILE.exists():
         default = {
@@ -133,14 +133,14 @@ def add_change(change_data):
 
 
 def show_status():
-    """Show Status an."""
+    """Show status an."""
     data = load()
     output = []
-    output.append("📝 CHANGE STATUS")
+    output.append("📝 CHANGE status")
     output.append("━" * 40)
     output.append(f"  Total: {data['metadata']['total_changes']}")
-    output.append(f"  Letzte 24h: {data['stats']['last_24h']}")
-    output.append(f"  Letzte Aktualisierung: {data['metadata']['last_updated']}")
+    output.append(f"  Last 24h: {data['stats']['last_24h']}")
+    output.append(f"  Last Update: {data['metadata']['last_updated']}")
     output.append("")
     output.append("  After Art:")
     for art, count in data['stats'].items():
@@ -150,12 +150,12 @@ def show_status():
     
     if data['changes']:
         last = data['changes'][-1]
-        output.append("  Letzte Change:")
+        output.append("  Last Change:")
         output.append(f"    #{last['id']}: {last['file']}")
         output.append(f"    {last['von']} → {last['nach']}")
         output.append(f"    User: {last['user']} ({'✅' if last['user_approved'] else '❌'})")
     else:
-        output.append("  Still no Changes.")
+        output.append("  No changes yet.")
     
     return "\n".join(output)
 
@@ -167,11 +167,11 @@ def show_history(limit=10):
     changes.reverse()
     
     output = []
-    output.append("📝 LETZTE CHANGES")
+    output.append("📝 LAST CHANGES")
     output.append("━" * 40)
     
     if not changes:
-        output.append("  Still no Changes.")
+        output.append("  No changes yet.")
         return "\n".join(output)
     
     for c in changes:
@@ -256,9 +256,9 @@ def main():
     if len(sys.argv) < 2:
         print("dev_changes.py — Change management")
         print("")
-        print("Verwendung:")
-        print("  --status              Status anshow")
-        print("  --history [n]         Letzte n Changes (Default: 10)")
+        print("Usage:")
+        print("  --status              status anshow")
+        print("  --history [n]         Last n Changes (Default: 10)")
         print("  --add <json>          Change entryen (JSON mit file, von, nach, grund)")
         print("  --get <id>            Details a Change")
         print("  --rollback <id>       Rollback-Command generate")

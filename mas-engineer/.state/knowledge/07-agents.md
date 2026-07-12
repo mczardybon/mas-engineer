@@ -5,7 +5,7 @@
 ### Kategorie Analyse (9)
 | Agent | description |
 |:------|:-------------|
-| framework-knowledge | Framework Concepts verstehen & Bauplaene |
+| framework-knowledge | Framework Concepts verstehen & blueprints |
 | framework-scanner | Framework analysieren (SCAN/AUDIT/HARDEN) |
 | session-analyst | Session-Korrelation & Anomalien |
 | config-auditor | Config-Consistency (16 Checks) |
@@ -25,10 +25,10 @@
 | recovery-timeline | Automatische Best point-Suche |
 | migration-helper | Framework Migrations planen |
 
-### Kategorie Aboutwachung (6)
+### Kategorie Monitoring (6)
 | Agent | description |
 |:------|:-------------|
-| agent-guardian | Death/Drift/Loop-Aboutwachung |
+| agent-guardian | Death/Drift/Loop-Monitoring |
 | monitor-health | YAML-Config-Health |
 | monitor-recovery | Checkpoint-Recovery-Monitor |
 | monitor-runtime | Runtime-token-Monitor |
@@ -64,7 +64,7 @@
 ### Kategorie Generierung (3)
 | Agent | description |
 |:------|:-------------|
-| doc-generator | Docs auf Aktualitaet checkn |
+| doc-generator | Docs auf Aktualitaet check |
 | signal-generator | Signale (CP_DONE/ERROR/SESSION_END) |
 | degradation-handler | Degradation-Recovery |
 
@@ -110,7 +110,7 @@ Git-Administration: init, commit, status, log, diff. NO push without ✅.
 Python-Code-Reparatur: compile (Syntax), analyze (AST), fix (Code-Change), validate (Health-Check).
 
 ### 📝 sub_mas-doc-writer
-Markdown-Documentation: create, update, consistency (Links checkn).
+Markdown-Documentation: create, update, consistency (Links check).
 
 ### 🔧 sub_mas-json-utility
 JSON-Operationen: validate (Syntax), format (indent+sort), append (entry add).

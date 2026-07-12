@@ -47,14 +47,14 @@
   - G1: Degradierter Agent → score < 80 → Settings/Prompt/Instructions optimize
   - G2: Hohe failure-rate → >10% failures/calls → timeout increase oder prompt make precise
   - G3: Loops erkannt → loop=warning oder critical → instructions make precise
-  - G4: Agent dead → resurrect failed → checkn: ist Agent obsolet? replace?
+  - G4: Agent dead → resurrect failed → check: ist Agent obsolet? replace?
 
   ### Type H — Anomalie-basierte Optimierung (via Session-Analyst)
   Erkenne: Anomalien in Session-Data.
-  - H1: duration-Anomalie → Session >2x ∅-duration → timeout oder max_steps checkn
+  - H1: duration-Anomalie → Session >2x ∅-duration → timeout oder max_steps check
   - H2: token-Anomalie → tokens >3x ∅ → prompt too long / instructions zu verbose
   - H3: cost-Anomalie → cost >5x ∅ → teuren Agents optimize (prompt shorten)
-  - H4: Stale-Session → idle >60min → recipe-Detection checkn (incomplete Task?)
+  - H4: Stale-Session → idle >60min → recipe-Detection check (incomplete Task?)
 
   ### Type I — Prompt-basierte Optimierung (via Prompt-Engineer REVIEW)
   Erkenne: Prompt-Quality.
@@ -143,7 +143,7 @@
 
   ### Type W — Goose Compatibility (via goose --version)
   Erkenne: Version-Drift.
-  - W1: New Version available → current < latest → Upgrade checkn
+  - W1: New Version available → current < latest → Upgrade check
   - W2: Breaking Change found → MAS-Adjustment needed → Migration planen
   - W3: Aktuellste Version → ✅ MAS runs auf latest Goose Version
 
@@ -155,7 +155,7 @@
 
   ### Type Y — Recovery-Effizienz (via Session-DB + Guardian-Log)
   Erkenne: Recovery-Trend.
-  - Y1: Recovery longsamer → Erholung after Error dauert longer → Timeout/Retry-Logik checkn
+  - Y1: Recovery longsamer → Erholung after Error dauert longer → Timeout/Retry-Logik check
   - Y2: Recovery schneller → ✅ Erholung optimiert sich
 
   ### Type Z — prompt churn (via changes.json + git log)
@@ -179,7 +179,7 @@
   Erkenne: Framework Compatibility.
   - BB1: Framework Test failed → Changes Framework incompatible → ROLLBACK
   - BB2: Framework Test bestanden → ✅ Changes Framework-kompatibel
-  - BB3: Framework longsam (>120s) → Performance-Optimierung checkn
+  - BB3: Framework longsam (>120s) → Performance-Optimierung check
 
   ### Type CC — Memory/Resource-Optimierung (via Session-DB + Guardian)
   Erkenne: Resource-Probleme.
@@ -200,7 +200,7 @@
   - EE1: DB read-only → chmod + Backup from changes.json
   - EE2: Missing Table → Migration oder DB neubauen
   - EE3: DB corrupted → Backup from changes.json againhcreate
-  - EE4: No Sessions (0 rows) → Goose neustart oder Path checkn
+  - EE4: No Sessions (0 rows) → Goose neustart oder Path check
 
   ### Type FF — Config-Drift (via diff recipe/ vs best-practices.yaml)
   Erkenne: Config-Deviation.

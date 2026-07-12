@@ -1,6 +1,6 @@
 # MAS-Architecture v1.0.0
 
-## Systemaufbau
+## System Architecture
 ```
 ┌──────────────────────────────────────────────────┐
 │  DEV-MAS-ENGINEER (dev-mas-engineer.yaml)        │
@@ -23,7 +23,7 @@
 ## rolesverteilung
 - **MAS = Developer des Frameworks** (analysiert, patcht, testet, deployt)
 - **Framework = Produktivsystem** (weiss nothing from MAS)
-- **User = Entscheider** (MAS schlaegt before, User entscheidet)
+- **User = Entscheider** (MAS schlaegt before, User decides)
 
 ## Domain separation (R09)
 - MAS schreibt ONLY in mas-engineer/
@@ -38,7 +38,7 @@ work/
 │   ├── recipe/           → dev-mas-engineer.yaml + sub/sub_mas-*.yaml
 │   ├── tools/            → 43 Dev-Tools
 │   ├── docs/             → Manifest, Governance, Procedures
-│   ├── plans/            → Dashboard-Bauplaene
+│   ├── plans/            → Dashboard-blueprints
 │   └── .state/           → Rules, Domains, Agents, Wissen
 ├── framework/            ← FRAMEWORK (Produktivsystem)
 │   └── dev-team/
@@ -52,7 +52,7 @@ work/
 └── dist/                 → Gebaute ZIPs
 ```
 
-## Installationsziele (after ./installr.sh)
+## Installation targets (after ./installr.sh)
 ```
 ~/.config/goose/recipes/  (RECIPE_PATH):
 ├── dev-mas-engineer.yaml     ← Core-Recipe

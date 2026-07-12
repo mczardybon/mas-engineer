@@ -8,7 +8,7 @@
 
 ## Prompt-Qualitaet (Typ B)
 - [ ] B1: Prompt zu vage? (User asks 3x "was machst du?")
-- [ ] B2: Prompt zu long? (> 500 Zeichen)
+- [ ] B2: Prompt zu long? (> 500 characters)
 - [ ] B3: Context missing? (Agent asks after Infos)
 - [ ] B4: Prompt != Instructions? (Widerspruch?)
 
@@ -16,7 +16,7 @@
 - [ ] C1: ⛔-Rule missing? (Agent tut Verbotenes)
 - [ ] C2: Ablauf unklar? (Agent asks after Reihenfolge)
 - [ ] C3: Boundaries missing? (Agent aboutschreitet Scope)
-- [ ] C4: Referenzen veraltet? (not-existente files)
+- [ ] C4: Referenzen outdated? (not-existente files)
 
 ## Workflow (Typ D)
 - [ ] D1: Step-Reihenfolge wrong?
@@ -49,9 +49,9 @@
 
 ## Prompt-Qualitaet (Typ I)
 - [ ] I1: Score < 5/10?
-- [ ] I2: Identitaet missing? ("Wer am ich")
+- [ ] I2: Identity missing? ("Wer am ich")
 - [ ] I3: No ⛔-Boundaries?
-- [ ] I4: Zu long? (> 500 Zeichen)
+- [ ] I4: Zu long? (> 500 characters)
 - [ ] I5: Nicht allinstehend?
 
 ## Config (Typ J)
@@ -59,7 +59,7 @@
 - [ ] J2: Config-Value obsolete?
 
 ## Docs (Typ K)
-- [ ] K1: Doc veraltet?
+- [ ] K1: Doc outdated?
 - [ ] K2: Doc missing?
 
 ## Goose (Typ L)
@@ -74,12 +74,12 @@
 ## Recipe (Typ N)
 - [ ] N1: Doppelte Recipes?
 - [ ] N2: Old Version?
-- [ ] N3: Fehlende Dependencies?
+- [ ] N3: Missing Dependencies?
 
 ## Struktur (Typ O)
 - [ ] O1: Instructions != Ist-State?
 - [ ] O2: Referenz auf not-existente file?
-- [ ] O3: Veralteter Zaehlimpuls?
+- [ ] O3: outdateder Zaehlimpuls?
 - [ ] O4: Hardcodierter Path?
 
 ## Tools (Typ P)
@@ -94,7 +94,7 @@
 ## Git (Typ R)
 - [ ] R1: Code reduziert? (Positiv)
 - [ ] R2: Code aufgeblaht? (Negativ)
-- [ ] R3: ⛔-Rulen vermehrt? (Safety verbettert)
+- [ ] R3: ⛔-Rulen increased? (Safety verbettert)
 - [ ] R4: Prompt gekuerzt? (Token-Effizienz)
 - [ ] R5: New file? (Only if notig)
 
@@ -106,8 +106,8 @@
 - [ ] GG1: ⛔ missing im prompt?
 - [ ] GG2: Version missing?
 - [ ] GG3: Emoji missing?
-- [ ] GG4: Prompt zu short? (< 100 Zeichen)
-- [ ] GG5: Instructions zu long? (> 2000 Zeichen)
+- [ ] GG4: Prompt zu short? (< 100 characters)
+- [ ] GG5: Instructions zu long? (> 2000 characters)
 
 ## Drift (Typ FF + JJ)
 - [ ] FF1: timeout abweichend?

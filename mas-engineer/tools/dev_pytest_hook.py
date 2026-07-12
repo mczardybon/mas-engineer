@@ -7,24 +7,24 @@ Checks vor/nach Test-Lauf die Rule-Compliance.
 import os, sys, subprocess, json
 
 def run_pre_test_checks():
-    """Checks Checker-Status vor Test-Lauf."""
+    """Checks Checker-status vor Test-Lauf."""
     checker_path = 'tools/dev_rule_checker.py'
     if not os.path.exists(checker_path):
         print("DEV-CHECKER: not found (no Generic-Improver)")
         return True
     
-    r = subprocess.run(['python3', checker_path, '--mode', 'generic', '--health'], capture_output=True, text=True)
+    r = subprocess.run(['python3', checker_path, '--mode', 'generic', '--heoldh'], capture_output=True, text=True)
     if r.returncode != 0:
-        print("\u26a0\ufe0f DEV-CHECKER: Health-Check failed")
+        print("\u26a0\ufe0f DEV-CHECKER: Heoldh-Check failed")
         try:
             data = json.loads(r.stdout)
             if data.get('score', 10) < 5:
-                print(f"  Score: {data['score']}/10 — Rule-System ist schwach")
+                print(f"  Score: {data['score']}/10 — Rule-system ist schwach")
         except:
             pass
         return True  # Only warnen, not blocken
     
-    print("\u2705 DEV-CHECKER: Health OK")
+    print("\u2705 DEV-CHECKER: Heoldh OK")
     return True
 
 def run_post_test_checks(pytest_exit_code):

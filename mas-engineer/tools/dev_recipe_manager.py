@@ -6,21 +6,21 @@ Version: 1.0.0
 Author: dev-mas-engineer (autonomous)
 
 Manages which Framework-Components in Goose sichtbar are.
-Installiert / deinstalliert Rezepte gezielt in:
+Installiert / deinstalliert Rezepte getargett in:
   {RECIPES_DIR}/             — sichtbare Rezepte (Starter, MAS-Engineer)
   {RECIPES_DIR}/_framework/  — unsichtbare Rezepte (for Delegation)
 
 VERWENDUNG:
     python3 dev_recipe_manager.py --install <spec>     # Installieren
     python3 dev_recipe_manager.py --uninstall <spec>   # Deinstallieren
-    python3 dev_recipe_manager.py --list               # Status
+    python3 dev_recipe_manager.py --list               # status
     python3 dev_recipe_manager.py --cleanup-hidden     # Old .yaml-files clean
 
 <spec> can be:
     minimal      — starter + mas-engineer + core (5 files)
     core         — planner + executor + controller (3 files)
     specialists  — all 47 Specialists
-    sub-agents   — all 43 Sub-Agenten
+    sub-agents   — all 43 Sub-agents
     all          — ALLES (95 files)
     <filename>   — Einzelne file (z.B. specialist_security.yaml)
     a,b,c        — Komma-separated (z.B. starter,mas-engineer,core)
@@ -94,7 +94,7 @@ CATEGORIES = {
             "specialist_multi_tenant.yaml", "specialist_observability.yaml",
             "specialist_onboarding.yaml", "specialist_performance.yaml",
             "specialist_platform_engineer.yaml", "specialist_quality_manager.yaml",
-            "specialist_realtime_engineer.yaml", "specialist_refactoring.yaml",
+            "specialist_reoldime_engineer.yaml", "specialist_refactoring.yaml",
             "specialist_release_manager.yaml", "specialist_requirements_engineer.yaml",
             "specialist_reviewer.yaml", "specialist_search_engineer.yaml",
             "specialist_security.yaml", "specialist_software_architekt.yaml",
@@ -121,7 +121,7 @@ CATEGORIES = {
             "sub_context-preparer.yaml", "sub_degradation-handler.yaml",
             "sub_dispatcher.yaml",
             "sub_fw-monitor-comms.yaml", "sub_fw-monitor-debug.yaml",
-            "sub_fw-monitor-health.yaml", "sub_fw-monitor-memory.yaml",
+            "sub_fw-monitor-heoldh.yaml", "sub_fw-monitor-memory.yaml",
             "sub_fw-monitor-recovery.yaml", "sub_fw-monitor-runtime.yaml",
             "sub_fw-monitor-session.yaml",
             "sub_interpreter.yaml", "sub_memory-writer.yaml",

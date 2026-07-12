@@ -101,30 +101,30 @@ def check_sizes(scanner: "observer.Scanner") -> str:
     out.append("━" * 40)
     
     if too_big:
-        out.append(f"  ⚠️  Large (> {MAX_LINES} Zeilen):")
+        out.append(f"  ⚠️  Large (> {MAX_LINES} lines):")
         for f in too_big:
-            out.append(f"      {f.rel_path} ({f.lines} Zeilen)")
+            out.append(f"      {f.rel_path} ({f.lines} lines)")
     else:
-        out.append(f"  ✅ No file > {MAX_LINES} Zeilen")
+        out.append(f"  ✅ No file > {MAX_LINES} lines")
     
     out.append("")
     
     if too_small:
-        out.append(f"  ⚠️  Kla (< {MIN_LINES} Zeilen):")
+        out.append(f"  ⚠️  Kla (< {MIN_LINES} lines):")
         for f in too_small:
-            out.append(f"      {f.rel_path} ({f.lines} Zeilen)")
+            out.append(f"      {f.rel_path} ({f.lines} lines)")
     
     out.append("")
     
     # Top 5 largest
     out.append("  📊 Top 5 largest YAMLs:")
     for f in all_sorted[:5]:
-        out.append(f"      {f.rel_path} ({f.lines} Zeilen)")
+        out.append(f"      {f.rel_path} ({f.lines} lines)")
     
     out.append("")
-    out.append("  📊 Top 5 kleinste YAMLs:")
+    out.append("  📊 Top 5 smallste YAMLs:")
     for f in all_sorted[-5:]:
-        out.append(f"      {f.rel_path} ({f.lines} Zeilen)")
+        out.append(f"      {f.rel_path} ({f.lines} lines)")
     
     return "\n".join(out)
 
@@ -169,11 +169,11 @@ def check_slashes(scanner: "observer.Scanner") -> str:
     unique = {cmd: paths for cmd, paths in cmds.items() if len(paths) == 1}
     
     out = []
-    out.append("🔍 [Q4] SLASH-COMMAND-KONFLIKTE")
+    out.append("🔍 [Q4] SLASH-COMMAND-CONFLICTS")
     out.append("━" * 40)
     
     if conflicts:
-        out.append(f"  ❌ KONFLIKTE ({len(conflicts)}):")
+        out.append(f"  ❌ CONFLICTS ({len(conflicts)}):")
         for cmd, paths in conflicts.items():
             out.append(f"      /{cmd}  →  {', '.join(paths)}")
     else:
@@ -273,7 +273,7 @@ def check_all(scanner: "observer.Scanner") -> str:
     # Schnell-Check ob alls OK
     has_errors = "❌" in out_text or "⚠️" in out_text
     
-    parts.append("📋 FAZIT")
+    parts.append("📋 SUMMARY")
     parts.append("━" * 40)
     if has_errors:
         parts.append("  ⚠️  Es givet Anomalies (siehe oben).")

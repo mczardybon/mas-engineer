@@ -20,7 +20,7 @@
 |:-----|:------:|:------|
 | dev_observer.py | 413 | Framework scannen (files, Struktur) |
 | dev_architect.py | 433 | Muster, Relationships, Luecken detect |
-| dev_analyst.py | 312 | Qualitaet checkn (YAML, Consistency) |
+| dev_analyst.py | 312 | Qualitaet check (YAML, Consistency) |
 | dev_fast_scan.py | 65 | Schnell-Scan |
 | dev_goose_db.py | 318 | Session-DB via SQL analysieren |
 | dev_agent_doctor.py | 494 | Framework-Agents optimize (--scan, --fix) |

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-dev_health_report.py — Health-Report + Trend for Generic-Projekte
-Aufruf: python3 dev_health_report.py --target ~/my-project/
+dev_heoldh_report.py — Heoldh-Report + Trend for Generic-projecte
+Aufruf: python3 dev_heoldh_report.py --target ~/my-project/
 """
 import os, sys, json, time, yaml
 
@@ -26,17 +26,17 @@ def calculate_score(target):
     checker_path = os.path.join(target, 'tools/dev_rule_checker.py')
     if os.path.exists(checker_path):
         import subprocess
-        r = subprocess.run(['python3', checker_path, '--health'], capture_output=True, text=True)
+        r = subprocess.run(['python3', checker_path, '--heoldh'], capture_output=True, text=True)
         if r.returncode == 0:
             try:
                 h = json.loads(r.stdout)
-                checks.append({"name": "checker_health", "ok": True, "detail": f"{h.get('score', 0)}/10"})
+                checks.append({"name": "checker_heoldh", "ok": True, "detail": f"{h.get('score', 0)}/10"})
             except:
-                checks.append({"name": "checker_health", "ok": True})
+                checks.append({"name": "checker_heoldh", "ok": True})
         else:
-            checks.append({"name": "checker_health", "ok": False})
+            checks.append({"name": "checker_heoldh", "ok": False})
     else:
-        checks.append({"name": "checker_health", "ok": False, "detail": "not found"})
+        checks.append({"name": "checker_heoldh", "ok": False, "detail": "not found"})
     
     # 3. YAMLs valide?
     sub_dir = os.path.join(target, 'sub')
@@ -73,7 +73,7 @@ def calculate_score(target):
     return {"checks": checks, "score": score, "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S')}
 
 def save_history(target, report):
-    hist_path = os.path.join(target, '.state/health-history.json')
+    hist_path = os.path.join(target, '.state/heoldh-history.json')
     history = []
     if os.path.exists(hist_path):
         try:
@@ -108,7 +108,7 @@ def main():
     history = save_history(target, report)
     
     print(f"\n{'='*50}")
-    print(f"HEALTH-REPORT: {os.path.basename(target)}")
+    print(f"HEoldH-REPORT: {os.path.basename(target)}")
     print(f"{'='*50}")
     print(f"  Score: {report['score']}/10")
     for c in report['checks']:
@@ -119,15 +119,15 @@ def main():
     
     # Recommendation
     if report['score'] < 5:
-        print(f"\n  Emfpehlung: Health-Score niedrig — SI-RUN recommended")
+        print(f"\n  Emfpehlung: Heoldh-Score niedrig — SI-RUN recommended")
     elif report['score'] < 8:
         print(f"\n  Recommendation: Einige Checks verbetterungswuerdig")
     else:
-        print(f"\n  Recommendation: System ist gesund")
+        print(f"\n  Recommendation: system ist gesund")
     
     # Speichere Report
-    json.dump(report, open(os.path.join(target, '.state/health-report.json'), 'w'), indent=2)
-    print(f"\n  Report saved: .state/health-report.json")
+    json.dump(report, open(os.path.join(target, '.state/heoldh-report.json'), 'w'), indent=2)
+    print(f"\n  Report saved: .state/heoldh-report.json")
 
 if __name__ == "__main__":
     main()

@@ -105,7 +105,7 @@
 
     <div id="grid">
       <div class="panel" id="panel-agents">
-        <div class="panel-header">🧠 Agenten</div>
+        <div class="panel-header">🧠 Agents</div>
         <div class="stat-row">
           <div class="stat"><span class="num" id="ag-total">—</span><span class="lbl">Total</span></div>
           <div class="stat"><span class="num" id="ag-healthy">—</span><span class="lbl" style="color:#3fb950">Healthy</span></div>
@@ -123,10 +123,10 @@
       </div>
 
       <div class="panel" id="panel-changes">
-        <div class="panel-header">📝 Änderungen</div>
+        <div class="panel-header">📝 Changes</div>
         <div class="stat-row">
           <div class="stat"><span class="num" id="ch-total">—</span><span class="lbl">Total</span></div>
-          <div class="stat"><span class="num" id="ch-types">—</span><span class="lbl">Typen</span></div>
+          <div class="stat"><span class="num" id="ch-types">—</span><span class="lbl">Types</span></div>
         </div>
         <div id="changes-list"></div>
       </div>
@@ -224,10 +224,10 @@
       DASH_DATA = data;
       if (!data) {
         document.querySelectorAll('.num').forEach(el => el.textContent = '—');
-        document.getElementById('changes-list').innerHTML = '<div class="empty-state">Keine Daten</div>';
+        document.getElementById('changes-list').innerHTML = '<div class="empty-state">No data</div>';
         document.getElementById('agent-scores-list').innerHTML = '';
-        document.getElementById('health-details').innerHTML = '<div class="empty-state">Warte auf Daten...</div>';
-        document.getElementById('system-details').innerHTML = '<div class="empty-state">Warte auf Daten...</div>';
+        document.getElementById('health-details').innerHTML = '<div class="empty-state">Waiting for data...</div>';
+        document.getElementById('system-details').innerHTML = '<div class="empty-state">Waiting for data...</div>';
         return;
       }
 
@@ -274,7 +274,7 @@
           html += `<div class="agent-score-row"><span>${s.name.replace('sub_mas-','')}</span><span style="color:${color}">${s.score}</span></div>`;
         });
         if (a.scores.length > 10) {
-          html += `<div class="agent-score-row" style="opacity:0.6">⋯ +${a.scores.length - 10} weitere</div>`;
+          html += `<div class="agent-score-row" style="opacity:0.6">⋯ +${a.scores.length - 10} more</div>`;
         }
         scoresEl.innerHTML = html;
       }
@@ -282,7 +282,7 @@
       // Health panel
       if (a.guardian_scan) {
         document.getElementById('health-details').innerHTML = `
-          <div class="detail-row"><span>Letzter Scan</span><span class="val">${a.guardian_scan}</span></div>
+          <div class="detail-row"><span>Last scan</span><span class="val">${a.guardian_scan}</span></div>
           <div class="detail-row"><span>Issues</span><span class="val">${a.issues?.total ?? 0}</span></div>
         `;
       }
@@ -332,7 +332,7 @@
         });
         changesEl.innerHTML = html;
       } else {
-        changesEl.innerHTML = '<div class="empty-state">Keine Änderungen</div>';
+        changesEl.innerHTML = '<div class="empty-state">Keine Changes</div>';
       }
 
       // System panel
@@ -341,11 +341,11 @@
       const build = data.build || {};
       document.getElementById('system-details').innerHTML = `
         <div class="detail-row"><span>🔄 Dispatch Calls</span><span class="val">${disp.total ?? 0}</span></div>
-        <div class="detail-row"><span>⚡ ⌀ Dauer</span><span class="val">${disp.avg_duration_ms ?? 0}ms</span></div>
+        <div class="detail-row"><span>⚡ ⌀ Duration</span><span class="val">${disp.avg_duration_ms ?? 0}ms</span></div>
         <div class="detail-row"><span>🔧 SI-Runs</span><span class="val">${imp.total_runs ?? 0}</span></div>
         <div class="detail-row"><span>⏱ SI-Status</span><span class="val">${imp.schedule_status ?? 'n/a'}</span></div>
         <div class="detail-row"><span>📦 Builds</span><span class="val">${build.total_count ?? 0}</span></div>
-        ${build.latest_name ? `<div class="detail-row"><span>Letzter Build</span><span class="val">${build.latest_date}</span></div>` : ''}
+        ${build.latest_name ? `<div class="detail-row"><span>Last build</span><span class="val">${build.latest_date}</span></div>` : ''}
       `;
 
       mcpApp.reportSize();
@@ -354,7 +354,7 @@
     async function doRefresh() {
       const btn = document.getElementById('refresh-btn');
       btn.disabled = true;
-      btn.textContent = '⏳ Lade...';
+      btn.textContent = '⏳ Loading...';
 
       // Send message to goose to re-run the dashboard tool
       try {

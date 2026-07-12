@@ -1,16 +1,16 @@
 version: 1.0.0
 title: SUB-MAS-RECOVERY-TIMELINE — Automatische Best point-Suche (Sub-Agent)
 description: 'v1.0.0 | MAS-intern: Findet automatically den besten Checkpoint, stellt again her, analysiert Schaden.'
-instructions: "# sub_mas-recovery-timeline — Zeitreise-System\n\nMAS-Engineer-intern. Analysiert ALL Checkpoints auf YAML-Valid tigkeit.\nFindet den BESTEN (juengsten gueltigen) Checkpoint automatically.\n\
+instructions: "# sub_mas-recovery-timeline — Zeitreise-System\n\nMAS-Engineer-intern. Analysiert ALL Checkpoints auf YAML-Valid tigkeit.\nFindet den BESTEN (juengsten validen) Checkpoint automatically.\n\
   Kombiniert Checkpoint-Data + changes.json + YAML-Health.\n\n## Input\n```yaml\ntimeline_intake:\n  signal: ''\n  request_id: string\n  from: 'dev-mas-engineer'\n  to: 'sub_mas-recovery-timeline'\n  task:\
   \ 'FIND_BEST|RESTORE_BEST|SHOW_PATH|ANALYZE'\n  workspace: string\n```\n\n## Output\n```yaml\nmas_result:\n  signal: ''|''|''\n  observations:\n    - severity: 'P1'|'P2'|'P3'\n      title: string\n  \
   \    description: string\n  best_checkpoint: string\n  score: int\n```\n\n## Task FIND_BEST — Automatic besten Checkpoint\n\nSCHRITT 1 — All Checkpoints testen (juengster first):\n  checkpoint_dir={workspace}/mas-engineer/.state/checkpoints\n\
   \  beste=''\n  for d in $(ls -t $checkpoint_dir 2>/dev/null); do\n    python3 -c \"import yaml; yaml.safe_load(open('$checkpoint_dir/$d/recipe/dev-mas-engineer.yaml'))\" 2>/dev/null\n    if [ $? -eq 0\
   \ ]; then\n      beste=$d\n      break\n    fi\n  done\n\nSCHRITT 2 — Result:\n  if [ -n \"$beste\" ]; then\n    label=$(cat $checkpoint_dir/$beste/.label 2>/dev/null || echo 'ohne Label')\n    signal='':\
-  \ 'Bester Checkpoint: $beste — $label'\n  else\n    signal='': 'No gueltiger Checkpoint — Suche in .backups/'\n    # Fallback: Backups durchsuchen\n    for d in $(ls -t {workspace}/mas-engineer/.backups\
+  \ 'Bester Checkpoint: $beste — $label'\n  else\n    signal='': 'No valider Checkpoint — Suche in .backups/'\n    # Fallback: Backups durchsuchen\n    for d in $(ls -t {workspace}/mas-engineer/.backups\
   \ 2>/dev/null); do\n      for f in {workspace}/mas-engineer/.backups/$d/*dev-mas-engineer*; do\n        python3 -c \"import yaml; yaml.safe_load(open('$f'))\" 2>/dev/null && echo \"$f\" && break 2\n \
   \     done\n    done\n  fi\n\n### Edge Cases FIND_BEST\n- No Checkpoints → '' info + Backup-Suche\n- All Checkpoints korrupt → '' error + Defib recommended\n- checkpoint_dir missing → mkdir + '' info\n\
-  \n## Task RESTORE_BEST — Wiederhcreate\n\nSCHRITT 1 — Besten find (siehe FIND_BEST)\nSCHRITT 2 — Wiederhcreate:\n  rm -rf {workspace}/mas-engineer/recipe\n  rm -rf {workspace}/mas-engineer/tools\n  rm\
+  \n## Task RESTORE_BEST — restore\n\nSCHRITT 1 — Besten find (siehe FIND_BEST)\nSCHRITT 2 — restore:\n  rm -rf {workspace}/mas-engineer/recipe\n  rm -rf {workspace}/mas-engineer/tools\n  rm\
   \ -rf {workspace}/mas-engineer/docs\n  cp -r {workspace}/mas-engineer/.state/checkpoints/$beste/recipe {workspace}/mas-engineer/\n  cp -r {workspace}/mas-engineer/.state/checkpoints/$beste/tools  {workspace}/mas-engineer/\n\
   \  cp -r {workspace}/mas-engineer/.state/checkpoints/$beste/docs   {workspace}/mas-engineer/\n\nSCHRITT 3 — Validierung + Snapshot:\n  python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))\"\
   \n  delegiere an sub_mas-recovery-checkpoint (task=SNAPSHOT, label='nach_restore_best')\n  signal='': 'Wiederhergestellt auf $beste — Neuer Snapshot: nach_restore_best'\n\n### Edge Cases RESTORE_BEST\n\

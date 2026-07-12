@@ -32,13 +32,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "show_framework_dashboard",
-        description: "Zeigt das Framework-Dashboard mit Agent-Status, Health-Trends, Aenderungen und Dispatch-Info",
+        description: "Shows the framework dashboard mit Agent-Status, Health-Trends, Changes und Dispatch-Info",
         inputSchema: {
           type: "object",
           properties: {
             workspace: {
               type: "string",
-              description: "Pfad zum Framework-Workspace (optional, default = current dir)",
+              description: "Path zum Framework-Workspace (optional, default = current dir)",
             },
           },
           required: [],
@@ -80,7 +80,7 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
       {
         uri: "ui://framework-dashboard/main",
         name: "Framework Dashboard",
-        description: "Interaktives Dashboard mit Agent-Status, Health-Trends, Aenderungen und Dispatch-Info",
+        description: "Interaktives Dashboard mit Agent-Status, Health-Trends, Changes und Dispatch-Info",
         mimeType: "text/html;profile=mcp-app",
       },
     ],

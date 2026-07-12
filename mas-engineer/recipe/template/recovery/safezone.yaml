@@ -11,7 +11,7 @@ instructions: "# sub_mas-recovery-safezone — Fork-Workspace\n\nMAS-Engineer-in
   \ — Fork in Main aboutnehmen\n\nSCHRITT 1 — Fork identify:\n  fork_path=$(readlink -f {workspace}/mas-engineer_active 2>/dev/null)\n  if [ ! -d \"$fork_path\" ]; then\n    signal='': 'No aktiver Fork\
   \ — FORK first'\n    return\n  fi\n\nSCHRITT 2 — Fork validate (YAML + Tools + Docs):\n  errors=0\n  for f in $(find $fork_path/recipe -name '*.yaml' -not -path '*/.backups/*'); do\n    python3 -c \"\
   import yaml; yaml.safe_load(open('$f'))\" 2>&1 || errors=$((errors+1))\n  done\n  if [ $errors -gt 0 ]; then\n    signal='': 'Fork has $errors YAML-Error — ABORT recommended'\n    return\n  fi\n\nSCHRITT\
-  \ 3 — Merge:\n  rm -rf {workspace}/mas-engineer\n  cp -r $fork_path {workspace}/mas-engineer\n\nSCHRITT 4 — Aufraeumen + bestaetigen:\n  rm -f {workspace}/mas-engineer_active\n  rm -rf $fork_path\n  signal='':\
+  \ 3 — Merge:\n  rm -rf {workspace}/mas-engineer\n  cp -r $fork_path {workspace}/mas-engineer\n\nSCHRITT 4 — Aufraeumen + confirm:\n  rm -f {workspace}/mas-engineer_active\n  rm -rf $fork_path\n  signal='':\
   \ 'Merge successful — $changed files aboutnommen'\n  Erstelle neuen Snapshot: label='nach_merge'\n\n### Edge Cases MERGE\n- Fork has WENIGER files → warning + Count-Comparison\n- Gleichzeitiger Access\
   \ → serialisieren durch temporaere Lock-file\n\n## Task ABORT — Fork verwerfen\n\nSCHRITT 1 — Fork find:\n  fork_path=$(readlink -f {workspace}/mas-engineer_active 2>/dev/null)\n  if [ ! -d \"$fork_path\"\
   \ ]; then\n    signal='': 'No aktiver Fork — nothing zu tun'\n    return\n  fi\n\nSCHRITT 2 — Delete:\n  rm -f {workspace}/mas-engineer_active\n  rm -rf $fork_path\n  signal='': 'Fork verworfen — Main-Workspace\

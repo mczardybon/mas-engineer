@@ -7,7 +7,7 @@ No write/edit/shell-Aktion without User-Confirmation.
 Confirmation gueltig: 5 Minuten (.state/.last_confirmation)
 
 ### R02 BESTAND_PRUFUNG
-Vor Neuerstellung checkn: Exists die file already?
+Vor Neuerstellung check: Exists die file already?
 Special-Agents in special_agents.yaml are fromgenommen.
 
 ### R04 GENERAL_IMPROVER_SCHUTZ
@@ -42,7 +42,7 @@ Sub-Agent = ONLY Analyse. Shell selbst fromexecuten.
 Sub-Agent terminiert (max_turns) → Task splitten + again delegate.
 
 ### R16 TOOL_VOR_EXPERTE
-Vor Task-Start: 1. Tool checkn → 2. Expert (Sub-Agent) → 3. Neuer Agent.
+Vor Task-Start: 1. Tool check → 2. Expert (Sub-Agent) → 3. Neuer Agent.
 R18 adds R16: delegate instead of selbst execute.
 
 ### R17 IMPROVEMENT_PUSH

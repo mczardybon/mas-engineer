@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""dev_fast_scan.py — 3 Deep-Punkte: Prompts, Settings, Struktur
+"""dev_fast_scan.py — 3 Deep-Punkte: Prompts, Settings, structure
 Output: JSON {findings, scores, structure_score}"""
 import json, os, sys, yaml, glob, re
 

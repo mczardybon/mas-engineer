@@ -16,28 +16,28 @@ mas-framework-v1.0.0_TIMESTAMP.zip
 │   │   └── template/
 │   ├── tools/               43 Dev-Tools
 │   ├── docs/                Manifest, Governance, Procedures
-│   ├── plans/               Dashboard-Bauplaene
+│   ├── plans/               Dashboard-blueprints
 │   └── .state/              Rulen, Domains, Agents, Wissen
 ├── installr.sh
 ├── update.sh
 └── .mas-mode
 
-## Installationsbefehle (User)
+## Installation commands (User)
 ./installr.sh                  → MAS + Framework (Default)
 ./installr.sh --mas            → Only MAS
 ./installr.sh --framework      → Only Framework
-./installr.sh --dry-run        → Trockentest
+./installr.sh --dry-run        → Dry run
 ./installr.sh --status         → Status anshow
 
 ## Updates (Developer)
-./update.sh --mas               → MAS aus Workspace syncen
-./update.sh --framework         → Framework aus Workspace syncen
-./update.sh --mas --dry-run     → MAS-Trockentest
+./update.sh --mas               → MAS aus Workspace sync
+./update.sh --framework         → Framework aus Workspace sync
+./update.sh --mas --dry-run     → MAS-Dry run
 
 ## Build (Developer)
 bash mas-engineer/tools/dev_build.sh              → ZIP bauen
 bash mas-engineer/tools/dev_build.sh --full        → MAS + ALL Projekte
-bash mas-engineer/tools/dev_build.sh --dry-run     → Only checkn
+bash mas-engineer/tools/dev_build.sh --dry-run     → Only check
 bash mas-engineer/tools/dev_build.sh --version x.y.z
 
 ## Installationslogik (installr.sh)

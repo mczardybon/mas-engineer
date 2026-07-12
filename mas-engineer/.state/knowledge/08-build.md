@@ -19,7 +19,7 @@ cd ~/agent_test/work && bash mas-engineer/tools/dev_build.sh
 |:-------|:-------------|
 | dev_build.sh | Framework-Modus (only aktives Projekt) |
 | dev_build.sh --full | FULL-Modus (MAS + ALL Projekte aus .projects.yaml) |
-| dev_build.sh --dry-run | Only checkn, nothing bauen |
+| dev_build.sh --dry-run | Only check, nothing bauen |
 | dev_build.sh --version x.y.z | Version setn |
 
 ## Installation (installr.sh)
@@ -50,9 +50,9 @@ cd dist && unzip mas-framework-*.zip && ./installr.sh
 ## Update (update.sh)
 | Command | Description |
 |:-------|:-------------|
-| ./update.sh --mas | Only MAS aus Workspace syncen |
-| ./update.sh --framework | Only Framework aus Workspace syncen |
-| ./update.sh --mas --dry-run | MAS-Trockentest |
+| ./update.sh --mas | Only MAS aus Workspace sync |
+| ./update.sh --framework | Only Framework aus Workspace sync |
+| ./update.sh --mas --dry-run | MAS-Dry run |
 | ./update.sh --help | Hilfe |
 
 ## Auto-Build (dev_autobuild.sh)
@@ -60,7 +60,7 @@ cd dist && unzip mas-framework-*.zip && ./installr.sh
 |:-------|:-------------|
 | dev_autobuild.sh | Auto-Build (checks ob Commit seit letztem ZIP) |
 | dev_autobuild.sh --force | Always bauen |
-| dev_autobuild.sh --status | Only checkn |
+| dev_autobuild.sh --status | Only check |
 | dev_autobuild.sh --install | Bauen + update.sh --mas |
 
 No eigene Logik mehr — delegiert an dev_build.sh.

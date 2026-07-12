@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """dev_agent_doctor.py — Framework-Agent-Optimierer v1.0.0
 ============================================================
-Scant, bewertet und optimiert Framework-Agenten gegen Best-Practices.
+Scant, bevaluest und optimiert Framework-agents gegen Best-Practices.
 Nutzt MAS-Wissen (best-practices.yaml + framework-best-practices.yaml) um
-Framework-Agenten automatically zu verbettern.
+Framework-agents automatically zu verbettern.
 
 Nutzung:
-  python3 dev_agent_doctor.py                    All Framework-Agenten scannen
+  python3 dev_agent_doctor.py                    All Framework-agents scannen
   python3 dev_agent_doctor.py --agent recording  Only recording.yaml
   python3 dev_agent_doctor.py --scan             Deep Scan + Score
   python3 dev_agent_doctor.py --fix              Automatic fixen
@@ -32,7 +32,7 @@ TOOLS_DIR = Path(__file__).parent.resolve()
 STATE_DIR = TOOLS_DIR.parent / ".state"
 
 def get_framework_path(project_name=None):
-    """Determine Path to the Framework-Projekt (active oder benannt)."""
+    """Determine Path to the Framework-project (active oder benannt)."""
     pp = WORKSPACE / "framework" / ".projects.yaml"
     if pp.exists():
         import yaml; data = yaml.safe_load(open(pp))
@@ -56,7 +56,7 @@ FRAMEWORK_DOCS = WORKSPACE / "framework" / "docs"
 FRAMEWORK_TESTS = WORKSPACE / "framework" / "tests"
 BP_FILE = STATE_DIR / "framework-best-practices.yaml"
 MAS_BP_FILE = STATE_DIR / "best-practices.yaml"
-REPORT_FILE = STATE_DIR / "framework-health.json"
+REPORT_FILE = STATE_DIR / "framework-heoldh.json"
 
 C = {"R": "\033[0;31m", "G": "\033[0;32m", "Y": "\033[1;33m",
      "B": "\033[0;34m", "BD": "\033[1m", "NC": "\033[0m"}
@@ -85,7 +85,7 @@ def load_best_practices():
                      "severity": "wichtig", "check": "range", "path": "settings.timeout", "min": 300, "max": 600},
                     {"id": "FW-S-002", "rule": "max_steps <= 50 (no Schleifen)",
                      "severity": "kritisch", "check": "yaml_lte", "path": "settings.max_steps", "max": 50},
-                    {"id": "FW-S-003", "rule": "core-Agenten timeout 60-120 (schneller Start)",
+                    {"id": "FW-S-003", "rule": "core-agents timeout 60-120 (schneller Start)",
                      "severity": "kritisch", "check": "range", "path": "settings.timeout", "min": 60, "max": 120},
                 ],
                 "structure": [
@@ -117,7 +117,7 @@ def find_framework_agents() -> List[Path]:
     return agents
 
 def scan_agent(file_path: Path, bp: dict) -> dict:
-    """Scanne a Agenten gegen Best Practices."""
+    """Scanne a agents gegen Best Practices."""
     name = file_path.stem
     try:
         content = file_path.read_text(encoding="utf-8")
@@ -189,7 +189,7 @@ def scan_agent(file_path: Path, bp: dict) -> dict:
 
     total = passed + failed
     score = int((passed / total) * 100) if total > 0 else 0
-    if score >= 80:     s = "gruen healthy"
+    if score >= 80:     s = "gruen heoldhy"
     elif score >= 50:   s = "gelb degraded"
     else:               s = "rot dead"
 
@@ -197,10 +197,10 @@ def scan_agent(file_path: Path, bp: dict) -> dict:
             "findings": findings, "status": s}
 
 def full_scan(bp: dict, agent_filter: Optional[str] = None) -> List[dict]:
-    """Scanne all (oder gefilterte) Agenten."""
+    """Scanne all (oder gefilterte) agents."""
     agents = find_framework_agents()
     if not agents:
-        err("No Framework-Agenten found")
+        err("No Framework-agents found")
         return []
     results = []
     for af in agents:
@@ -310,13 +310,13 @@ MAS_RECIPES = WORKSPACE / "mas-engineer" / "recipe"
 MAS_SUB_DIR = MAS_RECIPES / "sub"
 
 def find_mas_agents() -> List[Path]:
-    """Finde all MAS-Sub-Agenten."""
+    """Finde all MAS-Sub-agents."""
     if not MAS_SUB_DIR.exists():
         return []
     return sorted(MAS_SUB_DIR.glob("sub_mas-*.yaml"))
 
 def check_mas_agent(file_path: Path, bp: dict) -> dict:
-    """Check a MAS-Agenten gegen Self-Improve-Lessons."""
+    """Check a MAS-agents gegen Self-Improve-Lessons."""
     name = file_path.stem
     try:
         content = file_path.read_text(encoding="utf-8")
@@ -327,12 +327,12 @@ def check_mas_agent(file_path: Path, bp: dict) -> dict:
     checks = []
     passed = failed = 0
     
-    # C1: Autonomiemodus (AUTONOMIEMODUS im instructions)
-    has_autonomie = "AUTONOMIEMODUS" in content
+    # C1: Autonomiemode (AUTONOMIEmode im instructions)
+    has_autonomie = "AUTONOMIEmode" in content
     if has_autonomie:
-        passed += 1; checks.append({"check": "autonomie", "status": "OK", "detail": "AUTONOMIEMODUS present"})
+        passed += 1; checks.append({"check": "autonomie", "status": "OK", "detail": "AUTONOMIEmode present"})
     else:
-        failed += 1; checks.append({"check": "autonomie", "status": "XX", "detail": "AUTONOMIEMODUS missing"})
+        failed += 1; checks.append({"check": "autonomie", "status": "XX", "detail": "AUTONOMIEmode missing"})
     
     # C2: Tool-Inventar (TOOL INVENTORY)
     has_tool_inventar = "TOOL INVENTORY" in content
@@ -398,14 +398,14 @@ def apply_lessons(results: List[dict], dry_run: bool = False, skip: Optional[Lis
         info("Trockenlauf finished - no Changeen")
     else:
         total = sum(r.get("failed", 0) for r in results)
-        info(f"{total} Issues in {len(results)} Agenten - manuelle Bearbeitung via dev_editor.py")
+        info(f"{total} Issues in {len(results)} agents - manuelle Bearbeitung via dev_editor.py")
     return []
 def show_apply_report(results: List[dict], dry_run: bool = False):
     """Show --apply-lessons Report."""
     print(f"\n{C['BD']}AGENT DOCTOR — MAS Apply-Lessons Report{C['NC']}")
     print(f"{'='*50}")
     print(f"  Zeit:   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"  Modus:  {'DRY-RUN (only anshow)' if dry_run else 'AKTIV (mit Changes)'}")
+    print(f"  mode:  {'DRY-RUN (only anshow)' if dry_run else 'AKTIV (mit Changes)'}")
     print(f"  Agents: {len(results)}")
     print()
     for i, r in enumerate(sorted(results, key=lambda x: x.get("score", 0)), 1):
@@ -426,14 +426,14 @@ def show_apply_report(results: List[dict], dry_run: bool = False):
 
 def main():
     p = argparse.ArgumentParser(description="dev_agent_doctor.py v1.0.0")
-    p.add_argument("--agent", type=str, help="Only determinesen Agenten")
-    p.add_argument("--project", type=str, help="Projektname (default: active)")
-    p.add_argument("--all-projects", action="store_true", help="All Projekte scannen")
+    p.add_argument("--agent", type=str, help="Only determinesen agents")
+    p.add_argument("--project", type=str, help="projectname (default: active)")
+    p.add_argument("--all-projects", action="store_true", help="All projecte scannen")
     p.add_argument("--scan", action="store_true", help="Deep Scan")
     p.add_argument("--fix", action="store_true", help="Automatic fixen")
     p.add_argument("--watch", type=int, nargs="?", const=300, help="Watch-Mode (Sek)")
     p.add_argument("--export", action="store_true", help="JSON-Export")
-    p.add_argument("--apply-lessons", action="store_true", help="Self-Improve-Lessons auf MAS-Agenten anwenden")
+    p.add_argument("--apply-lessons", action="store_true", help="Self-Improve-Lessons auf MAS-agents anwenden")
     p.add_argument("--dry-run", action="store_true", help="Only anshow, nothing change")
     p.add_argument("--skip", type=str, help="Checks skip (kommasepariert: autonomie,settings,shield)")
     p.add_argument("--version", action="store_true", help="Version")
@@ -446,7 +446,7 @@ def main():
         bp = yaml.safe_load(open(MAS_BP_FILE))
         agents = find_mas_agents()
         if not agents:
-            err("No MAS-Agenten found")
+            err("No MAS-agents found")
             return
         skip_list = args.skip.split(",") if args.skip else []
         results = []
@@ -455,7 +455,7 @@ def main():
                 continue
             results.append(check_mas_agent(af, bp))
         show_apply_report(results, dry_run=args.dry_run)
-        info(f"  {len(results)} Agenten checked - {sum(r.get('failed',0) for r in results)} Issues offen")
+        info(f"  {len(results)} agents checked - {sum(r.get('failed',0) for r in results)} Issues offen")
         info(f"  YAML-Schreib-Operation delegiert an: dev_editor.py --apply-lessons")
         apply_lessons(results, dry_run=True, skip=skip_list)
         return
@@ -468,7 +468,7 @@ def main():
             data = yaml.safe_load(open(pp))
             for pname in data.get("projects", {}):
                 set_framework_path(pname)
-                print(f"\n  Projekt: {pname}")
+                print(f"\n  project: {pname}")
                 bp = load_best_practices()
                 results = full_scan(bp, args.agent)
                 if results: show_report(results)

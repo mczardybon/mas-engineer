@@ -16,7 +16,7 @@ VERWENDUNG:
     python3 dev_workspace.py --install-mas <workspace>    # Only MAS aus Workspace installieren
     python3 dev_workspace.py --uninstall-mas              # Only MAS deinstallieren (Framework bleibt)
     python3 dev_workspace.py --clean <workspace_dir>      # Workspace delete
-    python3 dev_workspace.py --status <workspace_dir>     # Status anshow
+    python3 dev_workspace.py --status <workspace_dir>     # status anshow
     python3 dev_workspace.py --rollback <workspace>  # Git-Log + Rollback
     python3 dev_workspace.py --add-recipe <ws> <recipe>   # Ein Recipe aus Workspace installieren
     python3 dev_workspace.py --remove-recipe <recipe>     # Ein Recipe aus Goose remove
@@ -70,7 +70,7 @@ def count_files(d: Path, pattern="*") -> int:
 
 
 def cmd_init_recovery(ws_dir):
-    """Add Phoenix-Recovery-Struktur in new Framework ein."""
+    """Add Phoenix-Recovery-structure in new Framework ein."""
     import shutil
     mas_dir = Path(ws_dir).resolve() / "mas-engineer"
     template_recovery = Path(__file__).parent.parent / "recipe" / "template" / "recovery"
@@ -124,7 +124,7 @@ def cmd_init(ws_dir: str):
     """Workspace mit Kopie des installierten Frameworks create."""
     ws = Path(ws_dir).resolve()
 
-    # Dev-Modus? (zweites Argument = "dev" → inkl. MAS-Tools + Docs)
+    # Dev-mode? (zweites Argument = "dev" → inkl. MAS-Tools + Docs)
     dev_mode = len(sys.argv) > 3 and sys.argv[3] == "dev"
 
     mode_label = "Framework + MAS-Engineer" if dev_mode else "Framework"
@@ -151,13 +151,13 @@ def cmd_init(ws_dir: str):
                 if name in EXCLUDE_RECIPES:
                     continue  # dev-mas-engineer.yaml → MAS-Territorium
                 if name.startswith("sub_mas-"):
-                    continue  # MAS-Sub-Agenten → mas-engineer/recipe/sub/
+                    continue  # MAS-Sub-agents → mas-engineer/recipe/sub/
                 dest_path = fw / "recipes" / name
                 if not dest_path.exists():
                     shutil.copy2(f, dest_path)
                     n_recipes += 1
 
-    # ── MAS-ENGINEER: Recipe + Tools + Docs (NUR Dev-Modus) ──
+    # ── MAS-ENGINEER: Recipe + Tools + Docs (NUR Dev-mode) ──
     if dev_mode:
         mas_recipe_dir = ws / "mas-engineer" / "recipe"
         mas_recipe_dir.mkdir(parents=True, exist_ok=True)
@@ -170,7 +170,7 @@ def cmd_init(ws_dir: str):
             shutil.copy2(mas_yaml, mas_recipe_dir / "dev-mas-engineer.yaml")
             n_recipes += 1
 
-        # MAS-Sub-Agenten kopieren (aus GOOSE_RECIPES/)
+        # MAS-Sub-agents kopieren (aus GOOSE_RECIPES/)
         sub_src = GOOSE_RECIPES
         sub_dst = mas_recipe_dir / "sub"
         sub_dst.mkdir(exist_ok=True)
@@ -181,7 +181,7 @@ def cmd_init(ws_dir: str):
                     shutil.copy2(f, sub_dst / f.name)
                     mas_sub_count += 1
             if mas_sub_count > 0:
-                ok(f"MAS-Sub-Agenten: {mas_sub_count} → mas-engineer/recipe/sub/")
+                ok(f"MAS-Sub-agents: {mas_sub_count} → mas-engineer/recipe/sub/")
                 n_recipes += mas_sub_count
 
         # MAS-Tools kopieren (aus mas-engineer-tools/)
@@ -206,11 +206,11 @@ def cmd_init(ws_dir: str):
 
     ok(f"Recipes: {n_recipes} files")
 
-    # Docs kopieren (mas-engineer/ separat in Dev-Modus behandelt)
+    # Docs kopieren (mas-engineer/ separat in Dev-mode behandelt)
     if GOOSE_DOCS.exists():
         for item in sorted(GOOSE_DOCS.iterdir()):
             if item.name in EXCLUDE_DOCS:
-                continue  # mas-engineer/ separat kopiert in Dev-Modus oben
+                continue  # mas-engineer/ separat kopiert in Dev-mode oben
             dst = fw / "docs" / item.name
             if item.is_dir():
                 if dst.exists():
@@ -227,7 +227,7 @@ def cmd_init(ws_dir: str):
     if GOOSE_CONFIG.exists():
         shutil.copy2(GOOSE_CONFIG, fw / "config.yaml")
 
-    # ── Python-Skripte kopieren (NUR im Dev-Modus) ──
+    # ── Python-Skripte kopieren (NUR im Dev-mode) ──
     if dev_mode:
         python_dir = fw / "python"
         python_dir.mkdir(exist_ok=True)
@@ -255,7 +255,7 @@ def cmd_init(ws_dir: str):
             shutil.copy2(init, tests_dir / "__init__.py")
         ok(f"Tests: {tc} files → framework/tests/")
 
-    # ── Projekt-files kopieren ──
+    # ── project-files kopieren ──
     for proj_file in ["pyproject.toml", ".gitignore"]:
         src = AGENT_REPO / proj_file
         if src.exists():
@@ -264,7 +264,7 @@ def cmd_init(ws_dir: str):
     gi = ws / ".gitignore"
     if gi.exists():
         gi.write_text(gi.read_text() + "\n# Workspace runtime\n.state/\n.backups/\n")
-    ok("Projekt-files: pyproject.toml, .gitignore")
+    ok("project-files: pyproject.toml, .gitignore")
 
     # ── README.md create ──
     readme = ws / "README.md"
@@ -272,9 +272,9 @@ def cmd_init(ws_dir: str):
         readme.write_text(f"""# Framework Workspace (Dev)
 
 > Creates: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M')}
-> Modus: Framework + MAS-Engineer (Dev)
+> mode: Framework + MAS-Engineer (Dev)
 
-## Struktur
+## structure
 
 ```
 ├── framework/          ← 🔒 Framework (Rezepte, Docs, Tests, Config)
@@ -284,7 +284,7 @@ def cmd_init(ws_dir: str):
 │   ├── tests/          ← Test-files (pytest)
 │   └── python/         ← Admin-Skripte
 ├── mas-engineer/       ← 🔒 MAS-Engineer (Rezept, Tools, Docs)
-│   ├── recipe/         ← dev-mas-engineer.yaml + Sub-Agenten
+│   ├── recipe/         ← dev-mas-engineer.yaml + Sub-agents
 │   ├── tools/          ← Python-Developer-Tools
 │   └── docs/           ← MAS-Documentation
 ├── .git/               ← Git-Repository
@@ -314,9 +314,9 @@ bash start-sessions.sh
         readme.write_text(f"""# Framework Workspace
 
 > Creates: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M')}
-> Modus: Framework
+> mode: Framework
 
-## Struktur
+## structure
 
 ```
 ├── framework/          ← Framework (Rezepte, Docs, Tests, Config)
@@ -348,7 +348,7 @@ cd {ws} && python3 -m pytest framework/tests/ -q
     (ws / ".state").mkdir(exist_ok=True)
     (ws / ".backups").mkdir(exist_ok=True)
 
-    # ── start-sessions.sh (only Dev-Modus) ──
+    # ── start-sessions.sh (only Dev-mode) ──
     if dev_mode:
         _write_start_sessions_script(ws)
 
@@ -372,7 +372,7 @@ cd {ws} && python3 -m pytest framework/tests/ -q
     ok(f"Workspace ready: {ws}")
     log(f"  📁 framework/    ← {n_recipes} Recipes, {n_docs} Docs, 1 Config, {tc if 'tc' in dir() else 0} Tests")
     if dev_mode:
-        log(f"  📁 mas-engineer/  ← MAS-Rezept, Sub-Agenten, Tools, Docs")
+        log(f"  📁 mas-engineer/  ← MAS-Rezept, Sub-agents, Tools, Docs")
         log(f"")
         log(f"  🚀 Zwei Goose-Sessions start:")
         log(f"     bash start-sessions.sh")
@@ -516,7 +516,7 @@ def _install_mas_from_workspace(ws: Path):
             shutil.rmtree(docs_dst)
         shutil.copytree(docs_src, docs_dst)
 
-    # Sub-Agenten (nach GOOSE_RECIPES/ for delegate()-Access)
+    # Sub-agents (nach GOOSE_RECIPES/ for delegate()-Access)
     subs_src = ws / "mas-engineer" / "recipe" / "sub"
     if subs_src.exists():
         for f in subs_src.glob("sub_mas-*.yaml"):
@@ -608,7 +608,7 @@ def cmd_uninstall_mas():
                 item.unlink()
             n += 1
 
-    # Sub-Agenten aus GOOSE_RECIPES delete
+    # Sub-agents aus GOOSE_RECIPES delete
     for f in GOOSE_RECIPES.glob("sub_mas-*.yaml"):
         f.unlink()
         n += 1
@@ -715,7 +715,7 @@ def cmd_clean(ws_dir: str):
 
 
 def cmd_status(ws_dir: str):
-    """Workspace-Status anshow."""
+    """Workspace-status anshow."""
     ws = Path(ws_dir).resolve()
 
     log(f"\n📊 Workspace: {ws}")
@@ -801,7 +801,7 @@ def _ask_name(agent_type):
             print("  ❌ Name may not empty be")
             continue
         if not re.match(r'^[a-z0-9-]+$', name):
-            print("  ❌ Only Kleinbuchstaben, Zahlen und Bindestriche erlaubt")
+            print("  ❌ Only smallbuchstaben, Zahlen und Bindestriche erlaubt")
             continue
         return name
 
@@ -819,7 +819,7 @@ def _ask_description():
 
 
 def _generate_agent(agent_type, name, description, emoji, workspace):
-    """Kopiert Template und replaces Platzhalter. Erzeugt bei Framework a Minimum-YAML."""
+    """Kopiert Template und replaces Platzholder. generated bei Framework a Minimum-YAML."""
     import shutil
 
     ws = Path(workspace)
@@ -993,12 +993,12 @@ def _show_summary(agent_type, name, description, emoji, yaml_path):
     print("  └─────────────────────────────────────────────┘")
 
 
-# ─── Multi-Projekt-Management ───────────────────────────────
+# ─── Multi-project-Management ───────────────────────────────
 
 PROJECTS_FILE = "framework/.projects.yaml"
 
 def _load_projects():
-    """Load .projects.yaml. Erstelle if not present."""
+    """Load .projects.yaml. Create if not present."""
     pp = Path(PROJECTS_FILE)
     if not pp.exists():
         pp.parent.mkdir(parents=True, exist_ok=True)
@@ -1018,36 +1018,36 @@ def _save_projects(data):
     yaml.dump(data, open(PROJECTS_FILE, "w"), default_flow_style=False, allow_unicode=True)
 
 def _active_project_path():
-    """Give Path to the aktiven Projekt back."""
+    """Give Path to the aktiven project back."""
     data = _load_projects()
     active = data.get("active_project", "dev-team")
     return Path("framework") / active, active
 
 def cmd_project_list():
-    """--project list: All Projekte anshow."""
+    """--project list: All projecte anshow."""
     data = _load_projects()
     active = data.get("active_project", "")
-    print(f"\n  Framework-Projekte")
+    print(f"\n  Framework-projecte")
     print(f"  {'='*50}")
     for name, p in data.get("projects", {}).items():
         marker = "  <- active" if name == active else ""
         status_icon = {"stable": "gruen", "draft": "gelb", "archived": "rot"}.get(p.get("status", ""), "weiss")
         print(f"  {status_icon} {name:<20} {p.get('agents', 0):>3} Agents  {p.get('tests', 0):>3} Tests  {p.get('status', '?')}{marker}")
     print(f"  {'='*50}")
-    print(f"  Total: {len(data.get('projects', {}))} Projekte")
+    print(f"  Total: {len(data.get('projects', {}))} projecte")
 
 def cmd_project_create(name, copy_from=None):
-    """--project create <name> [--copy <old>]: New Projekt."""
+    """--project create <name> [--copy <old>]: New project."""
     data = _load_projects()
     if name in data.get("projects", {}):
-        print(f"  Projekt '{name}' exists already")
+        print(f"  project '{name}' exists already")
         return
     
     pp = Path("framework") / name
     if copy_from:
         src = Path("framework") / copy_from
         if not src.exists():
-            print(f"  Quell-Projekt '{copy_from}' not found")
+            print(f"  Quell-project '{copy_from}' not found")
             return
         import shutil
         shutil.copytree(src, pp)
@@ -1064,7 +1064,7 @@ def cmd_project_create(name, copy_from=None):
                "project_type": "multi_agent_system", "created": datetime.now().strftime("%Y-%m-%d")}
         yaml.dump(cfg, open(pp / "config.yaml", "w"), default_flow_style=False, allow_unicode=True)
         
-        print(f"  Ordnerstruktur creates: framework/{name}/")
+        print(f"  Ordnerstructure creates: framework/{name}/")
     
     # .projects.yaml update
     if "projects" not in data:
@@ -1083,13 +1083,13 @@ def cmd_project_create(name, copy_from=None):
         symlink.unlink()
     symlink.symlink_to(name)
     
-    print(f"  Aktives Projekt: {name}")
+    print(f"  Aktives project: {name}")
 
 def cmd_project_switch(name):
-    """--project switch <name>: Aktives Projekt wechseln."""
+    """--project switch <name>: Aktives project wechseln."""
     data = _load_projects()
     if name not in data.get("projects", {}):
-        print(f"  Projekt '{name}' not found")
+        print(f"  project '{name}' not found")
         cmd_project_list()
         return
     
@@ -1103,29 +1103,29 @@ def cmd_project_switch(name):
     symlink.symlink_to(name)
     
     p = data["projects"][name]
-    print(f"  Aktives Projekt: {name} ({p.get('agents', 0)} Agents, {p.get('tests', 0)} Tests)")
+    print(f"  Aktives project: {name} ({p.get('agents', 0)} Agents, {p.get('tests', 0)} Tests)")
 
 def cmd_project_show(name):
     """--project show <name>: Details anshow."""
     data = _load_projects()
     if name not in data.get("projects", {}):
-        print(f"  Projekt '{name}' not found"); return
+        print(f"  project '{name}' not found"); return
     p = data["projects"][name]
-    print(f"\n  Projekt: {name}")
+    print(f"\n  project: {name}")
     print(f"  Label:   {p.get('label', '?')}")
     print(f"  Typ:     {p.get('type', '?')}")
     print(f"  Agents:  {p.get('agents', 0)}")
     print(f"  Tests:   {p.get('tests', 0)}")
-    print(f"  Status:  {p.get('status', '?')}")
+    print(f"  status:  {p.get('status', '?')}")
 
 def cmd_project_delete(name):
-    """--project delete <name>: Projekt delete (mit Backup)."""
+    """--project delete <name>: project delete (mit Backup)."""
     if name == "dev-team":
-        print("  dev-team can not deleted will (Basis-Projekt)"); return
+        print("  dev-team can not deleted will (Basis-project)"); return
     
     data = _load_projects()
     if name not in data.get("projects", {}):
-        print(f"  Projekt '{name}' not found"); return
+        print(f"  project '{name}' not found"); return
     
     import shutil
     pp = Path("framework") / name
@@ -1143,15 +1143,15 @@ def cmd_project_delete(name):
             symlink.unlink()
         symlink.symlink_to("dev-team")
     _save_projects(data)
-    print(f"  Projekt '{name}' deleted (Backup in .trash/)")
+    print(f"  project '{name}' deleted (Backup in .trash/)")
 
 def cmd_project_rename(old, new):
-    """--project rename <old> <new>: Projekt umbenennen."""
+    """--project rename <old> <new>: project umbenennen."""
     data = _load_projects()
     if old not in data.get("projects", {}):
-        print(f"  Projekt '{old}' not found"); return
+        print(f"  project '{old}' not found"); return
     if new in data.get("projects", {}):
-        print(f"  Projekt '{new}' exists already"); return
+        print(f"  project '{new}' exists already"); return
     
     import shutil
     src = Path("framework") / old
@@ -1176,7 +1176,7 @@ def cmd_project(args):
     if cmd in ("list", "ls", "l"):
         cmd_project_list()
     elif cmd in ("create", "new", "c"):
-        name = args[1] if len(args) > 1 else input("  Projektname: ").strip()
+        name = args[1] if len(args) > 1 else input("  projectname: ").strip()
         copy_from = None
         if "--copy" in args:
             ci = args.index("--copy")
@@ -1184,26 +1184,26 @@ def cmd_project(args):
         if name:
             cmd_project_create(name, copy_from)
     elif cmd in ("switch", "sw", "s"):
-        name = args[1] if len(args) > 1 else input("  Projektname: ").strip()
+        name = args[1] if len(args) > 1 else input("  projectname: ").strip()
         if name:
             cmd_project_switch(name)
     elif cmd in ("show", "info", "i"):
-        name = args[1] if len(args) > 1 else input("  Projektname: ").strip()
+        name = args[1] if len(args) > 1 else input("  projectname: ").strip()
         if name:
             cmd_project_show(name)
     elif cmd in ("delete", "del", "rm", "d"):
-        name = args[1] if len(args) > 1 else input("  Projektname: ").strip()
+        name = args[1] if len(args) > 1 else input("  projectname: ").strip()
         if name:
-            cmd = input(f"  Projekt '{name}' wirklich delete? (j/N): ").strip().lower()
+            cmd = input(f"  project '{name}' wirklich delete? (j/N): ").strip().lower()
             if cmd == "j":
                 cmd_project_delete(name)
     elif cmd in ("rename", "mv", "r"):
-        old = args[1] if len(args) > 1 else input("  Alter Name: ").strip()
-        new = args[2] if len(args) > 2 else input("  Neuer Name: ").strip()
+        old = args[1] if len(args) > 1 else input("  older Name: ").strip()
+        new = args[2] if len(args) > 2 else input("  newer Name: ").strip()
         if old and new:
             cmd_project_rename(old, new)
 def cmd_doctor_init(target_path):
-    """Creates new Framework-Projekt mit MAS-Integration."""
+    """Creates new Framework-project mit MAS-Integration."""
     from pathlib import Path
     import json
     from datetime import datetime
@@ -1246,12 +1246,12 @@ def cmd_doctor_init(target_path):
     json.dump(config, open(doctor_dir / "config.json", "w"), indent=2)
 
     print(f"""
-  Framework-Projekt creates: {target}
+  Framework-project creates: {target}
 
   recipes/
-    core/          Core-Agenten (starter, planner, executor)
-    specialists/   Spezialisierte Agenten
-    sub/           Sub-Agenten
+    core/          Core-agents (starter, planner, executor)
+    specialists/   Spezialisierte agents
+    sub/           Sub-agents
   docs/            Documentation
   tests/           pytest-Tests
   .doctor/         MAS-Integration
@@ -1301,7 +1301,7 @@ def cmd_scaffold(args):
 
 
 def cmd_install_check(ws_dir):
-    """Check ob MAS after Neuinstallation funktionieren would."""
+    """Check ob MAS after newinstallation funktionieren would."""
     mas_dir = Path(ws_dir) / "mas-engineer"
     if not mas_dir.exists():
         error(f"No MAS-Directory: {mas_dir}")
@@ -1358,7 +1358,7 @@ def cmd_install_check(ws_dir):
     # C4: Paralllitaet
     main_r = (mas_dir / "recipe" / "dev-mas-engineer.yaml").read_text()
     has_par = "PARALLEL-POOL" in main_r
-    ok(f"Paralll: {'ja' if has_par else 'nein'}")
+    ok(f"Paralll: {'yes' if has_par else 'no'}")
     checks.append(("paralll", has_par, ""))
 
     # C5: Backups

@@ -6,7 +6,7 @@ Version: 1.0.0
 Author: dev-mas-engineer (autonomous)
 
 Analysiert das agent/ Directory von aussen.
-Liefert strukturierte Text-Reports.
+Liefert structureierte Text-Reports.
 KEINE Framework-Dependency. Only os, pathlib, subprocess, re.
 
 VERWENDUNG:
@@ -21,12 +21,12 @@ import os, sys, subprocess
 from pathlib import Path
 from datetime import datetime
 
-# Der agent/ directory ist im Projekt-Root
+# Der agent/ directory ist im project-Root
 # tools/ liegt unter mas-engineer/tools/
 # Possible paths (depending on working directory):
 #   - Von tools/ aus:          ../../../
 #   - Von mas-engineer/ aus:   ../../
-#   - From Projekt-Root aus:    .
+#   - From project-Root aus:    .
 
 def resolve_agent_dir():
     """Ermittelt AGENT_DIR — mit --workspace Support."""
@@ -40,7 +40,7 @@ def resolve_agent_dir():
     default = Path(__file__).parent.parent.parent.resolve()
     if (default / "recipes").exists() or any((d / "recipes").exists() for d in default.iterdir() if d.is_dir()):
         return default
-    # Letzter Fallback
+    # Lastr Fallback
     return Path.home() / ".config" / "goose" / "recipes"
 
 # Module-Level auf None gesetzt — will via get_agent_dir()/get_state_dir() lazy loaded
@@ -64,7 +64,7 @@ def get_state_dir() -> Path:
 
 
 # ─────────────────────────────────────────────────────────
-# DATEI-INFO
+# file-INFO
 # ─────────────────────────────────────────────────────────
 
 class FileInfo:
@@ -229,7 +229,7 @@ class Scanner:
         out.append("📊 OVERVIEW")
         out.append("━" * 40)
         out.append(f"  Verzeichnisse:  {len(dirs)}")
-        out.append(f"  files total:  {len(self.files)} ({total_size/1024:.0f} KB, {total_lines} Zeilen)")
+        out.append(f"  files total:  {len(self.files)} ({total_size/1024:.0f} KB, {total_lines} lines)")
         out.append(f"  YAML:           {len(yamls)}")
         out.append(f"  Markdown:       {len(mds)}")
         out.append(f"  Python:         {len(pys)}")
@@ -237,14 +237,14 @@ class Scanner:
         out.append("")
         
         # 2. YAMLs mit Slash-Command
-        out.append(f"🎯 MIT SLASH-COMMAND ({len(with_slash)})")
+        out.append(f"🎯 WITH SLASH-COMMAND ({len(with_slash)})")
         out.append("━" * 40)
         for y in sorted(with_slash, key=lambda x: x.slash_cmd):
             out.append(f"  /{y.slash_cmd:25s}  {y.rel_path} ({y.lines_total} Z)")
         out.append("")
         
         # 3. YAMLs ohne Slash-Command
-        out.append(f"🔹 OHNE SLASH-COMMAND ({len(without_slash)})")
+        out.append(f"🔹 WITHOUT SLASH-COMMAND ({len(without_slash)})")
         out.append("━" * 40)
         # Gruppieren after Directory
         groups = {}
@@ -271,8 +271,8 @@ class Scanner:
             out.append(f"  - {name}")
         out.append("")
         
-        # 5. Sub-Agenten
-        out.append(f"🔧 SUB-AGENTEN ({len(subs)})")
+        # 5. Sub-agents
+        out.append(f"🔧 SUB-agents ({len(subs)})")
         out.append("━" * 40)
         for y in sorted(subs, key=lambda x: x.rel_path):
             name = Path(y.rel_path).stem
@@ -303,12 +303,12 @@ class Scanner:
             out.append("")
         
         # 9. Togetherfassung
-        out.append("📦 FAZIT")
+        out.append("📦 SUMMARY")
         out.append("━" * 40)
         out.append(f"  {len(yamls)} YAMLs ({len(with_slash)} mit, {len(without_slash)} ohne /)")
-        out.append(f"  {len(specialists)} Spezialisten, {len(subs)} Sub-Agenten")
+        out.append(f"  {len(specialists)} Spezialisten, {len(subs)} Sub-agents")
         out.append(f"  {len(mds)} Markdown, {len(pys)} Python")
-        out.append(f"  {total_lines} Zeilen Code/Doku")
+        out.append(f"  {total_lines} lines Code/Doku")
         
         return "\n".join(out)
     
@@ -327,7 +327,7 @@ class Scanner:
         out = []
         out.append("📊 FRAMEWORK-OVERVIEW")
         out.append("━" * 40)
-        out.append(f"  📁 {get_agent_dir().name}/  ({size:.0f} KB, {lines} Zeilen)")
+        out.append(f"  📁 {get_agent_dir().name}/  ({size:.0f} KB, {lines} lines)")
         out.append(f"  📄 YAML:  {yamls}  ({with_slash} mit /, {yamls-with_slash} ohne)")
         out.append(f"  👥 Spec:  {specialists}")
         out.append(f"  📋 Docs:  {mds}")
@@ -346,12 +346,12 @@ class Scanner:
         out = []
         out.append(f"📄 {y.rel_path}")
         out.append("━" * 40)
-        out.append(f"  Zeilen: {y.lines_total}")
+        out.append(f"  lines: {y.lines_total}")
         out.append(f"  Title: {y.title or '(no Titel)'}")
         out.append(f"  Slash: {'/' + y.slash_cmd if y.has_slash else 'ka'}")
-        out.append(f"  Settings: {'ja' if y.has_settings else 'nein'}")
-        out.append(f"  Instructions: {y.instr_lines} Zeilen")
-        out.append(f"  Prompt: {y.prompt_lines} Zeilen")
+        out.append(f"  Settings: {'yes' if y.has_settings else 'no'}")
+        out.append(f"  Instructions: {y.instr_lines} lines")
+        out.append(f"  Prompt: {y.prompt_lines} lines")
         
         return "\n".join(out)
 

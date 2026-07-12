@@ -77,7 +77,7 @@ def ask(msg: str, force: bool) -> bool:
     if force:
         return True
     answer = input(f"{msg} (j/N): ").strip().lower()
-    return answer in ("j", "ja", "y", "yes")
+    return answer in ("j", "yes", "y", "yes")
 
 
 def safe_delete(path: Path, label: str, force: bool) -> int:
@@ -108,8 +108,8 @@ def safe_delete(path: Path, label: str, force: bool) -> int:
 # ─── BEFEHLE ───
 
 def cmd_status():
-    """Complete Goose-Status."""
-    print("\n📊 GOOSE STATUS")
+    """Complete Goose-status."""
+    print("\n📊 GOOSE status")
     print("=" * 60)
 
     # 1. Provider
@@ -181,7 +181,7 @@ def cmd_status():
     if HISTORY_FILE.exists():
         try:
             lines = len(HISTORY_FILE.read_text().split("\n"))
-            print(f"                → {lines} Zeilen")
+            print(f"                → {lines} lines")
         except:
             pass
 
@@ -209,7 +209,7 @@ def cmd_status():
     print(f"  💡 .goosehints: {fmt_size(hints_file)}", end="")
     if hints_file.exists():
         lines = len(hints_file.read_text().split("\n"))
-        print(f" ({lines} Zeilen)")
+        print(f" ({lines} lines)")
     else:
         print(" (not present)")
 

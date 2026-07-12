@@ -128,7 +128,7 @@ class ParalllPool:
         return results
 
     def get_result(self, task_id: str) -> Optional[Any]:
-        """Einzelergebnis of a Tasks abrufen.
+        """Einzelresult of a Tasks abrufen.
         
         Args:
             task_id: ID des Tasks
@@ -301,7 +301,7 @@ class ParalllPool:
         return self._legacy_completed + self._legacy_failed
 
     def status_report(self) -> Dict:
-        """Erstelle Status-Report."""
+        """Erstelle status-Report."""
         legacy_completed = len(getattr(self, '_legacy_completed', []))
         legacy_failed = len(getattr(self, '_legacy_failed', []))
         legacy_tasks = len(getattr(self, '_legacy_tasks', []))
@@ -317,7 +317,7 @@ class ParalllPool:
 
 # ─── Batch-Dispatch (fuer delegate-Aufrufe) ────────
 def batch_dispatch(tasks: List[Dict], pool_size: int = 30) -> List[Dict]:
-    """Verteilt Tasks als delegate()-Aufrufe an Sub-Agenten."""
+    """Verteilt Tasks als delegate()-Aufrufe an Sub-agents."""
     pool = ParalllPool(max_workers=pool_size)
     for t in tasks:
         if isinstance(t, str):
@@ -334,7 +334,7 @@ def batch_dispatch(tasks: List[Dict], pool_size: int = 30) -> List[Dict]:
             )
     return pool._legacy_run()
 
-# ─── Sub-Agenten-Gruppen for Batching ────────────
+# ─── Sub-agents-Gruppen for Batching ────────────
 AGENT_GROUPS = {
     "analyse": [
         "sub_mas-framework-scanner",
@@ -359,7 +359,7 @@ AGENT_GROUPS = {
 }
 
 def get_group_agents(group_name: str) -> List[str]:
-    """Hole all Agenten a Gruppe."""
+    """Hole all agents a Gruppe."""
     return AGENT_GROUPS.get(group_name, [])
 
 def dispatch_group(group_name: str, workspace: str, task: str, pool_size: int = 30) -> List[Dict]:
@@ -382,24 +382,24 @@ def dispatch_group(group_name: str, workspace: str, task: str, pool_size: int = 
             }
         })
 
-    info(f"Dispatch Gruppe '{group_name}': {len(agents)} Agenten paralll")
+    info(f"Dispatch Gruppe '{group_name}': {len(agents)} agents paralll")
     return batch_dispatch(tasks, pool_size=pool_size)
 
 # ─── CLI ──────────────────────────────────────────
 def main():
     p = argparse.ArgumentParser(description="dev_paralll.py v2.1.0")
     p.add_argument("--batch", type=str, help="JSON-Array from Tasks")
-    p.add_argument("--group", type=str, help="Agenten-Gruppe dispatchen (analyse/test/fix/guard/docs)")
+    p.add_argument("--group", type=str, help="agents-Gruppe dispatchen (analyse/test/fix/guard/docs)")
     p.add_argument("--workspace", type=str, default=os.getcwd(), help="Workspace-Path")
     p.add_argument("--task", type=str, default="SCAN", help="Task for Gruppen-Dispatch")
     p.add_argument("--pool-size", type=int, default=30, help="Max parallle Tasks")
     p.add_argument("--timeout", type=int, default=600, help="Timeout pro Batch (Sek)")
     p.add_argument("--list-groups", action="store_true", help="Availablee Gruppen auflisten")
-    p.add_argument("--status", action="store_true", help="Pool-Status anshow")
+    p.add_argument("--status", action="store_true", help="Pool-status anshow")
     args = p.parse_args()
 
     if args.list_groups:
-        print("Availablee Agenten-Gruppen for Batch-Dispatch:\n")
+        print("Availablee agents-Gruppen for Batch-Dispatch:\n")
         for gname, agents in AGENT_GROUPS.items():
             print(f"  {gname}:")
             for a in agents:

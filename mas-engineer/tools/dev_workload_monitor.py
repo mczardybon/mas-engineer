@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-dev_workload_monitor.py — Workload-Analyse for MAS-Agenten
-Erkennt aboutlastete Agenten und deployt Relief-Agents via SOT+Generator.
+dev_workload_monitor.py — Workload-Analyse for MAS-agents
+Erkennt aboutlastete agents und deployt Relief-Agents via SOT+Generator.
 
 Aufruf:
-  python3 dev_workload_monitor.py --hours 24          # Report all Agenten
+  python3 dev_workload_monitor.py --hours 24          # Report all agents
   python3 dev_workload_monitor.py --hours 24 --json    # JSON-Output
-  python3 dev_workload_monitor.py --deploy             # Auto-Deploy kritische Agenten
-  python3 dev_workload_monitor.py --deploy --agent scanner  # Only a Agenten
+  python3 dev_workload_monitor.py --deploy             # Auto-Deploy kritische agents
+  python3 dev_workload_monitor.py --deploy --agent scanner  # Only a agents
 """
 import os, sys, json, time, sqlite3, yaml, subprocess
 
@@ -129,7 +129,7 @@ def deploy_relief_agent(agent_name, base=None):
             f"⚡ {agent_name.upper()}-RELIEF (v1.0.0)\n\n"
             f"  NUR Routine-Tasks — Delegiere komplexes an {agent_name}\n"
             f"  ⛔ CONFIRMATIONSPFLICHT (R01)\n"
-            f"  ⛔ MODUS-DOMANEN-KOPPLUNG (R09) NUR mas-engineer/"
+            f"  ⛔ mode-DOMANEN-KOPPLUNG (R09) NUR mas-engineer/"
         )
     }
     
@@ -213,7 +213,7 @@ def main():
     
     # 3. Deploy (falls gefordert)
     if do_deploy and recs:
-        print(f"Deploye Relief-Agents for {len(recs)} Agenten...")
+        print(f"Deploye Relief-Agents for {len(recs)} agents...")
         for r in recs:
             if r["auto_deploy"]:
                 result = deploy_relief_agent(r["agent"], base)

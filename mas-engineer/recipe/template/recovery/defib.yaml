@@ -11,7 +11,7 @@ instructions: "# sub_mas-recovery-defib — Emergency-Resuscitation\n\nMAS-Engin
   \ --restore-best aus.\nprompt: |\n  NOTFALL-MAS (v1.0.0)\n  RECOVERY-Modus active\n  NUR Recovery-Commands\n  immune + timeline\nsettings:\n  timeout: 30\n  max_steps: 10\n  goose_provider: openai\n \
   \ goose_model: filtered/deepseek/deepseek-chat\nENDOFFILE\n\nSCHRITT 2 — Sub-Agenten validate:\n  for agent in immune checkpoint safezone timeline; do\n    path={workspace}/mas-engineer/recipe/sub/sub_mas-recovery-$agent.yaml\n\
   \    if [ -f \"$path\" ]; then\n      python3 -c \"import yaml; yaml.safe_load(open('$path'))\" 2>/dev/null || echo 'WARNING: $agent.yaml korrupt'\n    else\n      echo 'WARNING: $agent.yaml missing'\n\
-  \    fi\n  done\n\nSCHRITT 3 — Minimum-Config validate + bestaetigen:\n  python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))\"\n  signal='': 'Minimum-Config\
+  \    fi\n  done\n\nSCHRITT 3 — Minimum-Config validate + confirm:\n  python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))\"\n  signal='': 'Minimum-Config\
   \ loaded — Recovery-Modus active'\n  'Als naechstes: recovery --restore-best oder recovery --resurrect'\n\n### Edge Cases DEFIB\n- Write permissions missing → '' error + 'chmod?'\n- immune.yaml missing\
   \ → '' warning + only timeline laden\n- All Sub-Agenten missing → '' error + only instructions (reine Text-Config)\n- Already Defib-Modus active → '' info + nothing tun\n\n## Task RESURRECT — Stepweise\
   \ Resuscitation\n\nSCHRITT 1 — Besten Checkpoint via timeline:\n  delegiere an sub_mas-recovery-timeline (task=FIND_BEST)\n  IF CHECKPOINT GEFUNDEN:\n    delegiere an sub_mas-recovery-timeline (task=RESTORE_BEST)\n\

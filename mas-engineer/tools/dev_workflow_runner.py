@@ -104,7 +104,7 @@ def run_workflow(name, params, wfs):
     with open(logfile, "w") as f:
         json.dump(run, f, indent=2)
     print(f"\nLog: {logfile}")
-    print(f"Status: {run['status']}")
+    print(f"status: {run['status']}")
     return run
 
 if __name__ == "__main__":

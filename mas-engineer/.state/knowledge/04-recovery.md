@@ -4,7 +4,7 @@
 YAML-Praevention before jedem Edit.
 - CHECK_YAML: YAML-Syntax before jedem Save
 - CHECK_SYNTAX: Python + Shell Syntax vor Ausfuehrung
-- VERIFY_STATE: Total-State checkn (all Rezepte valide?)
+- VERIFY_STATE: Total-State check (all Rezepte valide?)
 Tool: dev_rule_checker.py --check R10
 Sub:  sub_mas-recovery-immune
 

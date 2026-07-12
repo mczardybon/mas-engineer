@@ -7,7 +7,7 @@ instructions: "# sub_mas-recovery-immune — \"\"Coronashield\"\" YAML Immune Sy
   \  workspace: string\n  file_path: string\n  file_type: 'yaml'|'python'|'bash'\n  state_path: string\n```\n\n## Output\n```yaml\nmas_result:\n  signal: ''|''|''\n  observations:\n    - severity: 'P1'|'P2'|'P3'\n\
   \      title: string\n      description: string\n  validation_log:\n    - check: 'yaml'|'python'|'shell'|'state'\n      status: 'ok'|'error'|'warning'\n      detail: string\n  score: int\n```\n\n## Task\
   \ CHECK_YAML — YAML-Syntax before jedem Edit\n\nSCHRITT 1 — Existenz-Check:\n  [ -f '{file_path}' ] || return 'file not found: {file_path}'\n\nSCHRITT 2 — YAML-Parse:\n  python3 -c \"import yaml; yaml.safe_load(open('{file_path}'))\"\
-  \ 2>&1\n  EXIT 0: signal='', observations[P3]: 'YAML gueltig: {N} lines'\n  EXIT != 0: signal='', observations[P1]: 'YAML-Error: {error_msg}'\n    recommendation: 'Rollback from letztem Backup recommended'\n\
+  \ 2>&1\n  EXIT 0: signal='', observations[P3]: 'YAML valid: {N} lines'\n  EXIT != 0: signal='', observations[P1]: 'YAML-Error: {error_msg}'\n    recommendation: 'Rollback from letztem Backup recommended'\n\
   \n### Edge Cases CHECK_YAML\n- file empty (0 Bytes) → P2 warning\n- YAML mit Python-Exceptions (not yaml.Error) → P1 error  \n- Unicode-Error → P3 info: 'encoding issue, try utf-8'\n- Binary-file erkannt\
   \ → P1 error: 'No YAML-file (Binary)'\n\n## Task CHECK_SYNTAX — Python + Shell Syntax before Execution\n\nPYTHON-CHECK:\n  python3 -c \"compile(open('{file_path}').read(), '{file_path}', 'exec')\"\n \
   \ EXIT 0: 'Python-Syntax OK'\n  EXIT != 0: 'Python-Syntax-Error: {error}'\n\nSHELL-CHECK:\n  bash -n '{file_path}' 2>&1\n  EXIT 0: 'Shell-Syntax OK'\n  EXIT != 0: 'Shell-Syntax-Error: {error}'\n\n###\
@@ -15,7 +15,7 @@ instructions: "# sub_mas-recovery-immune — \"\"Coronashield\"\" YAML Immune Sy
   \ — Total-State checkn\n\nSCHRITT 1 — Rekursiver YAML-Scan:\n  find {workspace}/mas-engineer -name '*.yaml' -not -path '*/.backups/*' -not -path '*/checkpoints/*' | \\\n  while read f; do\n    python3\
   \ -c \"import yaml; yaml.safe_load(open('$f'))\" 2>&1 || echo \"FAIL:$f\"\n  done\n\nSCHRITT 2 — Statistik:\n  total=$(find {workspace}/mas-engineer -name '*.yaml' -not -path '*/.backups/*' -not -path\
   \ '*/checkpoints/*' | wc -l)\n  ok=$((total - $(grep -c '^FAIL' /tmp/immune_verify_$$)))\n  failed=$((total - ok))\n  score=$((ok * 100 / total))\n\nSCHRITT 3 — Report:\n  score == 100: signal='' — 'All\
-  \ {total} YAMLs gueltig'\n  score >= 80:  signal='' — '{ok}/{total} gueltig ({failed} Error)'\n  score < 80:   signal='' — 'Only {ok}/{total} gueltig — Recovery recommended'\n\n### Edge Cases VERIFY_STATE\n\
+  \ {total} YAMLs valid'\n  score >= 80:  signal='' — '{ok}/{total} valid ({failed} Error)'\n  score < 80:   signal='' — 'Only {ok}/{total} valid — Recovery recommended'\n\n### Edge Cases VERIFY_STATE\n\
   - No YAML-files → P3 info: 'No YAMLs zu checkn'\n- Permission denied → warning: 'Access-Error: {file}'\n- Symlink-Loop → find -L vermeiden, only -type f\n"
 prompt: " IMMUNE (v1.0.0)\nCoronashield: YAML-Praevention\n NOTHING automatically — Validierung only\n CHECK_YAML | CHECK_SYNTAX | VERIFY_STATE\n settings: timeout=60"
 settings:

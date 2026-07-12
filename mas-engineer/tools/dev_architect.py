@@ -9,14 +9,14 @@ Erkennt Muster, Relationships und Gaps im Framework.
 Nutz Rohdaten von dev_observer.py (oder scannt selbst).
 Adds NO framework knowledge (no SOTs, protocols, constitutions).
 
-NUTZT NUR strukturelle Beobachtungen:
+NUTZT NUR structureelle Beobachtungen:
   - Welche files exist?
   - Welche Namen have sie?
   - Welche Slash-Commands have sie?
   - Wie are sie angeordnet?
 
 VERWENDUNG:
-    python3 dev_architect.py --analyze         # Komplette Architektur-Analyse
+    python3 dev_architect.py --analyze         # Komplette Architecture-Analyse
     python3 dev_architect.py --quick            # Only Kern-Erkenntnisse
     python3 dev_architect.py --suggest          # Improvement suggestions generate
     python3 dev_architect.py --impact <change> # Impact-Analyse for eine Change
@@ -50,8 +50,8 @@ def analyze(scanner: "observer.Scanner") -> str:
     out.append("#" * 60)
     out.append("")
     
-    # 1. AGENTEN-LANDSCAPE
-    out.append("👥 AGENTEN-LANDSCAPE")
+    # 1. agents-LANDSCAPE
+    out.append("👥 agents-LANDSCAPE")
     out.append("━" * 60)
     
     with_slash = sorted([y for y in scanner.yamls if y.has_slash], key=lambda x: x.slash_cmd)
@@ -59,7 +59,7 @@ def analyze(scanner: "observer.Scanner") -> str:
     specialists = [y for y in scanner.yamls if "specialist_" in y.rel_path]
     subs = [y for y in scanner.yamls if y.rel_path.startswith("sub_") or "/sub_" in y.rel_path]
     
-    out.append(f"  Total: {len(scanner.yamls)} YAML-Agenten")
+    out.append(f"  Total: {len(scanner.yamls)} YAML-agents")
     out.append("")
     out.append(f"  🎯 Mit Slash-Command ({len(with_slash)}):")
     for y in with_slash:
@@ -67,15 +67,15 @@ def analyze(scanner: "observer.Scanner") -> str:
     
     out.append("")
     out.append(f"  🔹 Ohne Slash-Command ({len(without_slash)}):")
-    out.append(f"     → Werden von anderen Agenten dispatcht (no direkter Aufruf)")
-    out.append(f"     → {len(specialists)} Spezialisten, {len(subs)} Sub-Agenten")
+    out.append(f"     → Werden von anderen agents dispatcht (no direkter Aufruf)")
+    out.append(f"     → {len(specialists)} Spezialisten, {len(subs)} Sub-agents")
     out.append("")
     
-    # 2. LAYER-STRUKTUR (aus Namen und Anordnung abgeleitet)
-    out.append("📐 LAYER-STRUKTUR (abgeleitet)")
+    # 2. LAYER-structure (aus Namen und Anordnung abgeleitet)
+    out.append("📐 LAYER-structure (abgeleitet)")
     out.append("━" * 60)
     
-    # Finde Hauptagenten
+    # Finde Hauptagents
     starter = [y for y in with_slash if "starter" in y.rel_path.lower()]
     planner = [y for y in with_slash if "planner" in y.rel_path.lower() and "sub_" not in y.rel_path]
     executor = [y for y in with_slash if "executor" in y.rel_path.lower() and "sub_" not in y.rel_path]
@@ -120,9 +120,9 @@ def analyze(scanner: "observer.Scanner") -> str:
     out.append("━" * 60)
     
     cats = {
-        "A: Core Dev": [], "B: Architektur": [], "C: Security": [],
+        "A: Core Dev": [], "B: Architecture": [], "C: Security": [],
         "D: Data & AI": [], "E: Ops & Infra": [], "F: Spezial": [],
-        "Sub-Agenten": [], "Elseige": []
+        "Sub-agents": [], "Elseige": []
     }
     
     # Only Spezialisten categorize
@@ -132,7 +132,7 @@ def analyze(scanner: "observer.Scanner") -> str:
         if name in ("backend", "frontend", "test_engineer", "reviewer", "quality_manager", "refactoring", "software_engineer"):
             cats["A: Core Dev"].append(name)
         elif name in ("software_architekt", "system_architekt", "ddd_architect", "api_designer", "api_gateway", "ux_designer", "event_driven"):
-            cats["B: Architektur"].append(name)
+            cats["B: Architecture"].append(name)
         elif name in ("security", "auth", "devsecops", "legal_compliance"):
             cats["C: Security"].append(name)
         elif name in ("database", "data_engineer", "data_governance", "data_scientist", "ai_engineer", "ml_engineer", "search_engineer"):
@@ -165,16 +165,16 @@ def analyze(scanner: "observer.Scanner") -> str:
             out.append(f"  {f.rel_path} ({f.lines} Tests)")
         out.append("")
     
-    # 6. KONFIGURATION
+    # 6. CONFIGURATION
     configs = [f for f in scanner.files if f.name in ("config.yaml", "pyproject.toml")]
     if configs:
-        out.append("⚙️ KONFIGURATION")
+        out.append("⚙️ CONFIGURATION")
         out.append("━" * 60)
         for f in configs:
-            out.append(f"  {f.rel_path} ({f.lines} Zeilen)")
+            out.append(f"  {f.rel_path} ({f.lines} lines)")
         out.append("")
     
-    # 7. BEOBWARNINGEN (only strukturell!)
+    # 7. BEOBWARNINGEN (only structureell!)
     out.append("🔍 BEOBWARNINGEN")
     out.append("━" * 60)
     
@@ -192,8 +192,8 @@ def analyze(scanner: "observer.Scanner") -> str:
     for y in controller:
         observations.append(f"  • /{y.slash_cmd} runs in Schleife (6000 max_steps)")
     
-    # Agenten ohne / (dispatcht)
-    observations.append(f"  • {len(without_slash)} Agenten ohne Slash-Command (will dispatcht)")
+    # agents ohne / (dispatcht)
+    observations.append(f"  • {len(without_slash)} agents ohne Slash-Command (will dispatcht)")
     
     # Tests
     if not test_files:
@@ -222,7 +222,7 @@ def quick_analyze(scanner: "observer.Scanner") -> str:
     out = []
     out.append("🧠 KERN-ERKENNTNISSE")
     out.append("━" * 40)
-    out.append(f"  {len(scanner.yamls)} Agenten: {with_slash} Main- + {specialists} Spezialisten + {subs} Sub")
+    out.append(f"  {len(scanner.yamls)} agents: {with_slash} Main- + {specialists} Spezialisten + {subs} Sub")
     out.append(f"  {len(scanner.files)} files total")
     out.append(f"  Communication: User → Starter → Planner → Executor → Specialists")
     out.append(f"  Controller monitors the Framework in Schleife")
@@ -231,44 +231,44 @@ def quick_analyze(scanner: "observer.Scanner") -> str:
 
 
 def suggest(scanner: "observer.Scanner") -> str:
-    """Improvement suggestions generate (NUR aus Struktur)."""
+    """Improvement suggestions generate (NUR aus structure)."""
     scanner._collect()
     
     out = []
     out.append("💡 IMPROVEMENT SUGGESTIONS")
     out.append("━" * 60)
-    out.append("  (Basieren NUR auf strukturellen Beobachtungen)")
+    out.append("  (Basieren NUR auf structureellen Beobachtungen)")
     out.append("")
     
     suggestions = []
     
-    # 1. max_steps compare (main Agenten)
+    # 1. max_steps compare (main agents)
     main_yamls = [y for y in scanner.yamls if "planner" in y.rel_path.lower() and "sub_" not in y.rel_path
                   or "executor" in y.rel_path.lower() and "sub_" not in y.rel_path
                   or "starter" in y.rel_path.lower()
                   or "controller" in y.rel_path.lower()]
     
     # We cannot read max_steps directly (no YAML parsing in architect)
-    # Stattdessen: Zeilenzahlen als Indikator
+    # Stattdessen: lineszahlen als Indikator
     for y in main_yamls:
         name = Path(y.rel_path).stem
         if y.lines_total > 500:
-            suggestions.append(f"  • {name}.yaml: {y.lines_total} Zeilen (large)")
+            suggestions.append(f"  • {name}.yaml: {y.lines_total} lines (large)")
     
     # 2. Spezialisten ohne settings
     for y in scanner.yamls:
         if "specialist_" in y.rel_path and not y.has_settings:
             suggestions.append(f"  • {Path(y.rel_path).name}: no settings-Block")
     
-    # 3. Agenten mit very shorten Instructions
+    # 3. agents mit very shorten Instructions
     for y in scanner.yamls:
         if y.instr_lines > 0 and y.instr_lines < 10:
-            suggestions.append(f"  • {Path(y.rel_path).name}: only {y.instr_lines} Instructions-Zeilen")
+            suggestions.append(f"  • {Path(y.rel_path).name}: only {y.instr_lines} Instructions-lines")
     
     # 4. Very large Instructions
     for y in scanner.yamls:
         if y.instr_lines > 500:
-            suggestions.append(f"  • {Path(y.rel_path).name}: {y.instr_lines} Instructions-Zeilen (very large)")
+            suggestions.append(f"  • {Path(y.rel_path).name}: {y.instr_lines} Instructions-lines (very large)")
     
     if not suggestions:
         suggestions.append("  • No offensichtlichen Anomalies.")
@@ -308,13 +308,13 @@ def impact_analysis(scanner: "observer.Scanner", change_desc: str) -> str:
         out.append("  (No direkten files erkannt)")
     out.append("")
     
-    out.append("  Note: Only strukturelle Analyse. Der User entscheidet.")
+    out.append("  Note: Only structureelle Analyse. Der User entscheidet.")
     
     return "\n".join(out)
 
 
 def generate_blueprint(feature_name):
-    """Generates a Bauplan for a neuen Sub-Agenten mit Best-Practice-Integration."""
+    """Generates a Bauplan for a newen Sub-agents mit Best-Practice-Integration."""
     import yaml, re
     
     name = feature_name.upper().replace(" ", "-")
@@ -332,26 +332,26 @@ def generate_blueprint(feature_name):
         except Exception:
             bp = {}
     
-    prompt_hinweis = "Default"
-    timeout_hinweis = "600"
-    steps_hinweis = "100"
-    bp_anzahl = "no"
+    prompt_note = "Default"
+    timeout_note = "600"
+    steps_note = "100"
+    bp_number = "no"
     
     if bp and "best_practices" in bp:
-        bp_anzahl = str(sum(len(items) for items in bp["best_practices"].values()))
+        bp_number = str(sum(len(items) for items in bp["best_practices"].values()))
         for cat, practices in bp["best_practices"].items():
             for p in practices:
                 if p["id"] == "BP-P-001":
-                    prompt_hinweis = "✅ (v1.0.0) + ⛔ automatically"
+                    prompt_note = "✅ (v1.0.0) + ⛔ automatically"
                 elif p["id"] == "BP-S-001":
-                    timeout_hinweis = f"✅ {p['check_value']} (Sweet-Spot)"
+                    timeout_note = f"✅ {p['check_value']} (Sweet-Spot)"
                 elif p["id"] == "BP-S-002":
-                    steps_hinweis = f"✅ {p['check_value']} (Sweet-Spot)"
+                    steps_note = f"✅ {p['check_value']} (Sweet-Spot)"
     
     blueprint = f"""
 ╔══════════════════════════════════════════════════════════════╗
-║  BAUPPLAN: Neuer Sub-Agent — {name}                        ║
-║  Generates aus {bp_anzahl} Best-Practices                 ║
+║  BAUPPLAN: newer Sub-Agent — {name}                        ║
+║  Generates aus {bp_number} Best-Practices                 ║
 ╚══════════════════════════════════════════════════════════════╝
 
 📋 BESCHREIBUNG: {description}
@@ -360,7 +360,7 @@ def generate_blueprint(feature_name):
   mkdir -p recipe/sub/
   cp recipe/template/agent_template.yaml recipe/sub/sub_mas-{name_lower}.yaml
 
-=== PHASE 2 — Platzhalter replace ===
+=== PHASE 2 — Platzholder replace ===
   sed -i 's/{{{{NAME}}}}/{name}/g' recipe/sub/sub_mas-{name_lower}.yaml
   sed -i 's/{{{{name}}}}/{name_lower}/g' recipe/sub/sub_mas-{name_lower}.yaml
   sed -i 's/{{{{EMOJI}}}}/{emoji}/g' recipe/sub/sub_mas-{name_lower}.yaml
@@ -368,9 +368,9 @@ def generate_blueprint(feature_name):
   sed -i 's/{{{{TASK}}}}/{description}/g' recipe/sub/sub_mas-{name_lower}.yaml
 
 === PHASE 3 — Best-Practice-Optimierung ===
-  prompt:     {prompt_hinweis}
-  timeout:    {timeout_hinweis}
-  max_steps:  {steps_hinweis}
+  prompt:     {prompt_note}
+  timeout:    {timeout_note}
+  max_steps:  {steps_note}
   ⛔ KEINE hardcodierten Pathe (BP-T-001)
   ⛔ str.replace() mit count=1 (BP-T-002)
   ⛔ Backup vor erster Change (BP-R-003)
@@ -399,12 +399,12 @@ def generate_blueprint(feature_name):
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description="dev_architect.py — Architektur-Analyse")
+    parser = argparse.ArgumentParser(description="dev_architect.py — Architecture-Analyse")
     parser.add_argument("--analyze", action="store_true", help="Komplette Analyse")
     parser.add_argument("--quick", action="store_true", help="Only Kern-Erkenntnisse")
     parser.add_argument("--suggest", action="store_true", help="Improvement suggestions")
     parser.add_argument("--impact", type=str, help="Impact-Analyse for Change")
-    parser.add_argument("--blueprint", type=str, help="Bauplan for neuen Agenten generate")
+    parser.add_argument("--blueprint", type=str, help="Bauplan for newen agents generate")
     parser.add_argument("--apply-best-practices", action="store_true", help="Best Practices anwenden")
     parser.add_argument("--agent-path", type=str, default=str(observer.AGENT_DIR))
     
