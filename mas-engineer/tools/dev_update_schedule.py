@@ -5,7 +5,7 @@ dev_update_schedule.py — Self-Improve Timing update
 Version: 1.0.0
 call: python3 dev_update_schedule.py <workspace> <findings_count> <duration_sec>
 
-Updated .state/schedule.yaml after a Self-Improve-Runde.
+Updates .state/schedule.yaml after a self-improvement round.
 """
 
 import sys, yaml
@@ -29,7 +29,7 @@ def update_schedule(workspace: str, findings_count: int, duration_sec: int):
             "recommendation": {"status": "ready"}
         }
     
-    # New Runde entryen
+    # Log new round
     bp.setdefault("history", []).append({
         "round": len(bp["history"]) + 1,
         "time": datetime.now().isoformat(),
@@ -68,7 +68,7 @@ def update_schedule(workspace: str, findings_count: int, duration_sec: int):
     elif findings_sum < 5:
         rec.update({"status": "pause_recommended", "reason": "Wenige Findings — Pause recommended"})
     else:
-        rec.update({"status": "ready", "reason": "Genug Findings — naechste Runde ready"})
+        rec.update({"status": "ready", "reason": "Enough findings — next round ready"})
     rec["next_round_after"] = "30m"
     
     bp["last_updated"] = datetime.now().isoformat()
@@ -79,7 +79,7 @@ def update_schedule(workspace: str, findings_count: int, duration_sec: int):
     
     n = len(bp["history"])
     status = bp["recommendation"]["status"]
-    print(f"✅ Runde {n} in schedule.yaml saved. Status: {status}")
+    print(f"✅ Round {n} saved in schedule.yaml. Status: {status}")
 
 
 if __name__ == "__main__":

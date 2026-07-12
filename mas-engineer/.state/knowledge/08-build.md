@@ -1,26 +1,26 @@
 # Build-System v3.0
 
-## ZIP-Bau (dev_build.sh)
+## ZIP build (dev_build.sh)
 cd ~/agent_test/work && bash mas-engineer/tools/dev_build.sh
 → dist/mas-framework-v1.0.0_TIMESTAMP.zip (287 files, ~700 KB)
 
-### Was passiert:
-1. __pycache__ + .backups + .state/checkpoints will vor Build deleted
+### What happens:
+1. __pycache__ + .backups + .state/checkpoints will be deleted before build
 2. zip -r aus Workspace-Root:
    - installr.sh, update.sh, .mas-mode, .gitignore
    - framework/.projects.yaml
    - framework/$PROJECT/ (recipes + docs + config + tests + python)
    - mas-engineer/ (recipe + tools + docs + plans + .state)
-3. Ausschluesse: *.git* .backups __pycache__ *.pyc *.pyo improve-log*
+3. Exclusions: *.git* .backups __pycache__ *.pyc *.pyo improve-log*
 4. validation: 5 Cores, 47 Specialists, 44 FW-Subs, 36 MAS-Subs, >=40 Tools, no pycache
 
 ### Modi:
 | Command | Description |
 |:-------|:-------------|
-| dev_build.sh | framework mode (only aktives Projekt) |
-| dev_build.sh --full | FULL-Modus (MAS + ALL Projekte aus .projects.yaml) |
+| dev_build.sh | framework mode (only activees Projekt) |
+| dev_build.sh --full | FULL mode (MAS + ALL Projekte aus .projects.yaml) |
 | dev_build.sh --dry-run | Only check, nothing bauen |
-| dev_build.sh --version x.y.z | Version setn |
+| dev_build.sh --version x.y.z | Set version |
 
 ## Installation (installr.sh)
 cd dist && unzip mas-framework-*.zip && ./installr.sh
@@ -53,7 +53,7 @@ cd dist && unzip mas-framework-*.zip && ./installr.sh
 | ./update.sh --mas | Only MAS aus Workspace sync |
 | ./update.sh --framework | Only framework aus Workspace sync |
 | ./update.sh --mas --dry-run | MAS-Dry run |
-| ./update.sh --help | Hilfe |
+| ./update.sh --help | Help |
 
 ## Auto-Build (dev_autobuild.sh)
 | Command | Description |
@@ -61,6 +61,6 @@ cd dist && unzip mas-framework-*.zip && ./installr.sh
 | dev_autobuild.sh | Auto-Build (checks ob commit seit letztem ZIP) |
 | dev_autobuild.sh --force | Always bauen |
 | dev_autobuild.sh --status | Only check |
-| dev_autobuild.sh --install | Bauen + update.sh --mas |
+| dev_autobuild.sh --install | Build + install |
 
-No eigene Logik mehr — delegiert an dev_build.sh.
+No own logic anymore — delegates to dev_build.sh.

@@ -1,15 +1,15 @@
 #!/bin/bash
 # dev_build.sh — Distribution Builder v3.0.0
 # ==============================================================
-# Baut ZIP 1:1 aus Workspace-Struktur.
-# NUR Build — no Installation (dafor givet's install.sh + update.sh).
+# Builds ZIP 1:1 from workspace structure.
+# ONLY Build — no installation (dafor givet's install.sh + update.sh).
 #
 # Usage:
-#   ./mas-engineer/tools/dev_build.sh                    → ZIP bauen
+#   ./mas-engineer/tools/dev_build.sh                    → Build ZIP
 #   ./mas-engineer/tools/dev_build.sh --full             → MAS + ALL frameworks
 #   ./mas-engineer/tools/dev_build.sh --dry-run          → Only check
-#   ./mas-engineer/tools/dev_build.sh --version x.y.z    → Version setn
-#   ./mas-engineer/tools/dev_build.sh --help             → Hilfe
+#   ./mas-engineer/tools/dev_build.sh --version x.y.z    → Set version
+#   ./mas-engineer/tools/dev_build.sh --help             → Help
 # ==============================================================
 
 set -euo pipefail
@@ -24,7 +24,7 @@ fail() { echo -e "  ${RED}${BOLD}ERROR${NC} $1"; exit 1; }
 
 BUILD_WORKSPACE=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Workspace detect: --workspace, traditionell (mas-engineer/), oder Port-Modus (flach)
+# Workspace detect: --workspace, traditionell (mas-engineer/), oder Port mode (flach)
 if [ -n "$BUILD_WORKSPACE" ]; then
     WORKSPACE="$BUILD_WORKSPACE"
 elif [ -d "$SCRIPT_DIR/../../mas-engineer" ]; then
@@ -58,14 +58,14 @@ show_help() {
     echo ""
     echo -e "${BOLD}dev_build.sh v3.0.0 — Distribution Builder${NC}"
     echo ""
-    echo "Baut ZIP 1:1 aus Workspace-Struktur."
-    echo "NUR Build — no Installation."
+    echo "Builds ZIP 1:1 from workspace structure."
+    echo "ONLY Build — no installation."
     echo ""
     echo "Usage:"
-    echo "  ./mas-engineer/tools/dev_build.sh                    → ZIP bauen"
+    echo "  ./mas-engineer/tools/dev_build.sh                    → Build ZIP"
     echo "  ./mas-engineer/tools/dev_build.sh --full             → MAS + ALL Projekte"
     echo "  ./mas-engineer/tools/dev_build.sh --dry-run          → Only check"
-    echo "  ./mas-engineer/tools/dev_build.sh --version x.y.z    → Version setn"
+    echo "  ./mas-engineer/tools/dev_build.sh --version x.y.z    → Set version"
     echo ""
 }
 
@@ -76,7 +76,7 @@ build_zip() {
 
     header "Distribution bauen"
     echo "  Version: ${VERSION}"
-    echo "  Modus:   MAS-only (no framework)"
+    echo "  Mode:   MAS-only (no framework)"
 
     # Backup-directoryse ausclose
     find "$WORKSPACE/mas-engineer" -name "__pycache__" -typee d -exec rm -rf {} + 2>/dev/null || true
@@ -98,7 +98,7 @@ build_zip() {
     
     local zip_size; zip_size=$(du -h "$zip_path" | cut -f1)
     local zip_count; zip_count=$(unzip -l "$zip_path" 2>/dev/null | tail -1 | awk '{print $2}')
-    ok "ZIP creates: $zip_name ($zip_count files, $zip_size)"
+    ok "ZIP created: $zip_name ($zip_count files, $zip_size)"
 }
 
 validate_zip() {
@@ -140,9 +140,9 @@ validate_zip() {
 
     echo ""
     if [ "$errors" -eq 0 ]; then
-        ok "ZIP complete und korrekt — 0 Error"
+        ok "ZIP complete and correct — 0 errors"
     else
-        error "$errors Error im ZIP"
+        error "$errors Errors in ZIP"
     fi
     return $errors
 }
@@ -155,19 +155,19 @@ build_project_zip() {
     local zip_name="${project_name}-v${VERSION}_${timestamp}.zip"
     local zip_path="$DIST_DIR/$zip_name"
 
-    header "Projekt-Distribution bauen"
-    echo "  Projekt: $project_name"
+    header "Build project distribution"
+    echo "  Project: $project_name"
     echo "  Version: ${VERSION}"
 
     # Check ob Projekt exists
     [ -d "$project_path" ] || fail "Projekt '$project_name' not found in $WORKSPACE"
 
-    # Symlink aufloesen (tools/ -> echte files)
+    # Resolve symlink (tools/ -> echte files)
     if [ -L "$project_path/tools" ]; then
         local symlink_target
         symlink_target=$(readlink "$project_path/tools")
         info "Symlink found: $symlink_target"
-        info "Loese Symlink auf -> copy Tools als echte files"
+        info "Resolve symlink -> copy tools as real files"
         rm -f "$project_path/tools"
         rsync -a "$symlink_target/" "$project_path/tools/" || cp -rL "$symlink_target" "$project_path/tools"
         ok "tools/ -> echte files (standalone)"
@@ -180,7 +180,7 @@ build_project_zip() {
     cd "$WORKSPACE"
     zip -r "$zip_path" "$project_name/" \
         -x "*/\.backups/*" "*/\.git/*" "*/__pycache__/*" "*.pyc" "*.bak"
-    ok "ZIP creates: $zip_name"
+    ok "ZIP created: $zip_name"
 
     # Check: no sub_mas-* im ZIP (ausser generatede)
     local mas_subs
@@ -189,7 +189,7 @@ build_project_zip() {
         warn "ZIP contains $mas_subs sub_mas-* files"
         warn "Projekt sollte no MAS-Components contain"
     else
-        ok "No MAS-Components im ZIP — standalone"
+        ok "No MAS components in ZIP — standalone"
     fi
 
     echo ""
@@ -212,8 +212,8 @@ main() {
     echo ""
 
     # Check Workspace
-    echo "  ✅ MAS-only Modus (no framework)"
-    [ -d "$WORKSPACE/mas-engineer" ] || [ -f "$WORKSPACE/recipe/dev-mas-engineer.yaml" ] || fail "Nicht im Workspace (mas-engineer/ oder recipe/dev-mas-engineer.yaml missing)"
+    echo "  ✅ MAS-only Mode (no framework)"
+    [ -d "$WORKSPACE/mas-engineer" ] || [ -f "$WORKSPACE/recipe/dev-mas-engineer.yaml" ] || fail "Not in workspace (mas-engineer/ oder recipe/dev-mas-engineer.yaml missing)"
 
     if [ -n "$PROJECT_MODE" ]; then
         build_project_zip "$PROJECT_MODE"
@@ -227,7 +227,7 @@ main() {
 
     echo ""
     if [ "$DRY_RUN" = true ]; then
-        info "DRY-RUN completed. No Changeen."
+        info "DRY-RUN completed. No changes."
     else
         echo -e "${YELLOW}${BOLD}📦 Build completed${NC}"
         echo -e "${YELLOW}Installation: cd dist/ && unzip mas-framework-*.zip && ./installr.sh${NC}"

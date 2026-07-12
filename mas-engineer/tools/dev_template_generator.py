@@ -5,7 +5,7 @@ dev_template_generator.py v2.0.0 — Generates & refreshed Agent-YAMLs aus SOT +
 Sources:
   1. .state/workflows.yaml → configs.mas-self (remainderrictions, enforcement, recovery, signals)
   2. .state/best-practices.yaml → 27 auto_apply Rulen
-  3. .state/improvement-plan.json → offene Verbetterungen
+  3. .state/improvement-plan.json → open improvements
   4. recipe/template/agent_template.yaml → Reaelseruktur
 
 Modes:
@@ -332,7 +332,7 @@ settings:
         "{EMOJI}": emoji,
         "{TASK}": task,
         "{TASK}": task,
-        "{BESCHREIBUNG}": _shorten(task, 80),
+        "{DESCRIPTION}": _shorten(task, 80),
         "{Titel}": titel,
     }
     
@@ -662,7 +662,7 @@ def refresh_agent(agent_name: str, dry_run: bool, workspace: str, sources: Optio
     # ── Prompt-Checks ──
     prompt_text = agent_data.get("prompt", "")
     if len(prompt_text) > 500:
-        issues.append({"field": "prompt", "problem": f"prompt zu long: {len(prompt_text)} > 500", "fix": "Kuerzen auf ≤500 Zeichen", "severity": "mittel"})
+        issues.append({"field": "prompt", "problem": f"prompt too long: {len(prompt_text)} > 500", "fix": "Kuerzen auf ≤500 Zeichen", "severity": "mittel"})
     
     if "⛔" not in prompt_text:
         issues.append({"field": "prompt", "problem": "prompt missing ⛔-Boundary", "fix": "⛔-Boundary hinzuaddn", "severity": "hoch"})

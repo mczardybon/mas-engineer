@@ -74,7 +74,7 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     if "--validate" in args:
         errs = validate_sot()
-        print("✅ SOT valide" if not errs else "\n".join(f"❌ {e}" for e in errs))
+        print("✅ SOT valid" if not errs else "\n".join(f"❌ {e}" for e in errs))
     elif "--schema" in args:
         with open(SCHEMA_FILE) as f:
             print(f.read())

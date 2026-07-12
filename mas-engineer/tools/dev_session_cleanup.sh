@@ -26,7 +26,7 @@ DB_PATH="$HOME/.local/share/goose/sessions/sessions.db"
 MODE="${1:-dry-run}"
 KEEP_HOURS="${2:-24}"
 
-# Farben
+# Colors
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; CYAN='\033[0;36m'; NC='\033[0m'
 
 echo -e "${CYAN}═══════════════════════════════════════════${NC}"
@@ -143,7 +143,7 @@ PYEOF
 echo ""
 case "$MODE" in
     --exec)
-        echo -e "${RED}⚠️  EXEC-Modus! Delete jetzt...${NC}"
+        echo -e "${RED}⚠️  EXEC mode! Delete jetzt...${NC}"
         python3 << 'PYEOF'
 import sqlite3, datetime, os
 

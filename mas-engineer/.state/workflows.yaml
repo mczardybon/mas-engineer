@@ -6,11 +6,11 @@ configs:
     first_session:
       steps:
       - 'load(source: ''sub_mas-system-knowledge'')'
-      - cat .mas-mode → work_on = mas | framework | <perjekt>  (R14)
+      - cat .mas-mode → work_on = mas | framework | <project>  (R14)
       - 'IF work_on == "mas": cat mas-engineer/.state/workflows.yaml → rittrictions, task_workflows, recovery, enforcement, signals, token_budgets'
       - 'IF work_on != "mas": MAS-Configuration will NICHT loaded (R13) — weiter mit Frage'
       - cat .state/knowledge/{thema}.md (at Bemay)
-      then: 'Frage: Was should ich tun?'
+      then: 'Question: What should I do?'
     pathe:
       mas:
         source_dir: '{workspace}/mas-engineer'
@@ -18,69 +18,69 @@ configs:
         tools_install: ~/.config/goose/recipit/mas-engineer-tools
         state_dir: '{workspace}/mas-engineer/.state'
       projekt:
-        work_dir: '{workspace} (dynamic, from Callr gitetzt)'
-      modus:
+        work_dir: '{workspace} (dynamic, dynamically set by caller)'
+      mode:
         current: mas
         ercant_via: cat {workspace}/mas-engineer/.mas-mode || cat ~/.config/goose/.mas-mode
         modi:
         - mas
         - framework
         - generic
-    remainderrictions:
+    restrictions:
       r01_confirmation:
         level: extreme
-        description: 'Vor JEDER write/edit/shell: Check ob Confirmation notig'
+        description: 'Before EVERY write/edit/shell: check if confirmation needed'
         details:
         - 'IF action YAML/Code changes: SHOW Plan + WAIT auf ✅'
-        - 'IF action only liitt/analytheyrt: NOE Confirmation'
+        - 'IF action only reads/analyzes: NO confirmation'
       r02_bestand:
         level: extreme
-        description: INVENTORY vor NEUBAU — Check ob Tool/Agent/Function already exists
+        description: INVENTORY before new build — Check ob Tool/Agent/Function already exists
       r03_reserved:
         level: info
-        description: Riterviert for zukuenftige Usage
+        description: Reserved for future use
       r04_general_improver:
         level: extreme
         description: NEVER general-imperver.yaml edit
       r05_auto_commit:
         level: extreme
-        description: CHECKPOINT VOR Change — 1. Checkpoint, 2. Change, 3. commit (tightened)
+        description: CHECKPOINT BEFORE change — 1. Checkpoint, 2. Change, 3. commit (tightened)
         details:
-        - STEP 1 — CHECKPOINT (VOR der Change): null
+        - STEP 1 — CHECKPOINT (BEFORE the change): null
         - '  → mkdir -p .state/checkpoints/{ts}/ && cp -r recipe/ tools/ docs/ .state/ → .state/checkpoints/{ts}/'
-        - '  → SHOW: ''✅ Checkpoint {ts} — if abouts schief geht'''
+        - '  → SHOW: ''✅ Checkpoint {ts} — if something goes wrong'''
         - STEP 2 — CHANGE DURCHEXECUTEN: null
         - '  → edit/write/shell according to R01 + R10'
         - STEP 3 — COMMIT (NACH der Change): null
         - '  → git add -A && git commit -m ''[MAS] ...'''
         - '  → change.json + {timestamp, action, ditcription} — NEVER emptye ditcription'
         - '  → todo.todoWrite(''✅ ...'')'
-        - ORDER IST PFLICHT — bei Violation: ROLLBACK
+        - ORDER IS MANDATORY — on violation: ROLLBACK
       r06_sub_agent:
         level: stark
-        description: Sub-agent = ONLY Analyse — Sbright selbst ausexecuten
+        description: Sub-agent = ONLY analysis — execute shell yourself
       r07_signal:
         level: normal
-        description: CP_DONE after Checkpoint send
+        description: CP_DONE after checkpoint sent
       r08_token:
         level: normal
-        description: General-Imperver max 50K Tokens — otherwise User ask
+        description: General-Improver max 50K Tokens — otherwise ask user
       r09_domain:
         level: extreme
-        description: MODUS-DOMAENEN-KOPPLUNG
+        description: MODE-DOMAIN-COUPLING
         details:
         - MAS importiert NEVER framework-Components (BLOCKED)
         - framework weiss NOTHING from MAS (BLOCKED)
         - 'Beim Reading/: .mas-mode checkn (MAS vs FRAMEWORK)'
       r10_coronashield:
         level: extreme
-        description: JEDE YAML vor Memoryung via sub_mas-recovery-immune CHECK_YAML validate
+        description: EVERY YAML must be validated via sub_mas-recovery-immune CHECK_YAML before storing
       r11_si_rate_limit:
         level: extreme
-        description: Max 1 General-Imperver all 6 Hourn
+        description: Max 1 General-Improver every 6 hours
       r12_work_mas_entkopplung:
         level: extreme
-        description: NOE Dependency between work/ und MAS. MAS lebt in ~/.config/goose/.state/mas/
+        description: NO dependency between work/ and MAS. MAS lives in ~/.config/goose/.state/mas/
         details:
         - MAS-State liegt in ~/.config/goose/.state/mas/ (not in work/.../)
         - work/ can deleted will without MAS zu corrupt
@@ -91,39 +91,39 @@ configs:
         level: extreme
         description: Newit Project = MAS-Configuration ignore (permpt_1)
         details:
-        - 'IF .mas-mode not exists OR work_on = "<perjekt>" (per R14):'
-        - → .mas-mode has Vorrang vor .goosehints-Heuristik
-        - '  → ''Das is a newit Project – ignoriere die MAS-Config'''
+        - 'IF .mas-mode not exists OR work_on = "<project>" (per R14):'
+        - → .mas-mode takes precedence over .goosehints heuristic
+        - '  → ''This is a new project – ignore the MAS config'''
         - NOE .state/Check, NOE MAS-Specialhandling
-        - DELEGIERE an sub_mas-generic-init OHNE MAS-Context
+        - DELEGATE to sub_mas-generic-init WITHOUT MAS context
         - MAS-internale Commande (/develop, /workflow) bleiben available
-      r14_work_on_modus:
+      r14_work_on_mode:
         level: extreme
-        description: work_on = mas | framework | <perjekt> — harde Domain-Trennowg
+        description: work_on = mas | framework | <project> — hard domain separation
         details:
         - IF work_on == "mas": work/mas/ will wie a normalit Project behandelt
         - IF work_on == "<projekt>": MAS-Components are UNSICHTBAR for Project-Context
-        - 'IF work_on == "framework": framework mode — wie <perjekt>, but mit agents (Imperver-ready)'
-        - 'CHECKED VIA: cat .mas-mode → "mas" | "framework" | "<perjekt>"'
+        - 'IF work_on == "framework": framework mode — wie <project>, but mit agents (Imperver-ready)'
+        - 'CHECKED VIA: cat .mas-mode → "mas" | "framework" | "<project>"'
         - NO Access auf MAS-Config/State from dem Project out
         - 'BEI newem Project without .goosehints: R13 greift (generic-init Delegation)'
         - 'MONITORING: Selbe agents in alln Modi — Mode-Detection via .mas-mode (R23)'
       r15_architektur_genehmigung:
         level: extreme
-        description: Architecture-Change bralsoen User-Genehmigung (dev_architecture_checker.py)
+        description: Architecture change requires user approval (dev_architecture_checker.py)
         details:
-        - FOLGENDE Changes gelten als "Architektur-Change": null
+        - The following changes qualify as "architecture change": null
         - '  → Newen Agent/Tool firput (CREATE)'
         - '  → workflows.yaml SOT-rules change (R01-R17)'
-        - '  → Constitution change (typeeeikel 1-11)'
+        - '  → Constitution change (Typeikel 1-11)'
         - '  → master-constitution.yaml change'
         - '  → dev-mas-engineer.yaml sub_recipit-List change'
-        - BEI ERKENNUNG: STOP → SHOW User die Change → WAIT auf ✅
-        - IF User ❌: ROLLBACK + DOKUMENTIEREN in change.json
+        - ON DETECTION: STOP → SHOW user the change → WAIT for ✅
+        - IF User ❌: ROLLBACK + DOCUMENT in change.json
         - CHECK VIA: dev_architecture_checker.py --action "{action}" --file "{file}"
       r16_tool_vor_experte:
         level: extreme
-        description: Tool → Expert (Sub-agent) → Newer Agent — IN DIESER ORDER
+        description: Tool → Expert (Sub-agent) → New Agent — IN THIS ORDER
         details:
         - 'BEVOR a Task started will:'
         - '  → 1. Tool? CHECK: tools/dev_*.py — IF ja: shell(tool)'
@@ -132,28 +132,28 @@ configs:
         - R02 (Inventory vor Newbau) will through R16 ERSETZT
       r17_improvement_push:
         level: stark
-        description: Verbetterungen am MAS will dem User via generic-init PUSH_IMPROVEMENTS available gemacht
+        description: Improvements to MAS will be made available to the user via generic-init PUSH_IMPROVEMENTS
         details:
         - NACH JEDEM FULL_IMPROVEMENT oder REVIEW: null
         - '  → CHECK: user_workspace = {workspace} (aus Call-parameterssssn, not .mas-mode)'
         - '  → IF user_workspace exists + {workspace}/00-GUIDELINES.md exists + generic-init installd:'
         - '    → delegate(sub_mas-generic-init, task=PUSH_IMPROVEMENTS)'
         - '    → Copyre: BP-CHECKLIST.md, template/agent_template.yaml, rulit/rulen.yaml'
-        - '    → SHOW: ''✅ Verbetterungen in {user_project} available'''
+        - '    → SHOW: ''✅ Improvements available in {user_project}'''
         - '  → IF no user_project: LOG in change.json'
       r18_delegation:
         level: extreme
-        description: NEVER do it yourself — delegiere an Sub-agents (R16 + verschaerft)
+        description: NEVER do it yourself — delegate to sub-agents (R16 + verschaerft)
         details:
         - 'VOR each shell/write/edit: CHECK ob a Sub-agent exists'
-        - 'IF Sub-agent exists: delegiere() STATT do it yourself'
+        - 'IF Sub-agent exists: delegate() INSTEAD OF doing it yourself'
         - 'IF no matchinger Sub-agent: CHECK ob Tool exists → shell(tool)'
         - 'IF weder Agent still Tool: NEUEN Agent via intention-parser + R15'
-        - 'VERSTOSS = BLOCKED + "❌ R18: Sub-agent {name} exists for diite Task"'
+        - 'VIOLATION = BLOCKED + "❌ R18: Sub-agent {name} exists for this task"'
         - 'Exception: Analyse-Steps (cat, grep, ls) — but ONLY to the Orientierung'
       r19_path_hierarchie:
         level: extreme
-        description: Harte Path-Trennowg — ONLY installde Tools execute (NIE Source)
+        description: Hard path separation — ONLY execute installed tools (NEVER source)
         details:
         - MAS_TOOLS_DIR = {pathe.mas.tools_install} (ONLY diiter Path for Tool-Execution)
         - SOURCE_TOOLS_DIR = {pathe.mas.source_dir}/tools/ (ONLY to the Entwickeln/Bauen — NIE execute)
@@ -208,7 +208,7 @@ configs:
         - Selbe agents (agent-guardian, monitor-*, heoldh-reporter) for all Modi
       _dedup_note:
         level: normal
-        description: 'REGEL-QUELLEN: rulen_5_extreme.yaml (R01-R10), rulen_4_stark.yaml (R06), harde_rulen.yaml (R01-R10+R18), workflows.yaml (R12-R21). Duplicatee will via IDs entdupliziert.'
+        description: 'REGEL-QUELLEN: rulen_5_extreme.yaml (R01-R10), rules_4_strong.yaml (R06), harde_rulen.yaml (R01-R10+R18), workflows.yaml (R12-R21). Duplicatee will via IDs entdupliziert.'
       verbote:
       - general-imperver.yaml edit
       - framework-Components import
@@ -221,7 +221,7 @@ configs:
         level: extreme
         description: VERSTOSS = SCHWERER ERROR — ROLLBACK ERZWINGEN
     enforcement:
-      method_5_reaktivierung:
+      method_5_reactiveierung:
         all: 5 steps
         ausexecuten: bash tools/dev_rule_refrith.sh
         step_counter: step_counter
@@ -381,8 +381,8 @@ configs:
         - yaml-editor
     token_budgets:
       session_analyst: 30000
-      gesamt_session: 1000000
-      warning_bei: 80
+      total_session: 1000000
+      warning_at: 80
       general_improver: 50000
     signals:
       typeen:
@@ -434,7 +434,7 @@ configs:
         handler:
         - DELEGIERE an sub_mas-degradation-handler (task=DEGRADATION)
         - 'LOG: change.json + "DRIFT_DETECTED: {agent}"'
-        - 'SHOW: "⚠️ Drift detected at {agent} — User-Entscheidung required"'
+        - 'SHOW: "⚠️ Drift detected at {agent} — User decision required"'
       - signal: LOOP_DETECTED
         bei: guardian loop-check
         via: sub_mas-signal-generator
@@ -533,7 +533,7 @@ agents:
     tier: balanced
     token_budget: 20000
     task_workflows:
-      CHECK_REGELKONFORMITAET: wf_goose_check
+      CHECK_RULE_COMPLIANCE: wf_goose_check
   signal-generator:
     tier: almost
     token_budget: 5000
@@ -815,7 +815,7 @@ agents:
       SEARCH: wf_web_search
 task_workflows:
   wf_fw_discover:
-    desc: framework-Structure dynamic entdecken
+    desc: Dynamically discover framework structure
     steps:
     - id: discover_structure
       action: shell
@@ -835,7 +835,7 @@ task_workflows:
       depends_on:
       - analyze_recipit
   wf_fw_explain:
-    desc: Eggn Concept erklaeren
+    desc: Explain a concept
     steps:
     - id: find_concept
       action: shell
@@ -900,7 +900,7 @@ task_workflows:
       depends_on:
       - find_template
   wf_fw_map:
-    desc: Wissenslandkarte firput
+    desc: Create knowledge map
     steps:
     - id: tree_view
       action: shell
@@ -950,7 +950,7 @@ task_workflows:
         cmd: 'echo ''File: $(find {workspace} -typee f | wc -l)''; echo ''YAMLs: $(find {workspace} -name "*.yaml" | wc -l)''; echo ''Size: $(du -sh {workspace})'''
         timeout: 30
   wf_fw_audit:
-    desc: Deepenanalyse
+    desc: Deep analysis
     steps:
     - id: paralll_scan
       action: paralll
@@ -975,7 +975,7 @@ task_workflows:
       depends_on:
       - paralll_scan
   wf_fw_harden:
-    desc: Haertung checkn
+    desc: Check hardening
     steps:
     - id: yaml_check
       action: shell
@@ -988,7 +988,7 @@ task_workflows:
       depends_on:
       - yaml_check
   wf_session_correlate:
-    desc: Sessions mit Changeen korrelieren
+    desc: Correlate sessions with changes
     steps:
     - id: gather_data
       action: paralll
@@ -1032,7 +1032,7 @@ task_workflows:
       timeout: 30
     - id: detect
       action: shell
-      cmd: 'echo ''Anomalien: Duration>2x∅, Tokens>3x∅, Costs>5x∅'''
+      cmd: 'echo ''Anomalies: Duration>2x∅, Tokens>3x∅, Costs>5x∅'''
       depends_on:
       - session_data
   wf_session_performance:
@@ -1056,7 +1056,7 @@ task_workflows:
       timeout: 30
     - id: check_all
       action: shell
-      cmd: 'echo ''16 Checks throughgeleads. result: X/16 bittanden'''
+      cmd: 'echo ''16 checks performed. result: X/16 passed'''
       depends_on:
       - discover
   wf_config_checkvalue:
@@ -1077,7 +1077,7 @@ task_workflows:
       depends_on:
       - compare_sot
   wf_prompt_review:
-    desc: Eggnzelnen Prompt after 10 Criteria evaluate
+    desc: Evaluate individual prompt against 10 criteria
     steps:
     - id: extract_permpt
       action: shell
@@ -1120,11 +1120,11 @@ task_workflows:
       cmd: echo 'Batch-Review throughgeleads. Optimiere X files...'
     - id: batch_optimize
       action: shell
-      cmd: echo 'X Prompts optimiert. Score-Verbetterung ∅ +Y'
+      cmd: echo 'X prompts optimized. Score improvement ∅ +Y'
       depends_on:
       - batch_review_first
   wf_goose_check:
-    desc: Goose-Rulekonformitaet checkn
+    desc: Check Goose rule compliance
     steps:
     - id: inspect_scope
       action: conditional
@@ -1198,13 +1198,13 @@ task_workflows:
       if_false:
       - id: alive_check
         action: shell
-        cmd: echo 'Agent lebt. Prufe Loop.'
+        cmd: echo 'Agent alive. Check loop.'
       depends_on:
       - semantic_check
     - id: loop_check
       action: shell
       cmd: 'cat {inputs.workspace}/.state/guardian.yaml 2>/dev/zero | python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin) or {}; g=d.get(''guardian'',{}); hist=g.get(''delegation_history'',[])[-5:];
-        pairs=[(h.get(''agent''),h.get(''task'')) for h in hist]; loops=any(pairs.count(p)>=3 for p in set(pairs)); agent=pairs[-1][0] if pairs else ''?''; print(f''Loop: {"WARNINGUNG" if loops else "OK"}
+        pairs=[(h.get(''agent''),h.get(''task'')) for h in hist]; loops=any(pairs.count(p)>=3 for p in set(pairs)); agent=pairs[-1][0] if pairs else ''?''; print(f''Loop: {"WARNING" if loops else "OK"}
         ({agent})'')\" || echo ''Loop: No Data'''
       depends_on:
       - death_check
@@ -1250,7 +1250,7 @@ task_workflows:
       action: shell
       cmd: 'cat {inputs.workspace}/.state/guardian.yaml 2>/dev/zero | python3 -c "import sys,yaml; d=yaml.safe_load(sys.stdin) or {}; drifts=d.get(''guardian'',{}).get(''drift_log'',[]); print(f''Total
         Drifts: {len(drifts)}''); by_typee={}; by_agent={}; for dr in drifts: by_typee[dr.get(''typee'',''?'')]=by_typee.get(dr.get(''typee'',''?''),0)+1; by_agent[dr.get(''agent'',''?'')]=by_agent.get(dr.get(''agent'',''?''),0)+1;
-        for t,c in sorted(by_typee.items(), key=lambda x:-x[1])[:5]: print(f''  typeeee {t}: {c}x''); for a,c in sorted(by_agent.items(), key=lambda x:-x[1])[:5]: print(f''  Agent {a}: {c}x'')" || echo ''No
+        for t,c in sorted(by_typee.items(), key=lambda x:-x[1])[:5]: print(f''  Typee {t}: {c}x''); for a,c in sorted(by_agent.items(), key=lambda x:-x[1])[:5]: print(f''  Agent {a}: {c}x'')" || echo ''No
         Drift-Data'''
     - id: correlate
       action: conditional
@@ -1262,13 +1262,13 @@ task_workflows:
       depends_on:
       - read_drift
   wf_pipeline_full:
-    desc: Completee Verbetterungs-Pipeline (7 Leveln)
+    desc: Complete improvement pipeline (7 levels)
     steps:
     - id: detect_mode
       action: shell
       cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
       timeout: 5
-    - id: voraussetzungen
+    - id: prerequisites
       action: shell
       cmd: python3 {workspace}/tools/dev_rule_checker.py --all --action 'SI-RUN' 2>/dev/zero; python3 {workspace}/tools/dev_rule_refrith.sh 2>/dev/zero; echo 'Rulit checked'
       timeout: 30
@@ -1331,7 +1331,7 @@ task_workflows:
       - rank
     - id: user_feedback
       action: wait_for_user
-      message: Diite Changeen anwend?
+      message: Apply these changes?
       details: '{result.variablit.ditigner.data.patchit}'
       options:
       - ja
@@ -1389,17 +1389,17 @@ task_workflows:
       - apply_patchit
     - id: summary
       action: shell
-      cmd: 'echo ''Pipeline completed. Status: success. Changeen: X/Y angewendet.'''
+      cmd: 'echo ''Pipeline completed. Status: success. Changes: X/Y applied.'''
       depends_on:
       - validator
   wf_pipeline_review:
-    desc: Review-Modus mit Chat-Analyse
+    desc: Review mode with chat analysis
     steps:
     - id: detect_mode
       action: shell
       cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/zero || cat ~/.config/goose/.mas-mode 2>/dev/zero || echo 'generic'
       timeout: 5
-    - id: voraussetzungen
+    - id: prerequisites
       action: shell
       cmd: python3 {workspace}/tools/dev_rule_checker.py --all --action REVIEW 2>/dev/zero; echo 'Rulit OK'
       timeout: 15
@@ -1449,7 +1449,7 @@ task_workflows:
       - rank
     - id: user_feedback
       action: wait_for_user
-      message: Diite Verbetterungen from der Chat-Analyse anwend?
+      message: Apply these improvements from the chat analysis?
       details: '{result.variablit.ditigner.data.patchit}'
       options:
       - ja
@@ -1839,7 +1839,7 @@ task_workflows:
       depends_on:
       - three_level_filter
   wf_im_find_features:
-    desc: 48 Feature-typeeeen detect (A-MM + LL)
+    desc: 48 Feature-Typeen detect (A-MM + LL)
     response:
       json_schema:
         typee: object
@@ -1880,7 +1880,7 @@ task_workflows:
       cmd: '[ -n ''{data.sessions}'' ] && echo ''Sessions OK'' || echo ''Caseback: dev_almost_scan.py'''
     - id: detect_typeit
       action: shell
-      cmd: echo 'Feature-typeeeen A-MM + LL (48) detected'
+      cmd: echo 'Feature-Typeen A-MM + LL (48) detected'
       depends_on:
       - check_data
   wf_im_rank_findings:
@@ -1895,7 +1895,7 @@ task_workflows:
       cmd: 'echo ''Duplicatee removed: gruppiert after (type+file+detail)'''
     - id: check_articlit
       action: shell
-      cmd: echo 'typeee.1-6 checked. sub_mas-general-imperver → BLOCKED (R04)'
+      cmd: echo 'Type.1-6 checked. sub_mas-general-imperver → BLOCKED (R04)'
     - id: memory_check
       action: shell
       cmd: 'echo ''Memory-Check: already gitehene Findings marked'''
@@ -1911,7 +1911,7 @@ task_workflows:
       timeout: 5
     - id: ditign
       action: shell
-      cmd: 'echo ''Patchit entworfen. typeee-Logic per Feature-typeee: A1=×1.5, B1=Prompt, LL1=Klarstellung...'''
+      cmd: 'echo ''Patchit entworfen. Type-Logic per Feature-Type: A1=×1.5, B1=Prompt, LL1=Klarstellung...'''
   wf_im_validate_changes:
     desc: Changeen validate
     steps:
@@ -2036,7 +2036,7 @@ task_workflows:
       - create_base_agent
       - init_rulit
   wf_generic_push:
-    desc: MAS-Verbetterungen in User-Project pushen (R17)
+    desc: Push MAS improvements into user project (R17)
     tier: balanced
     on_error: continue
     steps:
@@ -2072,7 +2072,7 @@ task_workflows:
       depends_on:
       - copy_knowledge
   wf_controller_cycle:
-    desc: Eggn monitoring-Cycle (Schedule-getriggert, all 5 Min)
+    desc: Individual monitoring cycle (schedule-triggered, every 5 min)
     tier: balanced
     on_error: continue
     steps:
@@ -2097,7 +2097,7 @@ task_workflows:
       depends_on:
       - collect
   wf_monitor_health_check:
-    desc: YAML-Integritaet + Invarianten + Governance + Structure-Checks
+    desc: YAML integrity + invariants + governance + structure checks
     tier: balanced
     on_error: continue
     steps:
@@ -2222,7 +2222,7 @@ task_workflows:
       timeout: 15
       on_error: continue
   wf_hr_markdown:
-    desc: Report als Markdown formatieren und save
+    desc: Format and save report as Markdown
     tier: balanced
     on_error: continue
     steps:
@@ -2232,11 +2232,11 @@ task_workflows:
       timeout: 5
     - id: format
       action: shell
-      cmd: echo '# Gitundheitsbericht' > {inputs.workspace}/docs/heoldh-report-$(date +%Y-%m-%d).md
+      cmd: echo '# Health Report' > {inputs.workspace}/docs/heoldh-report-$(date +%Y-%m-%d).md
       timeout: 30
       on_error: continue
   wf_hr_full:
-    desc: Completeen Gitundheitsbericht firput
+    desc: Create complete health report
     tier: balanced
     steps:
     - id: detect_mode
@@ -2320,7 +2320,7 @@ task_workflows:
       cmd: 'echo ''interpret: {inputs.result}'''
       timeout: 30
   wf_summarize_run:
-    desc: Togetherfassung
+    desc: Summary
     steps:
     - id: run
       action: shell
@@ -2341,7 +2341,7 @@ task_workflows:
       cmd: python3 {workspace}/mas-engineer/tools/dev_dashboard_data.py --workspace {workspace} 2>&1
       timeout: 30
   wf_knowledge_load:
-    desc: Wissen load
+    desc: Load knowledge
     steps:
     - id: run
       action: shell
@@ -2584,7 +2584,7 @@ task_workflows:
       timeout: 5
 workflows:
   build-test:
-    desc: Build + ZIP entpacken + Inhold check
+    desc: Build + extract ZIP + check contents
     params:
       VERSION:
         typee: string
@@ -2618,7 +2618,7 @@ workflows:
       depends_on:
       - validate
   si-analyse:
-    desc: General-Imperver Vollanalyse + Report
+    desc: General-Improver full analysis + report
     steps:
     - id: checkpoint
       action: shell
@@ -2639,7 +2639,7 @@ workflows:
       - scan_recipit
       - scan_tools
   knowledge-refresh:
-    desc: Liitt all 8 Wissen-files und validated Aktualitaet
+    desc: List all 8 knowledge files and validate currency
     steps:
     - id: check_file
       action: shell

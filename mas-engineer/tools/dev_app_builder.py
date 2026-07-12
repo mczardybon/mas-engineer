@@ -122,7 +122,7 @@ def build_status(ws):
         elif 'MASTER-CONSTITUTION' in action or 'CONSTITUTION' in action:
             key = 'Constitution'
         elif 'FLEET' in action or 'paralll' in action.lower():
-            key = 'Fleet-Modus'
+            key = 'Fleet mode'
         elif 'FIX' in action or 'fix' in action.lower() or 'repair' in action.lower():
             key = 'Fixes'
         elif 'CHECKPOINT' in action:

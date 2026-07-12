@@ -35,7 +35,7 @@ def load_rules(path):
     return data.get("rules", [])
 
 def get_rules(mode=None):
-    """Load Rulen basierend auf Mode. --mode generic = rules.yaml, mas = hard_rules.yaml + workflows.yaml"""
+    """Load rules based on mode. --mode generic = rules.yaml, mas = hard_rules.yaml + workflows.yaml"""
     m = mode or "mas"
     if m == "generic":
         if os.path.exists(REGEL_GENERIC_DATEI):
@@ -44,7 +44,7 @@ def get_rules(mode=None):
             return data.get("rules", data.get("rules", []))
         return []
     else:
-        # Load aus alten files + workflows.yaml
+        # Load from old files + workflows.yaml
         rules = load_rules(REGEL_DATEI) + load_rules(REGEL_4_DATEI) + load_rules(HARTE_REGEL_DATEI)
         # Load additionally aus workflows.yaml (R12-R18)
         WORKFLOWS_DATEI
@@ -111,7 +111,7 @@ def check_rule(rule_id, action=""):
             
             Checken:
             1. Logischer Import (from/import andere Domain) -> BLOCKED
-            2. Modus-Konflikt (Target-Domaene != .mas-mode) -> BLOCKED  
+            2. Mode conflict (Target-Domain != .mas-mode) -> BLOCKED  
             3. Domain-Konflikt (Target-Domaene != .active_domain) -> BLOCKED
                Exception: Readder Access (read/cat/ls) in andere Domain = OK
                Exception: framework analyzen from MAS aus = OK (only read)
@@ -131,7 +131,7 @@ def check_rule(rule_id, action=""):
                     reg = _yaml9.safe_load(f) or {}
                 domains = reg.get("domains", {})
             
-            # Read currentn Modus
+            # Read current mode
             mode = check_mode() if _os9.path.exists(MODE_DATEI) else "unbekannt"
             
             # Read active_domain
@@ -154,7 +154,7 @@ def check_rule(rule_id, action=""):
                     return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                             "detail": f"{active_domain} importiert {dname} ({dp}) — Logischer Import FORBIDDEN!", "action": "BLOCKED"}
             
-            # PRUEFUNG 2: Modus-Konflikt (only bei write/edit/shell)
+            # CHECK 2: Mode conflict (only for write/edit/shell)
             is_write = any(x in akt for x in ["write ", "edit ", "delete ", "mv ", "cp ", "rm ", ">", "sed "])
             if is_write and active_domain and domains:
                 target_domain = None
@@ -165,7 +165,7 @@ def check_rule(rule_id, action=""):
                         break
                 
                 if target_domain and target_domain != active_domain:
-                    # Modus-Check: May active_domain in target_domain write?
+                    # Mode check: May active_domain write in target_domain?
                     target_mode = domains.get(target_domain, {}).get("mode", None)
                     if target_mode and mode != target_mode:
                         return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
@@ -296,7 +296,7 @@ def check_rule(rule_id, action=""):
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
 
         if rule_id == "R12":
-            """WORK_MAS_ENTKOPPLUNG: MAS lebt in ~/.config/goose/.state/mas/"""
+            """WORK_MAS_DECOUPLING: MAS lebt in ~/.config/goose/.state/mas/"""
             akt = action.lower()
             if any(x in akt for x in [".state/", "checkpoints/", ".backups/"]) and "checkpoint" not in akt:
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
@@ -304,13 +304,13 @@ def check_rule(rule_id, action=""):
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
         
         if rule_id == "R13":
-            """NEUES_PROJEKT_IGNORE: Bei emptym Directory MAS-Config ignorieren"""
+            """NEW_PROJECT_IGNORE: Bei emptym Directory MAS-Config ignorieren"""
             # Will in prompt_1 checked — hier only Enforcement-Check
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
                     "detail": "R13 is checked in prompt_1", "action": "OK"}
         
         if rule_id == "R14":
-            """WORK_ON_MODUS: work_on = mas | <projekt>"""
+            """WORK_ON_MODE: work_on = mas | <projekt>"""
             mode_file = os.path.expanduser("~/.config/goose/.mas-mode")
             if not os.path.exists(mode_file):
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
@@ -319,14 +319,14 @@ def check_rule(rule_id, action=""):
                 mode = _f.read().strip()
             akt = action.lower()
             if mode != "mas":
-                # Im Projekt-Modus: NOE MAS-Operationen erlaubt
+                # Im Projekt-Mode: NOE MAS-Operationen erlaubt
                 if any(x in akt for x in ["sub_mas-", "mas-engineer", "workflows.yaml"]):
                     return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                             "detail": f"work_on='{mode}' — MAS operations in project mode not allowed", "action": "BLOCKED"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
         
         if rule_id == "R15":
-            """ARCHITEKTUR_GENEHMIGUNG: Nutzt dev_architecture_checker.py"""
+            """ARCHITECTURE_APPROVAL: Nutzt dev_architecture_checker.py"""
             import subprocess as _sp
             try:
                 result = _sp.run(
@@ -363,7 +363,7 @@ def check_rule(rule_id, action=""):
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
         
         if rule_id == "R17":
-            """IMPROVEMENT_PUSH: Verbetterungen an User pushen"""
+            """IMPROVEMENT_PUSH: Push improvements to user"""
             # Will in general-improver checked — hier only Note
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
                     "detail": "R17 will in general-improver Step 8 checked", "action": "OK"}
@@ -446,7 +446,7 @@ def format_output(resultse, action_type=""):
             lines.append(f"⛔ {r['rule']}: {r['action']} — {r.get('detail', 'ok')}")
     
     if blocked:
-        lines.append(f"\n⛔⛔⛔⛔⛔ {len(blocked)} EXTREM-STARK VERSTOESSE!")
+        lines.append(f"\n⛔⛔⛔⛔⛔ {len(blocked)} EXTREME-STRONG VERSTOESSE!")
         lines.append("AKTION WAS BLOCKIERT — User informieren")
         for b in blocked:
             lines.append(f"  → {b['rule']}: {b['detail']}")
@@ -461,7 +461,7 @@ if __name__ == "__main__":
     parser.add_argument("--check", help="Rule-ID (R01-R19)")
     parser.add_argument("--file", default=None, help="Betroffene file (for R09)")
     parser.add_argument("--action", default="", help="Geplante action (z.B. 'edit file.yaml')")
-    parser.add_argument("--mode", default="mas", help="Currentr Modus")
+    parser.add_argument("--mode", default="mas", help="Current mode")
     parser.add_argument("--all", action="store_true", help="All Rulen check")
     parser.add_argument("--action-typee", default="unbekannt", help="typee der action: write|edit|delegate|shell")
     
@@ -500,7 +500,7 @@ if __name__ == "__main__":
             print(f"✅ {result['rule']}: OK")
             sys.exit(0)
     else:
-        # Default: all Rulen des aktiven Mode check
+        # Default: all Rulen des activeen Mode check
         active_rules = get_rules(args.mode)
         if args.mode == "mas":
             resultse = [check_rule(r["id"], args.action or "") for r in active_rules if isinstance(r, dict)]

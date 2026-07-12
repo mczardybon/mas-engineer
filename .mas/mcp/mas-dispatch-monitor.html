@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -416,12 +416,12 @@
 }
   </script>
   <script type="application/x-goose-prd">
-MAS Dispatch Monitor - Echtzeit-Monitoring.
+MAS Dispatch Monitor - Real-Time Monitoring.
 
-Datenquelle: fetch('http://localhost:3000/api/dashboard') alle 5 Sekunden.
-Die API liefert: {success: true, data: {dispatch: {tree: [{id, parent_id, from, to, task, reason, status, duration_ms, ts, result_detail, messages, turns, errors}], total, active, done, failed}, agents: {total, healthy}, timestamp}}
+Data source: fetch('http://localhost:3000/api/dashboard') alle 5 Sekunden.
+The API provides: {success: true, data: {dispatch: {tree: [{id, parent_id, from, to, task, reason, status, duration_ms, ts, result_detail, messages, turns, errors}], total, active, done, failed}, agents: {total, healthy}, timestamp}}
 
-WICHTIGE API-ZUGRIFFE:
+KEY API ACCESSES:
 - const apiData = json.data
 - const items = apiData.dispatch.tree || []
 - apiData.dispatch.total, apiData.dispatch.active, apiData.dispatch.done
@@ -430,18 +430,18 @@ WICHTIGE API-ZUGRIFFE:
 
 Layout (1200x900 pixel, dark theme, monospace font):
 
-OBEN (30%): "🔴 LIVE" - Only entries with status==="running".
+TOP (30%): "🔴 LIVE" - Only entries with status==="running".
 Show for each: "⏳ [from] → [to] [TASK]" + Duration in seconds + Reason
-Wenn nichts aktiv: "Keine aktiven Dispatches"
+Wenn nichts active: "Keine activeen Dispatches"
 
-MITTE (60%): "🕐 TIMELINE" - ALL entries, newest FIRST
-Jeder Eintrag zeigt: StatusIcon [from] → [to] [TASK] | Dauer | Reason | Zeit
-Bei Klick expandieren mit result_detail und messages.
+MIDDLE (60%): "🕐 TIMELINE" - ALL entries, newest FIRST
+Each entry shows: StatusIcon [from] → [to] [TASK] | Dauer | Reason | Zeit
+Click to expand with result_detail and messages.
 
-UNTEN (fix): Statusleiste: Total | Active | Done | Failed | Agents (healthy/total)
+BOTTOM (fixed): Status bar: Total | Active | Done | Failed | Agents (healthy/total)
 
-Kein Scroll-Springen! Vor Refresh scrollTop merken, nach Refresh wiederherstellen.
-Auto-Refresh alle 5 Sekunden.
+No scroll jumping! Remember scrollTop before refresh, restore after refresh.
+Auto-refresh every 5 seconds.
   </script>
 </head>
 <body>
@@ -456,7 +456,7 @@ Auto-Refresh alle 5 Sekunden.
     <div id="live-section">
       <div class="section-header">
         <span class="live-dot"></span> LIVE
-        <span class="count-badge" id="live-count">0 aktiv</span>
+        <span class="count-badge" id="live-count">0 active</span>
       </div>
       <div id="live-list"></div>
     </div>
@@ -488,8 +488,8 @@ Auto-Refresh alle 5 Sekunden.
         <span id="status-text">Live</span>
       </span>
       <span id="last-update">–</span>
-      <button id="toggle-pause" title="Auto-Refresh pausieren/resume">⏸ Pause</button>
-      <button id="refresh-btn" title="Manuell aktualisieren">⟳ Refresh</button>
+      <button id="toggle-pause" title="Pause/resume auto-refresh">⏸ Pause</button>
+      <button id="refresh-btn" title="Manually refresh">⟳ Refresh</button>
     </span>
   </div>
 </div>
@@ -535,7 +535,7 @@ Auto-Refresh alle 5 Sekunden.
   function formatTime(ts) {
     if (!ts) return '–';
     const d = new Date(ts);
-    return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
   function statusIcon(status) {
@@ -566,10 +566,10 @@ Auto-Refresh alle 5 Sekunden.
   // ─── Render Items ───
   function renderLiveItems(items) {
     const running = items.filter(i => i.status === 'running');
-    liveCount.textContent = running.length + ' aktiv';
+    liveCount.textContent = running.length + ' active';
 
     if (running.length === 0) {
-      liveList.innerHTML = '<div class="empty-state">Keine aktiven Dispatches</div>';
+      liveList.innerHTML = '<div class="empty-state">Keine activeen Dispatches</div>';
       return;
     }
 
@@ -590,7 +590,7 @@ Auto-Refresh alle 5 Sekunden.
     timelineCount.textContent = sorted.length + ' entries';
 
     if (sorted.length === 0) {
-      timelineContainer.innerHTML = '<div class="empty-state">Keine Dispatch-entries vorhanden</div>';
+      timelineContainer.innerHTML = '<div class="empty-state">No dispatch entries available</div>';
       return;
     }
 
@@ -772,7 +772,7 @@ Auto-Refresh alle 5 Sekunden.
     } catch (err) {
       showError('⛔ ' + err.message);
       statusDot.className = 'error';
-      statusText.textContent = 'Fehler';
+      statusText.textContent = 'Error';
     }
   }
 
@@ -780,7 +780,7 @@ Auto-Refresh alle 5 Sekunden.
     errorBanner.textContent = msg;
     errorBanner.classList.add('visible');
     statusDot.className = 'error';
-    statusText.textContent = 'Fehler';
+    statusText.textContent = 'Error';
   }
 
   function hideError() {
@@ -810,7 +810,7 @@ Auto-Refresh alle 5 Sekunden.
       togglePauseBtn.classList.add('paused');
       togglePauseBtn.textContent = '▶ Resume';
       statusDot.className = 'paused';
-      statusText.textContent = 'Pausiert';
+      statusText.textContent = 'Paused';
     } else {
       togglePauseBtn.classList.remove('paused');
       togglePauseBtn.textContent = '⏸ Pause';

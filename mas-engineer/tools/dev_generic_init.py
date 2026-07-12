@@ -32,7 +32,7 @@ MAS_STATE = os.path.join(MAS_CONFIG, ".state")
 WORKSPACE = os.environ.get('MAS_WORKSPACE',
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-# Struktur-Detection: traditionell (mas-engineer/) vs Port-Modus (flach)
+# Structure detection: traditional (mas-engineer/) vs port mode (flat)
 if os.path.exists(os.path.join(WORKSPACE, "mas-engineer")):
     MAS_DIR = os.path.join(WORKSPACE, "mas-engineer")
 else:
@@ -40,7 +40,7 @@ else:
 STATE_TEMPLATES = os.path.join(MAS_DIR, ".state", "templates")
 STATE_RULES = os.path.join(MAS_DIR, ".state", "rules")
 
-# Farben
+# Colors
 GREEN = "\033[0;32m"
 YELLOW = "\033[1;33m"
 BLUE = "\033[0;34m"
@@ -58,24 +58,24 @@ def header(msg): print(f"\n{BLUE}{BOLD}━━━ {msg} ━━━{NC}")
 def get_mas_state():
     """Checks ob MAS-Installation available ist."""
     state = {
-        "mas_installiert": os.path.exists(MAS_CONFIG),
+        "mas_installed": os.path.exists(MAS_CONFIG),
         "subs_available": os.path.exists(MAS_SUBS),
         "tools_available": os.path.exists(MAS_TOOLS),
-        "im_agenten": [],
-        "si_agenten": [],
+        "im_agents": [],
+        "si_agents": [],
         "tools_list": [],
     }
     if state["subs_available"]:
         for f in os.listdir(MAS_SUBS):
             if f.startswith("sub_mas-im-"):
-                state["im_agenten"].append(f)
+                state["im_agents"].append(f)
     if state["tools_available"]:
         state["tools_list"] = sorted([f for f in os.listdir(MAS_TOOLS) if f.startswith("dev_")])
     return state
 
 
 def create_symlinks(project_path, dry_run=False):
-    """Creates Symlink: projekt/tools → MAS-Tools-Installation."""
+    """Creates symlink: project/tools → MAS-Tools-Installation."""
     tools_dir = os.path.join(project_path, "tools")
 
     if os.path.exists(tools_dir):
@@ -85,12 +85,12 @@ def create_symlinks(project_path, dry_run=False):
                 ok(f"tools/ → Symlink exists already ({target})")
                 return True
             else:
-                warn(f"tools/ → Symlink zeigt auf {target}, not auf MAS")
+                warn(f"tools/ → Symlink points to {target}, not auf MAS")
                 info("Remove alten Symlink...")
                 if not dry_run:
                     os.unlink(tools_dir)
         elif os.path.isdir(tools_dir):
-            warn(f"tools/ is a echter directory — skip")
+            warn(f"tools/ is a actual directory — skip")
             info("Delete tools/ manuell und run --repair-symlinks aus")
             return False
 
@@ -147,7 +147,7 @@ def create_rules(project_path, dry_run=False):
             shutil.copy2(template_file, rules_file)
         ok(f"rules.yaml (Template)")
     else:
-        # Fallback: eigenes Default-Rulewerk
+        # Fallback: own default rule set
         default_rules = {
             "version": "1.0.0",
             "rules": {
@@ -191,7 +191,7 @@ Initialisiert mit dev_generic_init.py v{VERSION}
 - Communication via YAML-Structs
 - Domain separation: only im eigenen Projekt-Directory write
 
-## Agent-typeeen (reference)
+## Agent-Typen (reference)
 | typee | Task | Example |
 |-----|---------|----------|
 | Analyse | Data read + pattern detect | sub_{project}-analyst |
@@ -230,7 +230,7 @@ instructions: |
 The im-* agents of the MAS installation can analyze your project:
 ```
 sub_mas-im-pipeline → Verbetterungs-Pipeline
-sub_mas-im-finder  → Optimierungspotential (36 typeeen)
+sub_mas-im-finder  → Optimierungspotential (36 Typen)
 sub_mas-im-rank    → Priorisierung
 sub_mas-im-designer → Patch-Draft
 sub_mas-im-validator → validation
@@ -250,7 +250,7 @@ dev_build.sh --project {project}   # → standalone ZIP ohne MAS
 
 
 def create_bp_checklist(project_path, dry_run=False):
-    """Creates BP-CHECKLIST.md mit 36 Feature-typeeen — overwrites NEVER bestehende."""
+    """Creates BP-CHECKLIST.md mit 36 Feature-Typen — overwrites NEVER bestehende."""
     bp_target = os.path.join(project_path, 'BP-CHECKLIST.md')
     if os.path.exists(bp_target):
         info(f"BP-CHECKLIST.md exists already — skipped")
@@ -267,45 +267,45 @@ def create_bp_checklist(project_path, dry_run=False):
     # Fallback: hardcoded Content
     content = """# BP-CHECKLIST.md — Best-Practices-Checklist
 
-## Settings-Optimierung (typee A)
-- [ ] A1: timeout zu niedrig? (2+ timeouts in 10 calls?)
-- [ ] A2: max_steps zu niedrig? (will vor Abschluss erreicht?)
-- [ ] A3: timeout zu hoch? (Ø-Duration < 20% timeout?)
-- [ ] A4: max_steps zu hoch? (Ø-Steps < 30% max?)
+## Settings optimization (typee A)
+- [ ] A1: timeout too low? (2+ timeouts in 10 calls?)
+- [ ] A2: max_steps too low? (will vor Abschluss erreicht?)
+- [ ] A3: timeout too high? (Ø-Duration < 20% timeout?)
+- [ ] A4: max_steps too high? (Ø-Steps < 30% max?)
 
 ## Prompt-Quality (typee B)
-- [ ] B1: Prompt zu vage? (User asks 3× "was machst du?")
-- [ ] B2: Prompt zu long? (> 500 Zeichen)
+- [ ] B1: Prompt zu vage? (User asks 3× "what are you doing?")
+- [ ] B2: Prompt too long? (> 500 Zeichen)
 - [ ] B3: Context missing? (Agent asks after Infos)
-- [ ] B4: Prompt ≠ Instructions? (Widerspruch?)
+- [ ] B4: Prompt ≠ Instructions? (Contradiction?)
 
 ## Instructions (typee C)
 - [ ] C1: ⛔-Rule missing? (Agent tut Verbotenes)
-- [ ] C2: Ablauf unklar? (Agent asks after Reihenfolge)
+- [ ] C2: Procedure unclear? (Agent asks for sequence/order)
 - [ ] C3: Boundaries missing? (Agent exceeds Scope)
 - [ ] C4: referenceen veraltet? (not-existente files)
 
 ## Workflow (typee D)
-- [ ] D1: Step-Reihenfolge wrong?
-- [ ] D2: Step vergessen?
+- [ ] D1: Step sequence wrong?
+- [ ] D2: Step forgotten?
 - [ ] D3: Redundant step? (80% skipped)
-- [ ] D4: Unklare Frage?
+- [ ] D4: Unclear question?
 
 ## Detectionspattern (typee E)
 - [ ] E1: Command ohne Match?
 - [ ] E2: pattern matcht wrong?
-- [ ] E3: Tote Detection? (> 50 Sessions no Match)
+- [ ] E3: Dead detection? (> 50 sessions no match)
 
 ## Prompt-Block (typee F)
-- [ ] F1: Command ohne Prompt-entry?
+- [ ] F1: Command without prompt entry?
 - [ ] F2: Wrong sort order? (Most frequent not on top)
 - [ ] F3: Description unklar?
-- [ ] F4: MODUS-GUARD missing?
+- [ ] F4: MODE-GUARD missing?
 
 ## Health (typee G)
-- [ ] G1: Agent degradiert? (Score < 80)
-- [ ] G2: Hohe failure-rate? (> 10%)
-- [ ] G3: Loops erkannt?
+- [ ] G1: Agent degraded? (Score < 80)
+- [ ] G2: High failure rate? (> 10%)
+- [ ] G3: Loops detected?
 - [ ] G4: Agent dead?
 
 ## Anomalien (typee H)
@@ -316,10 +316,10 @@ def create_bp_checklist(project_path, dry_run=False):
 
 ## Prompt-Quality (typee I)
 - [ ] I1: Score < 5/10?
-- [ ] I2: Identity missing? ("Wer am ich")
+- [ ] I2: Identity missing? ("Who am I")
 - [ ] I3: No ⛔-Boundaries?
 - [ ] I4: Zu long? (> 500 Zeichen)
-- [ ] I5: Nicht allinstehend?
+- [ ] I5: Not self-contained?
 
 ## Config (typee J)
 - [ ] J1: Config ❌?
@@ -330,33 +330,33 @@ def create_bp_checklist(project_path, dry_run=False):
 - [ ] K2: Doc missing?
 
 ## Goose (typee L)
-- [ ] L1: Zu many Sessions?
-- [ ] L2: Zu many Skills?
-- [ ] L3: Logs zu large?
+- [ ] L1: Too many sessions?
+- [ ] L2: Too many skills?
+- [ ] L3: Logs too large?
 
 ## Migration (typee M)
 - [ ] M1: Breaking Changes?
 - [ ] M2: Non-Breaking?
 
 ## Recipe (typee N)
-- [ ] N1: Doppelte Recipes?
+- [ ] N1: Duplicate recipes?
 - [ ] N2: Old Version?
 - [ ] N3: Missing Dependencies?
 
-## Struktur (typee O)
+## Structure (Type O)
 - [ ] O1: Instructions ≠ Ist-State?
 - [ ] O2: reference auf not-existente file?
 - [ ] O3: Veralteter Counter?
-- [ ] O4: Hardcodierter Path?
+- [ ] O4: Hardcoded path?
 
 ## Tools (typee P)
 - [ ] P1: Syntax-Error?
-- [ ] P2: Hardcodierte Pathe?
+- [ ] P2: Hardcoded paths?
 - [ ] P3: Import-Error?
 
-## Kalibrierung (typee Q)
+## Calibration (typee Q)
 - [ ] Q1: Oversized? (< 20% Auslastung)
-- [ ] Q2: Knapp bemessen? (> 80% Auslastung)
+- [ ] Q2: Tightly sized? (> 80% Auslastung)
 
 ## Git (typee R)
 - [ ] R1: Code reduziert? (✅ positivee)
@@ -367,25 +367,25 @@ def create_bp_checklist(project_path, dry_run=False):
 
 ## Tests (typee V)
 - [ ] V1: No Tests?
-- [ ] V2: < 50% getestet?
+- [ ] V2: < 50% tested?
 
 ## Prompt-Erosion (typee GG)
 - [ ] GG1: ⛔ missing im prompt?
 - [ ] GG2: Version missing?
 - [ ] GG3: Emoji missing?
 - [ ] GG4: Prompt zu short? (< 100 Zeichen)
-- [ ] GG5: Instructions zu long? (> 2000 Zeichen)
+- [ ] GG5: Instructions too long? (> 2000 Zeichen)
 
 ## Drift (typee FF + JJ)
-- [ ] FF1: timeout abweichend?
-- [ ] FF2: max_steps abweichend?
-- [ ] JJ1: Installation abweichend?
+- [ ] FF1: timeout deviating?
+- [ ] FF2: max_steps deviating?
+- [ ] JJ1: Installation deviating?
 
 ## Backup (typee HH)
 - [ ] HH1: > 50 Backup-directoryse?
 - [ ] HH2: > 100 .bak-files?
-- [ ] HH3: No Backup vor Change?
-- [ ] HH4: Backup > 30 Tage old?
+- [ ] HH3: No backup before change?
+- [ ] HH4: Backup > 30 days old?
 """
     checklist_file = os.path.join(project_path, "BP-CHECKLIST.md")
     if not dry_run:
@@ -553,7 +553,7 @@ def create_dashboard_scaffold(project_path, dry_run=False):
 
 
 def create_mas_mode(project_path, project_name_clean, dry_run=False):
-    """Creates .mas-mode file for Modus-Detection."""
+    """Creates .mas-mode file for Mode detection."""
     mm_file = os.path.join(project_path, ".mas-mode")
     if dry_run:
         info(f"[DRY-RUN] .mas-mode = {project_name_clean}")
@@ -785,7 +785,7 @@ def cmd_init(project_name, dry_run=False, components="minimal"):
 
     if dry_run:
         print(f"\n{BOLD}DRY-RUN: Would initialize:{NC}")
-        print(f"  Projekt: {project_name}")
+        print(f"  Project: {project_name}")
         print(f"  Path:    {project_path}")
     else:
         header(f"Initialisiere Projekt '{project_name}'")
@@ -793,11 +793,11 @@ def cmd_init(project_name, dry_run=False, components="minimal"):
 
     # Check MAS-Installation
     mas_state = get_mas_state()
-    if not mas_state["mas_installiert"]:
+    if not mas_state["mas_installed"]:
         error("MAS-Installation not found!")
         error(f"  {MAS_CONFIG} exists not")
         return False
-    ok(f"MAS-Installation found ({len(mas_state['im_agenten'])} IM-Agenten, {len(mas_state['tools_list'])} Tools)")
+    ok(f"MAS-Installation found ({len(mas_state['im_agents'])} IM-Agenten, {len(mas_state['tools_list'])} Tools)")
 
     # Check ob Projekt exists
     if os.path.exists(project_path) and not dry_run:
@@ -873,7 +873,7 @@ def cmd_init(project_name, dry_run=False, components="minimal"):
     if "monitoring" in comps:
         copy_monitoring_files(project_path, dry_run)
 
-    # Togetherfassung
+    # Summary
     header("FINISHED")
     if not dry_run:
         ok(f"Projekt '{project_name_clean}' initialized ({project_path})")
@@ -882,7 +882,7 @@ def cmd_init(project_name, dry_run=False, components="minimal"):
         info("Analyse: remote via sub_mas-im-pipeline")
         info("Distribution: dev_build.sh --project → standalone ZIP")
         info("Dashboard: .mas/dashboards/ mit data.json for MCP App")
-        info(".mas-mode:  Modus-file mit Projektname")
+        info(".mas-mode:  mode file with project name")
         info("Setup:  goose run --recipe setup-dashboard.yaml (1x after Init)")
         print()
         info("Next Steps:")
@@ -1020,9 +1020,9 @@ def cmd_status():
     mas_state = get_mas_state()
 
     print(f"\nMAS-Installation:")
-    print(f"  Installiert: {'✅' if mas_state['mas_installiert'] else '❌'}")
-    print(f"  IM-Agenten: {len(mas_state['im_agenten'])}")
-    print(f"  SI-Agenten: {len(mas_state['si_agenten'])}")
+    print(f"  Installiert: {'✅' if mas_state['mas_installed'] else '❌'}")
+    print(f"  IM-Agenten: {len(mas_state['im_agents'])}")
+    print(f"  SI-Agenten: {len(mas_state['si_agents'])}")
     print(f"  Tools: {len(mas_state['tools_list'])}")
 
     # Check Symlinks im currentn Directory
@@ -1037,7 +1037,7 @@ def cmd_status():
 
 
 def cmd_repair_symlinks():
-    """Repariert defekte Symlinks."""
+    """Repairs broken symlinks."""
     header("Repair Symlinks")
     mas_state = get_mas_state()
 
@@ -1049,19 +1049,19 @@ def cmd_repair_symlinks():
         if os.path.islink("tools"):
             target = os.readlink("tools")
             if target != MAS_TOOLS:
-                warn(f"tools/ zeigt auf {target}, sollte auf {MAS_TOOLS}")
+                warn(f"tools/ points to {target}, should point to {MAS_TOOLS}")
                 os.unlink("tools")
                 os.symlink(MAS_TOOLS, "tools")
-                ok("Symlink repariert")
+                ok("Symlink repaired")
             else:
-                ok("Symlink already korrekt")
+                ok("Symlink already correct")
         elif os.path.isdir("tools"):
-            error("tools/ is a echter directory — can not reparieren")
-            info("Delete tools/ und run --init again aus")
+            error("tools/ is a actual directory — can not reparieren")
+            info("Delete tools/ und run --init again")
             return False
     else:
         os.symlink(MAS_TOOLS, "tools")
-        ok("Symlink creates (war not present)")
+        ok("Symlink created (was not present)")
 
     return True
 
@@ -1071,11 +1071,11 @@ def main():
     parser.add_argument("--init", metavar="PROJEKT", help="Projekt initialize")
     parser.add_argument("--bootstrap", metavar="PROJEKT", help="Complete MAS-framework bootstrap (generic-init + Portierung)")
     parser.add_argument("--status", action="store_true", help="Status anshow")
-    parser.add_argument("--repair-symlinks", action="store_true", help="Symlinks reparieren")
+    parser.add_argument("--repair-symlinks", action="store_true", help="Repair symlinks")
     parser.add_argument("--dry-run", action="store_true", help="Only show, nothing create")
-    parser.add_argument("--verbose", action="store_true", help="Verbose Output")
+    parser.add_argument("--verbose", action="store_true", help="Verbose output")
     parser.add_argument("--web-research", action="store_true",
-                        help="Web-Recherche-Note vor Bootstrap anshow")
+                        help="Show web-research note before bootstrap")
     parser.add_argument("--components", default="minimal",
                         help="Components: minimal|all|rules,state,knowledge,constitution,recovery,monitoring")
 

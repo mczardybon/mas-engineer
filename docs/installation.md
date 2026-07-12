@@ -72,7 +72,7 @@ flowchart LR
 ```
 
 ```
-Port-Modus (flat):                    Traditional:
+Port-mode (flat):                    Traditional:
 mas-engineer/                         mas-engineer/
 ├── recipe/dev-mas-engineer.yaml      ├── recipe/dev-mas-engineer.yaml
 ├── recipe/sub/sub_mas-*.yaml         ├── recipe/sub/sub_mas-*.yaml

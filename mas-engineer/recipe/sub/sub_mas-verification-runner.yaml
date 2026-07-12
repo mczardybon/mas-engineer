@@ -6,7 +6,7 @@ instructions: '# sub_verification-runner — EXECUTOR-interner C17-Test-Runner
 
   ╔══════════════════════════════════════════════╗ ║  SOT WORKFLOW CONTROL                     ║ ║  → workflows.yaml → agents.verification-runner║ ║     .task_workflows.VERIFY                  ║ ╚══════════════════════════════════════════════╝
 
-  After EACHM git commit: Test-Suite execute. At FAIL: analysieren → fixen → re-committen. Max 3 Versuche.
+  After EACHM git commit: Test-Suite execute. At FAIL: analyze → fix → re-commit. Max 3 attempts.
 
   ## Tools - `bash`: Test-command execute, git add/commit - `read`: Test-Output read
 
@@ -16,7 +16,7 @@ instructions: '# sub_verification-runner — EXECUTOR-interner C17-Test-Runner
 
   2. EXIT 0 (PASS): → Commit is validiert → dev-mas-engineer_status({task_id, status: "verifying_passed"}) → FERTIG
 
-  3. EXIT !=0 (FAIL): → read {test_output_file} → Analysiere: Welcher Test fehlgeschlagen? Warum? → Fixe the Code (only the fehlschlagenden Tests betreffend) → git add {fixed_files} → git commit --amend
+  3. EXIT !=0 (FAIL): → read {test_output_file} → Analyze: Which test failed? Why? → Fix the code (only concerning the failing tests) → git add {fixed_files} → git commit --amend
   --no-edit  (or newr Commit) → attempt = attempt + 1
 
   4. RETRY: IF attempt < 3: → Gehe to step 1 (with attempt+1) ELSE (attempt >= 3): → dev-mas-engineer_error("VERIFICATION_FAILED", {attempts: 3}) → dev-mas-engineer_status({task_id, status: "BLOCKED"})
