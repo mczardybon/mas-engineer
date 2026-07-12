@@ -2,7 +2,7 @@
 """
 dev_intention_parser.py — CLI for den Intention-Parser
 
-Nutzung:
+Usage:
   python3 tools/dev_intention_parser.py "Ich brauche a Agent der..."
   python3 tools/dev_intention_parser.py --analyse "Description"
   python3 tools/dev_intention_parser.py --validate
@@ -26,18 +26,18 @@ def save_workflows(data):
 
 def analyse_intention(text):
     result = {
-        "type": "sub",
+        "typee": "sub",
         "name": None,
         "task": text[:120],
-        "restrictions": {"allowed_paths": [], "forbidden_paths": [], "requires_confirmation": True},
+        "remainderrictions": {"allowed_paths": [], "forbidden_paths": [], "requires_confirmation": True},
         "workflow_steps": []
     }
     t = text.lower()
     if any(w in t for w in ["autonomous", "vollagent", "eigener prompt"]):
-        result["type"] = "voll"
-    elif any(w in t for w in ["funktion", "erweiterung", "in existierend"]):
-        result["type"] = "intern"
-    name_match = re.search(r'(?:agent|tool|funktion)\s+(?:der|die|das)\s+(\w+)', t)
+        result["typee"] = "voll"
+    elif any(w in t for w in ["function", "erweiterung", "in existierend"]):
+        result["typee"] = "intern"
+    name_match = re.search(r'(?:agent|tool|function)\s+(?:der|die|das)\s+(\w+)', t)
     if name_match:
         result["name"] = name_match.group(1) + "-agent"
     if not result["name"]:
@@ -45,7 +45,7 @@ def analyse_intention(text):
         result["name"] = (words[1] if len(words) > 1 else words[0] if words else "agent") + "-agent" if len(words) > 0 else "agent"
     path_patterns = re.findall(r'(?:may|should|only|not|exclusively)\s+([\w/.-]+)', t)
     if path_patterns:
-        result["restrictions"]["allowed_paths"] = [p for p in path_patterns if 'not' not in p and 'may' not in p]
+        result["remainderrictions"]["allowed_paths"] = [p for p in path_patterns if 'not' not in p and 'may' not in p]
     if any(w in t for w in ["cancel", "stopp", "error cancel"]):
         result["workflow_steps"].append({"id": "main", "action": "shell", "cmd": "", "on_error": "abort"})
     else:
@@ -60,14 +60,14 @@ def validate_sot():
             schema = yaml.safe_load(f)
     except Exception as e:
         return [f"Schema-Error: {e}"]
-    required = schema.get("agent_schema", {}).get("required", ["name", "type", "task"])
+    required = schema.get("agent_schema", {}).get("required", ["name", "typee", "task"])
     agents = wf.get("agents", {})
     for name, config in agents.items():
         if name.startswith("_"):
             continue
         for field in required:
             if field not in config:
-                errors.append(f"{name}: fehlendes Pflichtfeld '{field}'")
+                errors.append(f"{name}: missings required field '{field}'")
     return errors
 
 if __name__ == "__main__":

@@ -5,9 +5,9 @@ dev_editor.py — ✏️ Die Hand des dev-mas-engineer
 Version: 1.0.0
 Author: dev-mas-engineer (autonomous)
 
-Changes YAML-files im agent/ Framework.
-Sicher: Backup VOR jeder Change, Validierung NACH jeder Change,
-Automatischer Rollback bei Error.
+Changes YAML-files im agent/ framework.
+Sicher: Backup VOR jeder Change, validation NACH jeder Change,
+Automatischer rollback bei Error.
 
 VERWENDUNG:
     python3 dev_editor.py --patch <file> --von "<old>" --nach "<new>" --grund "<grund>"
@@ -22,7 +22,7 @@ BEISPIELE:
 
     python3 dev_editor.py --validate "<workspace>/recipes/planner.yaml"
 
-KEINE Framework-Dependency. Reine Standardbibliothek + subprocess.
+NOE framework-Dependency. Reine Standardlibrary + subprocess.
 """
 
 import sys, os, subprocess, shutil, json, yaml, re
@@ -79,7 +79,7 @@ def validate_yaml(path: Path) -> tuple[bool, str]:
 
 
 def create_backup(rel_path: str) -> Path | None:
-    """Create a Backup der file mit Zeitstempel."""
+    """Create a Backup der file mit timestamp."""
     source = AGENT_DIR / rel_path
     if not source.exists():
         error(f"file not found: {source}")
@@ -100,7 +100,7 @@ def create_backup(rel_path: str) -> Path | None:
         return None
 
 
-def restore_backup(backup_dir: Path, rel_path: str) -> bool:
+def remainderore_backup(backup_dir: Path, rel_path: str) -> bool:
     """Stelle eine file from dem Backup again her."""
     source = backup_dir / Path(rel_path).name
     target = AGENT_DIR / rel_path
@@ -112,10 +112,10 @@ def restore_backup(backup_dir: Path, rel_path: str) -> bool:
     shutil.copy2(source, target)
     
     if target.exists():
-        ok(f"Rollback performed: {target}")
+        ok(f"rollback performed: {target}")
         return True
     else:
-        error("Rollback failed")
+        error("rollback failed")
         return False
 
 
@@ -206,13 +206,13 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
     yaml_ok2, yaml_msg2 = validate_yaml(full_path)
     if not yaml_ok2:
         result["status"] = "rolled_back"
-        result["error"].append(f"YAML korrumpiert → Rollback: {yaml_msg2}")
-        # Git-Rollback
+        result["error"].append(f"YAML korrumpiert → rollback: {yaml_msg2}")
+        # Git-rollback
         if ws_root and (ws_root / ".git").exists():
             subprocess.run(["git", "-C", str(ws_root), "checkout", "--", rel_path],
                            capture_output=True)
             result["meldungen"].append("Git: rollback via checkout")
-        restore_backup(backup_dir, rel_path)
+        remainderore_backup(backup_dir, rel_path)
         return result
     ok(f"YAML after Change weiterhin valid")
     
@@ -232,8 +232,8 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
     new_count = int(grep2.stdout.strip() or 0)
     if new_count == 0:
         result["status"] = "rolled_back"
-        result["error"].append("newer Value not in file → Rollback")
-        restore_backup(backup_dir, rel_path)
+        result["error"].append("newer Value not in file → rollback")
+        remainderore_backup(backup_dir, rel_path)
         return result
     
     ok(f"'{nach}' successful gesetzt")
@@ -276,7 +276,7 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
 
 
 def load_best_practices(bp_path=None):
-    """Loads best-practices.yaml. Givet leeres Dict bei Error."""
+    """Loads best-practices.yaml. Givet emptys Dict bei Error."""
     if bp_path is None:
         bp_path = Path(__file__).parent.parent / ".state" / "best-practices.yaml"
     bp_path = Path(bp_path)
@@ -290,7 +290,7 @@ def load_best_practices(bp_path=None):
 
 
 def validate_against_best_practices(agent_content, bp):
-    """Validated YAML-String gegen Best Practices. Givet Liste von (status, msg) back."""
+    """Validated YAML-String gegen Best Practices. Givet list von (status, msg) back."""
     if not bp or "best_practices" not in bp:
         return [("ℹ️", "No Best Practices loaded")]
     
@@ -301,25 +301,25 @@ def validate_against_best_practices(agent_content, bp):
         for practice in practices:
             pid = practice["id"]
             rule = practice["rule"]
-            ctype = practice.get("check_type", "")
+            ctypee = practice.get("check_typee", "")
             cval = practice.get("check_value", "")
             auto = practice.get("auto_apply", False)
             severity = practice.get("severity", "🟢 info")
             
             passed = False
             
-            if ctype == "regex":
+            if ctypee == "regex":
                 if isinstance(cval, str):
                     try:
                         passed = bool(re.search(cval, agent_content))
                     except re.error:
                         passed = False
                         
-            elif ctype == "length":
+            elif ctypee == "length":
                 threshold = int(cval) if cval.isdigit() else 500
                 passed = len(agent_content) <= threshold
                 
-            elif ctype == "yaml":
+            elif ctypee == "yaml":
                 try:
                     y = yaml.safe_load(agent_content)
                     keys = cval.split(".")
@@ -334,23 +334,23 @@ def validate_against_best_practices(agent_content, bp):
                 except Exception:
                     passed = False
                     
-            elif ctype == "contains":
+            elif ctypee == "contains":
                 passed = cval in agent_content
                 
-            elif ctype == "contains_all":
+            elif ctypee == "contains_all":
                 if isinstance(cval, list):
                     passed = all(c in agent_content for c in cval)
                 else:
                     passed = False
                     
-            elif ctype == "grep":
+            elif ctypee == "grep":
                 if isinstance(cval, str):
                     try:
                         passed = not bool(re.search(cval, agent_content))
                     except re.error:
                         passed = False
             
-            elif ctype == "range":
+            elif ctypee == "range":
                 # Format: "300-900" -> min=300, max=900
                 try:
                     parts = cval.split("-")
@@ -480,24 +480,24 @@ def do_rollback(backup_path: str, rel_path: str) -> str:
     if not backup_dir.exists():
         return f"❌ Backup-Directory not found: {backup_path}"
     
-    if restore_backup(backup_dir, rel_path):
-        return f"✅ Rollback: {rel_path} againhergestellt"
-    return f"❌ Rollback failed"
+    if remainderore_backup(backup_dir, rel_path):
+        return f"✅ rollback: {rel_path} againhergestellt"
+    return f"❌ rollback failed"
 
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description="dev_editor.py — Framework-Editor")
-    parser.add_argument("--patch", type=str, help="file (relativ zu agent/)")
-    parser.add_argument("--von", type=str, default="", help="older Value")
-    parser.add_argument("--nach", type=str, default="", help="newer Value")
-    parser.add_argument("--grund", type=str, default="", help="Reason der Change")
-    parser.add_argument("--user", type=str, default="Marius")
-    parser.add_argument("--risk", type=str, default="niedrig")
-    parser.add_argument("--validate", type=str, help="YAML validate + Best-Practice-Check")
-    parser.add_argument("--backup", type=str, help="Only Backup")
-    parser.add_argument("--rollback-dir", type=str, help="Backup-Directory")
-    parser.add_argument("--rollback-file", type=str, help="file for Rollback")
+    parser = argparse.argumentParser(description="dev_editor.py — framework-Editor")
+    parser.add_argument("--patch", typee=str, help="file (relativ zu agent/)")
+    parser.add_argument("--von", typee=str, default="", help="older Value")
+    parser.add_argument("--nach", typee=str, default="", help="newer Value")
+    parser.add_argument("--grund", typee=str, default="", help="Reason der Change")
+    parser.add_argument("--user", typee=str, default="Marius")
+    parser.add_argument("--risk", typee=str, default="niedrig")
+    parser.add_argument("--validate", typee=str, help="YAML validate + Best-Practice-Check")
+    parser.add_argument("--backup", typee=str, help="Only Backup")
+    parser.add_argument("--rollback-dir", typee=str, help="Backup-Directory")
+    parser.add_argument("--rollback-file", typee=str, help="file for rollback")
     
     args = parser.parse_known_args()[0]
     
@@ -528,7 +528,7 @@ def main():
             sys.exit(1)
     
     else:
-        print("🔧 dev_editor.py — Framework-Editor")
+        print("🔧 dev_editor.py — framework-Editor")
         print("")
         print("Usage:")
         print("  --patch <file> --von '<old>' --nach '<new>' --grund '<grund>'")

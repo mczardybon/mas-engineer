@@ -2,12 +2,12 @@
 """
 dev_audit_deps.py — Dependency-Analyse for Generic-Projekte
 Scannt all Python-files after Imports und generates Whitelist-Suggestion.
-Aufruf: python3 dev_audit_deps.py --target ~/my-project/ [--apply]
+call: python3 dev_audit_deps.py --target ~/my-project/ [--apply]
 """
 import os, sys, re, json
 
-BLOCKED_IMPORTS = {"subprocess", "shutil", "socket", "requests", "urllib", "multiprocessing", "threading", "ctypes", "signal"}
-ALLOWED_IMPORTS = {"json", "yaml", "datetime", "os.path", "typing", "re", "math", "pathlib", "collections", "functools", "itertools", "enum"}
+BLOCKED_IMPORTS = {"subprocess", "shutil", "socket", "requests", "urllib", "multiprocessing", "threading", "ctypees", "signal"}
+ALLOWED_IMPORTS = {"json", "yaml", "datetime", "os.path", "typeing", "re", "math", "pathlib", "collections", "functools", "itertools", "enum"}
 
 def scan_project(target):
     findings = {"allowed": set(), "blocked": set(), "unknown": set(), "files": {}}
@@ -68,7 +68,7 @@ def main():
             target = sys.argv[i + 1]
     
     if not target:
-        print("❌ --target <verzeichnis> required")
+        print("❌ --target <directory> required")
         sys.exit(1)
     
     target = os.path.abspath(target)

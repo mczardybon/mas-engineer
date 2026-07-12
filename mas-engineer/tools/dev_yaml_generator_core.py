@@ -3,7 +3,7 @@
 dev_yaml_generator_core.py — Gemeinsamer Kern for YAML-Generierung
 Contains generate_agent_yaml() und validate_generated() for beide Varianten.
 
-Nutzung:
+Usage:
   from dev_yaml_generator_core import generate_agent_yaml, validate_generated
 """
 import os
@@ -62,7 +62,7 @@ def generate_agent_yaml(agent_name, agent_data, schema):
 
 
 def validate_generated(name, generated, current_path):
-    """Validated generierten YAML gegen existing file."""
+    """Validated generateden YAML gegen existing file."""
     if not os.path.exists(current_path):
         return False, ["FEHLT"]
     with open(current_path) as f:

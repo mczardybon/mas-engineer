@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""dev_auto_project.py — Erkennt Framework-Struktur automatically.
+"""dev_auto_project.py — Erkennt framework-Struktur automatically.
 Output: JSON {project, main_recipe, mode, has_tests, has_docs, prefix}"""
 import json, os, sys, yaml
 

@@ -3,7 +3,7 @@
 dev_workload_monitor.py — Workload-Analyse for MAS-agents
 Erkennt aboutlastete agents und deployt Relief-Agents via SOT+Generator.
 
-Aufruf:
+call:
   python3 dev_workload_monitor.py --hours 24          # Report all agents
   python3 dev_workload_monitor.py --hours 24 --json    # JSON-Output
   python3 dev_workload_monitor.py --deploy             # Auto-Deploy kritische agents
@@ -28,7 +28,7 @@ def scan_sessions(agent_name=None, hours=24):
             SELECT name, COUNT(*), COALESCE(SUM(total_tokens), 0), 
                    COALESCE(SUM(CAST(total_tokens > 50000 AS INTEGER)), 0)
             FROM sessions 
-            WHERE session_type='sub_agent' AND created_at > ? AND name LIKE ?
+            WHERE session_typee='sub_agent' AND created_at > ? AND name LIKE ?
             GROUP BY name
             ORDER BY 2 DESC
         """, (cutoff_str, f'%{agent_name}%'))
@@ -37,7 +37,7 @@ def scan_sessions(agent_name=None, hours=24):
             SELECT name, COUNT(*), COALESCE(SUM(total_tokens), 0),
                    COALESCE(SUM(CAST(total_tokens > 50000 AS INTEGER)), 0)
             FROM sessions 
-            WHERE session_type='sub_agent' AND created_at > ?
+            WHERE session_typee='sub_agent' AND created_at > ?
             GROUP BY name
             ORDER BY 2 DESC
         """, (cutoff_str,))
@@ -121,8 +121,8 @@ def deploy_relief_agent(agent_name, base=None):
             f"- Delegiert komplexe Faelle back an {agent_name}\n"
             f"- Arbeitet autark\n\n"
             f"Boundaries:\n"
-            f"- KEINE Konfig-Changeen an {agent_name}\n"
-            f"- KEINE Entscheidungen ohne Ruecksprache\n"
+            f"- NOE Konfig-Changeen an {agent_name}\n"
+            f"- NOE Entscheidungen ohne Ruecksprache\n"
             f"- NUR Routine-Tasks"
         ),
         "prompt": (

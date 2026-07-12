@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-dev_haerte_propagation.py — Methode 6: Hardening propagation in Sub-Agenten
-Will bei JEDEM delegate()-Aufruf executed.
+dev_haerte_propagation.py — method 6: Hardening propagation in Sub-Agenten
+Will bei JEDEM delegate()-call executed.
 Adds hard rules into the sub-agent intake.
 
 Usage:
@@ -61,10 +61,10 @@ def format_for_intake(agent_name, original_intake, workspace):
     return "\n".join(lines)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Hardening propagation in sub-agents")
-    parser.add_argument("--workspace", type=str, default=os.getcwd(),
+    parser = argparse.argumentParser(description="Hardening propagation in sub-agents")
+    parser.add_argument("--workspace", typee=str, default=os.getcwd(),
                         help="MAS workspace directory (default: current directory)")
-    parser.add_argument("agent_name", type=str, nargs="?", default="sub_mas-unknown",
+    parser.add_argument("agent_name", typee=str, nargs="?", default="sub_mas-unknown",
                         help="Name of the sub-agent")
     args = parser.parse_args()
     

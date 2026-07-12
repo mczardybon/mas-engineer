@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 dev_heoldh_report.py — Heoldh-Report + Trend for Generic-projecte
-Aufruf: python3 dev_heoldh_report.py --target ~/my-project/
+call: python3 dev_heoldh_report.py --target ~/my-project/
 """
 import os, sys, json, time, yaml
 
@@ -22,7 +22,7 @@ def calculate_score(target):
     else:
         checks.append({"name": "rules_active", "ok": False, "detail": "not found"})
     
-    # 2. Checker funktioniert?
+    # 2. Checker functioniert?
     checker_path = os.path.join(target, 'tools/dev_rule_checker.py')
     if os.path.exists(checker_path):
         import subprocess
@@ -125,7 +125,7 @@ def main():
     else:
         print(f"\n  Recommendation: system ist gesund")
     
-    # Speichere Report
+    # memorye Report
     json.dump(report, open(os.path.join(target, '.state/heoldh-report.json'), 'w'), indent=2)
     print(f"\n  Report saved: .state/heoldh-report.json")
 

@@ -4,7 +4,7 @@ dev_gatekeeper.py — Pre-Execute-Hook (R01 + R18 + R19 + R20 + R10 + R05 + Matr
 Will VOR jeder write/edit/shell/delete-action aufgerufen.
 BLOCKED if eine Rule verletzt ist.
 
-Aufruf: python3 dev_gatekeeper.py --write path --content "..."
+call: python3 dev_gatekeeper.py --write path --content "..."
         python3 dev_gatekeeper.py --edit path --before "X" --after "Y"
         python3 dev_gatekeeper.py --shell "befehl"
         python3 dev_gatekeeper.py --delete path
@@ -98,7 +98,7 @@ def check_r05(at):
         if ts and jetzt - ts < 1800: return (True, "")
     return (False, "No Checkpoint <30 Min")
 
-def check_responsibility_matrix(action_type, filepath=None, cmd=None):
+def check_responsibility_matrix(action_typee, filepath=None, cmd=None):
     """
     Checks ob eine action durch die Responsibility-Matrix abgedeckt ist.
     
@@ -122,25 +122,25 @@ def check_responsibility_matrix(action_type, filepath=None, cmd=None):
         matrix = yaml.safe_load(f)
     
     # 1. Check read_exceptions
-    if action_type == "shell" and cmd:
+    if action_typee == "shell" and cmd:
         cmd_base = cmd.split()[0] if cmd else ""
         for exc in matrix.get("read_exceptions", []):
             if exc.get("action") == "shell" and cmd_base in exc.get("cmds", []):
                 return ("self", None, None)
     
-    if action_type in ["load", "delegate"]:
+    if action_typee in ["load", "delegate"]:
         return ("self", None, None)
     
     # 2. Check file_map (Path-basiert)
     if filepath:
         for pattern, mapping in matrix.get("file_map", {}).items():
             if pattern in filepath or (filepath and filepath.endswith(pattern.replace("*", ""))):
-                agent = mapping.get(action_type)
+                agent = mapping.get(action_typee)
                 if agent:
                     return ("delegate", agent, None)
     
     # 3. Check action_map
-    entry = matrix.get("action_map", {}).get(action_type)
+    entry = matrix.get("action_map", {}).get(action_typee)
     if entry:
         agent = entry.get("agent")
         if agent is None:
@@ -148,7 +148,7 @@ def check_responsibility_matrix(action_type, filepath=None, cmd=None):
         return ("delegate", agent, entry.get("task"))
     
     # 4. Nothing found
-    return ("blocked", None, f"No Sub-Agent for action '{action_type}'")
+    return ("blocked", None, f"No Sub-Agent for action '{action_typee}'")
 
 PRUEF_MATRIX = {
     "write": ["R01","R18","R19","R20","R10","R05"],
@@ -184,7 +184,7 @@ def main():
         sys.exit(0)
 
     if len(sys.argv) < 3:
-        print("❌ Aufruf: dev_gatekeeper.py --write|--edit|--shell|--delete path [--content ...]")
+        print("❌ call: dev_gatekeeper.py --write|--edit|--shell|--delete path [--content ...]")
         sys.exit(1)
 
     at = sys.argv[1].lstrip('-')

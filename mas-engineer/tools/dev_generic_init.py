@@ -24,7 +24,7 @@ from pathlib import Path
 
 VERSION = "1.0.0"
 
-# Konstanten
+# constantn
 MAS_CONFIG = os.path.expanduser("~/.config/goose/recipes")
 MAS_SUBS = os.path.join(MAS_CONFIG, "sub")
 MAS_TOOLS = os.path.join(MAS_CONFIG, "mas-engineer-tools")
@@ -59,18 +59,18 @@ def get_mas_state():
     """Checks ob MAS-Installation available ist."""
     state = {
         "mas_installiert": os.path.exists(MAS_CONFIG),
-        "subs_vorhanden": os.path.exists(MAS_SUBS),
-        "tools_vorhanden": os.path.exists(MAS_TOOLS),
+        "subs_available": os.path.exists(MAS_SUBS),
+        "tools_available": os.path.exists(MAS_TOOLS),
         "im_agenten": [],
         "si_agenten": [],
-        "tools_liste": [],
+        "tools_list": [],
     }
-    if state["subs_vorhanden"]:
+    if state["subs_available"]:
         for f in os.listdir(MAS_SUBS):
             if f.startswith("sub_mas-im-"):
                 state["im_agenten"].append(f)
-    if state["tools_vorhanden"]:
-        state["tools_liste"] = sorted([f for f in os.listdir(MAS_TOOLS) if f.startswith("dev_")])
+    if state["tools_available"]:
+        state["tools_list"] = sorted([f for f in os.listdir(MAS_TOOLS) if f.startswith("dev_")])
     return state
 
 
@@ -109,15 +109,15 @@ def create_project_config(project_path, project_name, dry_run=False):
     config = {
         "name": project_name,
         "version": "1.0.0",
-        "type": "generic-project",
+        "typee": "generic-project",
         "created_with": f"dev_generic_init.py v{VERSION}",
         "mas_dependency": {
-            "type": "symlink",
+            "typee": "symlink",
             "tools_source": MAS_TOOLS,
             "analysis": "remote (im-* Agenten aus MAS-Installation)",
         },
         "structure": {
-            "tools": "symlink (no Kopie)",
+            "tools": "symlink (no copy)",
             "agents": "selbst creates (dev_template_generator.py --create)",
             "rules": ".state/rules/rules.yaml",
             "templates": "recipe/template/agent_template.yaml",
@@ -130,7 +130,7 @@ def create_project_config(project_path, project_name, dry_run=False):
 
 
 def create_rules(project_path, dry_run=False):
-    """Kopiert leeres Rule-System — overwrites NEVER bestehende."""
+    """copyrt emptys Rule-System — overwrites NEVER bestehende."""
     rules_dir = os.path.join(project_path, ".state", "rules")
     rules_file = os.path.join(rules_dir, "rules.yaml")
     template_file = os.path.join(STATE_TEMPLATES, "user_rules_template.yaml")
@@ -191,14 +191,14 @@ Initialisiert mit dev_generic_init.py v{VERSION}
 - Communication via YAML-Structs
 - Domain separation: only im eigenen Projekt-Directory write
 
-## Agent-Typen (Referenz)
-| Typ | Task | Example |
+## Agent-typeeen (reference)
+| typee | Task | Example |
 |-----|---------|----------|
-| Analyse | Data read + Muster detect | sub_{project}-analyst |
+| Analyse | Data read + pattern detect | sub_{project}-analyst |
 | Recovery | Aus Errorn erholen | sub_{project}-checkpoint |
 | Monitoring | Monitor metrics | sub_{project}-health |
 | Generator | Documents/Signale generate | sub_{project}-docgen |
-| Verbetterung | Analysieren + Optimieren | sub_{project}-improver |
+| Verbetterung | Analyzen + Optimieren | sub_{project}-improver |
 
 ## YAML-Struktur
 ```yaml
@@ -208,7 +208,7 @@ settings:
   timeout: 120
   max_steps: 30
 instructions: |
-  # sub_{{project}}-mein-agent — 🎯 Kurzbeschreibung
+  # sub_{{project}}-mein-agent — 🎯 Kurzdescription
   ...
 ```
 
@@ -216,12 +216,12 @@ instructions: |
 1. **Prompts**: < 300 Zeichen
 2. **Instructions**: < 2000 Zeichen
 3. **⛔-Rulen**: before jedem kritischen Step
-4. **Version**: always in erster Zeile
-5. **Namen**: sub_{{project}}-{funktion}
+4. **Version**: always in erster line
+5. **Namen**: sub_{{project}}-{function}
 
 ## Tools (Symlink auf MAS-Installation)
 - `dev_template_generator.py` — Agenten-Generator
-- `dev_rule_checker.py` — Rule-Validierung
+- `dev_rule_checker.py` — Rule-validation
 - `dev_yaml_generator.py` — YAML-Generator
 - `dev_workflow_runner.py` — Workflow-Execution
 - `dev_goose_db.py` — Session-Analyse
@@ -230,17 +230,17 @@ instructions: |
 The im-* agents of the MAS installation can analyze your project:
 ```
 sub_mas-im-pipeline → Verbetterungs-Pipeline
-sub_mas-im-finder  → Optimierungspotential (36 Typen)
+sub_mas-im-finder  → Optimierungspotential (36 typeeen)
 sub_mas-im-rank    → Priorisierung
 sub_mas-im-designer → Patch-Draft
-sub_mas-im-validator → Validierung
+sub_mas-im-validator → validation
 ```
 
 ## Distribution
 ```bash
 dev_build.sh --project {project}   # → standalone ZIP ohne MAS
 ```
-""".format(VERSION=VERSION, project=project_name_clean, funktion="analyst")
+""".format(VERSION=VERSION, project=project_name_clean, function="analyst")
 
     guidelines_file = os.path.join(project_path, "00-GUIDELINES.md")
     if not dry_run:
@@ -250,7 +250,7 @@ dev_build.sh --project {project}   # → standalone ZIP ohne MAS
 
 
 def create_bp_checklist(project_path, dry_run=False):
-    """Creates BP-CHECKLIST.md mit 36 Feature-Typen — overwrites NEVER bestehende."""
+    """Creates BP-CHECKLIST.md mit 36 Feature-typeeen — overwrites NEVER bestehende."""
     bp_target = os.path.join(project_path, 'BP-CHECKLIST.md')
     if os.path.exists(bp_target):
         info(f"BP-CHECKLIST.md exists already — skipped")
@@ -265,124 +265,124 @@ def create_bp_checklist(project_path, dry_run=False):
         return
     
     # Fallback: hardcoded Content
-    content = """# BP-CHECKLIST.md — Best-Practices-Checkliste
+    content = """# BP-CHECKLIST.md — Best-Practices-Checklist
 
-## Settings-Optimierung (Typ A)
+## Settings-Optimierung (typee A)
 - [ ] A1: timeout zu niedrig? (2+ timeouts in 10 calls?)
 - [ ] A2: max_steps zu niedrig? (will vor Abschluss erreicht?)
 - [ ] A3: timeout zu hoch? (Ø-Duration < 20% timeout?)
 - [ ] A4: max_steps zu hoch? (Ø-Steps < 30% max?)
 
-## Prompt-Quality (Typ B)
+## Prompt-Quality (typee B)
 - [ ] B1: Prompt zu vage? (User asks 3× "was machst du?")
 - [ ] B2: Prompt zu long? (> 500 Zeichen)
 - [ ] B3: Context missing? (Agent asks after Infos)
 - [ ] B4: Prompt ≠ Instructions? (Widerspruch?)
 
-## Instructions (Typ C)
+## Instructions (typee C)
 - [ ] C1: ⛔-Rule missing? (Agent tut Verbotenes)
 - [ ] C2: Ablauf unklar? (Agent asks after Reihenfolge)
 - [ ] C3: Boundaries missing? (Agent exceeds Scope)
-- [ ] C4: Referenzen veraltet? (not-existente files)
+- [ ] C4: referenceen veraltet? (not-existente files)
 
-## Workflow (Typ D)
+## Workflow (typee D)
 - [ ] D1: Step-Reihenfolge wrong?
 - [ ] D2: Step vergessen?
 - [ ] D3: Redundant step? (80% skipped)
 - [ ] D4: Unklare Frage?
 
-## Detectionsmuster (Typ E)
+## Detectionspattern (typee E)
 - [ ] E1: Command ohne Match?
-- [ ] E2: Muster matcht wrong?
+- [ ] E2: pattern matcht wrong?
 - [ ] E3: Tote Detection? (> 50 Sessions no Match)
 
-## Prompt-Block (Typ F)
+## Prompt-Block (typee F)
 - [ ] F1: Command ohne Prompt-entry?
 - [ ] F2: Wrong sort order? (Most frequent not on top)
 - [ ] F3: Description unklar?
 - [ ] F4: MODUS-GUARD missing?
 
-## Health (Typ G)
+## Health (typee G)
 - [ ] G1: Agent degradiert? (Score < 80)
 - [ ] G2: Hohe failure-rate? (> 10%)
 - [ ] G3: Loops erkannt?
 - [ ] G4: Agent dead?
 
-## Anomalien (Typ H)
+## Anomalien (typee H)
 - [ ] H1: Duration > 2× Ø?
 - [ ] H2: Tokens > 3× Ø?
 - [ ] H3: Kosten > 5× Ø?
 - [ ] H4: Session stale? (> 60min idle)
 
-## Prompt-Quality (Typ I)
+## Prompt-Quality (typee I)
 - [ ] I1: Score < 5/10?
 - [ ] I2: Identity missing? ("Wer am ich")
 - [ ] I3: No ⛔-Boundaries?
 - [ ] I4: Zu long? (> 500 Zeichen)
 - [ ] I5: Nicht allinstehend?
 
-## Config (Typ J)
+## Config (typee J)
 - [ ] J1: Config ❌?
 - [ ] J2: Config-Value obsolete?
 
-## Docs (Typ K)
+## Docs (typee K)
 - [ ] K1: Doc veraltet?
 - [ ] K2: Doc missing?
 
-## Goose (Typ L)
+## Goose (typee L)
 - [ ] L1: Zu many Sessions?
 - [ ] L2: Zu many Skills?
 - [ ] L3: Logs zu large?
 
-## Migration (Typ M)
+## Migration (typee M)
 - [ ] M1: Breaking Changes?
 - [ ] M2: Non-Breaking?
 
-## Recipe (Typ N)
+## Recipe (typee N)
 - [ ] N1: Doppelte Recipes?
 - [ ] N2: Old Version?
-- [ ] N3: Fehlende Dependencies?
+- [ ] N3: Missing Dependencies?
 
-## Struktur (Typ O)
+## Struktur (typee O)
 - [ ] O1: Instructions ≠ Ist-State?
-- [ ] O2: Referenz auf not-existente file?
+- [ ] O2: reference auf not-existente file?
 - [ ] O3: Veralteter Counter?
 - [ ] O4: Hardcodierter Path?
 
-## Tools (Typ P)
+## Tools (typee P)
 - [ ] P1: Syntax-Error?
 - [ ] P2: Hardcodierte Pathe?
 - [ ] P3: Import-Error?
 
-## Kalibrierung (Typ Q)
+## Kalibrierung (typee Q)
 - [ ] Q1: Oversized? (< 20% Auslastung)
 - [ ] Q2: Knapp bemessen? (> 80% Auslastung)
 
-## Git (Typ R)
-- [ ] R1: Code reduziert? (✅ Positiv)
-- [ ] R2: Code bloated? (⚠️ Negativ)
+## Git (typee R)
+- [ ] R1: Code reduziert? (✅ positivee)
+- [ ] R2: Code bloated? (⚠️ negativee)
 - [ ] R3: ⛔-Rulen vermehrt? (✅ Safety)
 - [ ] R4: Prompt shortened? (✅ Token-Effizienz)
 - [ ] R5: New file? (⚠️ Only if needed)
 
-## Tests (Typ V)
+## Tests (typee V)
 - [ ] V1: No Tests?
 - [ ] V2: < 50% getestet?
 
-## Prompt-Erosion (Typ GG)
+## Prompt-Erosion (typee GG)
 - [ ] GG1: ⛔ missing im prompt?
 - [ ] GG2: Version missing?
 - [ ] GG3: Emoji missing?
 - [ ] GG4: Prompt zu short? (< 100 Zeichen)
 - [ ] GG5: Instructions zu long? (> 2000 Zeichen)
 
-## Drift (Typ FF + JJ)
+## Drift (typee FF + JJ)
 - [ ] FF1: timeout abweichend?
 - [ ] FF2: max_steps abweichend?
 - [ ] JJ1: Installation abweichend?
 
-## Backup (Typ HH)
-- [ ] HH1: > 50 Backup-Verzeichnisse?
+## Backup (typee HH)
+- [ ] HH1: > 50 Backup-directoryse?
 - [ ] HH2: > 100 .bak-files?
 - [ ] HH3: No Backup vor Change?
 - [ ] HH4: Backup > 30 Tage old?
@@ -446,7 +446,7 @@ def create_workflows(project_path, project_name_clean, dry_run=False):
         "project": project_name_clean,
         "workflows": {
             "build-test": {
-                "description": "Bauen und Testen",
+                "description": "Bauen und Test",
                 "steps": [],
             },
             "analyse": {
@@ -462,16 +462,16 @@ def create_workflows(project_path, project_name_clean, dry_run=False):
     if not dry_run:
         with open(workflows_file, "w") as f:
             yaml.dump(skeleton, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
-    ok(f"workflows.yaml (3 leere Workflows)")
+    ok(f"workflows.yaml (3 empty Workflows)")
 
 
 def create_git_infrastructure(project_path, dry_run=False):
-    """Creates .gitignore + .gitattributes — overwrites NEVER bestehende."""
+    """Creates .gitignore + .gitattributeses — overwrites NEVER bestehende."""
     gitignore_file = os.path.join(project_path, ".gitignore")
-    gitattributes_file = os.path.join(project_path, ".gitattributes")
+    gitattributeses_file = os.path.join(project_path, ".gitattributeses")
 
-    if os.path.exists(gitignore_file) and os.path.exists(gitattributes_file):
-        info(f".gitignore + .gitattributes exist already — skipped")
+    if os.path.exists(gitignore_file) and os.path.exists(gitattributeses_file):
+        info(f".gitignore + .gitattributeses exist already — skipped")
         return
 
     if not os.path.exists(gitignore_file):
@@ -491,15 +491,15 @@ dist/
                 f.write(gitignore_content)
         ok(f".gitignore")
 
-    if not os.path.exists(gitattributes_file):
-        gitattributes_content = """*.yaml linguist-language=YAML
+    if not os.path.exists(gitattributeses_file):
+        gitattributeses_content = """*.yaml linguist-language=YAML
 *.md linguist-detectable=true
 *.py linguist-detectable=true
 """
         if not dry_run:
-            with open(gitattributes_file, "w") as f:
-                f.write(gitattributes_content)
-        ok(f".gitattributes")
+            with open(gitattributeses_file, "w") as f:
+                f.write(gitattributeses_content)
+        ok(f".gitattributeses")
 
 
 def create_dashboard_scaffold(project_path, dry_run=False):
@@ -519,7 +519,7 @@ def create_dashboard_scaffold(project_path, dry_run=False):
         "agents": {"total": 0, "healthy": 0, "degraded": 0, "dead": 0,
                    "avg_score": 0, "scores": [], "guardian_scan": None,
                    "issues": {"total": 0, "long_instructions": 0}},
-        "changes": {"total": 0, "last_10": [], "by_type": {}},
+        "changes": {"total": 0, "last_10": [], "by_typee": {}},
         "improvement": {"total_runs": 0, "last_run": None,
                         "schedule_status": "n/a", "next_round_after": "?"},
         "dispatch": {"total": 0, "done": 0, "failed": 0,
@@ -576,7 +576,7 @@ def resolve_components(comp_str):
 
 
 def copy_rules_full(project_path, dry_run=False):
-    """Kopiert all MAS-Rule-files (R01-R23 + Haerte-Leveln + Responsibility-Matrix)."""
+    """copyrt all MAS-Rule-files (R01-R23 + Haerte-Leveln + Responsibility-Matrix)."""
     if dry_run:
         info("[DRY-RUN] .state/rules/: 6 files (rulen, hard_rules, rulen_2/4/5_extrem, responsibility_matrix)")
         return
@@ -591,11 +591,11 @@ def copy_rules_full(project_path, dry_run=False):
         if os.path.exists(src):
             shutil.copy2(src, os.path.join(dest_rules, rf))
             copied += 1
-    ok(f"Rulen: {copied}/{len(rule_files)} files kopiert")
+    ok(f"Rulen: {copied}/{len(rule_files)} files copyrt")
 
 
 def create_state_files(project_path, dry_run=False):
-    """Creates leere/initiale State-files for das Projekt."""
+    """Creates empty/initiale State-files for das Projekt."""
     if dry_run:
         info("[DRY-RUN] .state/: changes.json, guardian.yaml, schedule.yaml, audit.log, health, checkpoints/")
         return
@@ -604,11 +604,11 @@ def create_state_files(project_path, dry_run=False):
     state_dir = os.path.join(project_path, ".state")
     os.makedirs(state_dir, exist_ok=True)
 
-    # changes.json: leeres Array
+    # changes.json: emptys Array
     with open(os.path.join(state_dir, "changes.json"), 'w') as f:
         json.dump([], f, indent=2)
 
-    # guardian.yaml: leere Guardian-Struktur mit drift_log
+    # guardian.yaml: empty Guardian-Struktur mit drift_log
     guardian = {
         "guardian": {
             "last_scan": None, "healthy": 0, "degraded": 0, "broken": 0,
@@ -617,14 +617,14 @@ def create_state_files(project_path, dry_run=False):
             "findings_summary": {"total_issues": 0, "long_instructions": 0},
             "agents": {},
             "drift_log": [],
-            "drift_summary": {"total_drifts": 0, "by_type": {}, "by_agent": {}, "trend": "stable"}
+            "drift_summary": {"total_drifts": 0, "by_typee": {}, "by_agent": {}, "trend": "stable"}
         }
     }
     with open(os.path.join(state_dir, "guardian.yaml"), 'w') as f:
         import yaml as _y
         _y.dump(guardian, f, default_flow_style=False, allow_unicode=True)
 
-    # schedule.yaml: leere Verbetterungs-Historie
+    # schedule.yaml: empty Verbetterungs-Historie
     schedule = {
         "version": "1.0.0", "last_updated": datetime.now().isoformat(),
         "history": [], "metrics": {}, "recommendation": {"status": "ready"}
@@ -657,7 +657,7 @@ def create_state_files(project_path, dry_run=False):
 
 
 def copy_knowledge_base(project_path, dry_run=False):
-    """Kopiert all 9 Knowledge-files ins Projekt."""
+    """copyrt all 9 Knowledge-files ins Projekt."""
     src_knowledge = os.path.join(os.path.dirname(MAS_CONFIG), "mas-engineer", ".state", "knowledge")
     dst_knowledge = os.path.join(project_path, ".state", "knowledge")
     if dry_run:
@@ -676,7 +676,7 @@ def copy_knowledge_base(project_path, dry_run=False):
 
 
 def copy_constitution(project_path, dry_run=False):
-    """Kopiert die MAS-Constitution als Vorlage ins Projekt."""
+    """copyrt die MAS-Constitution als template ins Projekt."""
     src = os.path.join(os.path.dirname(MAS_CONFIG), "mas-engineer", "recipe", "sub", "sub_mas-master-constitution.yaml")
     dst = os.path.join(project_path, ".state", "constitution.yaml")
     if dry_run:
@@ -686,11 +686,11 @@ def copy_constitution(project_path, dry_run=False):
         shutil.copy2(src, dst)
         ok("Constitution: .state/constitution.yaml (11 Artikel)")
     else:
-        info("Constitution-Vorlage not found — skipped")
+        info("Constitution-template not found — skipped")
 
 
 def copy_recovery_templates(project_path, dry_run=False):
-    """Kopiert 5 Recovery-Agent-Vorlagen ins Projekt."""
+    """copyrt 5 Recovery-Agent-templaten ins Projekt."""
     src_dir = os.path.join(os.path.dirname(MAS_CONFIG), "mas-engineer", "recipe", "template", "recovery")
     dst_dir = os.path.join(project_path, "recipe", "template", "recovery")
     if dry_run:
@@ -705,7 +705,7 @@ def copy_recovery_templates(project_path, dry_run=False):
         if f.endswith(".yaml"):
             shutil.copy2(os.path.join(src_dir, f), os.path.join(dst_dir, f))
             count += 1
-    ok(f"Recovery: {count} Vorlagen after recipe/template/recovery/")
+    ok(f"Recovery: {count} templaten after recipe/template/recovery/")
 
 
 def copy_monitoring_files(project_path, dry_run=False):
@@ -744,7 +744,7 @@ MAS_TOOLS=symlink
 GOOSE_SESSION_TAG=[{project_name_clean}]
 
 # Session-Tagging:
-# Starte jede Session mit [{project_name_clean}] ...
+# Start jede Session mit [{project_name_clean}] ...
 # Der Generic-Improver filtert NUR these Sessions.
 # Ohne Tag: Fallback auf working_dir oder letzte not-MAS Sessions.
 """
@@ -756,7 +756,7 @@ GOOSE_SESSION_TAG=[{project_name_clean}]
 
 
 def create_agent_template(project_path, dry_run=False):
-    """Kopiert agent_template.yaml ins Projekt — overwrites NEVER bestehende."""
+    """copyrt agent_template.yaml ins Projekt — overwrites NEVER bestehende."""
     template_dst = os.path.join(project_path, "recipe", "template", "agent_template.yaml")
     if os.path.exists(template_dst):
         info(f"recipe/template/agent_template.yaml exists already — skipped")
@@ -797,7 +797,7 @@ def cmd_init(project_name, dry_run=False, components="minimal"):
         error("MAS-Installation not found!")
         error(f"  {MAS_CONFIG} exists not")
         return False
-    ok(f"MAS-Installation found ({len(mas_state['im_agenten'])} IM-Agenten, {len(mas_state['tools_liste'])} Tools)")
+    ok(f"MAS-Installation found ({len(mas_state['im_agenten'])} IM-Agenten, {len(mas_state['tools_list'])} Tools)")
 
     # Check ob Projekt exists
     if os.path.exists(project_path) and not dry_run:
@@ -824,7 +824,7 @@ def cmd_init(project_name, dry_run=False, components="minimal"):
     header("3. Wissen")
     create_guidelines(project_path, project_name_clean, dry_run)
 
-    # 4. BP-Checkliste
+    # 4. BP-Checklist
     create_bp_checklist(project_path, dry_run)
 
     # 5. Rulen
@@ -877,7 +877,7 @@ def cmd_init(project_name, dry_run=False, components="minimal"):
     header("FINISHED")
     if not dry_run:
         ok(f"Projekt '{project_name_clean}' initialized ({project_path})")
-        ok(f"0 Agenten kopiert — Symlink + Guidelines statt Kopie")
+        ok(f"0 Agenten copyrt — Symlink + Guidelines statt copy")
         info("tools/ → Symlink auf MAS-Installation")
         info("Analyse: remote via sub_mas-im-pipeline")
         info("Distribution: dev_build.sh --project → standalone ZIP")
@@ -886,7 +886,7 @@ def cmd_init(project_name, dry_run=False, components="minimal"):
         info("Setup:  goose run --recipe setup-dashboard.yaml (1x after Init)")
         print()
         info("Next Steps:")
-        info("  1. Erstelle Agenten mit dev_template_generator.py --create")
+        info("  1. Create Agenten mit dev_template_generator.py --create")
         info("  2. Optimiere mit sub_mas-im-pipeline (task=FULL_IMPROVEMENT)")
         info("  3. Distribuiere mit dev_build.sh --project")
         info("  4. Dashboard: goose session --with-extension 'node .mas/mcp/server.js'")
@@ -895,15 +895,15 @@ def cmd_init(project_name, dry_run=False, components="minimal"):
 
 
 def cmd_bootstrap(project_name, dry_run=False, web_research=False):
-    """Creates a complete MAS-Framework (Bootstrap).
+    """Creates a complete MAS-framework (Bootstrap).
     Ruft generic-init --init mit --components all auf und portiert
     then die MAS-files ins Projekt."""
     if dry_run:
         info(f"[DRY-RUN] Bootstrap: {project_name}")
         info("[DRY-RUN] Step 1: generic-init --init --components all")
-        info("[DRY-RUN] Step 2: recipe/sub/ (47 Agenten kopieren)")
+        info("[DRY-RUN] Step 2: recipe/sub/ (47 Agenten copyren)")
         info("[DRY-RUN] Step 3: recipe/dev-mas-engineer.yaml")
-        info("[DRY-RUN] Step 4: tools/ (50 Tools kopieren)")
+        info("[DRY-RUN] Step 4: tools/ (50 Tools copyren)")
         info("[DRY-RUN] Step 5: .mas/mcp/ (Dashboard MCP Server)")
         info("[DRY-RUN] Step 6: docs/ + .state/ Configuration")
         return True
@@ -913,7 +913,7 @@ def cmd_bootstrap(project_name, dry_run=False, web_research=False):
         header("Step 0: Web-Recherche (Note)")
         info("Web-Recherche via sub_mas-web-researcher is only im Goose-Chat possible.")
         info("Starte VOR dem Bootstrap eine Goose-Session und frage:")
-        info('  "Recherchiere after aktuellen MAS-Techniken und show sie mit Evaluation"')
+        info('  "Recherchiere after currentn MAS-Techniken und show sie mit Evaluation"')
         info(f"Then: python3 dev_generic_init.py --bootstrap {project_name}")
         print()
 
@@ -1005,12 +1005,12 @@ def cmd_bootstrap(project_name, dry_run=False, web_research=False):
     ok(f".mas-mode = {project_name_clean}")
 
     header("✅ BOOTSTRAP ABGESCHLOSSEN")
-    ok(f"Projekt '{project_name_clean}' is a complete MAS-Framework")
+    ok(f"Projekt '{project_name_clean}' is a complete MAS-framework")
     info("47 Sub-Agenten, 50+ Tools, Dashboard, Monitoring, Recovery")
     info("Wechsel in das Directory und start Goose:")
     info(f"  cd {project_path}")
     info(f"  goose run --recipe recipe/dev-mas-engineer.yaml")
-    info(f"  oder: 'Zeig mir the Framework Dashboard'")
+    info(f"  oder: 'Zeig mir the framework Dashboard'")
     return True
 
 
@@ -1023,15 +1023,15 @@ def cmd_status():
     print(f"  Installiert: {'✅' if mas_state['mas_installiert'] else '❌'}")
     print(f"  IM-Agenten: {len(mas_state['im_agenten'])}")
     print(f"  SI-Agenten: {len(mas_state['si_agenten'])}")
-    print(f"  Tools: {len(mas_state['tools_liste'])}")
+    print(f"  Tools: {len(mas_state['tools_list'])}")
 
-    # Check Symlinks im aktuellen Directory
+    # Check Symlinks im currentn Directory
     if os.path.exists("tools") and os.path.islink("tools"):
         target = os.readlink("tools")
         print(f"\nSymlink tools/ → {target}")
         print(f"  Valid: {'✅' if os.path.exists(target) else '❌'}")
     else:
-        print(f"\nNo Symlink im aktuellen Directory")
+        print(f"\nNo Symlink im currentn Directory")
 
     return True
 
@@ -1041,7 +1041,7 @@ def cmd_repair_symlinks():
     header("Repair Symlinks")
     mas_state = get_mas_state()
 
-    if not mas_state["tools_vorhanden"]:
+    if not mas_state["tools_available"]:
         error("MAS-Installation not found — can Symlink not reparieren")
         return False
 
@@ -1067,9 +1067,9 @@ def cmd_repair_symlinks():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generic-Init Tool v" + VERSION)
-    parser.add_argument("--init", metavar="PROJEKT", help="Projekt initialisieren")
-    parser.add_argument("--bootstrap", metavar="PROJEKT", help="Complete MAS-Framework bootstrap (generic-init + Portierung)")
+    parser = argparse.argumentParser(description="Generic-Init Tool v" + VERSION)
+    parser.add_argument("--init", metavar="PROJEKT", help="Projekt initialize")
+    parser.add_argument("--bootstrap", metavar="PROJEKT", help="Complete MAS-framework bootstrap (generic-init + Portierung)")
     parser.add_argument("--status", action="store_true", help="Status anshow")
     parser.add_argument("--repair-symlinks", action="store_true", help="Symlinks reparieren")
     parser.add_argument("--dry-run", action="store_true", help="Only show, nothing create")

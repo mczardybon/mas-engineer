@@ -3,7 +3,7 @@
 dev_update_schedule.py — Self-Improve Timing update
 ===========================================================
 Version: 1.0.0
-Aufruf: python3 dev_update_schedule.py <workspace> <findings_count> <duration_sec>
+call: python3 dev_update_schedule.py <workspace> <findings_count> <duration_sec>
 
 Updated .state/schedule.yaml after a Self-Improve-Runde.
 """

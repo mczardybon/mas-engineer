@@ -12,12 +12,12 @@ cd ~/agent_test/work && bash mas-engineer/tools/dev_build.sh
    - framework/$PROJECT/ (recipes + docs + config + tests + python)
    - mas-engineer/ (recipe + tools + docs + plans + .state)
 3. Ausschluesse: *.git* .backups __pycache__ *.pyc *.pyo improve-log*
-4. Validierung: 5 Cores, 47 Specialists, 44 FW-Subs, 36 MAS-Subs, >=40 Tools, no pycache
+4. validation: 5 Cores, 47 Specialists, 44 FW-Subs, 36 MAS-Subs, >=40 Tools, no pycache
 
 ### Modi:
 | Command | Description |
 |:-------|:-------------|
-| dev_build.sh | Framework-Modus (only aktives Projekt) |
+| dev_build.sh | framework mode (only aktives Projekt) |
 | dev_build.sh --full | FULL-Modus (MAS + ALL Projekte aus .projects.yaml) |
 | dev_build.sh --dry-run | Only check, nothing bauen |
 | dev_build.sh --version x.y.z | Version setn |
@@ -51,14 +51,14 @@ cd dist && unzip mas-framework-*.zip && ./installr.sh
 | Command | Description |
 |:-------|:-------------|
 | ./update.sh --mas | Only MAS aus Workspace sync |
-| ./update.sh --framework | Only Framework aus Workspace sync |
+| ./update.sh --framework | Only framework aus Workspace sync |
 | ./update.sh --mas --dry-run | MAS-Dry run |
 | ./update.sh --help | Hilfe |
 
 ## Auto-Build (dev_autobuild.sh)
 | Command | Description |
 |:-------|:-------------|
-| dev_autobuild.sh | Auto-Build (checks ob Commit seit letztem ZIP) |
+| dev_autobuild.sh | Auto-Build (checks ob commit seit letztem ZIP) |
 | dev_autobuild.sh --force | Always bauen |
 | dev_autobuild.sh --status | Only check |
 | dev_autobuild.sh --install | Bauen + update.sh --mas |

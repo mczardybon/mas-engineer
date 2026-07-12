@@ -11,7 +11,7 @@ def scan_prompts(path):
             except: continue
         p = d.get('prompt', '') or ''
         if not p:
-            findings.append({'typ':'A1','agent':os.path.basename(f),'severity':'hoch','detail':f'KEIN prompt in {os.path.basename(f)}'})
+            findings.append({'type':'A1','agent':os.path.basename(f),'severity':'hoch','detail':f'NO prompt in {os.path.basename(f)}'})
             scores.append(0); continue
         s = 10
         if '\U000000a9' not in p: s -= 2
@@ -32,25 +32,25 @@ def scan_settings(path):
         if not s: continue
         total += 1
         t = s.get('timeout',0); m = s.get('max_steps',0)
-        if t < 300: findings.append({'typ':'B1', 'severity':'mittel','detail':f'timeout={t} < 300'})
-        elif t > 900: findings.append({'typ':'B2','severity':'niedrig','detail':f'timeout={t} > 900'})
+        if t < 300: findings.append({'type':'B1', 'severity':'mittel','detail':f'timeout={t} < 300'})
+        elif t > 900: findings.append({'type':'B2','severity':'niedrig','detail':f'timeout={t} > 900'})
         else: ok += 1
-        if m < 30: findings.append({'typ':'B3','severity':'niedrig','detail':f'max_steps={m} < 30'})
-        elif m > 300: findings.append({'typ':'B4','severity':'niedrig','detail':f'max_steps={m} > 300'})
+        if m < 30: findings.append({'type':'B3','severity':'niedrig','detail':f'max_steps={m} < 30'})
+        elif m > 300: findings.append({'type':'B4','severity':'niedrig','detail':f'max_steps={m} > 300'})
         elif m >= 50: ok += 1
     return findings, round(ok/total*10,1) if total else 10, total
 
 def scan_structure(path):
     findings = []; score = 10
     files = list(glob.glob(os.path.join(path, '**', '*.yaml'), recursive=True))
-    if not files: return [{'typ':'C1','severity':'hoch','detail':'KEINE YAMLs'}], 0, 0
+    if not files: return [{'type':'C1','severity':'hoch','detail':'NOE YAMLs'}], 0, 0
     for f in files:
         with open(f) as fh:
             try: d = yaml.safe_load(fh)
-            except: score -= 2; findings.append({'typ':'C2','agent':os.path.basename(f),'severity':'hoch','detail':'YAML-Error'}); continue
+            except: score -= 2; findings.append({'type':'C2','agent':os.path.basename(f),'severity':'hoch','detail':'YAML-Error'}); continue
         if not isinstance(d,dict): continue
-        if 'version' not in d: score -= 1; findings.append({'typ':'C3','agent':os.path.basename(f),'severity':'mittel','detail':'KEIN version'})
-        if 'instructions' not in d: score -= 3; findings.append({'typ':'C4','agent':os.path.basename(f),'severity':'hoch','detail':'KEINE instructions'})
+        if 'version' not in d: score -= 1; findings.append({'type':'C3','agent':os.path.basename(f),'severity':'mittel','detail':'NO version'})
+        if 'instructions' not in d: score -= 3; findings.append({'type':'C4','agent':os.path.basename(f),'severity':'hoch','detail':'NOE instructions'})
     return findings, max(0,score), len(files)
 
 if __name__ == '__main__':

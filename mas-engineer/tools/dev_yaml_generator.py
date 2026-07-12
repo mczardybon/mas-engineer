@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 dev_yaml_generator.py — Generates sub_mas-*.yaml aus agent_schema.yaml (SOT)
-Aufruf:
+call:
   python3 dev_yaml_generator.py [--mode mas|generic] [--target PFAD] [--validate-only] [--diff] [--write]
   
-  --mode mas (default):  Nutzt .state/templates/agent_schema.yaml, schreibt after recipe/sub/
-  --mode generic:        Nutzt --target/.state/templates/agent_schema.yaml, schreibt after --target/sub/
+  --mode mas (default):  Nutzt .state/templates/agent_schema.yaml, writes after recipe/sub/
+  --mode generic:        Nutzt --target/.state/templates/agent_schema.yaml, writes after --target/sub/
   --validate-only:       Only validate ohne zu write
   --diff:                Show Unterschiede zwischen generates und current
-  --write:               Write generierte YAMLs (Default: only validate)
+  --write:               Write generatede YAMLs (Default: only validate)
 """
 import os, sys
 from dev_yaml_generator_core import generate_agent_yaml, validate_generated

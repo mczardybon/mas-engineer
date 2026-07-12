@@ -9,7 +9,7 @@ Architektur-Changes (must User absegnen):
   3. Constitution change (Artikel 1-11)
   4. workflows.yaml Struktur change (new task_workflows-Sektion)
   5. master-constitution.yaml change
-  6. dev-mas-engineer.yaml sub_recipes-Liste change
+  6. dev-mas-engineer.yaml sub_recipes-list change
 """
 
 import sys, os, re, json, yaml
@@ -23,7 +23,7 @@ ARCHITEKTUR_DATEIEN = [
     "recipe/template/agent_template.yaml",
 ]
 
-# Allowed Changes (KEINE Architektur)
+# Allowed Changes (NOE Architektur)
 ERLAUBTE_PATTERNS = [
     r"recipe/sub/sub_mas-\w+\.yaml$",  # Sub-Agent-Edit (not CREATE)
     r"tools/dev_\w+\.py$",              # Tool-Edit (not CREATE)
@@ -35,9 +35,9 @@ ERLAUBTE_PATTERNS = [
     r"\.state/checkpoints/.*",         # Checkpoints
 ]
 
-def ist_architektur_change(aktion, file=""):
-    """Checks ob eine Aktion eine Architektur-Change ist."""
-    akt = aktion.lower()
+def ist_architektur_change(action, file=""):
+    """Checks ob eine action eine Architektur-Change ist."""
+    akt = action.lower()
     d = file.lower() if file else akt
     
     # 1. NEUE file create (CREATE)
@@ -48,7 +48,7 @@ def ist_architektur_change(aktion, file=""):
         # Check ob es only eine normale file ist
         if ".md" in d or "changes.json" in d or ".bak" in d:
             return False, ""
-        return True, "New file unbekannten Typs — Architektur check"
+        return True, "New file unbekannten typees — Architektur check"
     
     # 2. SOT-Rulen change
     if "workflows.yaml" in d:
@@ -66,40 +66,40 @@ def ist_architektur_change(aktion, file=""):
             if any(x in akt for x in ["edit", "write", "delete", "add"]):
                 return True, f"{ad} change — protected Architektur-file"
     
-    # 5. Allowed Changes (KEINE Architektur)
+    # 5. Allowed Changes (NOE Architektur)
     for pat in ERLAUBTE_PATTERNS:
         if re.search(pat, d):
             return False, ""
     
-    # 6. sub_recipes-Liste in dev-mas-engineer.yaml
+    # 6. sub_recipes-list in dev-mas-engineer.yaml
     if "dev-mas-engineer.yaml" in d and any(x in akt for x in ["sub_recipes", "add sub", "remove sub"]):
-        return True, "sub_recipes-Liste change — Agenten-Architektur"
+        return True, "sub_recipes-list change — Agenten-Architektur"
     
     return False, ""
 
-def check_architecture(aktion, file=""):
+def check_architecture(action, file=""):
     """Main check: Returns result as dict."""
-    ist_arch, grund = ist_architektur_change(aktion, file)
+    ist_arch, grund = ist_architektur_change(action, file)
     
     if ist_arch:
         return {
             "architektur_change": True,
             "grund": grund,
-            "aktion": "ABSEGNEN",
+            "action": "ABSEGNEN",
             "detail": f"Architektur-Change erkannt: {grund}. User must zustimmen."
         }
     else:
         return {
             "architektur_change": False,
             "grund": "",
-            "aktion": "OK",
+            "action": "OK",
             "detail": "No Architektur-Change"
         }
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="Architektur-Check (R15)")
-    parser.add_argument("--action", default="", help="Geplante Aktion")
+    parser = argparse.argumentParser(description="Architektur-Check (R15)")
+    parser.add_argument("--action", default="", help="Geplante action")
     parser.add_argument("--file", default="", help="Betroffene file")
     args = parser.parse_args()
     

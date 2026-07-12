@@ -4,10 +4,10 @@
 ```
 ┌──────────────────────────────────────────────────┐
 │  DEV-MAS-ENGINEER (dev-mas-engineer.yaml)        │
-│  - Entwickelt/aboutwacht/testet/patcht Framework │
+│  - Entwickelt/aboutwacht/testet/patcht framework │
 │  - 36 Sub-Agents (sub_mas-*.yaml)              │
 │  - 43 Tools (mas-engineer-tools/)                │
-│  - Runs ALWAYS (auch without Framework)            │
+│  - Runs ALWAYS (auch without framework)            │
 └──────────┬───────────────────────────────────────┘
            │ delegate()
            ▼
@@ -21,17 +21,17 @@
 ```
 
 ## rolesverteilung
-- **MAS = Developer des Frameworks** (analysiert, patcht, testet, deployt)
-- **Framework = Produktivsystem** (weiss nothing from MAS)
+- **MAS = Developer des frameworks** (analyzed, patcht, testet, deployt)
+- **framework = productivsystem** (weiss nothing from MAS)
 - **User = Entscheider** (MAS schlaegt before, User decides)
 
 ## Domain separation (R09)
-- MAS schreibt ONLY in mas-engineer/
-- Framework schreibt ONLY in framework/
+- MAS writes ONLY in mas-engineer/
+- framework writes ONLY in framework/
 - Read in andere domain ist OK
 - Durchgesetzt via: registry.yaml + dev_rule_checker.py R09
 
-## Verzeichnisstruktur (Workspace)
+## directorystruktur (Workspace)
 ```
 work/
 ├── mas-engineer/         ← MAS (autonomouser Developer)
@@ -40,7 +40,7 @@ work/
 │   ├── docs/             → Manifest, Governance, Procedures
 │   ├── plans/            → Dashboard-blueprints
 │   └── .state/           → Rules, Domains, Agents, Wissen
-├── framework/            ← FRAMEWORK (Produktivsystem)
+├── framework/            ← FRAMEWORK (productivsystem)
 │   └── dev-team/
 │       ├── recipes/      → 47 Specialists + 44 Subs + 4 Cores
 │       ├── docs/         → Governance, Protocols, Boundaries
@@ -81,5 +81,5 @@ prompt_3 (300 tokens)  → ⛔ can verschwinden
 |:-------:|:------------|:-----|
 | 5 | Reaktivierungs-Anker (all 5 steps) | dev_rule_refresh.sh |
 | 6 | Hardening Propagation (at delegate) | dev_haerte_propagation.py |
-| 9 | Rule-Test (before jeder Aktion) | dev_rule_checker.py |
+| 9 | Rule-Test (before jeder action) | dev_rule_checker.py |
 | 10 | Multi-Prompt (3 Leveln) | prompt_1+prompt_2+prompt_3 |

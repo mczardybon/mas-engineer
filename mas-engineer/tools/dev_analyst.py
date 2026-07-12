@@ -5,14 +5,14 @@ dev_analyst.py — 🔍 The quality checker des dev-mas-engineer
 Version: 1.0.0
 Author: dev-mas-engineer (autonomous)
 
-Checks die Quality des Frameworks:
+Checks die Quality des frameworks:
   - YAML-Syntax allr files
   - File sizes und Anomalies
   - settings-Completeness
   - slash_command-Konflikte
-  - UTF-8 Kodierung
+  - UTF-8 encoding
 
-KEINE Framework-Dependency. Reine Standardbibliothek.
+NOE framework-Dependency. Reine Standardlibrary.
 
 VERWENDUNG:
     python3 dev_analyst.py --check-all         # All Checks perform
@@ -31,8 +31,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import importlib.util
 spec = importlib.util.spec_from_file_location("dev_observer", OBSERVER_DIR)
-observer = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(observer)
+observer = importlib.util.modulese_from_spec(spec)
+spec.loader.exec_modulese(observer)
 
 
 # ─────────────────────────────────────────────────────────
@@ -188,7 +188,7 @@ def check_slashes(scanner: "observer.Scanner") -> str:
 
 
 def check_utf8(scanner: "observer.Scanner") -> str:
-    """Checks UTF-8 Kodierung allr files."""
+    """Checks UTF-8 encoding allr files."""
     scanner._collect()
     
     ok = 0
@@ -278,14 +278,14 @@ def check_all(scanner: "observer.Scanner") -> str:
     if has_errors:
         parts.append("  ⚠️  Es givet Anomalies (siehe oben).")
     else:
-        parts.append("  ✅ Framework-Quality: No offensichtlichen Probleme.")
+        parts.append("  ✅ framework-Quality: No offensichtlichen Probleme.")
     
     return "\n".join(parts)
 
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description="dev_analyst.py — Quality check")
+    parser = argparse.argumentParser(description="dev_analyst.py — Quality check")
     parser.add_argument("--check-all", action="store_true", help="All Checks")
     parser.add_argument("--yaml-syntax", action="store_true")
     parser.add_argument("--sizes", action="store_true")

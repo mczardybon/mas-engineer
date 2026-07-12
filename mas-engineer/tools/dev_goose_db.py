@@ -5,14 +5,14 @@ dev_goose_db.py — 📊 Goose SQLite-Database-Analyse
 Version: 1.0.0
 Author: dev-mas-engineer (autonomous)
 
-Analysiert die Goose-interne SQLite-Database:
+Analyzed die Goose-interne SQLite-Database:
   ~/.local/share/goose/sessions/sessions.db
 
-Hilft dem MAS-Engineer the Framework-Behavior zu verstehen:
+Hilft dem MAS-Engineer the framework-Behavior zu verstehen:
 Token-Verbrauch, Kosten, Stale-Sessions, Message-Historie.
 
 Database can gesperrt be if Goose runs.
-→ Automatische Kopie after /tmp/ vor Analyse.
+→ Automatische copy after /tmp/ vor Analyse.
 
 VERWENDUNG:
     python3 dev_goose_db.py --sessions         # All Sessions mit Metadaten
@@ -103,7 +103,7 @@ def cmd_sessions():
     """All Sessions mit Metadaten."""
     conn = open_db()
     rows = conn.execute("""
-        SELECT id, name, description, session_type, working_dir,
+        SELECT id, name, description, session_typee, working_dir,
                total_tokens, accumulated_cost, created_at, updated_at,
                provider_name, goose_mode, recipe_json
         FROM sessions
@@ -118,7 +118,7 @@ def cmd_sessions():
 
     print(f"\n📊 GOOSE SESSIONS ({len(rows)} active)")
     print("=" * 100)
-    print(f"{'ID':<12} {'Name':<28} {'Typ':<12} {'Tokens':>10} {'Kosten':>8} {'Mode':<16} {'Creates':<20}")
+    print(f"{'ID':<12} {'Name':<28} {'typee':<12} {'Tokens':>10} {'Kosten':>8} {'Mode':<16} {'Creates':<20}")
     print("-" * 100)
 
     total_tokens = 0
@@ -127,7 +127,7 @@ def cmd_sessions():
         total_tokens += (r["total_tokens"] or 0)
         total_cost += (r["accumulated_cost"] or 0)
         print(f"{r['id'][:12]:<12} {(r['name'] or '?')[:28]:<28} "
-              f"{(r['session_type'] or '—'):<12} {fmt_tokens(r['total_tokens']):>10} "
+              f"{(r['session_typee'] or '—'):<12} {fmt_tokens(r['total_tokens']):>10} "
               f"{fmt_cost(r['accumulated_cost']):>8} {(r['goose_mode'] or '—'):<16} "
               f"{fmt_dt(r['created_at']):<20}")
 
@@ -159,7 +159,7 @@ def cmd_session(session_id: str):
     print(f"\n📊 SESSION: {s['name'] or '?'} ({s['id'][:12]})")
     print("=" * 80)
     print(f"  Mode:      {s['goose_mode'] or '—'}")
-    print(f"  Typ:       {s['session_type'] or '—'}")
+    print(f"  typee:       {s['session_typee'] or '—'}")
     print(f"  Provider:  {s['provider_name'] or '—'}")
     print(f"  Tokens:    {fmt_tokens(s['total_tokens'])} (in: {fmt_tokens(s['input_tokens'])}, out: {fmt_tokens(s['output_tokens'])})")
     print(f"  Kosten:    {fmt_cost(s['accumulated_cost'] or 0)}")
@@ -195,7 +195,7 @@ def cmd_stale(minutes: int = 30):
     """Sessions idle for more than N minutes."""
     conn = open_db()
     rows = conn.execute(
-        "SELECT id, name, total_tokens, accumulated_cost, updated_at, session_type FROM sessions WHERE archived_at IS NULL"
+        "SELECT id, name, total_tokens, accumulated_cost, updated_at, session_typee FROM sessions WHERE archived_at IS NULL"
     ).fetchall()
     close_db(conn)
 
@@ -267,7 +267,7 @@ def cmd_activity():
     """Activitys-Timeline."""
     conn = open_db()
     rows = conn.execute(
-        "SELECT name, created_at, updated_at, total_tokens, session_type FROM sessions WHERE archived_at IS NULL ORDER BY created_at"
+        "SELECT name, created_at, updated_at, total_tokens, session_typee FROM sessions WHERE archived_at IS NULL ORDER BY created_at"
     ).fetchall()
     close_db(conn)
 
@@ -281,7 +281,7 @@ def cmd_activity():
         created = fmt_dt(r["created_at"])
         updated = fmt_dt(r["updated_at"])
         name = (r["name"] or "?")[:25]
-        print(f"  {created} → {updated} | {name:<25} | {fmt_tokens(r['total_tokens']):>8} | {r['session_type'] or '—'}")
+        print(f"  {created} → {updated} | {name:<25} | {fmt_tokens(r['total_tokens']):>8} | {r['session_typee'] or '—'}")
 
 
 def main():

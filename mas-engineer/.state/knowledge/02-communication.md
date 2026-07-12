@@ -8,13 +8,13 @@ DEV-MAS-ENGINEER
   ├── delegate() → ... (36 Sub-Agenten available)
   │
   ├── shell → tools/dev_*.py (43 Tools direkt)
-  ├── shell → git (Commits + Checkpoints)
+  ├── shell → git (commits + Checkpoints)
   ├── shell → .state/changes.json (Documentation)
   └── apps → Dashboard-App (Live-Data)
 
 REGEL: Sub-Agent = NUR Analyse. Shell selbst ausexecuten.
 
-## Framework (intern)
+## framework (intern)
 FRAMEWORK-STARTER (User-Interface)
   └── delegiert AN → PLANNER (Master Orchestrator)
        └── delegiert AN → EXECUTOR (Dispatch-Orchestrator)
@@ -32,7 +32,7 @@ FRAMEWORK-CONTROLLER (Dauerbetrieb, allwissend)
   -runtime, -session, -recovery
 
 ## Signale (YAML-Envelope, maschinenlesbar)
-JEDES Signal has Pflichtfelder: request_id, from, to, signal
+JEDES Signal has required fields: request_id, from, to, signal
 
 | Signal | Von → An | Zweck |
 |:-------|:---------|:------|
@@ -49,7 +49,7 @@ JEDES Signal has Pflichtfelder: request_id, from, to, signal
 
 ## Request-ID-Pflicht
 Jede strukturierte Antwort has eine request_id (UUID).
-Spezialisten geben only back: specialist_result, specialist_error, specialist_handover.
+Spezialistn geben only back: specialist_result, specialist_error, specialist_handover.
 
 ## Kommunikationsprinzip
 - YAML-strukturiert (maschinenlesbar, no Freitext)

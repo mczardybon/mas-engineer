@@ -4,7 +4,7 @@ dev_write_filter.py — Write filter (content check before writing)
 Will VOM GATEKEEPER aufgerufen.
 Checks: Target-Path, YAML-Syntax, Encoding, Duplikate.
 
-Aufruf: python3 dev_write_filter.py --file path --content "inhalt"
+call: python3 dev_write_filter.py --file path --content "content"
         python3 dev_write_filter.py --file path --stdin
         python3 dev_write_filter.py --file path --content "..." --skip-yaml
 """
@@ -55,7 +55,7 @@ def check_duplicates(file, content):
 
 def main():
     if len(sys.argv) < 3:
-        print("❌ Aufruf: dev_write_filter.py --file path --content '...'"); sys.exit(1)
+        print("❌ call: dev_write_filter.py --file path --content '...'"); sys.exit(1)
     if "--file" not in sys.argv:
         print("❌ --file required"); sys.exit(1)
     file = sys.argv[sys.argv.index("--file") + 1]

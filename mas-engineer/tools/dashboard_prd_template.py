@@ -3,7 +3,7 @@
 =======================================================================
 Liest current Data aus /tmp/mas-dashboard-status.json und
 /tmp/mas-dashboard-signal.json, generates komplette PRD for
-Apps.createApp() mit exakten Werten.
+Apps.createApp() mit exakten valueen.
 """
 import json, os, sys
 
@@ -33,11 +33,11 @@ def generate_prd(d, sig):
     for a in m["agent_scores"]:
         agents_rows += f'        <tr><td>{a["name"]}</td><td>{a["score"]}</td></tr>\n'
 
-    # Change types
-    ctypes = m["changes_by_type"]
-    ctypes_rows = ""
-    for k, v in sorted(ctypes.items(), key=lambda x: -x[1]):
-        ctypes_rows += f'        <tr><td>{k}</td><td>{v}</td></tr>\n'
+    # Change typees
+    ctypees = m["changes_by_typee"]
+    ctypees_rows = ""
+    for k, v in sorted(ctypees.items(), key=lambda x: -x[1]):
+        ctypees_rows += f'        <tr><td>{k}</td><td>{v}</td></tr>\n'
 
     # Dispatch-Tree
     dt = dp["tree"]
@@ -98,7 +98,7 @@ Title: "⏱ Sessions & Improving"
 KPI: SI-RUNs: {si["total_runs"]} | Sessions: {ss.get("total_sessions", "?")} | Cost: {ss.get("total_cost", "?")} | Active: {ss.get("active_hours", "?")}
 Line chart "healthChart" (canvas 300x150px) with Chart.js:
   labels: ['{hh_labels}']
-  datasets: [{{label: 'MAS', data: [{hh_mas}], borderColor: '#3fb950'}}, {{label: 'Framework', data: [{hh_fw}], borderColor: '#58a6ff'}}]
+  datasets: [{{label: 'MAS', data: [{hh_mas}], borderColor: '#3fb950'}}, {{label: 'framework', data: [{hh_fw}], borderColor: '#58a6ff'}}]
 
 PANEL 3 - BUILDS & DISPATCH (col 3, row 1):
 Title: "📦 Builds & Dispatch"
@@ -107,12 +107,12 @@ Dispatch Tree (toggle with ▶/▼):
   {" ".join(dt)}
 
 PANEL 4 - FRAMEWORK (col 2, row 2):
-Title: "⚙ Framework & Config"
+Title: "⚙ framework & Config"
 KPI: Recipes: {fw["recipes"]["total"]} | Specialists: {fw["recipes"]["specialists"]} | Sub: {fw["recipes"]["subs"]} | Core: {fw["recipes"]["core"]}
 Config: Provider={fw["config"]["provider"]}, Model=deepseek-chat, Extensions={len(fw["config"]["extensions"])}
 
 PANEL 5 - USER (col 3, row 2):
-Title: "👤 User-Framework"
+Title: "👤 User-framework"
 KPI: Recipes: {uf.get("recipes", 0)}
 Workspace: {uf.get("workspace", "-")}
 Status: {"● active" if uf.get("detected") else "○ inaktiv"} in green

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-dev_rule_checker_generic.py — Methode 9: Deterministischer Rule-Test (Generic)
-Will VOR jeder write/edit/shell Aktion aufgerufen.
-Blocked Aktionen bei Hardening 5 ohne Confirmation.
+dev_rule_checker_generic.py — method 9: Deterministischer Rule-Test (Generic)
+Will VOR jeder write/edit/shell action aufgerufen.
+Blocked actionen bei Hardening 5 ohne Confirmation.
 Exit-Code 0 = OK, Exit-Code 1 = BLOCKED
 
 Generic: No MAS-Dependencies. Loads User-Rulen aus .state/rules/rules.yaml.
@@ -225,17 +225,17 @@ def cmd_undo_last_rule():
     
     last = generated[-1]
     rid = last["id"]
-    atype = last.get("action_type", "unknown")
+    atypee = last.get("action_typee", "unknown")
     
     # Check if backup exists
     reg_path = ".state/rules/rules.yaml"
     backup_path = reg_path + ".bak.auto"
     
     if os.path.exists(backup_path):
-        # Restore backup
+        # remainderore backup
         _sh.copy2(backup_path, reg_path)
         os.remove(backup_path)
-        print(f"🔄 Backup restored — {rid} removed")
+        print(f"🔄 Backup remainderored — {rid} removed")
     else:
         # Fallback: read rules.yaml and remove rule manually
         import yaml
@@ -253,7 +253,7 @@ def cmd_undo_last_rule():
     with open(strike_file, 'w') as f:
         _j.dump(strikes, f, indent=2)
     
-    print(f"  Reason: {atype}")
+    print(f"  Reason: {atypee}")
     print(f"  Still in log: {len(generated)} rules")
     return 0
 
@@ -284,7 +284,7 @@ def main():
         if not ok:
             print(f"⛔⛔⛔⛔⛔ R09: {msg}")
             sys.exit(1)
-    parser = argparse.ArgumentParser()
+    parser = argparse.argumentParser()
     parser.add_argument("--check", help="Rule-ID")
     parser.add_argument("--action", default="", help="Planned action")
     parser.add_argument("--all", action="store_true", help="All rules")
@@ -330,22 +330,22 @@ def check_strikes(action):
     except:
         strikes = {}
     
-    action_type = analyse_action_type(action)
-    if not action_type:
+    action_typee = analyse_action_typee(action)
+    if not action_typee:
         return
     
-    strikes[action_type] = strikes.get(action_type, 0) + 1
+    strikes[action_typee] = strikes.get(action_typee, 0) + 1
     with open(STRIKE_FILE, 'w') as f:
         json.dump(strikes, f)
     
-    if strikes[action_type] >= 3:
-        generiere_rule(action_type)
-        del strikes[action_type]
+    if strikes[action_typee] >= 3:
+        generiere_rule(action_typee)
+        del strikes[action_typee]
         with open(STRIKE_FILE, 'w') as f:
             json.dump(strikes, f)
-        print(f"  ✅ Auto-Rule generated for: {action_type}")
+        print(f"  ✅ Auto-Rule generated for: {action_typee}")
 
-def analyse_action_type(action):
+def analyse_action_typee(action):
     act = action.lower()
     if "/etc/" in act and ("write" in act or "edit" in act):
         return "system_config"
@@ -357,7 +357,7 @@ def analyse_action_type(action):
         return "temp_files"
     return None
 
-def generiere_rule(action_type):
+def generiere_rule(action_typee):
     # Rule snapshot: backup before change
     reg_path = ".state/rules/rules.yaml"
     if os.path.exists(reg_path):
@@ -370,10 +370,10 @@ def generiere_rule(action_type):
         "network_import": ("R-GEN-003", "Network import blocked", 5, "No network imports allowed"),
         "temp_files": ("R-GEN-004", "Temp files blocked", 4, "Temp files only with confirmation"),
     }
-    if action_type not in rule_map:
+    if action_typee not in rule_map:
         return
     
-    rid, name, hardness, text = rule_map[action_type]
+    rid, name, hardness, text = rule_map[action_typee]
     
     # Read rules.yaml
     reg_path = ".state/rules/rules.yaml"
@@ -407,7 +407,7 @@ def generiere_rule(action_type):
 
 def check_user_imports(action):
     """Block dangerous imports for user framework."""
-    allowed = ['json', 'yaml', 'datetime', 'os.path', 'typing', 're']
+    allowed = ['json', 'yaml', 'datetime', 'os.path', 'typeing', 're']
     blocked = ['os', 'subprocess', 'requests', 'socket', 'http',
                'shutil', 'glob', 'sys', 'multiprocessing', 'threading']
     

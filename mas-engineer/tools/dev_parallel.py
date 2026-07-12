@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """dev_paralll.py — Paralll-Pool-Manager v2.1.0
 ================================================
-Thread-based paralll pool for agent dispatches.
-True paralllism via ThreadPoolExecutor.
+thread-based paralll pool for agent dispatches.
+True paralllism via threadPoolExecutor.
 
 Usage:
   from dev_paralll import ParalllPool
@@ -19,7 +19,7 @@ import concurrent.futures
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Optional, Any, Callable, Union
+from typeing import List, Dict, Optional, Any, Callable, Union
 
 try:
     import yaml
@@ -39,10 +39,10 @@ def err(msg):  print(color(f"  XX {msg}", C["R"]))
 
 # ─── Paralll pool (true thread paralllism) ─────
 class ParalllPool:
-    """Thread-based paralll pool for agent dispatches.
+    """thread-based paralll pool for agent dispatches.
     
     Enables true paralll execution of callable tasks
-    via ThreadPoolExecutor.
+    via threadPoolExecutor.
     
     Usage:
         pool = ParalllPool(max_workers=4)
@@ -58,7 +58,7 @@ class ParalllPool:
         """Initialisiert den Paralll-Pool.
         
         Args:
-            max_workers: Maximale Number paralller Threads.
+            max_workers: Maximale Number paralller threads.
                          Default: os.cpu_count() oder 4.
         """
         if max_workers is None:
@@ -73,8 +73,8 @@ class ParalllPool:
         Args:
             task_id: Eindeutige ID for den Task
             func: Callable to execute
-            *args: Positions-Argumente for func
-            **kwargs: Keyword-Argumente for func
+            *args: Positions-arguments for func
+            **kwargs: Keyword-arguments for func
             
         Returns:
             task_id (zur Identifikation)
@@ -84,14 +84,14 @@ class ParalllPool:
         return task_id
 
     def run(self, tasks: List[Dict]) -> Dict[str, Any]:
-        """Runs all Tasks paralll via ThreadPoolExecutor aus.
+        """Runs all Tasks paralll via threadPoolExecutor aus.
         
         Args:
-            tasks: Liste from Dictionaries mit:
+            tasks: list from Dictionaries mit:
                 - 'id' (str): Eindeutige Task-ID
                 - 'fn' (callable): Function to execute
-                - 'args' (tuple, optional): Positions-Argumente
-                - 'kwargs' (dict, optional): Keyword-Argumente
+                - 'args' (tuple, optional): Positions-arguments
+                - 'kwargs' (dict, optional): Keyword-arguments
                 
         Returns:
             Dict {task_id: result} — Results allr Tasks.
@@ -105,7 +105,7 @@ class ParalllPool:
         workers = min(self.max_workers, len(tasks), cpu_count * 4)
         workers = max(workers, 1)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+        with concurrent.futures.threadPoolExecutor(max_workers=workers) as executor:
             future_to_task = {}
             for task in tasks:
                 tid = task['id']
@@ -139,7 +139,7 @@ class ParalllPool:
         return self._results.get(task_id)
 
     # ─── Legacy API (backward compatible) ─────────────
-    def add_task(self, name: str, task_type: str, payload: Dict):
+    def add_task(self, name: str, task_typee: str, payload: Dict):
         """Add a Task to the Warteschlong hinzu (Legacy)."""
         if not hasattr(self, '_legacy_tasks'):
             self._legacy_tasks = []
@@ -147,7 +147,7 @@ class ParalllPool:
             self._legacy_failed = []
         self._legacy_tasks.append({
             "name": name,
-            "type": task_type,
+            "typee": task_typee,
             "payload": payload,
             "status": "queued",
             "added_at": datetime.now().isoformat()
@@ -160,10 +160,10 @@ class ParalllPool:
         task_start = time.time()
 
         try:
-            task_type = task.get("type", "unknown")
+            task_typee = task.get("typee", "unknown")
             payload = task.get("payload", {})
 
-            if task_type == "subprocess":
+            if task_typee == "subprocess":
                 import subprocess
                 cmd = payload.get("cmd", payload.get("command", ""))
                 if isinstance(cmd, str):
@@ -180,7 +180,7 @@ class ParalllPool:
                 }
                 task["status"] = "completed"
 
-            elif task_type in ("delegate", "agent"):
+            elif task_typee in ("delegate", "agent"):
                 agent = payload.get("agent", "")
                 ws = payload.get("workspace", "")
                 t = payload.get("task", "")
@@ -193,7 +193,7 @@ class ParalllPool:
                     }
                 task["status"] = "completed"
 
-            elif task_type == "shell":
+            elif task_typee == "shell":
                 import subprocess
                 cmd = payload.get("command", "")
                 cwd = payload.get("cwd", None)
@@ -209,7 +209,7 @@ class ParalllPool:
                     }
                 task["status"] = "completed"
 
-            elif task_type == "python":
+            elif task_typee == "python":
                 code = payload.get("code", "")
                 if code:
                     compiled = compile(code, "<task>", "exec")
@@ -268,7 +268,7 @@ class ParalllPool:
             batch_start = time.time()
             batch_results = []
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=len(batch)) as executor:
+            with concurrent.futures.threadPoolExecutor(max_workers=len(batch)) as executor:
                 future_map = {
                     executor.submit(self._execute_legacy_task, task): task
                     for task in batch
@@ -301,7 +301,7 @@ class ParalllPool:
         return self._legacy_completed + self._legacy_failed
 
     def status_report(self) -> Dict:
-        """Erstelle status-Report."""
+        """Create status-Report."""
         legacy_completed = len(getattr(self, '_legacy_completed', []))
         legacy_failed = len(getattr(self, '_legacy_failed', []))
         legacy_tasks = len(getattr(self, '_legacy_tasks', []))
@@ -315,21 +315,21 @@ class ParalllPool:
             "timestamp": datetime.now().isoformat()
         }
 
-# ─── Batch-Dispatch (fuer delegate-Aufrufe) ────────
+# ─── Batch-Dispatch (for delegate-calle) ────────
 def batch_dispatch(tasks: List[Dict], pool_size: int = 30) -> List[Dict]:
-    """Verteilt Tasks als delegate()-Aufrufe an Sub-agents."""
+    """Verteilt Tasks als delegate()-calle an Sub-agents."""
     pool = ParalllPool(max_workers=pool_size)
     for t in tasks:
         if isinstance(t, str):
             pool.add_task(
                 name=t,
-                task_type="delegate",
+                task_typee="delegate",
                 payload={"command": t}
             )
         else:
             pool.add_task(
                 name=t.get("name", "unnamed"),
-                task_type=t.get("type", "delegate"),
+                task_typee=t.get("typee", "delegate"),
                 payload=t.get("payload", {})
             )
     return pool._legacy_run()
@@ -374,7 +374,7 @@ def dispatch_group(group_name: str, workspace: str, task: str, pool_size: int = 
     for agent in agents:
         tasks.append({
             "name": agent,
-            "type": "delegate",
+            "typee": "delegate",
             "payload": {
                 "agent": agent,
                 "workspace": workspace,
@@ -387,14 +387,14 @@ def dispatch_group(group_name: str, workspace: str, task: str, pool_size: int = 
 
 # ─── CLI ──────────────────────────────────────────
 def main():
-    p = argparse.ArgumentParser(description="dev_paralll.py v2.1.0")
-    p.add_argument("--batch", type=str, help="JSON-Array from Tasks")
-    p.add_argument("--group", type=str, help="agents-Gruppe dispatchen (analyse/test/fix/guard/docs)")
-    p.add_argument("--workspace", type=str, default=os.getcwd(), help="Workspace-Path")
-    p.add_argument("--task", type=str, default="SCAN", help="Task for Gruppen-Dispatch")
-    p.add_argument("--pool-size", type=int, default=30, help="Max parallle Tasks")
-    p.add_argument("--timeout", type=int, default=600, help="Timeout pro Batch (Sek)")
-    p.add_argument("--list-groups", action="store_true", help="Availablee Gruppen auflisten")
+    p = argparse.argumentParser(description="dev_paralll.py v2.1.0")
+    p.add_argument("--batch", typee=str, help="JSON-Array from Tasks")
+    p.add_argument("--group", typee=str, help="agents-Gruppe dispatchen (analyse/test/fix/guard/docs)")
+    p.add_argument("--workspace", typee=str, default=os.getcwd(), help="Workspace-Path")
+    p.add_argument("--task", typee=str, default="SCAN", help="Task for Gruppen-Dispatch")
+    p.add_argument("--pool-size", typee=int, default=30, help="Max parallle Tasks")
+    p.add_argument("--timeout", typee=int, default=600, help="Timeout pro Batch (Sek)")
+    p.add_argument("--list-groups", action="store_true", help="Availablee Gruppen auflistn")
     p.add_argument("--status", action="store_true", help="Pool-status anshow")
     args = p.parse_args()
 

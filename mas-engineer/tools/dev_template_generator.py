@@ -3,21 +3,21 @@
 dev_template_generator.py v2.0.0 — Generates & refreshed Agent-YAMLs aus SOT + Best-Practices + Improvement-Plan
 
 Sources:
-  1. .state/workflows.yaml → configs.mas-self (restrictions, enforcement, recovery, signals)
+  1. .state/workflows.yaml → configs.mas-self (remainderrictions, enforcement, recovery, signals)
   2. .state/best-practices.yaml → 27 auto_apply Rulen
   3. .state/improvement-plan.json → offene Verbetterungen
   4. recipe/template/agent_template.yaml → Reaelseruktur
 
 Modes:
-  --create     Agent new create (Name + Task + Typ → YAML + SOT-entry)
+  --create     Agent new create (Name + Task + typee → YAML + SOT-entry)
   --refresh    Check existing agent against target + fill gaps
   --refresh-all All 39 Sub-Agenten check
 
 Optionen:
   --name NAME      Agenten-Name (z.B. log-analyzer)
   --emoji EMOJI    Emoji (z.B. 📊)
-  --task "TEXT"    Kernaufgabe
-  --type sub|voll  Agent-Typ (Default: sub)
+  --task "TEXT"    Kerntask
+  --typee sub|voll  Agent-typee (Default: sub)
   --agent NAME     Only thesen Agent refreshen
   --dry-run        Only show, nothing change
   --diff           Unterschiede anshow
@@ -27,7 +27,7 @@ Optionen:
 import argparse, json, os, sys, re, copy, textwrap
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Tuple
+from typeing import Dict, List, Optional, Any, Tuple
 
 try:
     import yaml
@@ -129,7 +129,7 @@ def load_all_sources(workspace: str) -> Dict:
     missing = [k for k, v in sources.items() if not v]
     if missing:
         print(f"  ℹ️  Sources loaded: {', '.join(loaded)}")
-        print(f"  ⚠️  Fehlend/Leer: {', '.join(missing)}")
+        print(f"  ⚠️  Fehlend/Empty: {', '.join(missing)}")
     
     return sources
 
@@ -138,7 +138,7 @@ def load_all_sources(workspace: str) -> Dict:
 # ──────────────────────────────────────────────
 
 def _format_dict_block(data: Dict, prefix: str = "# ", indent: str = "") -> str:
-    """Formatiert a Dict als YAML-Kommentarblock."""
+    """Formatiert a Dict als YAML-commentblock."""
     lines = []
     for key, value in data.items():
         if isinstance(value, dict):
@@ -183,34 +183,34 @@ def _format_bp_rules(bp: Dict, section_keys: List[str]) -> str:
 
 def build_rule_package(sources: Dict) -> Dict:
     """
-    Baut a Paket aus alln relevanten Rulen.
+    Baut a package aus alln relevanten Rulen.
     """
     sot = sources.get("sot", {})
     bp = sources.get("bp", {})
     improvement = sources.get("improvement", [])
     
-    # ── SOT Restrictions ──
-    restrictions_raw = sot.get("restrictions", {})
-    sot_restriction_lines = []
+    # ── SOT remainderrictions ──
+    remainderrictions_raw = sot.get("remainderrictions", {})
+    sot_remainderriction_lines = []
     for key in SOT_RESTRICTION_KEYS:
-        r = restrictions_raw.get(key)
+        r = remainderrictions_raw.get(key)
         if not r:
             continue
         if isinstance(r, dict):
             level = r.get("level", "?")
             desc = r.get("description", str(r))[:100]
-            sot_restriction_lines.append(f"  ⛔ [{key}] ({level}) {desc}")
+            sot_remainderriction_lines.append(f"  ⛔ [{key}] ({level}) {desc}")
         elif isinstance(r, list):
             for item in r:
-                sot_restriction_lines.append(f"  ⛔ {str(item)[:100]}")
-    sot_restrictions = "\n".join(sot_restriction_lines)
+                sot_remainderriction_lines.append(f"  ⛔ {str(item)[:100]}")
+    sot_remainderrictions = "\n".join(sot_remainderriction_lines)
     
     # ── SOT Enforcement ──
     enf = sot.get("enforcement", {})
     enf_lines = []
     for key, val in enf.items():
         if isinstance(val, dict):
-            desc = val.get("beschreibung", val.get("ausexecuten", str(val)))[:100]
+            desc = val.get("description", val.get("ausexecuten", str(val)))[:100]
             enf_lines.append(f"  ⚙️ [{key}] {desc}")
         else:
             enf_lines.append(f"  ⚙️ [{key}] {str(val)[:100]}")
@@ -223,7 +223,7 @@ def build_rule_package(sources: Dict) -> Dict:
         if isinstance(details, dict):
             for sk, sv in details.items():
                 if isinstance(sv, dict):
-                    desc = sv.get("beschreibung", str(sv))[:80]
+                    desc = sv.get("description", str(sv))[:80]
                     rec_lines.append(f"  🛟 {sk}: {desc}")
     sot_recovery = "\n".join(rec_lines)
     
@@ -275,7 +275,7 @@ def build_rule_package(sources: Dict) -> Dict:
     }
     
     return {
-        "sot_restrictions": sot_restrictions or "# No SOT-Restrictions defines",
+        "sot_remainderrictions": sot_remainderrictions or "# No SOT-remainderrictions defines",
         "sot_enforcement": sot_enforcement or "# No SOT-Enforcement defines",
         "sot_recovery": sot_recovery or "# No SOT-Recovery defines",
         "sot_signals": sot_signals or "# No SOT-Signals defines",
@@ -299,13 +299,13 @@ def _shorten(text: str, maxlen: int = 80) -> str:
         return text
     return text[:maxlen-3] + "..."
 
-def fill_template(sources: Dict, rules: Dict, name: str, emoji: str, task: str, agent_type: str) -> str:
+def fill_template(sources: Dict, rules: Dict, name: str, emoji: str, task: str, agent_typee: str) -> str:
     """
-    Fills agent_template.yaml mit statischen + dynamischen Platzhaltern.
+    Fills agent_template.yaml mit statischen + dynamischen placeholdern.
     """
     template = sources.get("template", "")
     if not template:
-        print("  ⚠️  No Template loaded. Generiere Minimumstruktur.")
+        print("  ⚠️  No Template loaded. Generiere minimumstruktur.")
         template = """version: 1.0.0
 title: "{EMOJI} SUB-MAS-{NAME} — {TASK}"
 description: 'v1.0.0 | MAS-intern: {TASK}'
@@ -325,7 +325,7 @@ settings:
 
     titel = f"sub_mas-{name} — {_shorten(task, 60)}"
     
-    # Statische Platzhalter
+    # Statische placeholder
     replacements = {
         "{NAME}": name.upper(),
         "{name}": name.lower() if name else name,
@@ -336,9 +336,9 @@ settings:
         "{Titel}": titel,
     }
     
-    # Dynamische Platzhalter aus rules
+    # Dynamische placeholder aus rules
     dynamic_replacements = {
-        "{SOT_RESTRICTIONS}": rules.get("sot_restrictions", ""),
+        "{SOT_RESTRICTIONS}": rules.get("sot_remainderrictions", ""),
         "{SOT_ENFORCEMENT}": rules.get("sot_enforcement", ""),
         "{SOT_RECOVERY}": rules.get("sot_recovery", ""),
         "{SOT_SIGNALS}": rules.get("sot_signals", ""),
@@ -361,20 +361,20 @@ settings:
         else:
             unreplaced.append(placeholder)
     
-    # Nicht-replacese Platzhalter (aus Template, not in replacements?) 
-    # -> Als leere String replace
+    # Nicht-replacese placeholder (aus Template, not in replacements?) 
+    # -> Als empty String replace
     all_found = re.findall(r"\{[A-Z_]+\}", result)
     for ph in all_found:
         if ph not in replacements:
             unreplaced.append(ph)
             result = result.replace(ph, "")
     
-    # Aufraeumen: Leerzeilen mit only Whitespace remove (max 1 Durchlauf)
+    # Aufraeumen: Emptylines mit only Whitespace remove (max 1 Durchlauf)
     while "\n\n\n" in result:
         result = result.replace("\n\n\n", "\n\n")
     
     if unreplaced:
-        print(f"  ℹ️  Nicht-replacese Platzhalter: {', '.join(unreplaced)}")
+        print(f"  ℹ️  Nicht-replacese placeholder: {', '.join(unreplaced)}")
     
     return result
 
@@ -390,9 +390,9 @@ def build_yaml(filled: str, rules: Dict, name: str, emoji: str, task: str) -> Di
     scope = task.split()[0].lower() if task.split() else "arbeiten"
     prompt_text = (
         f"{emoji} {name.upper()} (v1.0.0)\n"
-        f"⛔ NUR {scope} — KEINE anderen Aktionen\n"
-        f"⛔ KEINE Changeen ohne Confirmation\n"
-        f"→ Siehe SOT: configs.mas-self.restrictions\n"
+        f"⛔ NUR {scope} — NOE anderen actionen\n"
+        f"⛔ NOE Changeen ohne Confirmation\n"
+        f"→ Siehe SOT: configs.mas-self.remainderrictions\n"
     )
     
     # Sichcreate prompt ≤ 500 Zeichen
@@ -462,10 +462,10 @@ def _add_sot_entry(workspace: str, name: str, task: str):
             print(f"  ℹ️  Agent '{agent_key}' already in SOT present")
             return True
         
-        # Finde passende Kategorie oder haenge an
+        # Find passende Kategorie oder haenge an
         data["agents"][agent_key] = {
             "name": f"sub_mas-{agent_key}",
-            "type": "sub",
+            "typee": "sub",
             "task": task,
             "desc": f"Automatic generates aus Template-Generator"
         }
@@ -510,7 +510,7 @@ def _add_sub_recipes_entry(workspace: str, name: str):
         print(f"  ⚠️  sub_recipes-Update Error: {e}")
         return False
 
-def write_agent(yaml_data: Dict, name: str, agent_type: str, workspace: str, no_sot: bool = False) -> Dict:
+def write_agent(yaml_data: Dict, name: str, agent_typee: str, workspace: str, no_sot: bool = False) -> Dict:
     """
     Schreibt Agent-YAML + updated SOT.
     """
@@ -548,7 +548,7 @@ def write_agent(yaml_data: Dict, name: str, agent_type: str, workspace: str, no_
             validated = yaml.safe_load(f)
         for key in ["version", "title", "description", "instructions", "prompt", "settings"]:
             if key not in validated:
-                print(f"  ⚠️  Fehlender Key in generierter YAML: '{key}'")
+                print(f"  ⚠️  Missingr Key in generateder YAML: '{key}'")
     except Exception as e:
         print(f"  ❌ YAML-Invalid: {e}")
         return {"file": str(out_path), "yaml_valid": False, "error": str(e)}
@@ -578,7 +578,7 @@ def write_agent(yaml_data: Dict, name: str, agent_type: str, workspace: str, no_
 # ──────────────────────────────────────────────
 
 def _check_field(agent_data: Dict, key: str, expected: Any, label: str) -> Optional[Dict]:
-    """Checks ob a Feld dem Erwartungswert entspricht."""
+    """Checks ob a Feld dem Erwartungsvalue entspricht."""
     actual = agent_data
     for part in key.split("."):
         if isinstance(actual, dict):
@@ -609,7 +609,7 @@ def _check_contains(agent_data: Dict, field: str, needle: str, label: str) -> Op
     if needle not in str(text):
         return {
             "field": field,
-            "problem": f"{label}: Fehlt '{needle[:40]}'",
+            "problem": f"{label}: Missing '{needle[:40]}'",
             "fix": f"Add '{needle[:60]}' in {field} ein",
             "severity": "hoch" if "⛔" in needle else "mittel"
         }
@@ -641,7 +641,7 @@ def refresh_agent(agent_name: str, dry_run: bool, workspace: str, sources: Optio
     if chk: issues.append(chk)
     
     # ── Content-Checks ──
-    chk = _check_contains(agent_data, "instructions", "SOT", "SOT-Referenz")
+    chk = _check_contains(agent_data, "instructions", "SOT", "SOT-reference")
     if chk: issues.append(chk)
     
     chk = _check_contains(agent_data, "instructions", "AUTONOMIEMODUS", "Autonomiemodus")
@@ -741,7 +741,7 @@ def refresh_all(dry_run: bool, workspace: str) -> Dict:
     not_found = 0
     
     for agent in agents:
-        # Load Sources for jeden Agent (else Referenz-Probleme)
+        # Load Sources for jeden Agent (else reference-Probleme)
         src = load_all_sources(workspace)
         rules = build_rule_package(src)
         result = refresh_agent(agent, True, workspace, src, rules)
@@ -778,7 +778,7 @@ def refresh_all(dry_run: bool, workspace: str) -> Dict:
 # ──────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="dev_template_generator v2.0 — Agent-YAML Generator aus SOT+BP")
+    parser = argparse.argumentParser(description="dev_template_generator v2.0 — Agent-YAML Generator aus SOT+BP")
     
     # Mode (exklusiv)
     mode_group = parser.add_mutually_exclusive_group(required=True)
@@ -789,11 +789,11 @@ def main():
     # Create-Optionen
     parser.add_argument("--name", default="", help="Agenten-Name (z.B. log-analyzer)")
     parser.add_argument("--emoji", default="🔧", help="Emoji (Default: 🔧)")
-    parser.add_argument("--task", default="", help="Kernaufgabe")
-    parser.add_argument("--type", default="sub", choices=["sub", "voll"], help="Agent-Typ (Default: sub)")
+    parser.add_argument("--task", default="", help="Kerntask")
+    parser.add_argument("--typee", default="sub", choices=["sub", "voll"], help="Agent-typee (Default: sub)")
     
     # Refresh-Optionen
-    parser.add_argument("--agent", default="", help="Only thesen Agent refreshen (fuer --refresh)")
+    parser.add_argument("--agent", default="", help="Only thesen Agent refreshen (for --refresh)")
     
     # Global
     parser.add_argument("--dry-run", action="store_true", help="Only show, nothing change")
@@ -813,17 +813,17 @@ def main():
             sys.exit(1)
         
         print(f"\n🔨 GENERATE: {args.emoji} {args.name} — {_shorten(args.task, 60)}")
-        print(f"   Typ: {args.type}")
+        print(f"   typee: {args.typee}")
         
         sources = load_all_sources(workspace)
         rules = build_rule_package(sources)
-        filled = fill_template(sources, rules, args.name, args.emoji, args.task, args.type)
+        filled = fill_template(sources, rules, args.name, args.emoji, args.task, args.typee)
         yaml_data = build_yaml(filled, rules, args.name, args.emoji, args.task)
-        result = write_agent(yaml_data, args.name, args.type, workspace, args.no_sot)
+        result = write_agent(yaml_data, args.name, args.typee, workspace, args.no_sot)
         
         if args.json:
-            result.update({"name": args.name, "emoji": args.emoji, "task": args.task, "type": args.type})
-            # --json: AUSSCHLIESSLICH JSON ausgeben, no anderer Output
+            result.update({"name": args.name, "emoji": args.emoji, "task": args.task, "typee": args.typee})
+            # --json: AUSSCHLIESSLICH JSON output, no anderer Output
             # Redirect sys.stdout to capture any prior prints, then print only JSON
             print(json.dumps(result, indent=2, ensure_ascii=False))
             return  # Exit immediately, no further output

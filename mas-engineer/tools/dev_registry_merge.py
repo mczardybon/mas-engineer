@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""dev_registry_merge.py — Extrahiert Muster aus Findings und merged in Registry.
+"""dev_registry_merge.py — Extrahiert pattern aus Findings und merged in Registry.
 Usage: dev_registry_merge.py --findings <json-str> --registry <path> --project <name>
 Output: {new_patterns, merged_count, confidence_avg}"""
 import json, os, sys, yaml, datetime
 
 PATTERN_NAMES = {
-    'A1': 'prompt_fehlt_komplett', 'A2': 'timeout_zu_niedrig', 'A3': 'max_steps_zu_niedrig',
+    'A1': 'prompt_missing_komplett', 'A2': 'timeout_zu_niedrig', 'A3': 'max_steps_zu_niedrig',
     'A4': 'timeout_zu_hoch', 'B1': 'prompt_no_boundary', 'B2': 'prompt_ohne_version',
     'B3': 'prompt_ohne_emoji', 'B4': 'prompt_zu_short', 'B5': 'prompt_zu_long',
     'C1': 'instructions_ohne_input', 'C2': 'yaml_syntax_error', 'C3': 'settings_drift',
-    'D1': 'no_output_format', 'D2': 'no_berechtigung', 'D3': 'rekursion',
+    'D1': 'no_output_format', 'D2': 'no_permission', 'D3': 'recursion',
     'E1': 'hardcodierte_pathe', 'E2': 'no_rollback', 'E3': 'backup_bloat',
-    'F1': 'config_inkonsistent', 'F2': 'documentation_fehlt', 'G1': 'agent_degradiert',
+    'F1': 'config_inkonsistent', 'F2': 'documentation_missing', 'G1': 'agent_degradiert',
     'H1': 'session_kosten_anomalie', 'H2': 'veraltete_goose_version',
     'Z1': 'cross_generisch'
 }
 
-def generate_id(typ, existing_ids):
-    base = f'BP-CF-{PATTERN_NAMES.get(typ, "generic").upper()[:6]}'
+def generate_id(type, existing_ids):
+    base = f'BP-CF-{PATTERN_NAMES.get(type, "generic").upper()[:6]}'
     n = 1
     while f'{base}-{str(n).zfill(3)}' in existing_ids:
         n += 1
@@ -42,8 +42,8 @@ def merge_findings(findings, registry_path, project):
     total = max(1, len(existing_projects))
     for f_item in findings:
         if not isinstance(f_item, dict): continue
-        typ = f_item.get('typ', 'Z1')
-        name = PATTERN_NAMES.get(typ, 'cross_generisch')
+        type = f_item.get('type', 'Z1')
+        name = PATTERN_NAMES.get(type, 'cross_generisch')
         agent = f_item.get('agent', 'unknown')
         detail = f_item.get('detail', '')
         existing = None
@@ -63,7 +63,7 @@ def merge_findings(findings, registry_path, project):
             existing['evidence'] = ev
             merged_count += 1
         else:
-            pid, _ = generate_id(typ, existing_ids)
+            pid, _ = generate_id(type, existing_ids)
             existing_ids.add(pid)
             new_p = {
                 'id': pid, 'name': name, 'repeated_in': [project],
@@ -92,7 +92,7 @@ def merge_findings(findings, registry_path, project):
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser()
+    parser = argparse.argumentParser()
     parser.add_argument('--findings', required=True)
     parser.add_argument('--registry', required=True)
     parser.add_argument('--project', required=True)

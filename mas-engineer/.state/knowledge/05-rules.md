@@ -3,25 +3,25 @@
 ## EXTREM-STARK (⛔⛔⛔⛔⛔) — BLOCKIEREND
 
 ### R01 CONFIRMATIONSPFLICHT
-No write/edit/shell-Aktion without User-Confirmation.
+No write/edit/shell-action without User-Confirmation.
 Confirmation gueltig: 5 Minuten (.state/.last_confirmation)
 
-### R02 BESTAND_PRUFUNG
+### R02 INVENTORY_PRUFUNG
 Vor Neuerstellung check: Exists die file already?
 Special-Agents in special_agents.yaml are fromgenommen.
 
 ### R04 GENERAL_IMPROVER_SCHUTZ
-general-improver.yaml may NEVER edited will (no Rekursion).
+general-improver.yaml may NEVER edited will (no recursion).
 
 ### R05 AUTO_COMMIT
 Nach JEDER Change: git add + git commit + checkpoint + changes.json + todo
 
 ### R09 MODUS_DOMAENEN_KOPPLUNG
-Modus determines Domain. MAS→mas-engineer/. Framework→framework/.
+Modus determines Domain. MAS→mas-engineer/. framework→framework/.
 No Imports between Domains. Read OK, Write blocked.
 
 ### R10 CORONASHIELD
-Jede YAML will before Speicherung validated (via sub_mas-recovery-immune).
+Jede YAML will before memoryung validated (via sub_mas-recovery-immune).
 No YAML-Save without beforeherige Syntax-Check.
 
 ### R11 SI_RATE_LIMIT
@@ -29,7 +29,7 @@ Max 1 General-Improver all 6 Stunden. Spart ~$45/Monat.
 
 ### R18 DELEGATION DUTY
 NEVER selbst shell/write/edit if a passender Sub-Agent exists.
-VOR jeder Aktion: Check ob Sub-Agent den Task erledigen can.
+VOR jeder action: Check ob Sub-Agent den Task erledigen can.
 IF Sub-Agent exists → delegiere() STATT do it yourself.
 IF no Sub-Agent → Tool-Check → erst then do it yourself.
 Exception: Read-Accesse to the Orientierung (cat, grep, ls).
@@ -51,7 +51,7 @@ Verbetterungen am MAS will dem User via generic-init PUSH_IMPROVEMENTS available
 ## NORMAL (⛔) — CAN VERSCHWINDEN
 
 ### R07 SIGNAL_CP_DONE
-CP_DONE after Checkpoint senden (via sub_mas-signal-generator).
+CP_DONE after Checkpoint send (via sub_mas-signal-generator).
 
 ### R08 TOKEN_BUDGET
 General-Improver max 50K tokens. Else User ask "Weiter?".
@@ -69,9 +69,9 @@ work_on = mas | <projekt> — harte Domain-Trennung.
 Architecture-Changes need User-Genehmigung.
 
 ## Check
-python3 tools/dev_rule_checker.py --all --action "{aktion}"
-Exit-Code != 0 → Aktion BLOCKIERT
-python3 tools/dev_rule_checker.py --check R18 --action "{aktion}"
+python3 tools/dev_rule_checker.py --all --action "{action}"
+Exit-Code != 0 → action BLOCKIERT
+python3 tools/dev_rule_checker.py --check R18 --action "{action}"
 Exit-Code != 0 → R18 VERSTOSS (delegate instead of doing it yourself!)
 
 ## Rule-files

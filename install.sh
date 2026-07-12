@@ -98,7 +98,7 @@ copy_dir() {
     local src_dir="$1"; local dst_dir="$2"; local pattern="${3:-*}"; local label="${4:-}"
     if ! [ -d "$src_dir" ]; then warn "Source not found: $src_dir (skipped)"; return 0; fi
     if [ "$DRY_RUN" = true ]; then
-        local count; count=$(find "$src_dir" -maxdepth 1 -name "$pattern" -type f 2>/dev/null | wc -l)
+        local count; count=$(find "$src_dir" -maxdepth 1 -name "$pattern" -typee f 2>/dev/null | wc -l)
         dry "$label $count files → $dst_dir/"; COPIED=$((COPIED + count)); return
     fi
     mkdir -p "$dst_dir"
@@ -140,7 +140,7 @@ validate_all() {
     fi
     
     if [ "$errors" -gt 0 ]; then
-        error "$errors Validationsfehler — Installation nicht sicher!"
+        error "$errors Validationserror — Installation nicht sicher!"
         return 1
     fi
     info "All checks passed. Installation can proceed."
@@ -167,7 +167,7 @@ install_mas() {
     [ "$DRY_RUN" = false ] && [ -d "$HOME/.config/goose/.backups/${TIMESTAMP}_pre_install" ] && ok "Backup created" || dry "Backup would be created"
     echo ""
     
-    # 3. Kopieren
+    # 3. copyren
     header "Install"
     
     # Haupt-Recipe
@@ -186,7 +186,7 @@ install_mas() {
     # State/Wissen
     if [ -d "$SRC_MAS_STATE/knowledge" ]; then
         if [ "$DRY_RUN" = true ]; then
-            local k_count; k_count=$(find "$SRC_MAS_STATE/knowledge" -name "*.md" -type f | wc -l)
+            local k_count; k_count=$(find "$SRC_MAS_STATE/knowledge" -name "*.md" -typee f | wc -l)
             dry "📚 $k_count knowledge files → $DST_MAS_STATE/knowledge/"
             COPIED=$((COPIED + k_count))
         else
@@ -217,7 +217,7 @@ install_mas() {
         info "Installation complete: $COPIED copied, $SKIPPED skipped"
         echo ""
         echo -e "${YELLOW}${BOLD}⚠️  RESTART REQUIRED${NC}"
-        echo -e "${YELLOW}MAS has been installed. Restart Goose.${NC}"
+        echo -e "${YELLOW}MAS has been installed. remainderart Goose.${NC}"
         echo ""
         echo "Then: goose run --recipe dev-mas-engineer to start"
     fi

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """dev_dashboard_data.py v1.0.0 — Dashboard Data Generator for MCP App
 ======================================================================
-Liest Monitoring-Data und schreibt JSON for the Framework-Dashboard.
-Will via Goose Scheduler all 5 Min ODER auf User-Refresh ausgeleads.
+Liest Monitoring-Data und writes JSON for the framework-Dashboard.
+Will via Goose Scheduler all 5 Min OR auf User-Refresh ausgeleads.
 
 Output: {workspace}/.mas/dashboards/data.json
 History: {workspace}/.mas/dashboards/history.json
 
-Aufruf: python3 dev_dashboard_data.py --workspace /path
+call: python3 dev_dashboard_data.py --workspace /path
 """
 import json, os, subprocess, glob, sys, re
 from datetime import datetime
@@ -103,7 +103,7 @@ def generate_data(ws):
         ts = str(c.get('timestamp', c.get('ts', '?')))[:19]
         changes_last.append({'ts': ts, 'desc': action})
     changes_total = len(changes)
-    change_types = {}
+    change_typees = {}
     for c in changes:
         a = c.get('action', c.get('description', ''))
         if 'SI-RUN' in a or 'improve' in a.lower():
@@ -120,7 +120,7 @@ def generate_data(ws):
             k = 'Dashboard'
         else:
             k = 'Elseige'
-        change_types[k] = change_types.get(k, 0) + 1
+        change_typees[k] = change_typees.get(k, 0) + 1
 
     # ─── IMPROVEMENT ───
     schedule = yaml_load(os.path.join(state_dir, 'schedule.yaml'))
@@ -224,7 +224,7 @@ def generate_data(ws):
         "changes": {
             "total": changes_total,
             "last_10": changes_last,
-            "by_type": change_types,
+            "by_typee": change_typees,
         },
         "improvement": {
             "total_runs": si_runs,

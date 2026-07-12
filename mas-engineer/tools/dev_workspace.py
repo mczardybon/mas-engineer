@@ -5,22 +5,22 @@ dev_workspace.py — 📁 Workspace-Manager des dev-mas-engineer
 Version: 1.0.0
 Author: dev-mas-engineer (autonomous)
 
-Creates und manages a Arbeitsordner for the Framework-Development.
-Der Workspace contains eine Kopie des installierten Frameworks — der
+Creates und manages a Arbeitsordner for the framework-Development.
+Der Workspace contains eine copy des installierten frameworks — der
 MAS-Engineer arbeitet daran und installiert Changes back.
 
 VERWENDUNG:
     python3 dev_workspace.py --init <workspace_dir>      # Workspace create
-    python3 dev_workspace.py --install <workspace_dir>    # Framework aus Workspace installieren
-    python3 dev_workspace.py --uninstall                   # Framework deinstallieren (MAS bleibt)
+    python3 dev_workspace.py --install <workspace_dir>    # framework aus Workspace installieren
+    python3 dev_workspace.py --uninstall                   # framework deinstallieren (MAS bleibt)
     python3 dev_workspace.py --install-mas <workspace>    # Only MAS aus Workspace installieren
-    python3 dev_workspace.py --uninstall-mas              # Only MAS deinstallieren (Framework bleibt)
+    python3 dev_workspace.py --uninstall-mas              # Only MAS deinstallieren (framework bleibt)
     python3 dev_workspace.py --clean <workspace_dir>      # Workspace delete
     python3 dev_workspace.py --status <workspace_dir>     # status anshow
-    python3 dev_workspace.py --rollback <workspace>  # Git-Log + Rollback
+    python3 dev_workspace.py --rollback <workspace>  # Git-Log + rollback
     python3 dev_workspace.py --add-recipe <ws> <recipe>   # Ein Recipe aus Workspace installieren
     python3 dev_workspace.py --remove-recipe <recipe>     # Ein Recipe aus Goose remove
-    python3 dev_workspace.py --help                        # Diese Hilfe anshow
+    python3 dev_workspace.py --help                        # This help anshow
 """
 
 import sys, os, shutil, re, json
@@ -42,7 +42,7 @@ GOOSE_CONFIG = Path.home() / ".config" / "goose" / "config.yaml"
 # Source-Repo for Python scripts, tests, project files
 AGENT_REPO = Path.home() / ".config" / "goose" / "recipes"
 
-# Was will NICHT in den Workspace kopiert
+# Was will NICHT in den Workspace copyrt
 EXCLUDE_RECIPES = {"dev-mas-engineer.yaml"}
 EXCLUDE_DOCS = {"mas-engineer"}
 
@@ -70,7 +70,7 @@ def count_files(d: Path, pattern="*") -> int:
 
 
 def cmd_init_recovery(ws_dir):
-    """Add Phoenix-Recovery-structure in new Framework ein."""
+    """Add Phoenix-Recovery-structure in new framework ein."""
     import shutil
     mas_dir = Path(ws_dir).resolve() / "mas-engineer"
     template_recovery = Path(__file__).parent.parent / "recipe" / "template" / "recovery"
@@ -121,13 +121,13 @@ def cmd_init_recovery(ws_dir):
     ok("checkpoints/.state/ angelegt")
 
 def cmd_init(ws_dir: str):
-    """Workspace mit Kopie des installierten Frameworks create."""
+    """Workspace mit copy des installierten frameworks create."""
     ws = Path(ws_dir).resolve()
 
-    # Dev-mode? (zweites Argument = "dev" → inkl. MAS-Tools + Docs)
+    # Dev-mode? (zweites argument = "dev" → inkl. MAS-Tools + Docs)
     dev_mode = len(sys.argv) > 3 and sys.argv[3] == "dev"
 
-    mode_label = "Framework + MAS-Engineer" if dev_mode else "Framework"
+    mode_label = "framework + MAS-Engineer" if dev_mode else "framework"
     log(f"\n📁 Workspace: {ws} ({mode_label})")
     log("=" * 60)
 
@@ -139,7 +139,7 @@ def cmd_init(ws_dir: str):
     n_recipes = 0
     n_docs = 0
 
-    # ── FRAMEWORK: Recipes kopieren (Top-Level + _framework/) ──
+    # ── FRAMEWORK: Recipes copyren (Top-Level + _framework/) ──
     if GOOSE_RECIPES.exists():
         for src_dir in [GOOSE_RECIPES, GOOSE_FRAMEWORK_DIR]:
             if not src_dir.exists():
@@ -164,13 +164,13 @@ def cmd_init(ws_dir: str):
         mas_tools_dir = ws / "mas-engineer" / "tools"
         mas_docs_dir = ws / "mas-engineer" / "docs"
 
-        # MAS-Rezept kopieren
+        # MAS-Rezept copyren
         mas_yaml = GOOSE_RECIPES / "dev-mas-engineer.yaml"
         if mas_yaml.exists():
             shutil.copy2(mas_yaml, mas_recipe_dir / "dev-mas-engineer.yaml")
             n_recipes += 1
 
-        # MAS-Sub-agents kopieren (aus GOOSE_RECIPES/)
+        # MAS-Sub-agents copyren (aus GOOSE_RECIPES/)
         sub_src = GOOSE_RECIPES
         sub_dst = mas_recipe_dir / "sub"
         sub_dst.mkdir(exist_ok=True)
@@ -184,7 +184,7 @@ def cmd_init(ws_dir: str):
                 ok(f"MAS-Sub-agents: {mas_sub_count} → mas-engineer/recipe/sub/")
                 n_recipes += mas_sub_count
 
-        # MAS-Tools kopieren (aus mas-engineer-tools/)
+        # MAS-Tools copyren (aus mas-engineer-tools/)
         tools_src = GOOSE_RECIPES / "mas-engineer-tools"
         if tools_src.exists():
             if mas_tools_dir.exists():
@@ -194,7 +194,7 @@ def cmd_init(ws_dir: str):
             ok(f"MAS-Tools: {n_tools} files → mas-engineer/tools/")
             n_recipes += n_tools
 
-        # MAS-Docs kopieren
+        # MAS-Docs copyren
         mas_docs_src = GOOSE_DOCS / "mas-engineer"
         if mas_docs_src.exists():
             if mas_docs_dir.exists():
@@ -206,11 +206,11 @@ def cmd_init(ws_dir: str):
 
     ok(f"Recipes: {n_recipes} files")
 
-    # Docs kopieren (mas-engineer/ separat in Dev-mode behandelt)
+    # Docs copyren (mas-engineer/ separat in Dev-mode behandelt)
     if GOOSE_DOCS.exists():
         for item in sorted(GOOSE_DOCS.iterdir()):
             if item.name in EXCLUDE_DOCS:
-                continue  # mas-engineer/ separat kopiert in Dev-mode oben
+                continue  # mas-engineer/ separat copyrt in Dev-mode oben
             dst = fw / "docs" / item.name
             if item.is_dir():
                 if dst.exists():
@@ -223,11 +223,11 @@ def cmd_init(ws_dir: str):
 
     ok(f"Docs: {n_docs} files")
 
-    # Config kopieren
+    # Config copyren
     if GOOSE_CONFIG.exists():
         shutil.copy2(GOOSE_CONFIG, fw / "config.yaml")
 
-    # ── Python-Skripte kopieren (NUR im Dev-mode) ──
+    # ── Python-Skripte copyren (NUR im Dev-mode) ──
     if dev_mode:
         python_dir = fw / "python"
         python_dir.mkdir(exist_ok=True)
@@ -240,7 +240,7 @@ def cmd_init(ws_dir: str):
         if py_copied > 0:
             ok(f"Python-Skripte: {py_copied} files → framework/python/")
 
-    # ── Tests kopieren ──
+    # ── Tests copyren ──
     tests_src = AGENT_REPO / "tests"
     if tests_src.exists():
         tests_dir = fw / "tests"
@@ -255,7 +255,7 @@ def cmd_init(ws_dir: str):
             shutil.copy2(init, tests_dir / "__init__.py")
         ok(f"Tests: {tc} files → framework/tests/")
 
-    # ── project-files kopieren ──
+    # ── project-files copyren ──
     for proj_file in ["pyproject.toml", ".gitignore"]:
         src = AGENT_REPO / proj_file
         if src.exists():
@@ -269,18 +269,18 @@ def cmd_init(ws_dir: str):
     # ── README.md create ──
     readme = ws / "README.md"
     if dev_mode:
-        readme.write_text(f"""# Framework Workspace (Dev)
+        readme.write_text(f"""# framework Workspace (Dev)
 
 > Creates: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M')}
-> mode: Framework + MAS-Engineer (Dev)
+> mode: framework + MAS-Engineer (Dev)
 
 ## structure
 
 ```
-├── framework/          ← 🔒 Framework (Rezepte, Docs, Tests, Config)
+├── framework/          ← 🔒 framework (Rezepte, Docs, Tests, Config)
 │   ├── recipes/        ← 94 YAML-Rezepte
-│   ├── docs/           ← Framework-Documentation
-│   ├── config.yaml     ← Framework-Configuration
+│   ├── docs/           ← framework-Documentation
+│   ├── config.yaml     ← framework-Configuration
 │   ├── tests/          ← Test-files (pytest)
 │   └── python/         ← Admin-Skripte
 ├── mas-engineer/       ← 🔒 MAS-Engineer (Rezept, Tools, Docs)
@@ -292,7 +292,7 @@ def cmd_init(ws_dir: str):
 ├── .backups/           ← Backups
 └── start-sessions.sh   ← 🆕 Zwei Goose-Sessions start
 
-## Framework installieren
+## framework installieren
 
 ```bash
 cd {ws} && python3 framework/python/install_framework.py install --source framework --no-launcher
@@ -311,18 +311,18 @@ bash start-sessions.sh
 ```
 """)
     else:
-        readme.write_text(f"""# Framework Workspace
+        readme.write_text(f"""# framework Workspace
 
 > Creates: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M')}
-> mode: Framework
+> mode: framework
 
 ## structure
 
 ```
-├── framework/          ← Framework (Rezepte, Docs, Tests, Config)
+├── framework/          ← framework (Rezepte, Docs, Tests, Config)
 │   ├── recipes/        ← 94 YAML-Rezepte
-│   ├── docs/           ← Framework-Documentation
-│   ├── config.yaml     ← Framework-Configuration
+│   ├── docs/           ← framework-Documentation
+│   ├── config.yaml     ← framework-Configuration
 │   ├── tests/          ← Test-files (pytest)
 │   └── python/         ← Admin-Skripte
 ├── .git/               ← Git-Repository
@@ -330,7 +330,7 @@ bash start-sessions.sh
 ├── .backups/           ← Backups
 └── pyproject.toml
 
-## Framework installieren
+## framework installieren
 
 ```bash
 python3 {TOOLS_DIR}/dev_recipe_manager.py --install all
@@ -352,7 +352,7 @@ cd {ws} && python3 -m pytest framework/tests/ -q
     if dev_mode:
         _write_start_sessions_script(ws)
 
-    # ── Git-Repository initialisieren ──
+    # ── Git-Repository initialize ──
     import subprocess as _sp
     if _sp.run(["git", "--version"], capture_output=True).returncode == 0:
         ws_str = str(ws)
@@ -363,7 +363,7 @@ cd {ws} && python3 -m pytest framework/tests/ -q
         if r.returncode == 0:
             ok("Git-Repository initialized + initial commit")
         else:
-            warn("Git: no Commit (evtl. no Changes)")
+            warn("Git: no commit (evtl. no Changes)")
     else:
         warn("Git not available — Workspace ohne Versionierung")
 
@@ -386,7 +386,7 @@ def _write_start_sessions_script(ws: Path):
 
     content = f'''#!/bin/bash
 # ══════════════════════════════════════════════════
-#  Dual-Session-Starter — Framework + MAS-Engineer
+#  Dual-Session-Starter — framework + MAS-Engineer
 # ══════════════════════════════════════════════════
 
 set -e
@@ -396,7 +396,7 @@ FW_RECIPES="$WS/framework/recipes"
 MAS_RECIPES="$WS/mas-engineer/recipe"
 
 if [ ! -d "$FW_RECIPES" ]; then
-    echo "❌ Framework-Recipes not found: $FW_RECIPES"
+    echo "❌ framework-Recipes not found: $FW_RECIPES"
     exit 1
 fi
 if [ ! -f "$MAS_RECIPES/dev-mas-engineer.yaml" ]; then
@@ -405,9 +405,9 @@ if [ ! -f "$MAS_RECIPES/dev-mas-engineer.yaml" ]; then
 fi
 
 echo "╔══════════════════════════════════════════╗"
-echo "║  🚀 Framework Dev-Sessions              ║"
+echo "║  🚀 framework Dev-Sessions              ║"
 echo "╠══════════════════════════════════════════╣"
-echo "║  🛠️  Framework-Development               ║"
+echo "║  🛠️  framework-Development               ║"
 echo "║      RECIPE_PATH=$FW_RECIPES"
 echo "║      Policy: Goose-First"
 echo "║                                         ║"
@@ -417,8 +417,8 @@ echo "║      Policy: Python-First"
 echo "╚══════════════════════════════════════════╝"
 
 echo ""
-echo "▶️  Starte 🛠️  Framework-Development..."
-GOOSE_RECIPE_PATH="$FW_RECIPES" goose session -n "🛠️ Framework-Development" &
+echo "▶️  Starte 🛠️  framework-Development..."
+GOOSE_RECIPE_PATH="$FW_RECIPES" goose session -n "🛠️ framework-Development" &
 FW_PID=$!
 
 sleep 1
@@ -431,7 +431,7 @@ sleep 1
 
 echo ""
 echo "✅ Beide Sessions started:"
-echo "   🛠️  Framework (PID $FW_PID)"
+echo "   🛠️  framework (PID $FW_PID)"
 echo "      RECIPE_PATH=$FW_RECIPES"
 echo "      Policy: Goose-First"
 echo ""
@@ -449,7 +449,7 @@ wait
 
 
 def cmd_install(ws_dir: str):
-    """Framework AUS DEM WORKSPACE via install_framework.py installieren."""
+    """framework AUS DEM WORKSPACE via install_framework.py installieren."""
     ws = Path(ws_dir).resolve()
     import subprocess
 
@@ -468,9 +468,9 @@ def cmd_install(ws_dir: str):
     mas_tools = GOOSE_RECIPES / "mas-engineer-tools"
     mas_ok_before = mas_yaml.exists() and mas_tools.exists()
     if not mas_ok_before:
-        warn("MAS-Engineer missing vor Framework-Installation — will danach nachinstalliert")
+        warn("MAS-Engineer missing vor framework-Installation — will danach nachinstalliert")
 
-    log(f"\n📦 Installiere Framework aus: {ws}")
+    log(f"\n📦 Installiere framework aus: {ws}")
     log("=" * 60)
 
     result = subprocess.run(
@@ -478,23 +478,23 @@ def cmd_install(ws_dir: str):
     )
 
     if result.returncode != 0:
-        error(f"Framework-Installation failed (Exit {result.returncode})")
+        error(f"framework-Installation failed (Exit {result.returncode})")
         sys.exit(1)
 
     # Safety Post-Check: MAS still da?
     mas_ok_after = mas_yaml.exists() and mas_tools.exists()
     if mas_ok_before and not mas_ok_after:
-        warn("MAS after Framework-Install verschwunden — will againhergestellt")
+        warn("MAS after framework-Install verschwunden — will againhergestellt")
         _install_mas_from_workspace(ws)
     elif not mas_ok_after:
         warn("MAS-Engineer missing — will nachinstalliert")
         _install_mas_from_workspace(ws)
 
-    ok(f"Framework aus Workspace installiert ✓")
+    ok(f"framework aus Workspace installiert ✓")
 
 
 def _install_mas_from_workspace(ws: Path):
-    """Hilfsfunktion: MAS-files aus Workspace kopieren."""
+    """Hilfsfunction: MAS-files aus Workspace copyren."""
     # Recipe
     src = ws / "mas-engineer" / "recipe" / "dev-mas-engineer.yaml"
     if src.exists():
@@ -545,14 +545,14 @@ def cmd_install_mas(ws_dir: str):
 
 
 def cmd_uninstall():
-    """Framework deinstallieren — MAS bleibt keep."""
+    """framework deinstallieren — MAS bleibt keep."""
     # Safety Check
     mas_yaml = GOOSE_RECIPES / "dev-mas-engineer.yaml"
     if not mas_yaml.exists():
-        error("⛔ MAS-Engineer missing — Framework-Deinstallation verweigert")
+        error("⛔ MAS-Engineer missing — framework-Deinstallation verweigert")
         sys.exit(1)
 
-    log(f"\n🗑️  Deinstalliere Framework (MAS bleibt)")
+    log(f"\n🗑️  Deinstalliere framework (MAS bleibt)")
     log("=" * 60)
 
     n = 0
@@ -580,19 +580,19 @@ def cmd_uninstall():
                 item.unlink()
             n += 1
 
-    ok(f"Framework deinstalliert ({n} Elements) — MAS bleibt ✓")
+    ok(f"framework deinstalliert ({n} Elements) — MAS bleibt ✓")
 
 
 def cmd_uninstall_mas():
-    """NUR MAS-Engineer deinstallieren — Framework bleibt."""
+    """NUR MAS-Engineer deinstallieren — framework bleibt."""
     fw_yaml = GOOSE_RECIPES / "framework-starter.yaml"
     fw_dir = GOOSE_RECIPES / "_framework"
 
     if not fw_yaml.exists() or not fw_dir.exists():
-        error("⛔ Framework missing — MAS-Deinstallation verweigert")
+        error("⛔ framework missing — MAS-Deinstallation verweigert")
         sys.exit(1)
 
-    log(f"\n🗑️  Deinstalliere MAS-Engineer (Framework bleibt)")
+    log(f"\n🗑️  Deinstalliere MAS-Engineer (framework bleibt)")
     log("=" * 60)
 
     n = 0
@@ -613,11 +613,11 @@ def cmd_uninstall_mas():
         f.unlink()
         n += 1
 
-    ok(f"MAS-Engineer deinstalliert ({n} Components) — Framework bleibt ✓")
+    ok(f"MAS-Engineer deinstalliert ({n} Components) — framework bleibt ✓")
 
 
 def cmd_rollback(ws_dir: str):
-    """Git-Log show und Rollback enable."""
+    """Git-Log show und rollback enable."""
     import subprocess
     ws_str = str(Path(ws_dir).resolve())
 
@@ -631,11 +631,11 @@ def cmd_rollback(ws_dir: str):
             try: n = int(sys.argv[i + 1])
             except: pass
 
-    log(f"\n📜 GIT-LOG (letzte {n} Commits)")
+    log(f"\n📜 GIT-LOG (letzte {n} commits)")
     log("=" * 60)
     subprocess.run(["git", "-C", ws_str, "log", "--oneline", f"-{n}"])
 
-    print("\nRollback zu Commit? (Hash oder Enter=cancel): ", end="")
+    print("\nrollback zu commit? (Hash oder Enter=cancel): ", end="")
     commit = input().strip()
     if commit:
         r = subprocess.run(
@@ -643,10 +643,10 @@ def cmd_rollback(ws_dir: str):
             capture_output=True, text=True
         )
         if r.returncode == 0:
-            ok(f"Rollback zu {commit[:8]}")
+            ok(f"rollback zu {commit[:8]}")
             subprocess.run(["git", "-C", ws_str, "log", "--oneline", "-3"])
         else:
-            error(f"Rollback failed: {r.stderr.strip()}")
+            error(f"rollback failed: {r.stderr.strip()}")
 
 
 def cmd_add_recipe(ws_dir: str, recipe_name: str):
@@ -754,15 +754,15 @@ def cmd_status(ws_dir: str):
 MAS_TEMPLATE = Path(__file__).parent.parent / "recipe" / "template" / "agent_template.yaml"
 
 
-def _ask_type():
-    """Interaktive Typ-Selection: mas, specialist oder sub."""
+def _ask_typee():
+    """Interaktive typee-Selection: mas, specialist oder sub."""
     print("\n📋 AGENT-GENERATOR v1.0.0")
     print("━" * 50)
-    print("What type of agent would you like to create?")
+    print("What typee of agent would you like to create?")
     print()
     print("  1) MAS — Sub-Agent (mas-engineer/recipe/sub/)")
-    print("  2) Framework — Specialist (framework/recipes/specialists/)")
-    print("  3) Framework — Sub-Agent (framework/recipes/sub/)")
+    print("  2) framework — Specialist (framework/recipes/specialists/)")
+    print("  3) framework — Sub-Agent (framework/recipes/sub/)")
     print()
 
     while True:
@@ -780,13 +780,13 @@ def _ask_type():
         print("  ❌ Invalid — bitte 1, 2 oder 3 enter")
 
 
-def _ask_name(agent_type):
-    """Interaktive Namensabfrage mit Validierung."""
+def _ask_name(agent_typee):
+    """Interaktive Namensquery mit validation."""
     import re
     print()
-    if agent_type == "mas_sub":
-        hint = "Name (z.B. 'datenbank-cleaner' → sub_mas-datenbank-cleaner.yaml)"
-    elif agent_type == "fw_specialist":
+    if agent_typee == "mas_sub":
+        hint = "Name (z.B. 'database-cleaner' → sub_mas-database-cleaner.yaml)"
+    elif agent_typee == "fw_specialist":
         hint = "Name (z.B. 'deploy' → deploy.yaml)"
     else:
         hint = "Name (z.B. 'config-writer' → sub_config-writer.yaml)"
@@ -807,7 +807,7 @@ def _ask_name(agent_type):
 
 
 def _ask_description():
-    """Interaktive Abfrage from Description und Emoji."""
+    """Interaktive query from Description und Emoji."""
     print()
     try:
         desc = input("  Description (z.B. 'Database-Cleanup'): ").strip()
@@ -818,19 +818,19 @@ def _ask_description():
     return desc or name.replace("-", " ").title(), emoji
 
 
-def _generate_agent(agent_type, name, description, emoji, workspace):
-    """Kopiert Template und replaces Platzholder. generated bei Framework a Minimum-YAML."""
+def _generate_agent(agent_typee, name, description, emoji, workspace):
+    """copyrt Template und replaces Platzholder. generated bei framework a minimum-YAML."""
     import shutil
 
     ws = Path(workspace)
 
-    if agent_type == "mas_sub":
+    if agent_typee == "mas_sub":
         dst_dir = ws / "mas-engineer" / "recipe" / "sub"
         filename = f"sub_mas-{name}.yaml"
         if not MAS_TEMPLATE.exists():
             print(f"  ❌ Template not found: {MAS_TEMPLATE}")
             return None
-    elif agent_type == "fw_specialist":
+    elif agent_typee == "fw_specialist":
         dst_dir = ws / "framework" / "recipes" / "specialists"
         filename = f"{name}.yaml"
     else:
@@ -850,7 +850,7 @@ def _generate_agent(agent_type, name, description, emoji, workspace):
             print("  ❌ Skip")
             return None
 
-    if agent_type == "mas_sub" and MAS_TEMPLATE.exists():
+    if agent_typee == "mas_sub" and MAS_TEMPLATE.exists():
         content = MAS_TEMPLATE.read_text()
         content = content.replace("{NAME}", name.upper().replace("-", " "))
         content = content.replace("{name}", name.lower())
@@ -861,11 +861,11 @@ def _generate_agent(agent_type, name, description, emoji, workspace):
         content = content.replace("{Titel}", description)
         dst.write_text(content)
     else:
-        # Minimum-YAML for Framework
+        # minimum-YAML for framework
         display_name = name.upper().replace("-", " ")
         content = f"""version: 1.0.0
 title: "{display_name} — {description}"
-description: 'v1.0.0 | Framework: {description}'
+description: 'v1.0.0 | framework: {description}'
 
 prompt: |
   {emoji} {display_name} (v1.0.0)
@@ -887,17 +887,17 @@ settings:
     return dst
 
 
-def _validate_agent(yaml_path, agent_type):
-    """Validated gegen Best Practices (MAS) oder YAML (Framework)."""
+def _validate_agent(yaml_path, agent_typee):
+    """Validated gegen Best Practices (MAS) oder YAML (framework)."""
     import subprocess, yaml
 
     print()
     print(f"  🔍 Validiere {yaml_path.name}...")
 
-    if agent_type == "mas_sub":
+    if agent_typee == "mas_sub":
         editor = Path(__file__).parent / "dev_editor.py"
         if not editor.exists():
-            print("  ℹ️ dev_editor.py not found — skip Validierung")
+            print("  ℹ️ dev_editor.py not found — skip validation")
             return
 
         result = subprocess.run(
@@ -907,15 +907,15 @@ def _validate_agent(yaml_path, agent_type):
         )
         print(result.stdout)
         if result.returncode == 0:
-            print("  ✅ Validierung: BESTANDEN")
+            print("  ✅ validation: INVENTORYEN")
         else:
-            print("  ⚠️ Validierung: FAILED — Agent nevertheless creates")
+            print("  ⚠️ validation: FAILED — Agent nevertheless creates")
     else:
         try:
             with open(yaml_path) as fh:
                 yaml.safe_load(fh)
             print("  ✅ YAML-Syntax: OK")
-            print("  ℹ️ Framework: No MAS-Best-Practices available — manuelle Check recommended")
+            print("  ℹ️ framework: No MAS-Best-Practices available — manuelle Check recommended")
         except yaml.YAMLError as e:
             print(f"  ❌ YAML-Syntax-Error: {e}")
 
@@ -960,24 +960,24 @@ def _register_agent(name, description, emoji, workspace):
 """)
 
 
-def _show_summary(agent_type, name, description, emoji, yaml_path):
-    """Abschliessende Togetherfassung."""
+def _show_summary(agent_typee, name, description, emoji, yaml_path):
+    """Abclosede Togetherfassung."""
     ws = Path(os.getcwd())
 
     print()
     print("  ┌─────────────────────────────────────────────┐")
     print("  │  ✅ AGENT ERSTELLT                            │")
     print("  ├─────────────────────────────────────────────┤")
-    type_label = {"mas_sub": "MAS Sub-Agent",
-                  "fw_specialist": "Framework Specialist",
-                  "fw_sub": "Framework Sub-Agent"}.get(agent_type, agent_type)
-    print(f"  │  Typ:    {type_label:<22}{'│':>10}")
+    typee_label = {"mas_sub": "MAS Sub-Agent",
+                  "fw_specialist": "framework Specialist",
+                  "fw_sub": "framework Sub-Agent"}.get(agent_typee, agent_typee)
+    print(f"  │  typee:    {typee_label:<22}{'│':>10}")
     print(f"  │  Name:   {name:<22}{'│':>10}")
     print(f"  │  Emoji:  {emoji:<22}{'│':>10}")
     print(f"  │  Path:   {str(yaml_path.relative_to(ws)):<22}{'│':>2}")
     print("  ├─────────────────────────────────────────────┤")
 
-    if agent_type == "mas_sub":
+    if agent_typee == "mas_sub":
         steps = [
             "1. dev_editor.py --validate <path> (bei Changeen)",
             "2. sub_recipes-entry in dev-mas-engineer.yaml",
@@ -1006,14 +1006,14 @@ def _load_projects():
             "version": "1.0.0", "last_updated": datetime.now().isoformat(),
             "active_project": "dev-team",
             "projects": {"dev-team": {"label": "DEV-TEAM", "created": "2026-06-13",
-                         "type": "multi_agent_system", "agents": 0, "tests": 0,
+                         "typee": "multi_agent_system", "agents": 0, "tests": 0,
                          "config": "dev-team/config.yaml", "status": "stable"}}
         }
         yaml.dump(data, open(pp, "w"), default_flow_style=False, allow_unicode=True)
     return yaml.safe_load(open(pp))
 
 def _save_projects(data):
-    """Speichere .projects.yaml."""
+    """memorye .projects.yaml."""
     data["last_updated"] = datetime.now().isoformat()
     yaml.dump(data, open(PROJECTS_FILE, "w"), default_flow_style=False, allow_unicode=True)
 
@@ -1027,7 +1027,7 @@ def cmd_project_list():
     """--project list: All projecte anshow."""
     data = _load_projects()
     active = data.get("active_project", "")
-    print(f"\n  Framework-projecte")
+    print(f"\n  framework-projecte")
     print(f"  {'='*50}")
     for name, p in data.get("projects", {}).items():
         marker = "  <- active" if name == active else ""
@@ -1051,7 +1051,7 @@ def cmd_project_create(name, copy_from=None):
             return
         import shutil
         shutil.copytree(src, pp)
-        print(f"  Kopiert von '{copy_from}' after '{name}'")
+        print(f"  copyrt von '{copy_from}' after '{name}'")
     else:
         pp.mkdir(parents=True, exist_ok=True)
         (pp / "recipes" / "core").mkdir(parents=True)
@@ -1061,7 +1061,7 @@ def cmd_project_create(name, copy_from=None):
         
         # config.yaml
         cfg = {"version": "1.0.0", "project_name": name,
-               "project_type": "multi_agent_system", "created": datetime.now().strftime("%Y-%m-%d")}
+               "project_typee": "multi_agent_system", "created": datetime.now().strftime("%Y-%m-%d")}
         yaml.dump(cfg, open(pp / "config.yaml", "w"), default_flow_style=False, allow_unicode=True)
         
         print(f"  Ordnerstructure creates: framework/{name}/")
@@ -1071,7 +1071,7 @@ def cmd_project_create(name, copy_from=None):
         data["projects"] = {}
     data["projects"][name] = {
         "label": name.upper(), "created": datetime.now().strftime("%Y-%m-%d"),
-        "type": "multi_agent_system", "agents": 0, "tests": 0,
+        "typee": "multi_agent_system", "agents": 0, "tests": 0,
         "config": f"{name}/config.yaml", "status": "draft"
     }
     data["active_project"] = name
@@ -1113,7 +1113,7 @@ def cmd_project_show(name):
     p = data["projects"][name]
     print(f"\n  project: {name}")
     print(f"  Label:   {p.get('label', '?')}")
-    print(f"  Typ:     {p.get('type', '?')}")
+    print(f"  typee:     {p.get('typee', '?')}")
     print(f"  Agents:  {p.get('agents', 0)}")
     print(f"  Tests:   {p.get('tests', 0)}")
     print(f"  status:  {p.get('status', '?')}")
@@ -1203,7 +1203,7 @@ def cmd_project(args):
         if old and new:
             cmd_project_rename(old, new)
 def cmd_doctor_init(target_path):
-    """Creates new Framework-project mit MAS-Integration."""
+    """Creates new framework-project mit MAS-Integration."""
     from pathlib import Path
     import json
     from datetime import datetime
@@ -1246,7 +1246,7 @@ def cmd_doctor_init(target_path):
     json.dump(config, open(doctor_dir / "config.json", "w"), indent=2)
 
     print(f"""
-  Framework-project creates: {target}
+  framework-project creates: {target}
 
   recipes/
     core/          Core-agents (starter, planner, executor)
@@ -1263,14 +1263,14 @@ def cmd_doctor_init(target_path):
 
 
 def cmd_scaffold(args):
-    """Hauptfunktion for --scaffold."""
-    # Phase 1: Typ
-    agent_type, rel_dir, _ = _ask_type()
-    if not agent_type:
+    """Hauptfunction for --scaffold."""
+    # Phase 1: typee
+    agent_typee, rel_dir, _ = _ask_typee()
+    if not agent_typee:
         return
 
     # Phase 2: Name
-    name = args.name if getattr(args, 'name', None) else _ask_name(agent_type)
+    name = args.name if getattr(args, 'name', None) else _ask_name(agent_typee)
     if not name:
         return
 
@@ -1282,26 +1282,26 @@ def cmd_scaffold(args):
         if not desc:
             return
 
-    # Phase 4: Generieren
+    # Phase 4: Generate
     workspace = os.getcwd()
-    yaml_path = _generate_agent(agent_type, name, desc, emoji, workspace)
+    yaml_path = _generate_agent(agent_typee, name, desc, emoji, workspace)
     if not yaml_path:
         return
 
     # Phase 5: Validate
     if not getattr(args, 'no_validate', False):
-        _validate_agent(yaml_path, agent_type)
+        _validate_agent(yaml_path, agent_typee)
 
     # Phase 6: Registrieren (only MAS)
-    if agent_type == "mas_sub":
+    if agent_typee == "mas_sub":
         _register_agent(name, desc, emoji, workspace)
 
     # Phase 7: Togetherfassung
-    _show_summary(agent_type, name, desc, emoji, yaml_path)
+    _show_summary(agent_typee, name, desc, emoji, yaml_path)
 
 
 def cmd_install_check(ws_dir):
-    """Check ob MAS after newinstallation funktionieren would."""
+    """Check ob MAS after newinstallation functionieren would."""
     mas_dir = Path(ws_dir) / "mas-engineer"
     if not mas_dir.exists():
         error(f"No MAS-Directory: {mas_dir}")
@@ -1310,7 +1310,7 @@ def cmd_install_check(ws_dir):
     checks = []
     ok("=== INSTALL-CHECK ===")
 
-    # C1: YAML-Validierung
+    # C1: YAML-validation
     yaml_ok = yaml_total = 0
     for f in mas_dir.rglob("*.yaml"):
         if ".backups" in str(f): continue
@@ -1344,7 +1344,7 @@ def cmd_install_check(ws_dir):
         warn(f"Pathe: {hardcoded} hardcodiert")
     checks.append(("paths", hardcoded == 0, str(hardcoded)))
 
-    # C3: Framework-Undependentkeit
+    # C3: framework-Undependentkeit
     has_main = (mas_dir / "recipe" / "dev-mas-engineer.yaml").exists()
     has_sub = (mas_dir / "recipe" / "sub").exists()
     has_tools = (mas_dir / "tools").exists() and len(list((mas_dir / "tools").glob("dev_*.py"))) >= 8
@@ -1386,7 +1386,7 @@ def main():
             name = None
             no_validate = False
             quiet = False
-        # Parse optionale Argumente after --scaffold
+        # Parse optionale arguments after --scaffold
         extra = sys.argv[2:]
         for i, a in enumerate(extra):
             if a == "--name" and i + 1 < len(extra):

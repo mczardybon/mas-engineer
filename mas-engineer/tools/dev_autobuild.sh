@@ -2,9 +2,9 @@
 # dev_autobuild.sh — Automatischer Distribution-Builder v2.0.0
 # =======================================================
 # Will after jedem git commit automatically started.
-# Nutzt dev_build.sh --dry-run + manifest.yaml (gleiche Logik).
+# Nutzt dev_build.sh --dry-run + manifest.yaml (equale Logik).
 #
-# Nutzung:
+# Usage:
 #   ./mas-engineer/tools/dev_autobuild.sh                  → Auto-Build (checks + baut)
 #   ./mas-engineer/tools/dev_autobuild.sh --force          → Always bauen
 #   ./mas-engineer/tools/dev_autobuild.sh --status         → Only check
@@ -29,12 +29,12 @@ show_help() {
     echo ""
     echo -e "${BOLD}dev_autobuild.sh v2.0.0 — Auto-Distribution-Builder${NC}"
     echo ""
-    echo "Nutzung:"
+    echo "Usage:"
     echo "  ./mas-engineer/tools/dev_autobuild.sh              Auto-Build (checks + baut)"
     echo "  ./mas-engineer/tools/dev_autobuild.sh --force      Always bauen"
     echo "  ./mas-engineer/tools/dev_autobuild.sh --status     Only check"
     echo "  ./mas-engineer/tools/dev_autobuild.sh --install    Bauen + update.sh --mas"
-    echo "  ./mas-engineer/tools/dev_autobuild.sh --help       Diese Hilfe"
+    echo "  ./mas-engineer/tools/dev_autobuild.sh --help       This help"
     echo ""
 }
 
@@ -76,9 +76,9 @@ show_status() {
         warn "No ZIP present"
     fi
     ok "ZIPs total: $(ls "$DIST_DIR"/mas-framework-*.zip 2>/dev/null | wc -l)"
-    ok "Commits: $(git -C "$WORKSPACE" log --oneline 2>/dev/null | wc -l || echo "0")"
+    ok "commits: $(git -C "$WORKSPACE" log --oneline 2>/dev/null | wc -l || echo "0")"
     if needs_build; then
-        warn "Build needed! Letzter Commit ist new als letztes ZIP."
+        warn "Build needed! Letzter commit ist new als letztes ZIP."
     else
         ok "No Build needed"
     fi
@@ -105,7 +105,7 @@ case "$MODE" in
         ;;
     --force)
         info "Force-Build"
-        # Gleicher Build wie dev_build.sh
+        # equaler Build wie dev_build.sh
         bash "$TOOLS_DIR/dev_build.sh"
         ;;
     --install)

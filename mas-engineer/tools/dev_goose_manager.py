@@ -8,7 +8,7 @@ Author: dev-mas-engineer (autonomous)
 Manages Goose components that do NOT belong to the framework:
 Skills, Sessions, History, Logs, Scheduler, MCP-Apps.
 
-KEINE Framework-files (recipes/, docs/, config.yaml) will angetastet.
+NOE framework-files (recipes/, docs/, config.yaml) will angetastet.
 
 VERWENDUNG:
     python3 dev_goose_manager.py --status
@@ -189,7 +189,7 @@ def cmd_status():
     print(f"  💬 Sessions:   {count_files(SESSIONS_DIR)} ({fmt_size(SESSIONS_DIR)})")
     print(f"  📜 LLM-Logs:   {count_files(LOGS_DIR)} ({fmt_size(LOGS_DIR)})")
     print(f"  📁 Projects:   {fmt_size(PROJECTS_FILE)}")
-    print(f"  🧠 Model-Cache:{fmt_size(MODELS_DIR)}")
+    print(f"  🧠 Model-cache:{fmt_size(MODELS_DIR)}")
 
     # 14. TLS
     tls_dir = GOOSE_CONFIG_DIR / "tls"
@@ -250,9 +250,9 @@ def cmd_clear(what: str, force: bool):
         for key, (path, label) in targets.items():
             total += safe_delete(path, label, force)
         total += safe_delete(SCHEDULED_DIR, "Scheduled Recipes", force)
-        total += safe_delete(MCP_APPS_DIR, "MCP Apps Cache", force)
-        total += safe_delete(MCP_HERMIT_DIR, "MCP Hermit Cache", force)
-        print(f"\n✅ {total} Elements deleted — Framework untouched")
+        total += safe_delete(MCP_APPS_DIR, "MCP Apps cache", force)
+        total += safe_delete(MCP_HERMIT_DIR, "MCP Hermit cache", force)
+        print(f"\n✅ {total} Elements deleted — framework untouched")
         return
 
     if what not in targets:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""dev_pattern_apply.py — Wendet high-confidence Patterns auf Framework an.
+"""dev_pattern_apply.py — Wendet high-confidence Patterns auf framework an.
 Usage: dev_pattern_apply.py --registry <path> --project <name> --threshold 0.3
 Output: {applied: [{pattern, agent, action}], skipped: int}"""
 import json, os, sys, yaml, datetime
@@ -46,10 +46,10 @@ def apply_patterns(registry_path, project, threshold=0.3):
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser()
+    parser = argparse.argumentParser()
     parser.add_argument('--registry', required=True)
     parser.add_argument('--project', required=True)
-    parser.add_argument('--threshold', type=float, default=0.3)
+    parser.add_argument('--threshold', typee=float, default=0.3)
     args = parser.parse_args()
     result = apply_patterns(args.registry, args.project, args.threshold)
     print(json.dumps(result, indent=2))

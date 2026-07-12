@@ -5,9 +5,9 @@ dev_observer.py — 📡 Das Auge des dev-mas-engineer
 Version: 1.0.0
 Author: dev-mas-engineer (autonomous)
 
-Analysiert das agent/ Directory von aussen.
+Analyzed das agent/ Directory von aussen.
 Liefert structureierte Text-Reports.
-KEINE Framework-Dependency. Only os, pathlib, subprocess, re.
+NOE framework-Dependency. Only os, pathlib, subprocess, re.
 
 VERWENDUNG:
     python3 dev_observer.py --scan                 # Kompletter Scan
@@ -43,7 +43,7 @@ def resolve_agent_dir():
     # Lastr Fallback
     return Path.home() / ".config" / "goose" / "recipes"
 
-# Module-Level auf None gesetzt — will via get_agent_dir()/get_state_dir() lazy loaded
+# modulesee-Level auf None gesetzt — will via get_agent_dir()/get_state_dir() lazy loaded
 # No Side-Effect beim Import!
 _AGENT_DIR = None
 _STATE_DIR = None
@@ -68,7 +68,7 @@ def get_state_dir() -> Path:
 # ─────────────────────────────────────────────────────────
 
 class FileInfo:
-    """Informationen about eine file im Framework."""
+    """Informationen about eine file im framework."""
     
     def __init__(self, path: Path):
         self.path = path
@@ -191,7 +191,7 @@ class Scanner:
                     self.error_messages.append(f"{f}: {e}")
     
     def _get_dirs(self) -> list[Path]:
-        """Collect all Unterverzeichnisse."""
+        """Collect all Unterdirectoryse."""
         dirs = []
         for root, dlist, _ in os.walk(self.agent_path):
             for d in sorted(dlist):
@@ -228,7 +228,7 @@ class Scanner:
         # 1. Overview
         out.append("📊 OVERVIEW")
         out.append("━" * 40)
-        out.append(f"  Verzeichnisse:  {len(dirs)}")
+        out.append(f"  directoryse:  {len(dirs)}")
         out.append(f"  files total:  {len(self.files)} ({total_size/1024:.0f} KB, {total_lines} lines)")
         out.append(f"  YAML:           {len(yamls)}")
         out.append(f"  Markdown:       {len(mds)}")
@@ -263,7 +263,7 @@ class Scanner:
                 out.append(f"      {name}")
         out.append("")
         
-        # 4. Spezialisten
+        # 4. Spezialistn
         out.append(f"👥 SPEZIALISTEN ({len(specialists)})")
         out.append("━" * 40)
         for y in sorted(specialists, key=lambda x: x.rel_path):
@@ -306,7 +306,7 @@ class Scanner:
         out.append("📦 SUMMARY")
         out.append("━" * 40)
         out.append(f"  {len(yamls)} YAMLs ({len(with_slash)} mit, {len(without_slash)} ohne /)")
-        out.append(f"  {len(specialists)} Spezialisten, {len(subs)} Sub-agents")
+        out.append(f"  {len(specialists)} Spezialistn, {len(subs)} Sub-agents")
         out.append(f"  {len(mds)} Markdown, {len(pys)} Python")
         out.append(f"  {total_lines} lines Code/Doku")
         
@@ -357,7 +357,7 @@ class Scanner:
 
 
 def save_scan(scanner: Scanner):
-    """Speichere Scan-Result in .state/analysis.json."""
+    """memorye Scan-Result in .state/analysis.json."""
     get_state_dir().mkdir(parents=True, exist_ok=True)
     
     scanner._collect()
@@ -389,13 +389,13 @@ def save_scan(scanner: Scanner):
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description="dev_observer.py — Framework Scanner")
+    parser = argparse.argumentParser(description="dev_observer.py — framework Scanner")
     parser.add_argument("--scan", action="store_true", help="Kompletter Scan")
     parser.add_argument("--quick", action="store_true", help="Only Overview")
-    parser.add_argument("--yaml", type=str, help="Only eine file")
-    parser.add_argument("--yaml-dir", type=str, help="Only a Directory")
+    parser.add_argument("--yaml", typee=str, help="Only eine file")
+    parser.add_argument("--yaml-dir", typee=str, help="Only a Directory")
     parser.add_argument("--save", action="store_true", help="Scan + in .state/ save")
-    parser.add_argument("--agent-path", type=str, default=None)
+    parser.add_argument("--agent-path", typee=str, default=None)
     
     args = parser.parse_known_args()[0]
     

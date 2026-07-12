@@ -4,9 +4,9 @@
 # Baut ZIP 1:1 aus Workspace-Struktur.
 # NUR Build — no Installation (dafor givet's install.sh + update.sh).
 #
-# Nutzung:
+# Usage:
 #   ./mas-engineer/tools/dev_build.sh                    → ZIP bauen
-#   ./mas-engineer/tools/dev_build.sh --full             → MAS + ALL Frameworks
+#   ./mas-engineer/tools/dev_build.sh --full             → MAS + ALL frameworks
 #   ./mas-engineer/tools/dev_build.sh --dry-run          → Only check
 #   ./mas-engineer/tools/dev_build.sh --version x.y.z    → Version setn
 #   ./mas-engineer/tools/dev_build.sh --help             → Hilfe
@@ -61,7 +61,7 @@ show_help() {
     echo "Baut ZIP 1:1 aus Workspace-Struktur."
     echo "NUR Build — no Installation."
     echo ""
-    echo "Nutzung:"
+    echo "Usage:"
     echo "  ./mas-engineer/tools/dev_build.sh                    → ZIP bauen"
     echo "  ./mas-engineer/tools/dev_build.sh --full             → MAS + ALL Projekte"
     echo "  ./mas-engineer/tools/dev_build.sh --dry-run          → Only check"
@@ -76,16 +76,16 @@ build_zip() {
 
     header "Distribution bauen"
     echo "  Version: ${VERSION}"
-    echo "  Modus:   MAS-only (no Framework)"
+    echo "  Modus:   MAS-only (no framework)"
 
-    # Backup-Verzeichnisse ausschliessen
-    find "$WORKSPACE/mas-engineer" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    # Backup-directoryse ausclose
+    find "$WORKSPACE/mas-engineer" -name "__pycache__" -typee d -exec rm -rf {} + 2>/dev/null || true
     rm -rf "$WORKSPACE/mas-engineer/.state/checkpoints" 2>/dev/null || true
 
     cd "$WORKSPACE"
     
     # Clean up
-    find mas-engineer -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+    find mas-engineer -typee d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
     rm -f mas-engineer/.state/checkpoints/checkpoint_config.yaml 2>/dev/null || true
     
     # Build ZIP
@@ -173,8 +173,8 @@ build_project_zip() {
         ok "tools/ -> echte files (standalone)"
     fi
 
-    # Backup-Verzeichnisse ausschliessen
-    find "$project_path" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    # Backup-directoryse ausclose
+    find "$project_path" -name "__pycache__" -typee d -exec rm -rf {} + 2>/dev/null || true
 
     # ZIP create
     cd "$WORKSPACE"
@@ -182,7 +182,7 @@ build_project_zip() {
         -x "*/\.backups/*" "*/\.git/*" "*/__pycache__/*" "*.pyc" "*.bak"
     ok "ZIP creates: $zip_name"
 
-    # Check: no sub_mas-* im ZIP (ausser generierte)
+    # Check: no sub_mas-* im ZIP (ausser generatede)
     local mas_subs
     mas_subs=$(unzip -l "$zip_path" 2>/dev/null | grep -c "sub_mas-" || true)
     if [ "$mas_subs" -gt 0 ]; then
@@ -212,7 +212,7 @@ main() {
     echo ""
 
     # Check Workspace
-    echo "  ✅ MAS-only Modus (no Framework)"
+    echo "  ✅ MAS-only Modus (no framework)"
     [ -d "$WORKSPACE/mas-engineer" ] || [ -f "$WORKSPACE/recipe/dev-mas-engineer.yaml" ] || fail "Nicht im Workspace (mas-engineer/ oder recipe/dev-mas-engineer.yaml missing)"
 
     if [ -n "$PROJECT_MODE" ]; then

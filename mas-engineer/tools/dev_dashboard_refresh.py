@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """dev_dashboard_refresh.py v1.0.0 — On-Demand Dashboard Generator
 =================================================================
-Will NUR auf User-Refresh aufgerufen. KEIN Daemon. KEIN Polling.
+Will NUR auf User-Refresh aufgerufen. NO Daemon. NO Polling.
 Generates Dashboard for den AKTUELLEN Workspace.
 
-Aufruf: python3 dev_dashboard_refresh.py
+call: python3 dev_dashboard_refresh.py
 Output: .mas/dashboards/project.json + formatierte Text-Output
 """
 import json, os, subprocess, glob, re, sys
@@ -112,7 +112,7 @@ def generate_dashboard(ws):
         changes_last.append(f"{ts} {action}")
 
     # Categorization
-    change_types = {}
+    change_typees = {}
     for c in changes:
         action = c.get('action', c.get('msg', c.get('description', '')))
         if 'SI-RUN' in action or 'improve' in action.lower():
@@ -129,7 +129,7 @@ def generate_dashboard(ws):
             key = 'Dashboard'
         else:
             key = 'Elseige'
-        change_types[key] = change_types.get(key, 0) + 1
+        change_typees[key] = change_typees.get(key, 0) + 1
 
     # ─── BUILD / DISTRIBUTION ───
     dist_zips = sorted(glob.glob(os.path.join(dist_dir, 'mas-framework-*.zip')))
@@ -282,7 +282,7 @@ def generate_dashboard(ws):
         'changes': {
             'total': changes_count,
             'last_10': changes_last,
-            'by_type': change_types
+            'by_typee': change_typees
         },
         'build': build_info,
         'git': {

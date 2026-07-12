@@ -5,7 +5,7 @@ dev_recipe_manager.py — Rezept-Manager for Goose GUI
 Version: 1.0.0
 Author: dev-mas-engineer (autonomous)
 
-Manages which Framework-Components in Goose sichtbar are.
+Manages which framework-Components in Goose sichtbar are.
 Installiert / deinstalliert Rezepte getargett in:
   {RECIPES_DIR}/             — sichtbare Rezepte (Starter, MAS-Engineer)
   {RECIPES_DIR}/_framework/  — unsichtbare Rezepte (for Delegation)
@@ -139,7 +139,7 @@ CATEGORIES = {
 # ─── HILFSFUNKTIONEN ───
 
 def find_recipe_file(filename, main_dir=None, specialists_dir=None):
-    """Findet eine Recipe-file in den Quell-Verzeichnissen."""
+    """Findet eine Recipe-file in den Quell-directorysen."""
     if main_dir is None:
         main_dir = REPO_MAIN
     if specialists_dir is None:
@@ -287,7 +287,7 @@ def cmd_list():
     else:
         print("  (no)")
 
-    print(f"\n📊 Total: {len(vis)} sichtbar + {len(hid)} Framework = {len(vis) + len(hid)} installiert")
+    print(f"\n📊 Total: {len(vis)} sichtbar + {len(hid)} framework = {len(vis) + len(hid)} installiert")
 
 
 def cmd_cleanup_hidden():

@@ -16,7 +16,7 @@ Beim Start theyhst Du: GOOSE_SESSION_TAG=[perjekt-name]
 
 ### Automatic: working_dir
 Cases no Day gitetzt ist, filtert der Imperver uber das
-Worksverzeichnis (working_dir). Functioneverrt if Du always
+Worksdirectory (working_dir). Functioneverrt if Du always
 from dem sameen Directory startest.
 
 ### Caseback: Letzte Sessions without MAS
@@ -44,7 +44,7 @@ Dithalf gilt:
 2. Installieren:  cd work && bash update.sh --mas
 3. Checkn:        tools/dev_xxx.py --help    (runs now newe Version)
 4. test:        (Project functionality test)
-5. Committen:     git add ... && git commit
+5. committen:     git add ... && git commit
 6. Distribuieren: dev_build.sh --full
 ```
 

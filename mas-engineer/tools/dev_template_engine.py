@@ -36,7 +36,7 @@ def generate_yaml(name, emoji, task, output, workspace, mode='mas', auto_commit=
     prompt_r = extract_rules(bp, 'prompt', 2)
     
     prompt = emoji + " " + name.upper() + " (v1.0.0)"
-    prompt += "\n⛔ NUR " + scope + " — KEINE anderen Aktionen"
+    prompt += "\n⛔ NUR " + scope + " — NOE anderen actionen"
     prompt += "\n→ Give Result als strukturierten Report back"
     
     lines = ["# " + agent_name + " — " + emoji + " " + task]
@@ -44,7 +44,7 @@ def generate_yaml(name, emoji, task, output, workspace, mode='mas', auto_commit=
     lines.append(task)
     lines.append("")
     lines.append("## Input (vom MAS-Engineer)")
-    lines.append("Der MAS-Engineer aboutgivet these Parameter via delegate():")
+    lines.append("Der MAS-Engineer aboutgivet these parameterss via delegate():")
     lines.append("- signal: HANDOVER")
     lines.append("- request_id: string (UUID)")
     lines.append("- from: dev-mas-engineer")
@@ -87,13 +87,13 @@ def generate_yaml(name, emoji, task, output, workspace, mode='mas', auto_commit=
     lines.append("- signal: DONE")
     lines.append("- request_id: UUID (vom Input)")
     lines.append("- from: " + agent_name)
-    lines.append("- to: {from} (Aufrufer)")
+    lines.append("- to: {from} (caller)")
     lines.append("- status: success | error | timeout")
     lines.append("- result: {result} (agentenspezifisch)")
     lines.append("")
     lines.append("⛔ NUR " + scope)
-    lines.append("⛔ KEINE Rekursion")
-    lines.append("⛔ KEINE Changeen an anderen files")
+    lines.append("⛔ NOE recursion")
+    lines.append("⛔ NOE Changeen an anderen files")
     
     instructions = "\n".join(lines)
     
@@ -127,14 +127,14 @@ def generate_yaml(name, emoji, task, output, workspace, mode='mas', auto_commit=
     }
 
 def main():
-    parser = argparse.ArgumentParser(description='Erstelle BP-konforme Sub-Agent YAML')
+    parser = argparse.argumentParser(description='Create BP-konforme Sub-Agent YAML')
     parser.add_argument('--name', required=True)
     parser.add_argument('--emoji', default='\U0001f527')
     parser.add_argument('--task', required=True)
     parser.add_argument('--output', default='recipe/sub/sub_mas-agent.yaml')
     parser.add_argument('--workspace', default=os.getcwd())
     parser.add_argument('--mode', default='mas', choices=['mas', 'generic'])
-    parser.add_argument('--auto-commit', action='store_true', help='Aktiviere Auto-Commit-Block im generierten Agenten')
+    parser.add_argument('--auto-commit', action='store_true', help='Aktiviere Auto-commit-Block im generateden Agenten')
     parser.add_argument('--project', default=os.path.basename(os.getcwd()))
     parser.add_argument('--registry', default=None)
     parser.add_argument('--json', action='store_true')
@@ -143,7 +143,7 @@ def main():
     stats = generate_yaml(args.name, args.emoji, args.task, args.output, args.workspace, args.mode, getattr(args, 'auto_commit', False))
     if args.registry:
         import subprocess
-        f_item = [{'typ': 'Z1', 'agent': stats['name'], 'severity': 'niedrig', 'detail': f'Neuer Agent: {stats["name"]}'}]
+        f_item = [{'type': 'Z1', 'agent': stats['name'], 'severity': 'niedrig', 'detail': f'Neuer Agent: {stats["name"]}'}]
         merge_tool = os.path.join(os.getcwd(), 'mas-engineer', 'tools', 'dev_registry_merge.py')
         subprocess.run(['python3', merge_tool, '--findings', json.dumps(f_item), '--registry', args.registry, '--project', args.project], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     

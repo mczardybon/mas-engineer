@@ -5,18 +5,18 @@ dev_changes.py — 📝 Das Memory des dev-mas-engineer
 Version: 1.0.0
 Author: dev-mas-engineer (autonomous)
 
-Dokumentiert JEDE Change am agent/ Framework.
-Enables Rollback. Zeigt Historie.
+Dokumentiert JEDE Change am agent/ framework.
+Enables rollback. Zeigt Historie.
 
 VERWENDUNG:
-    python3 dev_changes.py --status                  # Aktuellen status show
+    python3 dev_changes.py --status                  # Currentn status show
     python3 dev_changes.py --history                 # All Changes show
     python3 dev_changes.py --add <json>              # Change add
     python3 dev_changes.py --get <id>                # Eine determinese Change
-    python3 dev_changes.py --rollback <id>           # Rollback-Command generate
-    python3 dev_changes.py --help                    # Diese Hilfe anshow
+    python3 dev_changes.py --rollback <id>           # rollback-Command generate
+    python3 dev_changes.py --help                    # This help anshow
 
-KEINE Framework-Dependency. Reine Standardbibliothek.
+NOE framework-Dependency. Reine Standardlibrary.
 """
 
 import json, sys, os
@@ -36,7 +36,7 @@ CHANGES_FILE = STATE_DIR / "changes.json"
 
 
 def init_state():
-    """Create leere changes.json falls not present."""
+    """Create empty changes.json falls not present."""
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     if not CHANGES_FILE.exists():
         default = {
@@ -67,7 +67,7 @@ def load():
 
 
 def save(data):
-    """Speichere changes.json."""
+    """memorye changes.json."""
     data["metadata"]["last_updated"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     data["metadata"]["total_changes"] = len(data["changes"])
     with open(CHANGES_FILE, "w", encoding="utf-8") as f:
@@ -96,7 +96,7 @@ def add_change(change_data):
         "user_approved": change_data.get("user_approved", True),
         "user_comment": change_data.get("user_comment", ""),
         "file": change_data.get("file", ""),
-        "typ": change_data.get("typ", "edit"),
+        "type": change_data.get("type", "edit"),
         "von": change_data.get("von", ""),
         "nach": change_data.get("nach", ""),
         "grund": change_data.get("grund", ""),
@@ -203,7 +203,7 @@ def show_change(change_id):
 
 
 def generate_rollback(change_id):
-    """Generiere Rollback-Command for eine Change."""
+    """Generiere rollback-Command for eine Change."""
     data = load()
     for c in data["changes"]:
         if c["id"] == change_id:
@@ -239,12 +239,12 @@ def mark_rolled_back(change_id, reason=""):
 
 
 def add_cli():
-    """CLI for --add: Liest JSON von stdin oder als Argument."""
+    """CLI for --add: Liest JSON von stdin oder als argument."""
     if len(sys.argv) > 2 and sys.argv[2]:
         try:
             data = json.loads(sys.argv[2])
         except json.JSONDecodeError:
-            data = {"file": sys.argv[2], "von": "", "nach": "", "grund": "CLI-Aufruf", "user": "Marius"}
+            data = {"file": sys.argv[2], "von": "", "nach": "", "grund": "CLI-call", "user": "Marius"}
     else:
         data = json.loads(sys.stdin.read())
     
@@ -261,7 +261,7 @@ def main():
         print("  --history [n]         Last n Changes (Default: 10)")
         print("  --add <json>          Change entryen (JSON mit file, von, nach, grund)")
         print("  --get <id>            Details a Change")
-        print("  --rollback <id>       Rollback-Command generate")
+        print("  --rollback <id>       rollback-Command generate")
         print("  --mark-rolled <id>    Als rolled_back markieren")
         return
     

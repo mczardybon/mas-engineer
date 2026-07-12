@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """dev_dispatch_tracker.py — Dispatch Tree Tracker v1.0.0
 ========================================================
-Trackt jeden delegate()-Aufruf und baut a Dispatch-Tree.
+Trackt jeden delegate()-call und baut a Dispatch-Tree.
 
-Aufruf:
+call:
   python3 dev_dispatch_tracker.py --add <to> <task> <mode> [parent_id]
       → logged a neuen Dispatch, givet ID back
   python3 dev_dispatch_tracker.py --done <id> <duration_sec> <turns> <summary>

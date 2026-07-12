@@ -23,15 +23,15 @@ mas-framework-v1.0.0_TIMESTAMP.zip
 └── .mas-mode
 
 ## Installation commands (User)
-./installr.sh                  → MAS + Framework (Default)
+./installr.sh                  → MAS + framework (Default)
 ./installr.sh --mas            → Only MAS
-./installr.sh --framework      → Only Framework
+./installr.sh --framework      → Only framework
 ./installr.sh --dry-run        → Dry run
 ./installr.sh --status         → Status anshow
 
 ## Updates (Developer)
 ./update.sh --mas               → MAS aus Workspace sync
-./update.sh --framework         → Framework aus Workspace sync
+./update.sh --framework         → framework aus Workspace sync
 ./update.sh --mas --dry-run     → MAS-Dry run
 
 ## Build (Developer)

@@ -1,5 +1,5 @@
 #!/bin/bash
-# dev_rule_refresh.sh — Methode 5: Reaktivierungs-Anker (MAS + Generic)
+# dev_rule_refresh.sh — method 5: Reaktivierungs-Anker (MAS + Generic)
 # Will all 5 Steps aufgerufen. Loads Rulen frisch aus file.
 # --mode mas     → MAS-eigene Rulen (harte_rulen.yaml → rulen_5/4/2_*.yaml)
 # --mode generic → User-Rulen (rulen.yaml)
@@ -17,7 +17,7 @@ if [ ! -d "$REGL_DIR" ]; then
 fi
 
 if [ "$MODE" = "generic" ]; then
-    # ── GENERIC-MODE: User-Rulen laden ──
+    # ── GENERIC-MODE: User-Rulen load ──
     echo ""
     echo "=== ⛔ GENERIC-RULES (frisch loaded $(date +%H:%M:%S)) ==="
     if [ -f "$REGL_DIR/rulen.yaml" ]; then
@@ -39,7 +39,7 @@ print(f'⛔ {len(rulen)} Generic-Rulen loaded')
         cp -n mas-engineer/.state/templates/user_rulen_template.yaml "$REGL_DIR/rulen.yaml" 2>/dev/null
     fi
 else
-    # ── MAS-MODE: Harte Rulen laden ──
+    # ── MAS-MODE: Harte Rulen load ──
     python3 -c "
 import yaml, os
 

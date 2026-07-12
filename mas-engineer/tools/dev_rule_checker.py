@@ -51,14 +51,14 @@ def get_rules(mode=None):
         if os.path.exists(WORKFLOWS_DATEI):
             with open(WORKFLOWS_DATEI) as f:
                 wf = yaml.safe_load(f)
-            restrictions = wf.get("configs", {}).get("mas-self", {}).get("restrictions", {})
-            for key, val in restrictions.items():
+            remainderrictions = wf.get("configs", {}).get("mas-self", {}).get("remainderrictions", {})
+            for key, val in remainderrictions.items():
                 if key.startswith("r") and isinstance(val, dict):
                     # Normierte ID: R19 aus r19_path_hierarchie, R01 aus r01_confirmation usw.
                     norm_id = key.split("_")[0].upper()
                     rules.append({
                         "id": norm_id,
-                        "name": val.get("description", val.get("type", key)),
+                        "name": val.get("description", val.get("typee", key)),
                         "hardness": 5 if val.get("level") == "extreme" else (4 if val.get("level") == "strong" else 3)
                     })
         return rules
@@ -77,7 +77,7 @@ def check_confirmation():
         ts = int(f.read().strip())
     return int(time.time()) - ts < 300
 
-def check_rule(rule_id, aktion=""):
+def check_rule(rule_id, action=""):
     rules = load_rules(REGEL_DATEI)
     # Load auch aus workflows.yaml (R12-R19)
     import os as _wf_os
@@ -85,8 +85,8 @@ def check_rule(rule_id, aktion=""):
         try:
             with open(WORKFLOWS_DATEI) as f:
                 wf = yaml.safe_load(f)
-            restrictions = wf.get("configs", {}).get("mas-self", {}).get("restrictions", {})
-            for key, val in restrictions.items():
+            remainderrictions = wf.get("configs", {}).get("mas-self", {}).get("remainderrictions", {})
+            for key, val in remainderrictions.items():
                 if key.startswith("r") and isinstance(val, dict):
                     norm_id = key.split("_")[0].upper()
                     rules.append({
@@ -114,7 +114,7 @@ def check_rule(rule_id, aktion=""):
             2. Modus-Konflikt (Target-Domaene != .mas-mode) -> BLOCKED  
             3. Domain-Konflikt (Target-Domaene != .active_domain) -> BLOCKED
                Exception: Readder Access (read/cat/ls) in andere Domain = OK
-               Exception: Framework analysieren from MAS aus = OK (only read)
+               Exception: framework analyzen from MAS aus = OK (only read)
             """
             import os as _os9, yaml as _yaml9
             
@@ -131,7 +131,7 @@ def check_rule(rule_id, aktion=""):
                     reg = _yaml9.safe_load(f) or {}
                 domains = reg.get("domains", {})
             
-            # Read aktuellen Modus
+            # Read currentn Modus
             mode = check_mode() if _os9.path.exists(MODE_DATEI) else "unbekannt"
             
             # Read active_domain
@@ -140,7 +140,7 @@ def check_rule(rule_id, aktion=""):
                 with open(domain_file) as f:
                     active_domain = f.read().strip()
             
-            akt = aktion.lower()
+            akt = action.lower()
             
             # PRUEFUNG 1: Logische Imports (import/from andere Domain)
             for dname, dconf in domains.items():
@@ -181,7 +181,7 @@ def check_rule(rule_id, aktion=""):
             """INVENTORY_CHECK: Checks if file exists + special_agents registry"""
             import os as _os, yaml as _yaml
             
-            akt = aktion.lower()
+            akt = action.lower()
             path = None
             for prefix in ["write ", "edit ", "cp ", "mv "]:
                 if prefix in akt:
@@ -210,8 +210,8 @@ def check_rule(rule_id, aktion=""):
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
         
         if rule_id == "R05":
-            """AUTO_COMMIT: 1. Checkpoint BEFORE change → 2. Change → 3. Commit"""
-            akt = aktion.lower()
+            """AUTO_COMMIT: 1. Checkpoint BEFORE change → 2. Change → 3. commit"""
+            akt = action.lower()
             is_modify = any(x in akt for x in ["write ", "edit ", "mv ", "cp ", "delete ", "rm "])
             
             if is_modify:
@@ -228,19 +228,19 @@ def check_rule(rule_id, aktion=""):
                 
                 if has_change and not has_checkpoint and not has_commit:
                     return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
-                            "detail": "Change WITHOUT prior checkpoint! Order: 1. Checkpoint → 2. Change → 3. Commit", "action": "BLOCKED"}
+                            "detail": "Change WITHOUT prior checkpoint! Order: 1. Checkpoint → 2. Change → 3. commit", "action": "BLOCKED"}
                 
                 if has_change and not has_checkpoint and has_commit and "git commit" in akt:
                     return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
-                            "detail": "Commit WITHOUT prior checkpoint! ORDER VIOLATED — Rollback recommended", "action": "BLOCKED"}
+                            "detail": "commit WITHOUT prior checkpoint! ORDER VIOLATED — rollback recommended", "action": "BLOCKED"}
             
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
         
         if rule_id == "R06":
             """SUB_AGENT_CONTAINMENT: Sub-Agent = NUR Analyse, Shell selbst ausexecuten"""
-            akt = aktion.lower()
+            akt = action.lower()
             
-            # Check ob delegate() eine shell-Aktion contains
+            # Check ob delegate() eine shell-action contains
             if "delegate" in akt and ("write" in akt or "edit" in akt or "rm " in akt or "mv " in akt):
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": "Sub-agent delegated write/edit — Sub-agent ONLY for analysis, execute shell yourself!", "action": "BLOCKED"}
@@ -249,7 +249,7 @@ def check_rule(rule_id, aktion=""):
         
         if rule_id == "R07":
             """SIGNAL_CP_DONE: CP_DONE signal required after checkpoint"""
-            akt = aktion.lower()
+            akt = action.lower()
             
             if "checkpoint" in akt and "cp_done" not in akt and "CP_DONE" not in akt:
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
@@ -259,7 +259,7 @@ def check_rule(rule_id, aktion=""):
         
         if rule_id == "R08":
             """TOKEN_BUDGET: General improver max 50K tokens"""
-            akt = aktion.lower()
+            akt = action.lower()
             
             if "general-improver" in akt or "general_improver" in akt or "si-run" in akt:
                 extrahiere_token = False
@@ -274,14 +274,14 @@ def check_rule(rule_id, aktion=""):
         
         
         if rule_id == "R04":
-            if "general-improver" in aktion.lower() and ("edit" in aktion.lower() or "write" in aktion.lower()):
+            if "general-improver" in action.lower() and ("edit" in action.lower() or "write" in action.lower()):
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": "general-improver.yaml may not be edited", "action": "BLOCKED"}
         
         if rule_id == "R10":
             """CORONASHIELD: Every YAML must be validated before saving"""
             import os as _os
-            akt = aktion.lower()
+            akt = action.lower()
             
             # Only bei write/edit von .yaml/.yml files check
             is_yaml_write = any(x in akt for x in [".yaml", ".yml"]) and ("write " in akt or "edit " in akt)
@@ -297,14 +297,14 @@ def check_rule(rule_id, aktion=""):
 
         if rule_id == "R12":
             """WORK_MAS_ENTKOPPLUNG: MAS lebt in ~/.config/goose/.state/mas/"""
-            akt = aktion.lower()
+            akt = action.lower()
             if any(x in akt for x in [".state/", "checkpoints/", ".backups/"]) and "checkpoint" not in akt:
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": "MAS state in work/ detected! State belongs in ~/.config/goose/.state/mas/", "action": "WARNING"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
         
         if rule_id == "R13":
-            """NEUES_PROJEKT_IGNORE: Bei leerem Directory MAS-Config ignorieren"""
+            """NEUES_PROJEKT_IGNORE: Bei emptym Directory MAS-Config ignorieren"""
             # Will in prompt_1 checked — hier only Enforcement-Check
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
                     "detail": "R13 is checked in prompt_1", "action": "OK"}
@@ -317,9 +317,9 @@ def check_rule(rule_id, aktion=""):
                         "detail": "No .mas-mode found — work_on mode not determinable", "action": "BLOCKED"}
             with open(mode_file) as _f:
                 mode = _f.read().strip()
-            akt = aktion.lower()
+            akt = action.lower()
             if mode != "mas":
-                # Im Projekt-Modus: KEINE MAS-Operationen erlaubt
+                # Im Projekt-Modus: NOE MAS-Operationen erlaubt
                 if any(x in akt for x in ["sub_mas-", "mas-engineer", "workflows.yaml"]):
                     return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                             "detail": f"work_on='{mode}' — MAS operations in project mode not allowed", "action": "BLOCKED"}
@@ -330,7 +330,7 @@ def check_rule(rule_id, aktion=""):
             import subprocess as _sp
             try:
                 result = _sp.run(
-                    ["python3", "tools/dev_architecture_checker.py", "--action", aktion, "--file", ""],
+                    ["python3", "tools/dev_architecture_checker.py", "--action", action, "--file", ""],
                     capture_output=True, text=True, timeout=5
                 )
                 if result.returncode == 1:
@@ -343,7 +343,7 @@ def check_rule(rule_id, aktion=""):
         
         if rule_id == "R16":
             """TOOL_BEFORE_EXPERT: Checks if tool exists before delegating to expert"""
-            akt = aktion.lower()
+            akt = action.lower()
             if "delegate" in akt:
                 # Extract agent_name aus delegate()
                 import re as _re
@@ -370,7 +370,7 @@ def check_rule(rule_id, aktion=""):
 
         if rule_id == "R19":
             """PATH-HIERARCHY: ONLY execute installed tools — NEVER source tools"""
-            akt = aktion.lower()
+            akt = action.lower()
             # CHECK 1: Build/Install exception (BEFORE source check)
             if "dev_build.sh" in akt or "dev_install.sh" in akt:
                 return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
@@ -389,20 +389,20 @@ def check_rule(rule_id, aktion=""):
                             "detail": f"Source-Path erkannt ('{pattern}')! Nutze $MAS_TOOLS_DIR (Install-Path) statt Source",
                             "action": "BLOCKED"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
-                    "detail": "No Tool-Aufruf erkannt — R19 not anwendbar", "action": "OK"}
+                    "detail": "No Tool-call erkannt — R19 not anwendbar", "action": "OK"}
 
         if rule_id == "R18":
             """DELEGATION DUTY: NEVER shell/write/edit yourself if sub-agent exists"""
-            akt = aktion.lower()
-            # Check ob es sich um eine shell/write/edit Aktion handelt
+            akt = action.lower()
+            # Check ob es sich um eine shell/write/edit action handelt
             ist_selbst_mach = any(x in akt for x in ["shell", "write", "edit"])
             if not ist_selbst_mach:
                 return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
-                        "detail": "No shell/write/edit Aktion — R18 not anwendbar", "action": "OK"}
+                        "detail": "No shell/write/edit action — R18 not anwendbar", "action": "OK"}
 
             # Check ob a passender Sub-Agent exists
             wf_path = os.path.join(BASE_DIR, ".state/workflows.yaml")
-            sub_agent_gefunden = False
+            sub_agent_found = False
             if os.path.exists(wf_path):
                 with open(WORKFLOWS_DATEI) as f:
                     wf = yaml.safe_load(f)
@@ -414,13 +414,13 @@ def check_rule(rule_id, aktion=""):
                 for agent in all_sub_agent_names:
                     agent_clean = agent.replace("sub_mas-", "").replace("_", "-").lower()
                     if agent_clean in akt or any(word in akt for word in agent_clean.split("-")):
-                        sub_agent_gefunden = True
-                        gefundener_agent = agent
+                        sub_agent_found = True
+                        founder_agent = agent
                         break
 
-            if sub_agent_gefunden:
+            if sub_agent_found:
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
-                        "detail": f"Sub-Agent {gefundener_agent} exists for these Task — delegiere() statt do it yourself!",
+                        "detail": f"Sub-Agent {founder_agent} exists for these Task — delegiere() statt do it yourself!",
                         "action": "BLOCKED"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
                     "detail": "No matching sub-agent found — doing it yourself allowed", "action": "OK"}
@@ -429,21 +429,21 @@ def check_rule(rule_id, aktion=""):
     
     return {"violation": False, "rule": "unbekannt", "hardness": 2, "action": "OK"}
 
-def format_output(ergebnisse, action_typ=""):
-    blocked = [r for r in ergebnisse if r.get("action") == "BLOCKED"]
+def format_output(resultse, action_type=""):
+    blocked = [r for r in resultse if r.get("action") == "BLOCKED"]
     
     lines = []
     lines.append("=== ⛔ REGEL-CHECK ===")
-    lines.append(f"Aktion: {action_typ}")
-    lines.append(f"Gechecks: {len(ergebnisse)} Rulen")
+    lines.append(f"action: {action_type}")
+    lines.append(f"Gechecks: {len(resultse)} Rulen")
     
-    for r in ergebnisse:
+    for r in resultse:
         if r.get("hardness", 0) >= 5:
-            lines.append(f"⛔⛔⛔⛔⛔ {r['rule']}: {r['aktion']} — {r.get('detail', 'ok')}")
+            lines.append(f"⛔⛔⛔⛔⛔ {r['rule']}: {r['action']} — {r.get('detail', 'ok')}")
         elif r.get("hardness", 0) >= 4:
-            lines.append(f"⛔⛔⛔ {r['rule']}: {r['aktion']} — {r.get('detail', 'ok')}")
+            lines.append(f"⛔⛔⛔ {r['rule']}: {r['action']} — {r.get('detail', 'ok')}")
         else:
-            lines.append(f"⛔ {r['rule']}: {r['aktion']} — {r.get('detail', 'ok')}")
+            lines.append(f"⛔ {r['rule']}: {r['action']} — {r.get('detail', 'ok')}")
     
     if blocked:
         lines.append(f"\n⛔⛔⛔⛔⛔ {len(blocked)} EXTREM-STARK VERSTOESSE!")
@@ -452,63 +452,63 @@ def format_output(ergebnisse, action_typ=""):
             lines.append(f"  → {b['rule']}: {b['detail']}")
         return "\n".join(lines), False
     else:
-        lines.append("\n✅ All Rulen eingehalten — Aktion approved")
+        lines.append("\n✅ All Rulen eingehalten — action approved")
         return "\n".join(lines), True
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="Rule check before actions")
+    parser = argparse.argumentParser(description="Rule check before actions")
     parser.add_argument("--check", help="Rule-ID (R01-R19)")
-    parser.add_argument("--file", default=None, help="Betroffene file (fuer R09)")
-    parser.add_argument("--action", default="", help="Geplante Aktion (z.B. 'edit file.yaml')")
-    parser.add_argument("--mode", default="mas", help="Aktueller Modus")
+    parser.add_argument("--file", default=None, help="Betroffene file (for R09)")
+    parser.add_argument("--action", default="", help="Geplante action (z.B. 'edit file.yaml')")
+    parser.add_argument("--mode", default="mas", help="Currentr Modus")
     parser.add_argument("--all", action="store_true", help="All Rulen check")
-    parser.add_argument("--action-type", default="unbekannt", help="Typ der Aktion: write|edit|delegate|shell")
+    parser.add_argument("--action-typee", default="unbekannt", help="typee der action: write|edit|delegate|shell")
     
     args = parser.parse_args()
     global CURRENT_MODE
     CURRENT_MODE = args.mode or "mas"
     
-    action_info = f"{args.action_type}: {args.action}" if args.action else args.action_type
+    action_info = f"{args.action_typee}: {args.action}" if args.action else args.action_typee
     
     if args.all:
         active_rules = get_rules(args.mode)
         # R09 ALWAYS FIRST checkn (oberste Rule) — only im MAS-Mode
         if args.mode == "mas":
             r09_result = check_rule("R09", args.action or "")
-            ergebnisse = [r09_result]
+            resultse = [r09_result]
             # ALL anderen Rulen (ohne Duplikate via ID)
             gesehene_ids = {"R09", "R19"}
             for idx, r in enumerate(active_rules):
                 rid = r.get("id", f"G{idx:02d}")
                 if rid not in gesehene_ids:
                     gesehene_ids.add(rid)
-                    ergebnisse.append(check_rule(rid, args.action or ""))
+                    resultse.append(check_rule(rid, args.action or ""))
         else:
-            ergebnisse = [check_rule(r.get("id", f"G{i:02d}"), args.action or "") for i, r in enumerate(active_rules)]
-        output, ok = format_output(ergebnisse, action_info)
+            resultse = [check_rule(r.get("id", f"G{i:02d}"), args.action or "") for i, r in enumerate(active_rules)]
+        output, ok = format_output(resultse, action_info)
         print(output)
         sys.exit(0 if ok else 1)
     elif args.check:
-        ergebnis = check_rule(args.check, args.action or "")
-        if ergebnis.get("violation"):
-            print(f"⛔⛔⛔⛔⛔ REGEL-VERSTOSS: {ergebnis['rule']}")
-            print(f"  Detail: {ergebnis['detail']}")
-            print(f"  Aktion: {ergebnis['aktion']}")
+        result = check_rule(args.check, args.action or "")
+        if result.get("violation"):
+            print(f"⛔⛔⛔⛔⛔ REGEL-VERSTOSS: {result['rule']}")
+            print(f"  Detail: {result['detail']}")
+            print(f"  action: {result['action']}")
             sys.exit(1)
         else:
-            print(f"✅ {ergebnis['rule']}: OK")
+            print(f"✅ {result['rule']}: OK")
             sys.exit(0)
     else:
         # Default: all Rulen des aktiven Mode check
         active_rules = get_rules(args.mode)
         if args.mode == "mas":
-            ergebnisse = [check_rule(r["id"], args.action or "") for r in active_rules if isinstance(r, dict)]
+            resultse = [check_rule(r["id"], args.action or "") for r in active_rules if isinstance(r, dict)]
         else:
-            ergebnisse = [{"rule": r.get("name", r.get("id", "?")), "hardness": r.get("hardness", 3),
+            resultse = [{"rule": r.get("name", r.get("id", "?")), "hardness": r.get("hardness", 3),
                           "action": "WARNING" if r.get("block") else "OK",
                           "detail": r.get("prompt_text", str(r)[:100])}
                          for r in active_rules if isinstance(r, dict)]
-        output, ok = format_output(ergebnisse, action_info)
+        output, ok = format_output(resultse, action_info)
         print(output)
         sys.exit(0 if ok else 1)

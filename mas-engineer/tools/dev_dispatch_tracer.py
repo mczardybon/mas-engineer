@@ -2,10 +2,10 @@
 """
 dev_dispatch_tracer.py — Dispatch-Tracing for MAS
 =================================================
-Schreibt jeden delegate()-Aufruf in /tmp/mas-dispatch.ndjson.
-Das Dashboard liest these file und zeigt den Dispatch-Tree.
+Schreibt jeden delegate()-call in /tmp/mas-dispatch.ndjson.
+Das Dashboard reads these file und zeigt den Dispatch-Tree.
 
-Nutzung:
+Usage:
   python3 dev_dispatch_tracer.py log "mas-engineer" "sub_mas-scanner" "SCAN" "sync"
   python3 dev_dispatch_tracer.py status
   python3 dev_dispatch_tracer.py tree  --last 20
@@ -127,7 +127,7 @@ def build_tree(last_n=20):
     
     recent = entries[-last_n:] if len(entries) > last_n else entries
     
-    # Baumstruktur: Eltern-ID → Children
+    # treestruktur: Eltern-ID → Children
     tree = []
     child_map = {}
     for e in recent:
@@ -204,7 +204,7 @@ def update_dashboard():
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Nutzung: dev_dispatch_tracer.py log|complete|status|tree|update [args]")
+        print("Usage: dev_dispatch_tracer.py log|complete|status|tree|update [args]")
         sys.exit(1)
     
     cmd = sys.argv[1]

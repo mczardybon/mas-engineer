@@ -39,7 +39,7 @@ def run_post_test_checks(pytest_exit_code):
 
 def main():
     if '--checker-hook' not in sys.argv:
-        print("Nutzung: pytest --checker-hook")
+        print("Usage: pytest --checker-hook")
         sys.exit(1)
     
     run_pre_test_checks()

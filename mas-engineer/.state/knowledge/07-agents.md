@@ -5,15 +5,15 @@
 ### Kategorie Analyse (9)
 | Agent | description |
 |:------|:-------------|
-| framework-knowledge | Framework Concepts verstehen & blueprints |
-| framework-scanner | Framework analysieren (SCAN/AUDIT/HARDEN) |
+| framework-knowledge | framework Concepts verstehen & blueprints |
+| framework-scanner | framework analyzen (SCAN/AUDIT/HARDEN) |
 | session-analyst | Session-Korrelation & Anomalien |
 | config-auditor | Config-Consistency (16 Checks) |
 | prompt-engineer | Prompt-Qualitaet (10 Kriterien) |
 | goose-expert | Goose-Rulekonformitaet (14 Scopes) |
-| im-finder | 🔍 Optimierungspotential (37 Feature-Typeen) |
+| im-finder | 🔍 Optimierungspotential (37 Feature-typeeeen) |
 | im-designer | 🛠️ Patches from Findings entwerfen |
-| im-validator | ✅ Changes validate & Rollback |
+| im-validator | ✅ Changes validate & rollback |
 
 ### Kategorie Recovery (6)
 | Agent | description |
@@ -23,7 +23,7 @@
 | recovery-immune | Coronashield YAML-Praevention |
 | recovery-safezone | Paralller Fork-Workspace |
 | recovery-timeline | Automatische Best point-Suche |
-| migration-helper | Framework Migrations planen |
+| migration-helper | framework Migrations planen |
 
 ### Kategorie Monitoring (6)
 | Agent | description |
@@ -51,13 +51,13 @@
 |:------|:-------------|
 | general-improver | 🔬 Improvement-Pipeline Orchestrator (6 Leveln) |
 | im-session-reader | 📊 Session-Database read & Rohdaten |
-| im-finder | 🔍 Optimierungspotential detect (37 Typeen) |
+| im-finder | 🔍 Optimierungspotential detect (37 typeeeen) |
 | im-rank | 📊 Findings priorisieren & filter |
 | im-designer | 🛠️ Patches from Findings entwerfen |
-| im-validator | ✅ Changes validate & Rollback |
+| im-validator | ✅ Changes validate & rollback |
 | general-improver | 🔬 Verbetterungs-Pipeline (v2, backwards-compat) |
 | dashboard-live | 📊 Live-Dashboard-Update |
-| generic-init | 🌍 Generic-Improver Initialization (v3: Symlink + Guidelines, no Kopie) |
+| generic-init | 🌍 Generic-Improver Initialization (v3: Symlink + Guidelines, no copy) |
 | master-constitution | ⚖️ MAS-Konstitution |
 | test-runner | 🧪 Tests fromexecuten & detect regressions |
 
@@ -68,7 +68,7 @@
 | signal-generator | Signale (CP_DONE/ERROR/SESSION_END) |
 | degradation-handler | Degradation-Recovery |
 
-## Framework Specialists (47) — specialist_*.yaml
+## framework Specialists (47) — specialist_*.yaml
 accessibility, ai_engineer, api_designer, api_gateway, auth,
 backend, chaos_engineer, cloud_architect, cost_optimizer,
 database, data_engineer, data_governance, data_scientist,
@@ -82,7 +82,7 @@ search_engineer, security, software_architekt,
 software_engineer, sre, system_architekt, technical_writer,
 test_engineer, ux_designer, workflow_engineer
 
-## Framework-Sub-Agents (44) — sub_*.yaml
+## framework-Sub-Agents (44) — sub_*.yaml
 sub_dispatcher, sub_orchestrator,
 sub_analyst, sub_analyst-accessibility, sub_analyst-auth,
 sub_analyst-backend, sub_analyst-code, sub_analyst-deps,

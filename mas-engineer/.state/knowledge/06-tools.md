@@ -3,33 +3,33 @@
 ## Hardening-Tools (Methods 5+6+9)
 | Tool | Method | lines | Zweck |
 |:-----|:-------:|:------:|:------|
-| dev_rule_checker.py | M9 Rule-Test | 296 | Blocked Aktionen at Ruleverstoss (all 11 Rules) |
+| dev_rule_checker.py | M9 Rule-Test | 296 | Blocked actionen at Ruleverstoss (all 11 Rules) |
 | dev_rule_refresh.sh | M5 Anker | 55 | Laedt harte Rules all 5 steps new |
 | dev_haerte_propagation.py | M6 Prop. | 62 | Givet Rules an Sub-Agents weiter |
-| dev_rule_checker_generic.py | M9 Generic | 463 | Gleicher Checker for Generic-Projekte |
+| dev_rule_checker_generic.py | M9 Generic | 463 | equaler Checker for Generic-Projekte |
 
 ## Build & Deployment
 | Tool | lines | Zweck |
 |:-----|:------:|:------|
 | dev_build.sh | 263 | ZIP-Builder (Workspace→ZIP, ONLY Build) |
 | dev_autobuild.sh | 47 | Auto-Build after git commit |
-| dev_mode.sh | 128 | Modus-Wechsel (MAS/Generic/Framework) |
+| dev_mode.sh | 128 | Modus-Wechsel (MAS/Generic/framework) |
 
 ## Analyse & Architecture
 | Tool | lines | Zweck |
 |:-----|:------:|:------|
-| dev_observer.py | 413 | Framework scannen (files, Struktur) |
-| dev_architect.py | 433 | Muster, Relationships, Luecken detect |
+| dev_observer.py | 413 | framework scannen (files, Struktur) |
+| dev_architect.py | 433 | pattern, Relationships, Luecken detect |
 | dev_analyst.py | 312 | Qualitaet check (YAML, Consistency) |
 | dev_fast_scan.py | 65 | Schnell-Scan |
-| dev_goose_db.py | 318 | Session-DB via SQL analysieren |
-| dev_agent_doctor.py | 494 | Framework-Agents optimize (--scan, --fix) |
+| dev_goose_db.py | 318 | Session-DB via SQL analyzen |
+| dev_agent_doctor.py | 494 | framework-Agents optimize (--scan, --fix) |
 
 ## YAML-Editor & Changes
 | Tool | lines | Zweck |
 |:-----|:------:|:------|
-| dev_editor.py | 541 | Sicheres YAML-Edit (Backup→Patch→Validate→Rollback) |
-| dev_changes.py | 290 | Changeen document & Rollback |
+| dev_editor.py | 541 | Sicheres YAML-Edit (Backup→Patch→Validate→rollback) |
+| dev_changes.py | 290 | Changeen document & rollback |
 | dev_yaml_generator.py | 167 | YAML from Template generate |
 | dev_template_generator.py | 36163 | Agent-Template-Generator v2 (SOT+BP+Improvement) |
 
