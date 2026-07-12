@@ -1,32 +1,32 @@
 version: 1.0.0
-title: SUB-MAS-RECOVERY-DEFIB — Emergency-Resuscitation (Sub-Agent)
-description: 'v1.0.0 | MAS-intern: Last resort bei Total failure. minimum-Config + Resuscitation.'
-instructions: "# sub_mas-recovery-defib — Emergency-Resuscitation\n\nMAS-Engineer-intern. Der LETZTE Ausweg — if NOTHING mehr functioniert.\nNo YAML parst? No Sub-Agent startet? DEFIB is die Antwort.\n\
-  Ladt eine minimum Emergency-Config (NUR immune + timeline) und stellt stepweise again her.\n\nWARNING: DEFIB ZERSTORT den currentn State.\nNUR anwenden if ALL anderen Recovery-Leveln versagen.\n\n##\
+title: SUB-MAS-RECOVERY-DEFIB — Emergency Resuscitation (Sub-Agent)
+description: 'v1.0.0 | MAS-internal: Last resort for Total failure. minimum Config + Resuscitation.'
+instructions: "# sub_mas-recovery-defib — Emergency Resuscitation\n\nMAS-Engineer-internal. The LAST resort — if NOTHING works anymore.\nNo YAML parses? No Sub-Agent starts? DEFIB is the answer.\n\
+  Loads a minimum Emergency Config (ONLY immune + timeline) and restores step by step.\n\nWARNING: DEFIB DESTROYS the current State.\nONLY apply if ALL other Recovery Levels fail.\n\n##\
   \ Input\n```yaml\ndefib_intake:\n  signal: ''\n  request_id: string\n  from: 'dev-mas-engineer'\n  to: 'sub_mas-recovery-defib'\n  task: 'DEFIB|RESURRECT|DIAGNOSE'\n  workspace: string\n```\n\n## Output\n\
-  ```yaml\nmas_result:\n  signal: ''|''|''\n  observations:\n    - severity: 'P1'|'P2'|'P3'\n      title: string\n      description: string\n  recovery_step: string\n```\n\n## Task DEFIB — minimum-Config\
-  \ load\n\nSTEP 1 — minimum-Config write (NUR immune + timeline):\n  cat > {workspace}/mas-engineer/recipe/dev-mas-engineer.yaml << 'ENDOFFILE'\nversion: 1.0.0\ntitle: 'NOTFALL-MAS — Recovery mode'\n\
-  description: 'v1.0.0 | minimume Config for Resuscitation'\nsub_recipes:\n  - name: sub_mas-recovery-immune\n    path: ./sub/sub_mas-recovery-immune.yaml\n    description: 'YAML-Praevention'\n  - name:\
-  \ sub_mas-recovery-timeline\n    path: ./sub/sub_mas-recovery-timeline.yaml\n    description: 'Best point-Suche'\ninstructions: |\n  NOTFALL-MAS AKTIV.\n  NUR Recovery-Sub-Agenten loaded.\n  Execute recovery\
-  \ --remainderore-best aus.\nprompt: |\n  NOTFALL-MAS (v1.0.0)\n  RECOVERY mode active\n  NUR Recovery-Commands\n  immune + timeline\nsettings:\n  timeout: 30\n  max_steps: 10\n  goose_provider: openai\n \
-  \ goose_model: filtered/deepseek/deepseek-chat\nENDOFFILE\n\nSTEP 2 — Sub-Agenten validate:\n  for agent in immune checkpoint safezone timeline; do\n    path={workspace}/mas-engineer/recipe/sub/sub_mas-recovery-$agent.yaml\n\
-  \    if [ -f \"$path\" ]; then\n      python3 -c \"import yaml; yaml.safe_load(open('$path'))\" 2>/dev/null || echo 'WARNING: $agent.yaml korrupt'\n    else\n      echo 'WARNING: $agent.yaml missing'\n\
-  \    fi\n  done\n\nSTEP 3 — minimum-Config validate + confirm:\n  python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))\"\n  signal='': 'minimum-Config\
-  \ loaded — Recovery mode active'\n  'Als naechstes: recovery --remainderore-best oder recovery --resurrect'\n\n### Edge Cases DEFIB\n- Write permissions missing → '' error + 'chmod?'\n- immune.yaml missing\
-  \ → '' warning + only timeline load\n- All Sub-Agenten missing → '' error + only instructions (reine Text-Config)\n- Already Defib mode active → '' info + nothing tun\n\n## Task RESURRECT — Stepweise\
-  \ Resuscitation\n\nSTEP 1 — Besten Checkpoint via timeline:\n  delegiere an sub_mas-recovery-timeline (task=FIND_BEST)\n  IF CHECKPOINT GEFUNDEN:\n    delegiere an sub_mas-recovery-timeline (task=RESTORE_BEST)\n\
-  \nSTEP 2 — NO Checkpoint: Backups durchsuchen:\n  IF NO CHECKPOINT:\n  for d in $(ls -t {workspace}/mas-engineer/.backups 2>/dev/null); do\n    python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/.backups/$d/recipe_dev-mas-engineer.yaml'))\"\
+  ```yaml\nmas_result:\n  signal: ''|''|''\n  observations:\n    - severity: 'P1'|'P2'|'P3'\n      title: string\n      description: string\n  recovery_step: string\n```\n\n## Task DEFIB — minimum Config\
+  \ load\n\nSTEP 1 — Write minimum Config (ONLY immune + timeline):\n  cat > {workspace}/mas-engineer/recipe/dev-mas-engineer.yaml << 'ENDOFFILE'\nversion: 1.0.0\ntitle: 'EMERGENCY-MAS — Recovery mode'\n\
+  description: 'v1.0.0 | minimum Config for Resuscitation'\nsub_recipes:\n  - name: sub_mas-recovery-immune\n    path: ./sub/sub_mas-recovery-immune.yaml\n    description: 'YAML Prevention'\n  - name:\
+  \ sub_mas-recovery-timeline\n    path: ./sub/sub_mas-recovery-timeline.yaml\n    description: 'Best point search'\ninstructions: |\n  EMERGENCY-MAS ACTIVE.\n  ONLY Recovery Sub-Agents loaded.\n  Execute recovery\
+  \ --restore-best.\nprompt: |\n  EMERGENCY-MAS (v1.0.0)\n  RECOVERY mode active\n  ONLY Recovery Commands\n  immune + timeline\nsettings:\n  timeout: 30\n  max_steps: 10\n  goose_provider: openai\n \
+  \ goose_model: filtered/deepseek/deepseek-chat\nENDOFFILE\n\nSTEP 2 — Validate Sub-Agents:\n  for agent in immune checkpoint safezone timeline; do\n    path={workspace}/mas-engineer/recipe/sub/sub_mas-recovery-$agent.yaml\n\
+  \    if [ -f \"$path\" ]; then\n      python3 -c \"import yaml; yaml.safe_load(open('$path'))\" 2>/dev/null || echo 'WARNING: $agent.yaml corrupt'\n    else\n      echo 'WARNING: $agent.yaml missing'\n\
+  \    fi\n  done\n\nSTEP 3 — Validate minimum Config + confirm:\n  python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))\"\n  signal='': 'minimum Config\
+  \ loaded — Recovery mode active'\n  'Next: recovery --restore-best or recovery --resurrect'\n\n### Edge Cases DEFIB\n- Write permissions missing → '' error + 'chmod?'\n- immune.yaml missing\
+  \ → '' warning + only timeline loaded\n- All Sub-Agents missing → '' error + only instructions (pure text config)\n- Already Defib mode active → '' info + nothing to do\n\n## Task RESURRECT — Step by step\
+  \ Resuscitation\n\nSTEP 1 — Best Checkpoint via timeline:\n  delegate to sub_mas-recovery-timeline (task=FIND_BEST)\n  IF CHECKPOINT FOUND:\n    delegate to sub_mas-recovery-timeline (task=RESTORE_BEST)\n\
+  \nSTEP 2 — NO Checkpoint: Search backups:\n  IF NO CHECKPOINT:\n  for d in $(ls -t {workspace}/mas-engineer/.backups 2>/dev/null); do\n    python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/.backups/$d/recipe_dev-mas-engineer.yaml'))\"\
   \ 2>/dev/null\n    if [ $? -eq 0 ]; then\n      cp {workspace}/mas-engineer/.backups/$d/recipe_dev-mas-engineer.yaml {workspace}/mas-engineer/recipe/dev-mas-engineer.yaml\n      signal='': 'Backup $d\
-  \ againhergestellt'\n      break\n    fi\n  done\n\nSTEP 3 — NOTHING found: Neuinstallation suggest:\n  IF NOTHING FUNKTIONIERT:\n    signal='': 'No functionierendes Backup — Neuinstallation recommended'\n\
-  \    'Execute: python3 dev_workspace.py --init {workspace}'\n\nSTEP 4 — After remainderoration:\n  delegiere an sub_mas-recovery-checkpoint (task=SNAPSHOT, label='nach_resurrection')\n  signal='': 'Resuscitation\
-  \ completed — Snapshot: nach_resurrection'\n  'Execute update --mas um new Version zu activeieren'\n\n### Edge Cases RESURRECT\n- Checkpoint present aber korrupt → aboutspringen, naechsten try\n- Backup\
-  \ present aber uncomplete → '' warning + manuelle Nacharbeit\n- Weder Checkpoint still Backup → '' error + --init\n\n## Task DIAGNOSE — Total failure-Analyse\n\nSTEP 1 — 7-Ask:\n  error=0\n  [ -d {workspace}\
+  \ restored'\n      break\n    fi\n  done\n\nSTEP 3 — NOTHING found: Suggest reinstallation:\n  IF NOTHING WORKS:\n    signal='': 'No working Backup — Reinstallation recommended'\n\
+  \    'Execute: python3 dev_workspace.py --init {workspace}'\n\nSTEP 4 — After restoration:\n  delegate to sub_mas-recovery-checkpoint (task=SNAPSHOT, label='after_resurrection')\n  signal='': 'Resuscitation\
+  \ completed — Snapshot: after_resurrection'\n  'Execute update --mas to activate new Version'\n\n### Edge Cases RESURRECT\n- Checkpoint present but corrupt → skip, try next\n- Backup\
+  \ present but incomplete → '' warning + manual rework\n- Neither Checkpoint nor Backup → '' error + --init\n\n## Task DIAGNOSE — Total failure analysis\n\nSTEP 1 — 7-Ask:\n  error=0\n  [ -d {workspace}\
   \ ]                         || error=$((error+1))\n  [ -d {workspace}/mas-engineer ]             || error=$((error+1))\n  [ -f {workspace}/mas-engineer/recipe/dev-mas-engineer.yaml ] || error=$((error+1))\n\
   \  [ -d {workspace}/mas-engineer/recipe/sub ]  || error=$((error+1))\n  [ -d {workspace}/mas-engineer/tools ]       || error=$((error+1))\n  [ -d {workspace}/mas-engineer/.state ]      || error=$((error+1))\n\
-  \  python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))\" 2>/dev/null || error=$((error+1))\n\nSTEP 2 — Schadenslevel + action:\n  action=''\n  if\
-  \ [ $error -eq 0 ]; then  action='No Recovery notig'\n  elif [ $error -le 3 ]; then action='recovery --remainderore-best'\n  elif [ $error -le 5 ]; then action='recovery --resurrect'\n  else              \
-  \          action='recovery --defib -> --init'\n  fi\n\n  echo '(error)/7 Error — Recommendation: $action'\n  signal=''|''|'' je after Level\n"
-prompt: " DEFIB (v1.0.0)\n NOTFALL — Last resort\n DEFIB | RESURRECT | DIAGNOSE\n settings: timeout=120"
+  \  python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))\" 2>/dev/null || error=$((error+1))\n\nSTEP 2 — Damage level + action:\n  action=''\n  if\
+  \ [ $error -eq 0 ]; then  action='No Recovery necessary'\n  elif [ $error -le 3 ]; then action='recovery --restore-best'\n  elif [ $error -le 5 ]; then action='recovery --resurrect'\n  else              \
+  \          action='recovery --defib -> --init'\n  fi\n\n  echo '(error)/7 Errors — Recommendation: $action'\n  signal=''|''|'' depending on Level\n"
+prompt: " DEFIB (v1.0.0)\n EMERGENCY — Last resort\n DEFIB | RESURRECT | DIAGNOSE\n settings: timeout=120"
 settings:
   timeout: 120
   max_steps: 40

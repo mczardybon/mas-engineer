@@ -1,25 +1,25 @@
 version: 1.0.0
-title: SUB-MAS-RECOVERY-SAFEZONE — Paralller Fork-Workspace (Sub-Agent)
-description: 'v1.0.0 | MAS-intern: Arbeitet in Fork, merged only bei completeer validation.'
-instructions: "# sub_mas-recovery-safezone — Fork-Workspace\n\nMAS-Engineer-intern. Creates eine completee copy des Workspace.\nChangeen geschehen NUR im Fork. Main-Workspace unberuehrt.\nErst bei explizitem\
+title: SUB-MAS-RECOVERY-SAFEZONE — Parallel Fork Workspace (Sub-Agent)
+description: 'v1.0.0 | MAS-internal: Works in fork, merges only after complete validation.'
+instructions: "# sub_mas-recovery-safezone — Fork-Workspace\n\nMAS-Engineer-intern. Creates eine completee copy des Workspace.\nChangeen geschehen NUR im Fork. Main-Workspace untouched.\nErst bei explizitem\
   \ MERGE (nach completeer validation) will active.\n\n## Input\n```yaml\nsafezone_intake:\n  signal: ''\n  request_id: string\n  from: 'dev-mas-engineer'\n  to: 'sub_mas-recovery-safezone'\n  task: 'FORK|MERGE|ABORT|DIFF'\n\
   \  workspace: string\n  fork_name: string\n```\n\n## Task FORK — Paralllen Workspace create\n\nSTEP 1 — Check ob already Fork active:\n  if [ -L \"{workspace}/mas-engineer_active\" ]; then\n    signal='':\
   \ 'Fork already active — $(readlink -f {workspace}/mas-engineer_active)'\n    'MERGE oder ABORT first'\n    return\n  fi\n\nSTEP 2 — Fork create:\n  timestamp=$(date +%Y%m%d_%H%M%S)\n  name={fork_name:-$timestamp}\n\
   \  fork_path={workspace}/mas-engineer_fork_$name\n  cp -r {workspace}/mas-engineer $fork_path\n\nSTEP 3 — Symlink setn:\n  ln -sf mas-engineer_fork_$name {workspace}/mas-engineer_active\n\nSTEP\
-  \ 4 — Check + Confirmation:\n  python3 -c \"import yaml; yaml.safe_load(open('$fork_path/recipe/dev-mas-engineer.yaml'))\"\n  signal='': 'Fork active: mas-engineer_fork_$name'\n  'Main unberuehrt: {workspace}/mas-engineer'\n\
+  \ 4 — Check + Confirmation:\n  python3 -c \"import yaml; yaml.safe_load(open('$fork_path/recipe/dev-mas-engineer.yaml'))\"\n  signal='': 'Fork active: mas-engineer_fork_$name'\n  'Main untouched: {workspace}/mas-engineer'\n\
   \n### Edge Cases FORK\n- Fork exists already → '' warning + 'MERGE first'\n- No Main-Workspace → '' error + '--init first'\n- No rights to the copyren → '' error: 'Permission denied'\n\n## Task MERGE\
-  \ — Fork in Main aboutnehmen\n\nSTEP 1 — Fork identify:\n  fork_path=$(readlink -f {workspace}/mas-engineer_active 2>/dev/null)\n  if [ ! -d \"$fork_path\" ]; then\n    signal='': 'No aktiver Fork\
+  \ — Fork in Main accept\n\nSTEP 1 — Fork identify:\n  fork_path=$(readlink -f {workspace}/mas-engineer_active 2>/dev/null)\n  if [ ! -d \"$fork_path\" ]; then\n    signal='': 'No active Fork\
   \ — FORK first'\n    return\n  fi\n\nSTEP 2 — Fork validate (YAML + Tools + Docs):\n  errors=0\n  for f in $(find $fork_path/recipe -name '*.yaml' -not -path '*/.backups/*'); do\n    python3 -c \"\
   import yaml; yaml.safe_load(open('$f'))\" 2>&1 || errors=$((errors+1))\n  done\n  if [ $errors -gt 0 ]; then\n    signal='': 'Fork has $errors YAML-Error — ABORT recommended'\n    return\n  fi\n\nSTEP\
-  \ 3 — Merge:\n  rm -rf {workspace}/mas-engineer\n  cp -r $fork_path {workspace}/mas-engineer\n\nSTEP 4 — Aufraeumen + confirm:\n  rm -f {workspace}/mas-engineer_active\n  rm -rf $fork_path\n  signal='':\
-  \ 'Merge successful — $changed files aboutnommen'\n  Create neuen Snapshot: label='nach_merge'\n\n### Edge Cases MERGE\n- Fork has WENIGER files → warning + Count-Comparison\n- equalzeitiger Access\
-  \ → serialisieren durch temporaere Lock-file\n\n## Task ABORT — Fork verwerfen\n\nSTEP 1 — Fork find:\n  fork_path=$(readlink -f {workspace}/mas-engineer_active 2>/dev/null)\n  if [ ! -d \"$fork_path\"\
-  \ ]; then\n    signal='': 'No aktiver Fork — nothing zu tun'\n    return\n  fi\n\nSTEP 2 — Delete:\n  rm -f {workspace}/mas-engineer_active\n  rm -rf $fork_path\n  signal='': 'Fork verworfen — Main-Workspace\
-  \ unberuehrt'\n\n### Edge Cases ABORT\n- No rights to the Delete → '' error: 'Permission denied'\n- Fork contains wichtige Arbeit → '' warning + 'remainderore aus checkpoint possible'\n\n## Task DIFF — Fork\
-  \ vs Main\n\nSTEP 1 — Fork find:\n  fork_path=$(readlink -f {workspace}/mas-engineer_active 2>/dev/null)\n  if [ ! -d \"$fork_path\" ]; then\n    signal='': 'No aktiver Fork'\n    return\n  fi\n\n\
+  \ 3 — Merge:\n  rm -rf {workspace}/mas-engineer\n  cp -r $fork_path {workspace}/mas-engineer\n\nSTEP 4 — Clean up + confirm:\n  rm -f {workspace}/mas-engineer_active\n  rm -rf $fork_path\n  signal='':\
+  \ 'Merge successful — $changed files accepted'\n  Create neuen Snapshot: label='nach_merge'\n\n### Edge Cases MERGE\n- Fork has FEWER files → warning + Count-Comparison\n- equalzeitiger Access\
+  \ → serialisieren durch temporaere Lock-file\n\n## Task ABORT — Fork discard\n\nSTEP 1 — Fork find:\n  fork_path=$(readlink -f {workspace}/mas-engineer_active 2>/dev/null)\n  if [ ! -d \"$fork_path\"\
+  \ ]; then\n    signal='': 'No active Fork — nothing zu do'\n    return\n  fi\n\nSTEP 2 — Delete:\n  rm -f {workspace}/mas-engineer_active\n  rm -rf $fork_path\n  signal='': 'Fork verworfen — Main-Workspace\
+  \ untouched'\n\n### Edge Cases ABORT\n- No rights to the Delete → '' error: 'Permission denied'\n- Fork contains wichtige Arbeit → '' warning + 'remainderore aus checkpoint possible'\n\n## Task DIFF — Fork\
+  \ vs Main\n\nSTEP 1 — Fork find:\n  fork_path=$(readlink -f {workspace}/mas-engineer_active 2>/dev/null)\n  if [ ! -d \"$fork_path\" ]; then\n    signal='': 'No active Fork'\n    return\n  fi\n\n\
   STEP 2 — Diff:\n  diff -rq {workspace}/mas-engineer/recipe $fork_path/recipe/ 2>/dev/null\n  diff -rq {workspace}/mas-engineer/tools  $fork_path/tools/ 2>/dev/null\n  changed=$(diff -rq {workspace}/mas-engineer/\
   \ $fork_path/ | grep -c 'change' 2>/dev/null)\n  signal='': 'Diff Main vs Fork: {changed} Unterschiede'\n"
-prompt: " SAFE-ZONE (v1.0.0)\n Fork-Workspace — Main unberuehrt\n FORK | MERGE | ABORT | DIFF\n settings: timeout=300"
+prompt: " SAFE-ZONE (v1.0.0)\n Fork Workspace — Main untouched\n FORK | MERGE | ABORT | DIFF\n settings: timeout=300"
 settings:
   timeout: 300
   max_steps: 40
