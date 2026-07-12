@@ -4,363 +4,401 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MAS Dispatch Monitor</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
   :root {
-    --bg: #0d1117;
-    --surface: #161b22;
-    --surface2: #1c2333;
-    --border: #30363d;
-    --text: #e6edf3;
-    --text-dim: #8b949e;
-    --green: #3fb950;
-    --yellow: #d29922;
-    --red: #f85149;
-    --blue: #58a6ff;
-    --purple: #bc8cff;
-    --cyan: #39d2c0;
-    --orange: #d4760e;
-    --running: #58a6ff;
-    --done: #3fb950;
-    --error: #f85149;
-    --pending: #8b949e;
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-tertiary: #21262d;
+    --border-color: #30363d;
+    --text-primary: #f0f6fc;
+    --text-secondary: #8b949e;
+    --text-muted: #6e7681;
+    --accent-green: #3fb950;
+    --accent-red: #f85149;
+    --accent-yellow: #d29922;
+    --accent-blue: #58a6ff;
+    --accent-purple: #bc8cff;
+    --accent-cyan: #39d2c0;
+    --font: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    --radius: 8px;
+    --radius-sm: 4px;
+    --shadow: 0 4px 16px rgba(0,0,0,0.4);
   }
-  html, body { height: 100%; overflow: hidden; }
-  body {
-    font-family: 'JetBrains Mono', 'Courier New', monospace;
-    background: var(--bg);
-    color: var(--text);
-    display: flex; flex-direction: column;
+
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    font-family: var(--font);
+    background: var(--bg-primary);
+    color: var(--text-primary);
     font-size: 13px;
     line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
   }
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--surface); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
 
-  .header {
-    padding: 10px 16px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  /* ─── Status Bar ─── */
+  #status-bar {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
+    gap: 1.2em;
+    padding: 10px 20px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    min-height: 44px;
   }
-  .header h1 { font-size: 15px; font-weight: 700; color: var(--cyan); }
-  .header h1 span { color: var(--text-dim); font-weight: 400; font-size: 12px; }
-  .header .ts { font-size: 11px; color: var(--text-dim); }
+  #status-bar .stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  #status-bar .stat .label { color: var(--text-secondary); }
+  #status-bar .stat .value { color: var(--text-primary); font-weight: 600; }
+  #status-bar .stat .value.green { color: var(--accent-green); }
+  #status-bar .stat .value.red { color: var(--accent-red); }
+  #status-bar .stat .value.yellow { color: var(--accent-yellow); }
+  #status-bar .stat .value.blue { color: var(--accent-blue); }
+  #status-bar .stat .value.cyan { color: var(--accent-cyan); }
+  #status-bar .pipe { color: var(--border-color); font-weight: 300; user-select: none; }
+  #status-bar .right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  #status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-size: 11px;
+  }
+  #status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    animation: pulse-dot 2s ease-in-out infinite;
+  }
+  #status-dot.error { background: var(--accent-red); animation: none; }
+  #status-dot.paused { background: var(--accent-yellow); animation: none; }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+  #last-update {
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+  #refresh-btn {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 11px;
+    transition: all 0.15s;
+  }
+  #refresh-btn:hover {
+    background: var(--border-color);
+    color: var(--text-primary);
+  }
+  #toggle-pause {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-family: var(--font);
+    font-size: 11px;
+    transition: all 0.15s;
+  }
+  #toggle-pause:hover {
+    background: var(--border-color);
+    color: var(--text-primary);
+  }
+  #toggle-pause.paused {
+    border-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+  }
 
-  .main-content {
+  /* ─── Content ─── */
+  #content {
     flex: 1;
-    display: flex; flex-direction: column;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
-    min-height: 0;
+    padding: 0;
   }
 
-  /* LIVE SECTION */
-  .live-section {
+  /* ─── Top Section: LIVE ─── */
+  #live-section {
+    flex: 0 0 30%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-primary);
+  }
+  #live-section .section-header {
     flex-shrink: 0;
-    background: var(--surface);
-    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+  }
+  #live-section .section-header .live-dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent-red);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+  #live-section .section-header .count-badge {
+    margin-left: auto;
+    background: var(--bg-tertiary);
+    padding: 1px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  #live-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 8px;
+    scroll-behavior: smooth;
+  }
+  #live-list::-webkit-scrollbar { width: 5px; }
+  #live-list::-webkit-scrollbar-track { background: transparent; }
+  #live-list::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+
+  /* ─── Middle Section: Timeline ─── */
+  #timeline-section {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  #timeline-section .section-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+  }
+  #timeline-section .section-header .count-badge {
+    margin-left: auto;
+    background: var(--bg-tertiary);
+    padding: 1px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  #timeline-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 8px;
+    scroll-behavior: smooth;
+  }
+  #timeline-container::-webkit-scrollbar { width: 5px; }
+  #timeline-container::-webkit-scrollbar-track { background: transparent; }
+  #timeline-container::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+
+  /* ─── Items ─── */
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .dispatch-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 4px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-secondary);
+    border-left: 3px solid var(--border-color);
+    transition: background 0.12s;
+    cursor: pointer;
+  }
+  .dispatch-item:hover { background: var(--bg-tertiary); }
+  .dispatch-item.running { border-left-color: var(--accent-green); }
+  .dispatch-item.done { border-left-color: var(--accent-blue); }
+  .dispatch-item.failed { border-left-color: var(--accent-red); }
+  .dispatch-item.pending { border-left-color: var(--accent-yellow); }
+
+  .dispatch-item .main-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    min-height: 32px;
+    flex-wrap: wrap;
+  }
+  .dispatch-item .main-row .status-icon {
+    flex-shrink: 0;
+    font-size: 14px;
+    width: 20px;
+    text-align: center;
+  }
+  .dispatch-item .main-row .route {
+    color: var(--text-primary);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .dispatch-item .main-row .route .arrow {
+    color: var(--text-muted);
+    margin: 0 3px;
+  }
+  .dispatch-item .main-row .task-name {
+    color: var(--accent-cyan);
+    font-weight: 500;
+  }
+  .dispatch-item .main-row .badge {
+    flex-shrink: 0;
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-weight: 500;
+  }
+  .dispatch-item .main-row .badge.duration {
+    background: rgba(88,166,255,0.15);
+    color: var(--accent-blue);
+  }
+  .dispatch-item .main-row .badge.reason {
+    background: rgba(210,153,34,0.15);
+    color: var(--accent-yellow);
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dispatch-item .main-row .badge.time {
+    background: rgba(139,148,158,0.12);
+    color: var(--text-secondary);
+    margin-left: auto;
+  }
+  .dispatch-item .main-row .expand-arrow {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 10px;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .dispatch-item .main-row .expand-arrow.open {
+    transform: rotate(90deg);
+  }
+
+  .dispatch-item .detail-row {
+    display: none;
+    padding: 6px 10px 8px 38px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: rgba(0,0,0,0.15);
+    border-top: 1px solid var(--border-color);
     max-height: 200px;
     overflow-y: auto;
   }
-  .live-header {
-    padding: 6px 16px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--running);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-    position: sticky; top: 0; z-index: 2;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .live-header .pulse {
-    display: inline-block;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--running);
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--running); }
-    50% { opacity: 0.4; box-shadow: 0 0 12px var(--running); }
-  }
-  .live-list { padding: 4px 0; }
-  .live-entry {
-    padding: 5px 16px;
-    display: flex; align-items: center; gap: 10px;
-    font-size: 12px;
-    border-bottom: 1px solid rgba(48,54,61,0.3);
-    transition: background 0.15s;
-  }
-  .live-entry:hover { background: var(--surface2); }
-  .live-entry .icon { flex-shrink: 0; font-size: 14px; }
-  .live-entry .from-to {
-    color: var(--blue);
+  .dispatch-item .detail-row.open { display: block; }
+  .dispatch-item .detail-row .detail-label {
+    color: var(--text-muted);
     font-weight: 500;
-    flex-shrink: 0;
-    min-width: 100px;
+    margin-top: 5px;
   }
-  .live-entry .task {
-    color: var(--text);
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .live-entry .duration {
-    flex-shrink: 0;
-    color: var(--text-dim);
-    font-size: 11px;
-    min-width: 60px;
-    text-align: right;
-  }
-  .live-entry .turns {
-    flex-shrink: 0;
-    color: var(--purple);
-    font-size: 11px;
-    min-width: 40px;
-    text-align: right;
-  }
-  .live-empty {
-    padding: 20px 16px;
-    text-align: center;
-    color: var(--text-dim);
-    font-size: 12px;
-  }
-
-  /* TIMELINE SECTION */
-  .timeline-section {
-    flex: 1;
-    display: flex; flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-  }
-  .timeline-header {
-    padding: 6px 16px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--cyan);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 8px;
-    flex-shrink: 0;
-  }
-  .timeline-header .count { color: var(--text-dim); font-weight: 400; }
-  .timeline-scroll {
-    flex: 1;
+  .dispatch-item .detail-row .detail-label:first-child { margin-top: 0; }
+  .dispatch-item .detail-row .detail-value {
+    color: var(--text-primary);
+    word-break: break-word;
+    white-space: pre-wrap;
+    max-height: 80px;
     overflow-y: auto;
-    overflow-x: hidden;
-    padding: 8px 0;
-  }
-
-  .date-group { margin-bottom: 4px; }
-  .date-label {
-    padding: 3px 16px;
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--text-dim);
-    background: rgba(48,54,61,0.2);
-    border-bottom: 1px solid var(--border);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    position: sticky; top: 0; z-index: 1;
-  }
-
-  .tl-entry {
-    border-bottom: 1px solid rgba(48,54,61,0.2);
-    cursor: pointer;
-    transition: background 0.12s;
-  }
-  .tl-entry:hover { background: var(--surface2); }
-  .tl-entry .tl-summary {
-    padding: 5px 16px;
-    display: flex; align-items: center; gap: 10px;
-    font-size: 12px;
-  }
-  .tl-entry .tl-summary .status-icon {
-    flex-shrink: 0;
-    font-size: 14px;
-    width: 20px; text-align: center;
-  }
-  .tl-entry .tl-summary .from-to {
-    color: var(--blue);
-    font-weight: 500;
-    flex-shrink: 0;
-    min-width: 100px;
-  }
-  .tl-entry .tl-summary .task {
-    flex: 1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    color: var(--text);
-  }
-  .tl-entry .tl-summary .meta {
-    flex-shrink: 0;
-    display: flex; gap: 12px;
-    font-size: 11px;
-    color: var(--text-dim);
-  }
-  .tl-entry .tl-summary .meta .dur { color: var(--yellow); }
-  .tl-entry .tl-summary .meta .turns { color: var(--purple); }
-  .tl-entry .tl-summary .arrow {
-    flex-shrink: 0;
-    color: var(--text-dim);
-    font-size: 10px;
-    transition: transform 0.2s;
-    width: 16px; text-align: center;
-  }
-  .tl-entry.expanded .tl-summary .arrow { transform: rotate(90deg); }
-
-  .tl-entry .tl-details {
-    display: none;
-    padding: 8px 16px 12px 46px;
-    background: rgba(22,27,34,0.6);
-    border-top: 1px solid rgba(48,54,61,0.2);
-    font-size: 12px;
-  }
-  .tl-entry.expanded .tl-details { display: block; }
-
-  .tl-details .detail-section {
-    margin-bottom: 8px;
-  }
-  .tl-details .detail-section:last-child { margin-bottom: 0; }
-  .tl-details .detail-label {
-    font-size: 10px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-    font-weight: 700;
-  }
-  .tl-details .detail-label .badge {
-    display: inline-block;
-    padding: 1px 6px;
-    border-radius: 3px;
-    font-size: 9px;
-    font-weight: 700;
-    margin-left: 6px;
-  }
-  .badge-done { background: rgba(63,185,80,0.15); color: var(--done); }
-  .badge-error { background: rgba(248,81,73,0.15); color: var(--error); }
-  .badge-running { background: rgba(88,166,255,0.15); color: var(--running); }
-
-  .detail-result {
-    color: var(--green);
-    background: rgba(63,185,80,0.08);
-    padding: 5px 8px;
-    border-radius: 4px;
-    border-left: 2px solid var(--green);
-    font-size: 11px;
-    word-break: break-word;
-  }
-  .detail-result.error {
-    color: var(--red);
-    background: rgba(248,81,73,0.08);
-    border-left-color: var(--red);
-  }
-  .detail-result.running {
-    color: var(--yellow);
-    background: rgba(210,153,34,0.08);
-    border-left-color: var(--yellow);
-  }
-
-  .detail-messages { max-height: 200px; overflow-y: auto; }
-  .detail-msg {
+    background: rgba(0,0,0,0.2);
     padding: 4px 8px;
-    margin-bottom: 3px;
-    background: rgba(48,54,61,0.15);
     border-radius: 3px;
+    margin-top: 2px;
     font-size: 11px;
   }
-  .detail-msg .msg-from {
-    color: var(--blue);
-    font-weight: 500;
-    margin-right: 6px;
-  }
-  .detail-msg .msg-text {
-    color: var(--text-dim);
-    word-break: break-word;
-  }
+  .dispatch-item .detail-row .detail-value::-webkit-scrollbar { width: 3px; }
+  .dispatch-item .detail-row .detail-value::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
 
-  .detail-children {
-    display: flex; flex-wrap: wrap; gap: 4px;
+  /* ─── Live-Item Variant ─── */
+  .dispatch-item.live-item {
+    background: rgba(63,185,80,0.06);
+    border-left-color: var(--accent-green);
+    animation: live-glow 2s ease-in-out infinite;
   }
-  .detail-child-ref {
-    display: inline-block;
-    padding: 2px 6px;
-    background: rgba(88,166,255,0.1);
-    border: 1px solid rgba(88,166,255,0.2);
-    border-radius: 3px;
-    font-size: 10px;
-    color: var(--blue);
-    cursor: pointer;
+  @keyframes live-glow {
+    0%, 100% { box-shadow: inset 3px 0 8px -4px rgba(63,185,80,0.15); }
+    50% { box-shadow: inset 3px 0 12px -2px rgba(63,185,80,0.35); }
   }
-  .detail-child-ref:hover {
-    background: rgba(88,166,255,0.2);
-  }
+  .dispatch-item.live-item .main-row .route { color: var(--accent-green); }
 
-  .detail-errors {
-    color: var(--red);
-    background: rgba(248,81,73,0.08);
-    padding: 5px 8px;
-    border-radius: 4px;
-    border-left: 2px solid var(--red);
-    font-size: 11px;
-    word-break: break-word;
-  }
-
-  /* STATUS BAR */
-  .status-bar {
+  /* ─── Error Banner ─── */
+  #error-banner {
+    display: none;
     flex-shrink: 0;
-    padding: 8px 16px;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    display: flex; align-items: center; gap: 16px;
-    flex-wrap: wrap;
-    font-size: 11px;
+    background: rgba(248,81,73,0.12);
+    border-bottom: 1px solid rgba(248,81,73,0.3);
+    color: var(--accent-red);
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
   }
-  .status-bar .stat {
-    display: flex; align-items: center; gap: 4px;
-  }
-  .status-bar .stat .label { color: var(--text-dim); }
-  .status-bar .stat .value { font-weight: 700; }
-  .stat-total .value { color: var(--text); }
-  .stat-active .value { color: var(--running); }
-  .stat-done .value { color: var(--done); }
-  .stat-failed .value { color: var(--error); }
-  .stat-avg .value { color: var(--yellow); }
-  .stat-agents .value { color: var(--cyan); }
-  .stat-healthy .value { color: var(--green); }
-  .status-bar .divider { width: 1px; height: 16px; background: var(--border); }
-  .status-bar .connection-status {
-    margin-left: auto;
-    display: flex; align-items: center; gap: 6px;
-    color: var(--text-dim);
-  }
-  .status-bar .connection-status .dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--green);
-  }
-  .status-bar .connection-status .dot.error { background: var(--error); animation: none; }
-  .status-bar .connection-status .dot.pending { background: var(--yellow); animation: pulse 1s infinite; }
+  #error-banner.visible { display: block; }
 
-  .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  @media (max-width: 768px) {
-    body { font-size: 12px; }
-    .live-entry .from-to, .tl-entry .tl-summary .from-to { min-width: 70px; }
-    .status-bar { gap: 8px; }
+  /* ─── Responsive ─── */
+  @media (max-width: 700px) {
+    #status-bar { flex-wrap: wrap; gap: 0.5em; padding: 8px 12px; font-size: 11px; }
+    #status-bar .right { margin-left: 0; width: 100%; justify-content: flex-end; }
+    .dispatch-item .main-row { font-size: 11px; padding: 4px 8px; gap: 4px; }
+    .dispatch-item .main-row .badge.reason { max-width: 100px; }
+    #live-section { flex: 0 0 35%; }
+  }
+  @media (max-width: 500px) {
+    #status-bar .pipe { display: none; }
+    #status-bar { gap: 0.3em; }
+    .dispatch-item .main-row .badge.time { display: none; }
   }
 </style>
   <script type="application/ld+json">
@@ -368,508 +406,447 @@
   "@context": "urn:goose.ai:schema",
   "@type": "GooseApp",
   "name": "mas-dispatch-monitor",
-  "description": "Real-time MAS (Multi-Agent System) dispatch monitoring with live view and timeline",
+  "description": "Real-time MAS dispatch monitoring dashboard with live tracking",
   "width": 1200,
   "height": 900,
-  "resizable": true,
+  "resizable": false,
   "mcpServers": [
     "apps"
   ]
 }
   </script>
   <script type="application/x-goose-prd">
-Erstelle eine Echtzeit-Dispatch-Überwachung 'mas-dispatch' (1200x900) für ein MAS (Multi-Agent System).
+MAS Dispatch Monitor - Echtzeit-Monitoring.
 
 Datenquelle: fetch('http://localhost:3000/api/dashboard') alle 5 Sekunden.
-Antwort: {success: true, data: {dispatch: {tree: [Entry], total, active, done, failed}, agents: {total, healthy}, timestamp}}
+Die API liefert: {success: true, data: {dispatch: {tree: [{id, parent_id, from, to, task, reason, status, duration_ms, ts, result_detail, messages, turns, errors}], total, active, done, failed}, agents: {total, healthy}, timestamp}}
 
-Jeder Entry: id, parent_id, from, to, task, reason, status (running/done/error), duration_ms, ts, result_detail, messages [{from, text}], turns, errors
+WICHTIGE API-ZUGRIFFE:
+- const apiData = json.data
+- const items = apiData.dispatch.tree || []
+- apiData.dispatch.total, apiData.dispatch.active, apiData.dispatch.done
+- apiData.agents.total, apiData.agents.healthy
+- apiData.timestamp
 
-KRITISCH:
-- const json = await response.json(); const apiData = json.data; const items = apiData.dispatch.tree || [];
-- const total = apiData.dispatch.total; const active = apiData.dispatch.active;
+Layout (1200x900 pixel, dark theme, monospace font):
 
-App hat 2 Bereiche, KEIN Scroll-Springen:
+OBEN (30%): "🔴 LIVE" - Nur Einträge mit status==="running".
+Zeige für jeden: "⏳ [from] → [to] [TASK]" + Dauer in Sekunden + Grund
+Wenn nichts aktiv: "Keine aktiven Dispatches"
 
-1. LIVE (oben): NUR Einträge mit status='running'. Zeige: ⏳ + Von -> Nach [Task] + Dauer
-2. ZEITSTRAHL (unten, scrollbar): ALLE Einträge, neueste ZUERST. Gruppiert nach Datum. BEIM KLICK expandieren und zeigen: messages, result_detail, children-refs
-3. STATUS-BAR (fix unten): Total | Active | Done | Failed | Avg | Agents
+MITTE (60%): "🕐 ZEITSTRAHL" - ALLE Einträge, neueste ZUERST
+Jeder Eintrag zeigt: StatusIcon [from] → [to] [TASK] | Dauer | Grund | Zeit
+Bei Klick expandieren mit result_detail und messages.
 
-scrollTop merken vor refresh, wiederherstellen nach refresh. Monospace Font, Dark Theme.
+UNTEN (fix): Statusleiste: Total | Active | Done | Failed | Agents (healthy/total)
+
+Kein Scroll-Springen! Vor Refresh scrollTop merken, nach Refresh wiederherstellen.
+Auto-Refresh alle 5 Sekunden.
   </script>
 </head>
 <body>
-<div class="header">
-  <h1>⚡ MAS Dispatch <span>Monitor</span></h1>
-  <div class="ts" id="headerTs">—</div>
-</div>
+<div id="app">
+  <!-- Error Banner -->
+  <div id="error-banner"></div>
 
-<div class="main-content">
-  <!-- LIVE SECTION -->
-  <div class="live-section" id="liveSection">
-    <div class="live-header">
-      <span class="pulse"></span>
-      LIVE — Aktive Dispatchs
-      <span id="liveCount" style="font-weight:400;color:var(--text-dim);font-size:11px;margin-left:auto;">0</span>
+  <!-- Status Bar (bottom-anchored via flex order) -->
+  <!-- Content Area -->
+  <div id="content">
+    <!-- LIVE Section -->
+    <div id="live-section">
+      <div class="section-header">
+        <span class="live-dot"></span> LIVE
+        <span class="count-badge" id="live-count">0 aktiv</span>
+      </div>
+      <div id="live-list"></div>
     </div>
-    <div class="live-list" id="liveList"></div>
+
+    <!-- Timeline Section -->
+    <div id="timeline-section">
+      <div class="section-header">
+        🕐 ZEITSTRAHL
+        <span class="count-badge" id="timeline-count">0 Einträge</span>
+      </div>
+      <div id="timeline-container"></div>
+    </div>
   </div>
 
-  <!-- TIMELINE SECTION -->
-  <div class="timeline-section">
-    <div class="timeline-header">
-      📋 ZEITSTRAHL — Alle Dispatchs
-      <span class="count" id="tlCount">(0)</span>
-    </div>
-    <div class="timeline-scroll" id="timelineScroll">
-      <div id="timelineList"></div>
-    </div>
-  </div>
-</div>
-
-<!-- STATUS BAR -->
-<div class="status-bar" id="statusBar">
-  <div class="stat stat-total"><span class="label">Total:</span><span class="value" id="statTotal">0</span></div>
-  <div class="divider"></div>
-  <div class="stat stat-active"><span class="label">Active:</span><span class="value" id="statActive">0</span></div>
-  <div class="divider"></div>
-  <div class="stat stat-done"><span class="label">Done:</span><span class="value" id="statDone">0</span></div>
-  <div class="divider"></div>
-  <div class="stat stat-failed"><span class="label">Failed:</span><span class="value" id="statFailed">0</span></div>
-  <div class="divider"></div>
-  <div class="stat stat-avg"><span class="label">⏱ Ø:</span><span class="value" id="statAvg">—</span></div>
-  <div class="divider"></div>
-  <div class="stat stat-agents"><span class="label">Agents:</span><span class="value" id="statAgents">0</span></div>
-  <div class="stat stat-healthy"><span class="label">✓:</span><span class="value" id="statHealthy">0</span></div>
-  <div class="connection-status">
-    <span class="dot" id="connDot"></span>
-    <span id="connText">Verbinde...</span>
+  <!-- Status Bar -->
+  <div id="status-bar">
+    <span class="stat"><span class="label">Total:</span> <span class="value blue" id="stat-total">0</span></span>
+    <span class="pipe">|</span>
+    <span class="stat"><span class="label">Active:</span> <span class="value green" id="stat-active">0</span></span>
+    <span class="pipe">|</span>
+    <span class="stat"><span class="label">Done:</span> <span class="value cyan" id="stat-done">0</span></span>
+    <span class="pipe">|</span>
+    <span class="stat"><span class="label">Failed:</span> <span class="value red" id="stat-failed">0</span></span>
+    <span class="pipe">|</span>
+    <span class="stat"><span class="label">Agents:</span> <span class="value" id="stat-agents">0/0</span></span>
+    <span class="right">
+      <span id="status-indicator">
+        <span id="status-dot"></span>
+        <span id="status-text">Live</span>
+      </span>
+      <span id="last-update">–</span>
+      <button id="toggle-pause" title="Auto-Refresh pausieren/resume">⏸ Pause</button>
+      <button id="refresh-btn" title="Manuell aktualisieren">⟳ Refresh</button>
+    </span>
   </div>
 </div>
 
 <script>
-(function(){
+(function() {
   'use strict';
 
-  // State
-  let allEntries = [];
+  // ─── State ───
+  let paused = false;
+  let lastData = null;
+  let intervalId = null;
+  let savedScrollTop = { timeline: 0, live: 0 };
   let expandedIds = new Set();
-  let savedScrollTop = 0;
-  let pollInterval = null;
-  let isPolling = false;
 
-  const SCROLL_KEY = 'mas_dispatch_scroll';
+  // ─── DOM Refs ───
+  const liveList = document.getElementById('live-list');
+  const timelineContainer = document.getElementById('timeline-container');
+  const errorBanner = document.getElementById('error-banner');
+  const statusDot = document.getElementById('status-dot');
+  const statusText = document.getElementById('status-text');
+  const lastUpdateEl = document.getElementById('last-update');
+  const refreshBtn = document.getElementById('refresh-btn');
+  const togglePauseBtn = document.getElementById('toggle-pause');
+  const statTotal = document.getElementById('stat-total');
+  const statActive = document.getElementById('stat-active');
+  const statDone = document.getElementById('stat-done');
+  const statFailed = document.getElementById('stat-failed');
+  const statAgents = document.getElementById('stat-agents');
+  const liveCount = document.getElementById('live-count');
+  const timelineCount = document.getElementById('timeline-count');
 
-  // DOM refs
-  const liveList = document.getElementById('liveList');
-  const liveCount = document.getElementById('liveCount');
-  const timelineList = document.getElementById('timelineList');
-  const timelineScroll = document.getElementById('timelineScroll');
-  const tlCount = document.getElementById('tlCount');
-  const headerTs = document.getElementById('headerTs');
-
-  const statTotal = document.getElementById('statTotal');
-  const statActive = document.getElementById('statActive');
-  const statDone = document.getElementById('statDone');
-  const statFailed = document.getElementById('statFailed');
-  const statAvg = document.getElementById('statAvg');
-  const statAgents = document.getElementById('statAgents');
-  const statHealthy = document.getElementById('statHealthy');
-  const connDot = document.getElementById('connDot');
-  const connText = document.getElementById('connText');
-
-  // Helpers
-  function fmtDuration(ms) {
-    if (ms == null) return '—';
-    if (ms < 1000) return ms + 'ms';
-    if (ms < 60000) return (ms / 1000).toFixed(1) + 's';
-    const m = Math.floor(ms / 60000);
-    const s = Math.floor((ms % 60000) / 1000);
-    return m + 'm ' + s + 's';
+  // ─── Helpers ───
+  function formatDuration(ms) {
+    if (ms == null) return '–';
+    const s = Math.floor(ms / 1000);
+    if (s < 60) return s + 's';
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return m + 'm ' + sec + 's';
   }
 
-  function fmtTime(ts) {
-    if (!ts) return '';
+  function formatTime(ts) {
+    if (!ts) return '–';
     const d = new Date(ts);
-    if (isNaN(d.getTime())) return '';
-    const pad = n => String(n).padStart(2, '0');
-    return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
-  function fmtDate(ts) {
-    if (!ts) return 'Unbekannt';
-    const d = new Date(ts);
-    if (isNaN(d.getTime())) return 'Unbekannt';
-    const now = new Date();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (d.toDateString() === now.toDateString()) return 'Heute';
-    if (d.toDateString() === yesterday.toDateString()) return 'Gestern';
-    const pad = n => String(n).padStart(2, '0');
-    return pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + d.getFullYear();
-  }
-
-  function getDateGroupKey(ts) {
-    if (!ts) return 'Unbekannt';
-    const d = new Date(ts);
-    if (isNaN(d.getTime())) return 'Unbekannt';
-    return d.toDateString();
-  }
-
-  function getStatusIcon(status) {
+  function statusIcon(status) {
     switch (status) {
-      case 'running': return '⏳';
+      case 'running': return '▶️';
       case 'done': return '✅';
-      case 'error': return '❌';
-      default: return '⬜';
+      case 'failed': return '❌';
+      case 'pending': return '⏳';
+      default: return '❓';
     }
   }
 
-  function getStatusClass(status) {
+  function statusClass(status) {
     switch (status) {
       case 'running': return 'running';
-      case 'done': return 'badge-done';
-      case 'error': return 'badge-error';
+      case 'done': return 'done';
+      case 'failed': return 'failed';
+      case 'pending': return 'pending';
       default: return '';
     }
   }
 
-  // Render LIVE entries (only running)
-  function renderLive(entries) {
-    const running = entries.filter(e => e && e.status === 'running');
-    liveCount.textContent = running.length;
+  function truncate(str, max = 80) {
+    if (!str) return '';
+    return str.length > max ? str.slice(0, max) + '…' : str;
+  }
+
+  // ─── Render Items ───
+  function renderLiveItems(items) {
+    const running = items.filter(i => i.status === 'running');
+    liveCount.textContent = running.length + ' aktiv';
 
     if (running.length === 0) {
-      liveList.innerHTML = '<div class="live-empty">Keine aktiven Dispatchs — System idle ⏸</div>';
+      liveList.innerHTML = '<div class="empty-state">Keine aktiven Dispatches</div>';
       return;
     }
 
     let html = '';
-    for (const e of running) {
-      const dur = e.duration_ms != null ? fmtDuration(Date.now() - (Date.now() - e.duration_ms)) : '0s';
-      html += '<div class="live-entry">'
-        + '<span class="icon">⏳</span>'
-        + '<span class="from-to">' + escHtml(e.from || '?') + ' → ' + escHtml(e.to || '?') + '</span>'
-        + '<span class="task truncate">' + escHtml(e.task || e.reason || '—') + '</span>'
-        + '<span class="duration">' + dur + '</span>'
-        + '<span class="turns">#' + (e.turns || 0) + '</span>'
-        + '</div>';
+    for (const item of running) {
+      html += dispatchItemHTML(item, true);
     }
     liveList.innerHTML = html;
+    attachClickHandlers(liveList);
   }
 
-  function escHtml(s) {
-    if (s == null) return '';
-    const d = document.createElement('div');
-    d.textContent = String(s);
-    return d.innerHTML;
-  }
-
-  // Render timeline (ALL entries, newest first, grouped by date)
-  function renderTimeline(entries) {
-    const sorted = [...entries].sort((a, b) => {
-      const ta = a.ts ? new Date(a.ts).getTime() : 0;
-      const tb = b.ts ? new Date(b.ts).getTime() : 0;
-      return tb - ta;
+  function renderTimelineItems(items) {
+    const sorted = [...items].sort((a, b) => {
+      const ta = a.ts || a.id || 0;
+      const tb = b.ts || b.id || 0;
+      return tb > ta ? 1 : tb < ta ? -1 : 0;
     });
-
-    tlCount.textContent = '(' + sorted.length + ')';
-
-    // Group by date
-    const groups = {};
-    for (const e of sorted) {
-      const key = getDateGroupKey(e.ts);
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(e);
-    }
-
-    let html = '';
-    for (const [dateKey, ents] of Object.entries(groups)) {
-      html += '<div class="date-group">';
-      html += '<div class="date-label">' + escHtml(fmtDate(ents[0]?.ts)) + ' — ' + ents.length + ' Einträge</div>';
-      for (const e of ents) {
-        const isExpanded = expandedIds.has(e.id);
-        const hasChildren = entries.some(c => c.parent_id === e.id);
-        html += '<div class="tl-entry' + (isExpanded ? ' expanded' : '') + '" data-id="' + escHtml(e.id) + '">';
-        html += '<div class="tl-summary">';
-        html += '<span class="status-icon">' + getStatusIcon(e.status) + '</span>';
-        html += '<span class="from-to">' + escHtml(e.from || '?') + ' → ' + escHtml(e.to || '?') + '</span>';
-        html += '<span class="task truncate">' + escHtml(e.task || e.reason || '—') + '</span>';
-        html += '<span class="meta">';
-        html += '<span class="dur">' + fmtDuration(e.duration_ms) + '</span>';
-        if (e.turns != null) html += '<span class="turns">#' + e.turns + '</span>';
-        html += '<span class="time">' + fmtTime(e.ts) + '</span>';
-        html += '</span>';
-        html += '<span class="arrow">▶</span>';
-        html += '</div>';
-
-        // Details
-        html += '<div class="tl-details">';
-        html += '<div class="detail-section">';
-        html += '<div class="detail-label">Status <span class="badge ' + getStatusClass(e.status) + '">' + escHtml(e.status) + '</span></div>';
-        if (e.result_detail) {
-          const cls = e.status === 'error' ? 'error' : (e.status === 'running' ? 'running' : '');
-          html += '<div class="detail-result ' + cls + '">' + escHtml(e.result_detail) + '</div>';
-        }
-        if (e.errors && e.errors.length > 0) {
-          html += '<div style="margin-top:4px;"><div class="detail-label">Fehler</div>';
-          for (const err of e.errors) {
-            html += '<div class="detail-errors">' + escHtml(typeof err === 'string' ? err : JSON.stringify(err)) + '</div>';
-          }
-        }
-        html += '</div>';
-
-        if (e.messages && e.messages.length > 0) {
-          html += '<div class="detail-section">';
-          html += '<div class="detail-label">Messages (' + e.messages.length + ')</div>';
-          html += '<div class="detail-messages">';
-          for (const m of e.messages) {
-            html += '<div class="detail-msg"><span class="msg-from">' + escHtml(m.from || '?') + ':</span><span class="msg-text">' + escHtml(m.text || '') + '</span></div>';
-          }
-          html += '</div></div>';
-        }
-
-        if (hasChildren) {
-          const children = entries.filter(c => c.parent_id === e.id);
-          html += '<div class="detail-section">';
-          html += '<div class="detail-label">Kind-Einträge (' + children.length + ')</div>';
-          html += '<div class="detail-children">';
-          for (const c of children) {
-            html += '<span class="detail-child-ref" data-id="' + escHtml(c.id) + '">#' + escHtml(c.id && c.id.length > 8 ? c.id.substring(0, 8)+'…' : c.id) + ' (' + escHtml(c.status) + ')</span>';
-          }
-          html += '</div></div>';
-        }
-
-        html += '</div>'; // tl-details
-        html += '</div>'; // tl-entry
-      }
-      html += '</div>'; // date-group
-    }
+    timelineCount.textContent = sorted.length + ' Einträge';
 
     if (sorted.length === 0) {
-      html = '<div class="live-empty">⏳ Warte auf erste Dispatch-Daten...</div>';
-    }
-
-    timelineList.innerHTML = html;
-
-    // Attach click events
-    timelineList.querySelectorAll('.tl-entry').forEach(el => {
-      el.addEventListener('click', function(e) {
-        // Don't toggle if clicking on a child-ref
-        if (e.target.classList.contains('detail-child-ref')) {
-          const id = e.target.getAttribute('data-id');
-          if (id) {
-            // Scroll to first entry with this id (if exists)
-            const targetEntry = document.querySelector('.tl-entry[data-id="' + CSS.escape(id) + '"]');
-            if (targetEntry) {
-              targetEntry.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              // Also expand it
-              expandedIds.add(id);
-              saveExpanded();
-              renderAll();
-            }
-          }
-          return;
-        }
-        const id = el.getAttribute('data-id');
-        if (id) {
-          if (expandedIds.has(id)) {
-            expandedIds.delete(id);
-          } else {
-            expandedIds.add(id);
-          }
-          saveExpanded();
-          renderAll();
-        }
-      });
-    });
-  }
-
-  function saveExpanded() {
-    try {
-      sessionStorage.setItem('mas_dispatch_expanded', JSON.stringify([...expandedIds]));
-    } catch(e) { /* ignore */ }
-  }
-
-  function loadExpanded() {
-    try {
-      const data = sessionStorage.getItem('mas_dispatch_expanded');
-      if (data) {
-        const arr = JSON.parse(data);
-        if (Array.isArray(arr)) {
-          expandedIds = new Set(arr);
-        }
-      }
-    } catch(e) { /* ignore */ }
-  }
-
-  function saveScroll() {
-    savedScrollTop = timelineScroll.scrollTop;
-    try {
-      sessionStorage.setItem(SCROLL_KEY, String(savedScrollTop));
-    } catch(e) { /* ignore */ }
-  }
-
-  function restoreScroll() {
-    try {
-      const saved = sessionStorage.getItem(SCROLL_KEY);
-      if (saved) {
-        savedScrollTop = parseInt(saved, 10) || 0;
-      }
-    } catch(e) { /* ignore */ }
-    // Apply after render
-    requestAnimationFrame(() => {
-      timelineScroll.scrollTop = savedScrollTop;
-    });
-  }
-
-  // Full render
-  function renderAll() {
-    renderLive(allEntries);
-    renderTimeline(allEntries);
-    // Restore scroll after render
-    requestAnimationFrame(() => {
-      timelineScroll.scrollTop = savedScrollTop;
-    });
-  }
-
-  // Update status bar
-  function updateStats(data) {
-    if (!data) {
-      statTotal.textContent = '0';
-      statActive.textContent = '0';
-      statDone.textContent = '0';
-      statFailed.textContent = '0';
-      statAvg.textContent = '—';
-      statAgents.textContent = '0';
-      statHealthy.textContent = '0';
+      timelineContainer.innerHTML = '<div class="empty-state">Keine Dispatch-Einträge vorhanden</div>';
       return;
     }
 
+    let html = '';
+    for (const item of sorted) {
+      const isExpanded = expandedIds.has(item.id);
+      html += dispatchItemHTML(item, false, isExpanded);
+    }
+    timelineContainer.innerHTML = html;
+    attachClickHandlers(timelineContainer);
+  }
+
+  function dispatchItemHTML(item, isLive, isExpanded) {
+    const statusCls = statusClass(item.status);
+    const icon = statusIcon(item.status);
+    const dur = formatDuration(item.duration_ms);
+    const time = formatTime(item.ts);
+    const reason = item.reason || item.task || '–';
+    const from = item.from || '?';
+    const to = item.to || '?';
+    const task = item.task || '–';
+    const arrow = '→';
+
+    const expandArrow = isExpanded ? '▸ open' : '▸';
+    const detailOpen = isExpanded ? ' open' : '';
+    const liveCls = isLive ? ' live-item' : '';
+
+    // Detail content
+    let detailHTML = '';
+    if (isExpanded) {
+      detailHTML = '<div class="detail-label">Result Detail:</div>';
+      detailHTML += '<div class="detail-value">' + (item.result_detail ? escapeHtml(item.result_detail) : '–') + '</div>';
+      detailHTML += '<div class="detail-label" style="margin-top:6px;">Messages (' + (item.messages || 0) + '):</div>';
+      detailHTML += '<div class="detail-value">' + (item.messages ? escapeHtml(JSON.stringify(item.messages, null, 2)) : '–') + '</div>';
+      if (item.errors) {
+        detailHTML += '<div class="detail-label" style="margin-top:6px;color:var(--accent-red);">Errors:</div>';
+        detailHTML += '<div class="detail-value" style="color:var(--accent-red);">' + escapeHtml(JSON.stringify(item.errors, null, 2)) + '</div>';
+      }
+      if (item.turns != null) {
+        detailHTML += '<div class="detail-label" style="margin-top:6px;">Turns:</div>';
+        detailHTML += '<div class="detail-value">' + item.turns + '</div>';
+      }
+    }
+
+    return '<div class="dispatch-item ' + statusCls + liveCls + '" data-id="' + item.id + '">' +
+      '<div class="main-row">' +
+        '<span class="status-icon">' + icon + '</span>' +
+        '<span class="route"><span class="from">' + escapeHtml(from) + '</span><span class="arrow"> ' + arrow + ' </span><span class="to">' + escapeHtml(to) + '</span></span>' +
+        '<span class="task-name">' + escapeHtml(truncate(task, 40)) + '</span>' +
+        '<span class="badge duration">' + dur + '</span>' +
+        '<span class="badge reason" title="' + escapeHtml(reason) + '">' + escapeHtml(truncate(reason, 25)) + '</span>' +
+        '<span class="badge time">' + time + '</span>' +
+        '<span class="expand-arrow ' + (isExpanded ? 'open' : '') + '">▸</span>' +
+      '</div>' +
+      '<div class="detail-row' + detailOpen + '">' + detailHTML + '</div>' +
+    '</div>';
+  }
+
+  function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // ─── Click Handling ───
+  function attachClickHandlers(container) {
+    container.querySelectorAll('.dispatch-item').forEach(el => {
+      el.addEventListener('click', function(e) {
+        // Don't toggle if clicking inside detail-row scroll areas
+        if (e.target.closest('.detail-value') || e.target.closest('.detail-row')) return;
+        const id = this.dataset.id;
+        if (!id) return;
+        const detailRow = this.querySelector('.detail-row');
+        const arrow = this.querySelector('.expand-arrow');
+        if (!detailRow) return;
+
+        if (expandedIds.has(id)) {
+          expandedIds.delete(id);
+          detailRow.classList.remove('open');
+          if (arrow) arrow.classList.remove('open');
+        } else {
+          expandedIds.add(id);
+          detailRow.classList.add('open');
+          if (arrow) arrow.classList.add('open');
+          // Re-render detail content if empty
+          if (!detailRow.innerHTML.trim()) {
+            // We need the full item to re-render - find it from lastData
+            const item = findItemById(id);
+            if (item) {
+              let html = '<div class="detail-label">Result Detail:</div>';
+              html += '<div class="detail-value">' + (item.result_detail ? escapeHtml(item.result_detail) : '–') + '</div>';
+              html += '<div class="detail-label" style="margin-top:6px;">Messages (' + (item.messages || 0) + '):</div>';
+              html += '<div class="detail-value">' + (item.messages ? escapeHtml(JSON.stringify(item.messages, null, 2)) : '–') + '</div>';
+              if (item.errors) {
+                html += '<div class="detail-label" style="margin-top:6px;color:var(--accent-red);">Errors:</div>';
+                html += '<div class="detail-value" style="color:var(--accent-red);">' + escapeHtml(JSON.stringify(item.errors, null, 2)) + '</div>';
+              }
+              if (item.turns != null) {
+                html += '<div class="detail-label" style="margin-top:6px;">Turns:</div>';
+                html += '<div class="detail-value">' + item.turns + '</div>';
+              }
+              detailRow.innerHTML = html;
+            }
+          }
+        }
+      });
+    });
+  }
+
+  function findItemById(id) {
+    if (!lastData || !lastData.dispatch || !lastData.dispatch.tree) return null;
+    return lastData.dispatch.tree.find(i => String(i.id) === String(id)) || null;
+  }
+
+  // ─── Update Status Bar ───
+  function updateStatusBar(data) {
     const dispatch = data.dispatch || {};
     const agents = data.agents || {};
-
-    const total = dispatch.total || 0;
-    const active = dispatch.active || 0;
-    const done = dispatch.done || 0;
-    const failed = dispatch.failed || 0;
-
-    statTotal.textContent = total;
-    statActive.textContent = active;
-    statDone.textContent = done;
-    statFailed.textContent = failed;
-
-    // Average duration of completed entries (done/error)
-    const completed = (allEntries || []).filter(e => e && (e.status === 'done' || e.status === 'error') && e.duration_ms != null);
-    if (completed.length > 0) {
-      const avg = completed.reduce((sum, e) => sum + e.duration_ms, 0) / completed.length;
-      statAvg.textContent = fmtDuration(Math.round(avg));
+    statTotal.textContent = dispatch.total ?? 0;
+    statActive.textContent = dispatch.active ?? 0;
+    statDone.textContent = dispatch.done ?? 0;
+    statFailed.textContent = dispatch.failed ?? 0;
+    const healthy = agents.healthy ?? 0;
+    const total = agents.total ?? 0;
+    statAgents.textContent = healthy + '/' + total;
+    if (total > 0 && healthy === total) {
+      statAgents.style.color = 'var(--accent-green)';
+    } else if (healthy < total) {
+      statAgents.style.color = 'var(--accent-red)';
     } else {
-      statAvg.textContent = '—';
+      statAgents.style.color = 'var(--text-primary)';
     }
-
-    statAgents.textContent = agents.total || 0;
-    statHealthy.textContent = agents.healthy || 0;
   }
 
-  // Connection status
-  function setConnStatus(ok, msg) {
-    connDot.className = 'dot' + (ok ? '' : ' error');
-    connText.textContent = msg || (ok ? 'Verbunden' : 'Fehler');
+  // ─── Scroll Save/Restore ───
+  function saveScrollPositions() {
+    savedScrollTop.timeline = timelineContainer.scrollTop;
+    savedScrollTop.live = liveList.scrollTop;
   }
 
-  // Fetch data
+  function restoreScrollPositions() {
+    requestAnimationFrame(() => {
+      timelineContainer.scrollTop = savedScrollTop.timeline;
+      liveList.scrollTop = savedScrollTop.live;
+    });
+  }
+
+  // ─── Main Render ───
+  function renderAll(data) {
+    const items = data.dispatch.tree || [];
+    renderLiveItems(items);
+    renderTimelineItems(items);
+    updateStatusBar(data);
+    const ts = data.timestamp;
+    lastUpdateEl.textContent = ts ? formatTime(ts) : '–';
+  }
+
+  // ─── Fetch Data ───
   async function fetchData() {
-    if (isPolling) return;
-    isPolling = true;
+    if (paused) return;
 
     try {
-      // Save scroll before fetching
-      saveScroll();
-
-      const response = await fetch('http://localhost:3000/api/dashboard', {
-        method: 'GET',
-        headers: { 'Accept': 'application/json' }
-      });
-
-      if (!response.ok) {
-        throw new Error('HTTP ' + response.status);
-      }
-
-      const json = await response.json();
+      const res = await fetch('http://localhost:3000/api/dashboard');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+      if (!json.success) throw new Error('API error: success=false');
       const apiData = json.data;
-      if (!apiData || !apiData.dispatch) {
-        throw new Error('Ungültige API-Antwort');
-      }
+      if (!apiData || !apiData.dispatch) throw new Error('Ungültige API-Struktur');
 
-      const items = apiData.dispatch.tree || [];
-      const total = apiData.dispatch.total;
-      const active = apiData.dispatch.active;
-
-      allEntries = items;
-
-      // Render
-      renderAll();
-      updateStats(apiData);
-
-      // Timestamp
-      if (apiData.timestamp) {
-        headerTs.textContent = 'Letztes Update: ' + fmtTime(apiData.timestamp);
-      } else {
-        headerTs.textContent = 'Letztes Update: ' + new Date().toLocaleTimeString();
-      }
-
-      setConnStatus(true, 'Verbunden');
-
+      saveScrollPositions();
+      lastData = apiData;
+      renderAll(apiData);
+      restoreScrollPositions();
+      hideError();
     } catch (err) {
-      console.warn('MAS Dispatch fetch error:', err);
-      setConnStatus(false, 'Fehler: ' + err.message);
-    } finally {
-      isPolling = false;
+      showError('⛔ ' + err.message);
+      statusDot.className = 'error';
+      statusText.textContent = 'Fehler';
     }
   }
 
-  // Start polling
-  function startPolling() {
-    fetchData();
-    pollInterval = setInterval(fetchData, 5000);
+  function showError(msg) {
+    errorBanner.textContent = msg;
+    errorBanner.classList.add('visible');
+    statusDot.className = 'error';
+    statusText.textContent = 'Fehler';
   }
 
-  function stopPolling() {
-    if (pollInterval) {
-      clearInterval(pollInterval);
-      pollInterval = null;
+  function hideError() {
+    errorBanner.classList.remove('visible');
+    statusDot.className = '';
+    statusText.textContent = 'Live';
+  }
+
+  // ─── Auto-Refresh ───
+  function startAutoRefresh() {
+    stopAutoRefresh();
+    fetchData(); // immediate first fetch
+    intervalId = setInterval(fetchData, 5000);
+  }
+
+  function stopAutoRefresh() {
+    if (intervalId) {
+      clearInterval(intervalId);
+      intervalId = null;
     }
   }
 
-  // Init
-  loadExpanded();
-  restoreScroll();
-  startPolling();
-
-  // Cleanup
-  window.addEventListener('beforeunload', function() {
-    saveScroll();
-    stopPolling();
-  });
-
-  // Handle visibility change - pause when hidden
-  document.addEventListener('visibilitychange', function() {
-    if (document.hidden) {
-      stopPolling();
+  // ─── Pause / Resume ───
+  function togglePause() {
+    paused = !paused;
+    if (paused) {
+      togglePauseBtn.classList.add('paused');
+      togglePauseBtn.textContent = '▶ Resume';
+      statusDot.className = 'paused';
+      statusText.textContent = 'Pausiert';
     } else {
-      startPolling();
+      togglePauseBtn.classList.remove('paused');
+      togglePauseBtn.textContent = '⏸ Pause';
+      statusDot.className = '';
+      statusText.textContent = 'Live';
+      fetchData();
     }
-  });
+  }
 
-  // Save scroll on manual scroll
-  timelineScroll.addEventListener('scroll', function() {
-    savedScrollTop = timelineScroll.scrollTop;
-    try {
-      sessionStorage.setItem(SCROLL_KEY, String(savedScrollTop));
-    } catch(e) { /* ignore */ }
-  });
+  // ─── Init ───
+  function init() {
+    refreshBtn.addEventListener('click', () => {
+      if (paused) {
+        // manual refresh even when paused
+        fetchData().catch(() => {});
+      } else {
+        fetchData();
+      }
+    });
+    togglePauseBtn.addEventListener('click', togglePause);
+    startAutoRefresh();
 
+    // Handle visibility change: re-fetch when tab becomes visible again
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && !paused) {
+        fetchData();
+      }
+    });
+  }
+
+  // ─── Start ───
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
 </script>
 </body>

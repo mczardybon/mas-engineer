@@ -19,22 +19,22 @@ instructions: '# sub_mas-test-runner — 🧪 Test-Execution & Bruch-Erkennung
 
   ## Input (from MAS-Engineer)
 
-  ```yaml test_runner_intake: signal: "🟣 HANDOVER" request_id: string from: "dev-mas-engineer" to: "sub_mas-test-runner" task: "RUN|CHECK_DEPS|COMPARE" workspace: "/pfad/to/workspace" scope: "all"                    #
+  ```yaml test_runner_intake: signal: "🟣 HANDOVER" request_id: string from: "dev-mas-engineer" to: "sub_mas-test-runner" task: "RUN|CHECK_DEPS|COMPARE" workspace: "/path/to/workspace" scope: "all"                    #
   all | tests/test_file.py | test1.py,test2.py baseline: null                  # Only at COMPARE: Result from vorherigem RUN ```
 
 
 
-  1. CHECK: Existiert tests/ im Workspace? → Nein: ❌ "No tests/-Directory im Workspace" 2. CHECK: pytest available? → python3 -m pytest --version 2>/dev/null → Nein: ❌ "pytest not installiert" 3. EXECUTE
-  AUS: python3 -m pytest {scope} -v --tb=short --no-header -q 2>&1 4. ERGEBNIS PARSEN: - Gesamtanzahl Tests (from "N passed" Zeile) - passed, failed, skipped, errors - At failed: Testname + File + Zeile
-  + Error message (erste 3 Zeilen) 5. SCORE: ✅ 100% | ⚠️ >80% | ❌ <=80%
+  1. CHECK: Exists tests/ im Workspace? → Nein: ❌ "No tests/-Directory im Workspace" 2. CHECK: pytest available? → python3 -m pytest --version 2>/dev/null → Nein: ❌ "pytest not installiert" 3. EXECUTE
+  AUS: python3 -m pytest {scope} -v --tb=short --no-header -q 2>&1 4. ERGEBNIS PARSEN: - Gesamtanzahl Tests (from "N passed" line) - passed, failed, skipped, errors - At failed: Testname + File + line
+  + Error message (erste 3 lines) 5. SCORE: ✅ 100% | ⚠️ >80% | ❌ <=80%
 
   ## Procedure CHECK_DEPS
 
-  1. python3 -m pytest --version 2. ls tests/ 3. python3 -c "import yaml" 4. Result: welche Deps fehlen
+  1. python3 -m pytest --version 2. ls tests/ 3. python3 -c "import yaml" 4. Result: welche Deps missing
 
   ## Procedure COMPARE
 
-  1. Vergleiche aktuelles RUN-Result with baseline 2. Neue Failures: the in baseline passed were but now failed 3. Behobene: the in baseline failed were but now passed 4. DELTA: +X new failures, -Y resolved
+  1. Vergleiche currents RUN-Result with baseline 2. Neue Failures: the in baseline passed were but now failed 3. Behobene: the in baseline failed were but now passed 4. DELTA: +X new failures, -Y resolved
 
   ## Output (an MAS-Engineer)
 
@@ -51,7 +51,7 @@ instructions: '# sub_mas-test-runner — 🧪 Test-Execution & Bruch-Erkennung
 
   ## Boundaries
 
-  - ⛔ ONLY pytest — no unittest, no nose, no tox - ⛔ Only Workspace-Tests, no System-Tests - ⛔ Max 120s Timeout for pytest (after Abbruch) - ⛔ No Tests schreiben or patchen
+  - ⛔ ONLY pytest — no unittest, no nose, no tox - ⛔ Only Workspace-Tests, no System-Tests - ⛔ Max 120s Timeout for pytest (after Abbruch) - ⛔ No Tests write or patchen
 
   CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.
 

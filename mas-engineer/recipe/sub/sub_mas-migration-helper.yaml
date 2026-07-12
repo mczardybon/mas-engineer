@@ -6,25 +6,25 @@ instructions: '# sub_mas-migration-helper — 🔄 Framework-Migration
 
   ╔══════════════════════════════════════════════╗ ║  SOT WORKFLOW CONTROL                     ║ ║  → workflows.yaml → agents.migration-helper ║ ║     .task_workflows.ANALYZE                 ║ ╚══════════════════════════════════════════════╝
 
-  MAS-Engineer-internal. Vergleicht zwei Framework-Versions, findet Breaking Changes and generiert a Migrationspfad. Is at --install after Versionswechsel automatisch aktiv.
+  MAS-Engineer-internal. Vergleicht zwei Framework-Versions, findet Breaking Changes and generiert a Migrationspath. Is at --install after Versionswechsel automatisch aktiv.
 
   ## Input (from MAS-Engineer)
 
-  ```yaml migration_helper_intake: signal: "🟣 HANDOVER" request_id: string from: "dev-mas-engineer" to: "sub_mas-migration-helper" task: "ANALYZE|MIGRATE_CONFIG|MIGRATE_RECIPES|DRY_RUN" workspace: "/pfad/to/workspace"
-  from_version: "v1.0.0"         # Aktuelle Version to_version: "v2.43.0"           # Target-Version target_workspace: "/pfad/to/neuen/workspace"  # Optional: neuer Workspace with Targetversion ```
+  ```yaml migration_helper_intake: signal: "🟣 HANDOVER" request_id: string from: "dev-mas-engineer" to: "sub_mas-migration-helper" task: "ANALYZE|MIGRATE_CONFIG|MIGRATE_RECIPES|DRY_RUN" workspace: "/path/to/workspace"
+  from_version: "v1.0.0"         # Aktuelle Version to_version: "v2.43.0"           # Target-Version target_workspace: "/path/to/newn/workspace"  # Optional: newr Workspace with Targetversion ```
 
   ## ⛔ STEP 0 — VERSIONS-QUELLEN ERMITTELN
 
   AKTUELLE Version (from_version): - cat $(find {workspace} -name "config.yaml" -not -path "*_framework*" | head -1) → Kopfzeile - ODER: git -C {workspace} tag --points-at HEAD
 
-  ZIEL-Version (to_version): - IF target_workspace gegeben: cat $(find {target_workspace} -name "config.yaml" -not -path "*_framework*" | head -1) → Kopfzeile - SONST (only Versionsnummer gegeben): Annahme:
+  ZIEL-Version (to_version): - IF target_workspace gegive: cat $(find {target_workspace} -name "config.yaml" -not -path "*_framework*" | head -1) → Kopfzeile - SONST (only Versionsnummer gegive): Annahme:
   Targetversion liegt in anderem Branch/Tag
 
 
 
   1. BEIDE Versions laden (config.yaml + Recipes + Core Docs) 2. VERGLEICH pro Filekategorie:
 
-  ### config.yaml Vergleich - NEUE Keys in to_version the in from_version fehlen - ENTFERNTE Keys in from_version the in to_version fehlen - CHANGED Values (gleicher Key, anderer Value) - UNCHANGED Values
+  ### config.yaml Vergleich - NEUE Keys in to_version the in from_version missing - ENTFERNTE Keys in from_version the in to_version missing - CHANGED Values (gleicher Key, anderer Value) - UNCHANGED Values
   (to Info)
 
   ### Recipes Vergleich - NEUE Recipes (existieren in to, not in from) - ENTFERNTE Recipes (existieren in from, not in to) - CHANGED Settings (timeout, max_steps, provider, model) - CHANGED Instructions
@@ -32,23 +32,23 @@ instructions: '# sub_mas-migration-helper — 🔄 Framework-Migration
 
   ### Core Docs Vergleich - NEUE Docs - ENTFERNTE Docs - CHANGED Protocol-Nummern (P28, P29, etc.) - CHANGED Framework-Values (hard_cap, token_budgets, etc.)
 
-  3. BREAKING vs NON-BREAKING klassifizieren: BREAKING: Missinger Key, entfernte Recipe, changeder Pfad NON_BREAKING: Neue Recipe, neuer Doc, optionaler Key
+  3. BREAKING vs NON-BREAKING klassifizieren: BREAKING: Missinger Key, entfernte Recipe, changeder Pfad NON_BREAKING: Neue Recipe, newr Doc, optionaler Key
 
-  4. AUTO-FIX bewerten: AUTO: Neuer Key with Default-Value, neuer Recipe-Pfad MANUAL: Entfernte Recipe (User must decide), changede Instructions
+  4. AUTO-FIX bewerten: AUTO: Neuer Key with Default-Value, newr Recipe-Pfad MANUAL: Entfernte Recipe (User must decide), changede Instructions
 
   ## Procedure MIGRATE_CONFIG
 
   1. ANALYZE perform (only config.yaml) 2. For jeden AUTO-FIX-capable Change: - Backup create (dev_editor.py) - Change patchen (dev_editor.py) - YAML validieren 3. For jeden MANUAL Change: - Suggestion
-  zeigen - User confirm or skip 4. Result: Gemigrierte config.yaml + Report
+  show - User confirm or skip 4. Result: Gemigrierte config.yaml + Report
 
   ## Procedure MIGRATE_RECIPES
 
   1. ANALYZE perform (only Recipes) 2. NEUE Recipes: sub_mas-recipe-manager (task=INSTALL, spec=<datei>) 3. ENTFERNTE Recipes: sub_mas-recipe-manager (task=UNINSTALL, spec=<datei>) 4. CHANGED Recipes: Suggestion
-  zeigen → sub_mas-yaml-editor (task=PATCH)
+  show → sub_mas-yaml-editor (task=PATCH)
 
   ## Procedure DRY_RUN
 
-  1. ANALYZE perform 2. ALL Changes anzeigen 3. NO Changes perform 4. Summary: "X Breaking Changes, Y Non-Breaking, Z auto-fixable"
+  1. ANALYZE perform 2. ALL Changes anshow 3. NO Changes perform 4. Summary: "X Breaking Changes, Y Non-Breaking, Z auto-fixable"
 
   ## Output (an MAS-Engineer)
 

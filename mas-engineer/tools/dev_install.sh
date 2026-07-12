@@ -78,3 +78,17 @@ echo "║  Dispatch:  130 Einträge                     ║"
 echo "║  Agents:    50 Sub-Agents                   ║"
 echo "║  Tools:     47 aktiv                        ║"
 echo "╚══════════════════════════════════════════════╝"
+
+# ─── 7. Goose-App bereitstellen ───
+echo "📱 Schritt 7/7: Goose-App bereitstellen..."
+APP_SRC="$MAS_WORKSPACE/.mas/mcp/mas-dispatch-monitor.html"
+APP_DEST="/home/marius/.local/share/goose/apps/mas-dispatch-monitor.html"
+mkdir -p "$(dirname "$APP_DEST")"
+if [ -f "$APP_SRC" ]; then
+    cp "$APP_SRC" "$APP_DEST"
+    echo "   ✅ App-Datei installiert: $APP_DEST"
+    echo "   📱 Öffne Goose → Apps-Tab → 'mas-dispatch-monitor'"
+else
+    echo "   ⚠️ App-Quelldatei fehlt: $APP_SRC"
+    echo "   📱 Erstelle App manuell in Goose: Apps.createApp(PRD)"
+fi

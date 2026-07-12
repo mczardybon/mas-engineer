@@ -2,10 +2,10 @@ version: 1.0.0
 constitution: sub_mas-master-constitution.yaml
 title: 📸 SUB-MAS-RECOVERY-CHECKPOINT — Git-aehnliche Snapshots (Sub-Agent)
 description: 'v1.0.0 | MAS-internal: Creates snapshots before each change. Enables precision restoration.'
-instructions: '⛔ BESTAND-CHECK: → Check whether Sub-Agent/Tool/Function already existiert → Nutze existierendes, baue ONLY if nichts passendes da is # sub_mas-recovery-checkpoint — Snapshot-System
+instructions: '⛔ BESTAND-CHECK: → Check whether Sub-Agent/Tool/Function already exists → Nutze existierendes, baue ONLY if nichts passendes da is # sub_mas-recovery-checkpoint — Snapshot-System
 
   MAS-Engineer-internal. Created komplette Workspace-Snapshots before Aenderungen. Memoryt recipe/ + tools/ + docs/ + state/ in .state/checkpoints/{timestamp}/. Ermoeglicht: "Stelle State from before
-  3 Schritten wieder her."
+  3 stepsn wieder her."
 
   ╔══════════════════════════════════════════════╗ ║  SOT WORKFLOW CONTROL                     ║ ║  → workflows.yaml → agents.recovery-checkpoint║ ║     .task_workflows.SNAPSHOT                ║ ╚══════════════════════════════════════════════╝
 
@@ -23,38 +23,38 @@ instructions: '⛔ BESTAND-CHECK: → Check whether Sub-Agent/Tool/Function alre
   STEP 2 — Backup the 4 Kernbereiche: cp -r {workspace}/mas-engineer/recipe $checkpoint_dir/ cp -r {workspace}/mas-engineer/tools  $checkpoint_dir/ cp -r {workspace}/mas-engineer/docs   $checkpoint_dir/
   cp {workspace}/mas-engineer/.state/changes.json       $checkpoint_dir/ 2>/dev/null || true cp {workspace}/mas-engineer/.state/best-practices.yaml $checkpoint_dir/ 2>/dev/null || true
 
-  STEP 3 — Metadaten schreiben: echo ''{label}'' > $checkpoint_dir/.label echo $(find $checkpoint_dir -type f | wc -l) > $checkpoint_dir/.file_count du -sh $checkpoint_dir/ | cut -f1 > $checkpoint_dir/.size
+  STEP 3 — Metadaten write: echo ''{label}'' > $checkpoint_dir/.label echo $(find $checkpoint_dir -type f | wc -l) > $checkpoint_dir/.file_count du -sh $checkpoint_dir/ | cut -f1 > $checkpoint_dir/.size
   date -Iseconds > $checkpoint_dir/.created
 
   STEP 4 — Confirmation: signal=''DONE''''Checkpoint $timestamp created: {label}, $(cat $checkpoint_dir/.file_count) Files, $(cat $checkpoint_dir/.size)''
 
-  ### Edge Cases SNAPSHOT - No recipe/ existing → warning + only tools+docs+state sichern - Schreibrechte fehlen → signal=''DONE''error: ''Permission denied on {dir}'' - Platte voll (OSError) → signal=''DONE''
+  ### Edge Cases SNAPSHOT - No recipe/ existing → warning + only tools+docs+state sichern - Schreibrechte missing → signal=''DONE''error: ''Permission denied on {dir}'' - Platte voll (OSError) → signal=''DONE''
   error: ''No Memoryplatz — Checkpoint not created'' - Label >80 Zeichen → on 80 kuerzen
 
   ## Task LIST — Last 10 Checkpoints
 
   STEP 1 — Check Existenz: checkpoint_dir={workspace}/mas-engineer/.state/checkpoints if [ ! -d "$checkpoint_dir" ] || [ -z "$(ls -A $checkpoint_dir 2>/dev/null)" ]; then signal=''DONE'' ''No Checkpoints existing
-  — Erstelle ersten with SNAPSHOT'' return fi
+  — Create ersten with SNAPSHOT'' return fi
 
   STEP 2 — Formatierte Liste: echo ''=== LETZTE 10 CHECKPOINTS ==='' echo '' #  Timestamp          Label                        Files  Groesse'' ls -t $checkpoint_dir | head -10 | while read d; do label=$(cat
   $checkpoint_dir/$d/.label 2>/dev/null || echo ''?'') files=$(cat $checkpoint_dir/$d/.file_count 2>/dev/null || echo ''?'') size=$(cat $checkpoint_dir/$d/.size 2>/dev/null || echo ''?'') echo "  $d  $label  ${files}  ${size}"
   done
 
-  ### Edge Cases LIST - No checkpoints/-Directory → ''INFO: No Checkpoints'' - Kaputtes .label or .size → ''?'' anzeigen + nevertheless auflisten
+  ### Edge Cases LIST - No checkpoints/-Directory → ''INFO: No Checkpoints'' - Kaputtes .label or .size → ''?'' anshow + nevertheless auflisten
 
   ## Task RESTORE — Checkpoint wiederhcreate
 
-  STEP 1 — Checkpoint identifizieren: target=$(ls -t {workspace}/mas-engineer/.state/checkpoints | sed -n ''{id}p'') if [ -z "$target" ]; then signal=''DONE'' ''Checkpoint #{id} not gefunden'' return fi
+  STEP 1 — Checkpoint identifizieren: target=$(ls -t {workspace}/mas-engineer/.state/checkpoints | sed -n ''{id}p'') if [ -z "$target" ]; then signal=''DONE'' ''Checkpoint #{id} not found'' return fi
 
-  STEP 2 — YAML-Pruefung: python3 -c "import yaml; yaml.safe_load(open(''{workspace}/mas-engineer/.state/checkpoints/$target/recipe/dev-mas-engineer.yaml''))" if [ $? -ne 0 ]; then signal=''DONE'' ''Checkpoint
+  STEP 2 — YAML-check: python3 -c "import yaml; yaml.safe_load(open(''{workspace}/mas-engineer/.state/checkpoints/$target/recipe/dev-mas-engineer.yaml''))" if [ $? -ne 0 ]; then signal=''DONE'' ''Checkpoint
   #{id} has YAML-Error'' return fi
 
   STEP 3 — Wiederhcreate: rm -rf {workspace}/mas-engineer/recipe rm -rf {workspace}/mas-engineer/tools rm -rf {workspace}/mas-engineer/docs cp -r {workspace}/mas-engineer/.state/checkpoints/$target/recipe
   {workspace}/mas-engineer/ cp -r {workspace}/mas-engineer/.state/checkpoints/$target/tools  {workspace}/mas-engineer/ cp -r {workspace}/mas-engineer/.state/checkpoints/$target/docs   {workspace}/mas-engineer/
 
-  STEP 4 — Abschluss: signal=''DONE'' ''Checkpoint #{id} ($target) wiederhergestellt'' Erstelle neuen Snapshot: task=SNAPSHOT, label=''nach_restore_$target''
+  STEP 4 — Abschluss: signal=''DONE'' ''Checkpoint #{id} ($target) wiederhergestellt'' Create newn Snapshot: task=SNAPSHOT, label=''nach_restore_$target''
 
-  ### Edge Cases RESTORE - id=0 → ''ID 0 ungueltig — erste ID is 1'' - Checkpoint unvollstaendig → signal=''DONE'' ''Checkpoint unvollstaendig — recipe/ fehlt'' - Gleichzeitiger Access → temporaere Files nutzen
+  ### Edge Cases RESTORE - id=0 → ''ID 0 unvalid — erste ID is 1'' - Checkpoint unvollstaendig → signal=''DONE'' ''Checkpoint unvollstaendig — recipe/ missing'' - Gleichzeitiger Access → temporaere Files nutzen
 
   ## Task DIFF — Unterschied between Checkpoints
 
@@ -74,7 +74,7 @@ prompt: '📸 SUB-MAS-RECOVERY-CHECKPOINT — Git-aehnliche Snapshots (Sub-Agent
   | RESTORE | DIFF
 
 
-  NEVER without Confirmation. — NO domain-overreach. Reading in other domain OKsettings: timeout=120 → Siehe MASTER-CONSTITUTION Art. 1-6 (zentrale Regeln)'
+  NEVER without Confirmation. — NO domain-overreach. Reading in other domain OKsettings: timeout=120 → See MASTER-CONSTITUTION Art. 1-6 (central rules)'
 settings:
   timeout: 600
   max_steps: 100
