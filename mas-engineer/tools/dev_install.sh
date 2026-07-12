@@ -1,7 +1,7 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════
 # dev_install.sh — MAS-Engineer Vollinstallation
-# Führt alle Schritte aus, damit alles direkt nach git clone
+# Runs all steps to work immediately after git clone
 # funktioniert: Dashboard-Server, Dispatch-Tracker, Cron, Goose-App
 # ═══════════════════════════════════════════════════════════════
 set -e
@@ -11,25 +11,25 @@ echo "📦 MAS-Engineer Installation"
 echo "   Workspace: $MAS_WORKSPACE"
 echo ""
 
-# ─── 1. Abhängigkeiten ───
-echo "📦 Schritt 1/6: Abhängigkeiten prüfen..."
+# ─── 1. Dependencies ───
+echo "📦 Step 1/6: Dependencies check..."
 command -v node >/dev/null 2>&1 || { echo "❌ node fehlt"; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "❌ python3 fehlt"; exit 1; }
 command -v npm >/dev/null 2>&1 || { echo "❌ npm fehlt"; exit 1; }
 cd "$MAS_WORKSPACE/.mas/mcp"
 [ -d node_modules ] || npm install express cors fs-extra 2>/dev/null
-echo "   ✅ Abhängigkeiten OK"
+echo "   ✅ Dependencies OK"
 
 # ─── 2. State-Verzeichnisse ───
-echo "📁 Schritt 2/6: State-Verzeichnisse anlegen..."
+echo "📁 Step 2/6: State-Verzeichnisse anlegen..."
 mkdir -p "$MAS_WORKSPACE/.state/dispatch"
 mkdir -p "$MAS_WORKSPACE/.state/checkpoints"
 echo "   ✅ Verzeichnisse OK"
 
 # ─── 3. Dashboard-Server starten ───
-echo "🖥️  Schritt 3/6: Dashboard-Server starten..."
+echo "🖥️  Step 3/6: Dashboard-Server starten..."
 if curl -s http://localhost:3000/api/health > /dev/null 2>&1; then
-    echo "   ✅ Server läuft bereits"
+    echo "   ✅ Server already running"
 else
     cd "$MAS_WORKSPACE/.mas/mcp"
     MAS_WORKSPACE="$MAS_WORKSPACE" nohup /usr/bin/node server.js \
@@ -44,16 +44,16 @@ else
 fi
 
 # ─── 4. Initialdaten generieren ───
-echo "📊 Schritt 4/6: Initialdaten generieren..."
+echo "📊 Step 4/6: Initialdaten generieren..."
 cd "$MAS_WORKSPACE"
 python3 tools/dev_dashboard_data.py --workspace "$MAS_WORKSPACE" 2>/dev/null
 echo "   ✅ Initialdaten OK"
 
 # ─── 5. Live-Daemon starten ───
-echo "🚀 Schritt 5/6: Live-Dispatch-Daemon starten..."
+echo "🚀 Step 5/6: Live-Dispatch-Daemon starten..."
 DAEMON_PID_FILE="$MAS_WORKSPACE/.mas/live-daemon.pid"
 if [ -f "$DAEMON_PID_FILE" ] && kill -0 $(cat "$DAEMON_PID_FILE") 2>/dev/null; then
-    echo "   ✅ Daemon läuft bereits"
+    echo "   ✅ Daemon already running"
 else
     nohup python3 "$MAS_WORKSPACE/tools/dev_dispatch_live.py" --daemon \
         > "$MAS_WORKSPACE/.mas/live-daemon.log" 2>&1 &
@@ -62,7 +62,7 @@ else
 fi
 
 # ─── 6. Cron einrichten ───
-echo "⏰ Schritt 6/6: Cron-Scheduler..."
+echo "⏰ Step 6/6: Cron-Scheduler..."
 CRON_LINE="*/5 * * * * $MAS_WORKSPACE/.mas/scheduler.sh"
 (crontab -l 2>/dev/null | grep -v "scheduler.sh"; echo "$CRON_LINE") | crontab -
 echo "   ✅ Cron aktiv (alle 5 Minuten Daten-Refresh)"
@@ -74,20 +74,20 @@ echo "║  ✅ MAS-ENGINEER INSTALLATION ABGESCHLOSSEN ║"
 echo "╠══════════════════════════════════════════════╣"
 echo "║  Dashboard: http://localhost:3000            ║"
 echo "║  API:       http://localhost:3000/api/health ║"
-echo "║  Dispatch:  130 Einträge                     ║"
+echo "║  Dispatch:  130 entries                     ║"
 echo "║  Agents:    50 Sub-Agents                   ║"
 echo "║  Tools:     47 aktiv                        ║"
 echo "╚══════════════════════════════════════════════╝"
 
 # ─── 7. Goose-App bereitstellen ───
-echo "📱 Schritt 7/7: Goose-App bereitstellen..."
+echo "📱 Step 7/7: Goose-App bereitstellen..."
 APP_SRC="$MAS_WORKSPACE/.mas/mcp/mas-dispatch-monitor.html"
 APP_DEST="/home/marius/.local/share/goose/apps/mas-dispatch-monitor.html"
 mkdir -p "$(dirname "$APP_DEST")"
 if [ -f "$APP_SRC" ]; then
     cp "$APP_SRC" "$APP_DEST"
     echo "   ✅ App-Datei installiert: $APP_DEST"
-    echo "   📱 Öffne Goose → Apps-Tab → 'mas-dispatch-monitor'"
+    echo "   📱 Open Goose → Apps tab → 'mas-dispatch-monitor'"
 else
     echo "   ⚠️ App-Quelldatei fehlt: $APP_SRC"
     echo "   📱 Erstelle App manuell in Goose: Apps.createApp(PRD)"
