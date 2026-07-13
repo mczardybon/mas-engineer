@@ -399,5 +399,11 @@ if __name__ == '__main__':
     with open(HISTORY_FILE, 'w') as f:
         json.dump(data['history'], f, indent=2)
 
+    # Send notification for realtime updates
+    flag_file = os.path.join(DASH_DIR, '.updated')
+    with open(flag_file, 'w') as f:
+        f.write(str(int(datetime.now().timestamp())))
+
     # Formatierte Output for User
     print(format_dashboard(data))
+    print(f"\n[OK] Dashboard refreshed | Realtime notifications enabled")

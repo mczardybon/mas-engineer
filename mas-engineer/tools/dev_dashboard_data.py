@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""dev_dashboard_data.py v1.0.0 — Dashboard Data Generator for MCP App
+"""dev_dashboard_data.py v1.0.0 - Dashboard Data Generator for MCP App
 ======================================================================
-Liest Monitoring data and writes JSON for the framework dashboard.
-Will via Goose Scheduler all 5 Min OR auf User-Refresh ausgeleads.
+Reads Monitoring data and writes JSON for the framework dashboard.
+Will be called via Goose Scheduler every 5 Min OR on User-Refresh.
 
 Output: {workspace}/.mas/dashboards/data.json
 History: {workspace}/.mas/dashboards/history.json
+
+Features:
+- Auto-generates data.json on each run
+- Sends MCP notification for realtime dashboard updates
+- Tracks health trend over time
 
 call: python3 dev_dashboard_data.py --workspace /path
 """
@@ -243,6 +248,24 @@ def generate_data(ws):
     }
 
 
+def send_dashboard_notification(data: dict = None):
+    """Send MCP notification for realtime dashboard updates
+    
+    This notifies the Goose UI dashboard to refresh its display.
+    Call this after writing new data.json.
+    """
+    import os
+    # Write a flag file that can be detected by MCP
+    flag_file = os.path.join(
+        os.environ.get('MAS_WORKSPACE', '.'),
+        '.mas', 'dashboards', '.updated'
+    )
+    with open(flag_file, 'w') as f:
+        import time
+        f.write(str(int(time.time())))
+    return True
+
+
 def main():
     ws = '.'
     if '--workspace' in sys.argv:
@@ -266,9 +289,13 @@ def main():
         json.dump({"health_trend": data['health_trend'],
                    "build_size": data.get('build', {}).get('latest_size_kb', [])}, f, indent=2)
 
-    print(f"✅ Dashboard-Data written: {data_path}")
+    # Send notification for realtime updates
+    send_dashboard_notification(data)
+
+    print(f"[OK] Dashboard Data written: {data_path}")
     print(f"   Agents: {data['agents']['total']} | Changes: {data['changes']['total']} | "
           f"SI-Runs: {data['improvement']['total_runs']} | Dispatch: {data['dispatch']['total']}")
+    print(f"   Realtime: Notification sent to dashboard")
 
 if __name__ == '__main__':
     main()

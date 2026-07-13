@@ -36,6 +36,22 @@
     }
     #refresh-btn:hover { background: #30363d; }
     #refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    #auto-refresh-btn {
+      background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
+      padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;
+    }
+    #auto-refresh-btn:hover { background: #30363d; }
+    #auto-refresh-btn.active { 
+      background: #238636; border-color: #2ea043; color: #ffffff;
+      box-shadow: 0 0 8px rgba(46,160,67,0.4);
+    }
+    #status-led.live {
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 6px #3fb950; }
+      50% { opacity: 0.5; box-shadow: 0 0 12px #3fb950; }
+    }
 
     #grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .panel {
@@ -100,6 +116,7 @@
       <span class="logo">📊</span>
       <span id="project-name">Framework</span>
       <span id="timestamp-label">—</span>
+      <button id="auto-refresh-btn" onclick="toggleAutoRefresh()">▶️ Go Live</button>
       <button id="refresh-btn" onclick="doRefresh()">🔄 Refresh</button>
     </div>
 
@@ -165,6 +182,10 @@
           if (this.hostContext?.theme) this.applyTheme(this.hostContext.theme);
           this.notify('ui/notifications/initialized', {});
           this.reportSize();
+          // Start live mode by default
+          setTimeout(() => {
+            toggleAutoRefresh();
+          }, 1000);
         } catch (e) { console.error('Init failed', e); }
       }
       handleMessage(event) {
@@ -178,6 +199,12 @@
         }
         if (data.method === 'ui/notifications/host-context-changed') {
           if (data.params?.theme) this.applyTheme(data.params.theme);
+        }
+        // Handle dashboard update notifications
+        if (data.method === 'dashboard:updated' || data.method === 'dashboard:data') {
+          if (typeof window.handleDashboardUpdate === 'function') {
+            window.handleDashboardUpdate(data.params);
+          }
         }
       }
       request(method, params) {
@@ -351,12 +378,15 @@
       mcpApp.reportSize();
     }
 
+    let autoRefreshInterval = null;
+    let autoRefreshEnabled = false;
+    const AUTO_REFRESH_MS = 15000; // 15 seconds
+
     async function doRefresh() {
       const btn = document.getElementById('refresh-btn');
       btn.disabled = true;
       btn.textContent = '⏳ Loading...';
 
-      // Send message to goose to re-run the dashboard tool
       try {
         await mcpApp.sendMessageToChat('refresh dashboard');
       } catch(e) {
@@ -365,6 +395,53 @@
 
       btn.disabled = false;
       btn.textContent = '🔄 Refresh';
+    }
+
+    async function fetchData() {
+      // Try to fetch fresh data via MCP
+      try {
+        const data = await mcpApp.request('ui/dashboard/data', {});
+        if (data) {
+          render(data);
+          document.getElementById('timestamp-label').textContent = 
+            `Auto-refresh: ${new Date().toLocaleTimeString()}`;
+        }
+      } catch(e) {
+        // Fallback: trigger full dashboard refresh
+        await mcpApp.sendMessageToChat('refresh dashboard');
+      }
+    }
+
+    function toggleAutoRefresh() {
+      autoRefreshEnabled = !autoRefreshEnabled;
+      const btn = document.getElementById('auto-refresh-btn');
+      const led = document.getElementById('status-led');
+      
+      if (autoRefreshEnabled) {
+        btn.textContent = '⏸ Pause Live';
+        btn.classList.add('active');
+        led.classList.add('live');
+        fetchData(); // Immediate fetch
+        autoRefreshInterval = setInterval(fetchData, AUTO_REFRESH_MS);
+        document.getElementById('timestamp-label').textContent = 
+          `Live Mode (${AUTO_REFRESH_MS/1000}s interval)`;
+      } else {
+        btn.textContent = '▶️ Go Live';
+        btn.classList.remove('active');
+        led.classList.remove('live');
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        document.getElementById('timestamp-label').textContent = 'Manual Mode';
+      }
+    }
+
+    // Listen for dashboard update notifications from Goose
+    function setupNotificationListener() {
+      if (mcpApp.hostContext) {
+        mcpApp.notify('ui/notifications/subscribe', { 
+          events: ['dashboard:updated', 'agent:changed', 'dispatch:completed'] 
+        });
+      }
     }
 
     function doAction(cmd) {
