@@ -27,7 +27,7 @@ Optionen:
 import argparse, json, os, sys, re, copy, textwrap
 from pathlib import Path
 from datetime import datetime
-from typeing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any, Tuple
 
 try:
     import yaml

@@ -10,7 +10,7 @@ call:
   --diff:                Show Unterschiede zwischen generates und current
   --write:               Write generatede YAMLs (Default: only validate)
 """
-import os, sys
+import os, sys, yaml
 from dev_yaml_generator_core import generate_agent_yaml, validate_generated
 
 MAS_SCHEMA = ".state/templates/agent_schema.yaml"

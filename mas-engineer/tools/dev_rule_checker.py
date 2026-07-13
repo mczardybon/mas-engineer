@@ -15,7 +15,6 @@ import time
 BASE_DIR = os.path.abspath(".")
 MAS_DIR = os.path.join(BASE_DIR, "mas-engineer") if os.path.isdir(os.path.join(BASE_DIR, "mas-engineer")) else BASE_DIR
 # MAS-Rulen liegen in mas-engineer/.state/rules/ (not in .state/rules/)
-MAS_DIR = os.path.join(BASE_DIR, "mas-engineer") if os.path.isdir(os.path.join(BASE_DIR, "mas-engineer")) else BASE_DIR
 
 # --mode generic: User-Projekt (rules.yaml)
 # --mode mas (default): MAS-eigene Rulen (rules_5_extreme.yaml + hard_rules.yaml)
@@ -457,7 +456,7 @@ def format_output(resultse, action_type=""):
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.argumentParser(description="Rule check before actions")
+    parser = argparse.ArgumentParser(description="Rule check before actions")
     parser.add_argument("--check", help="Rule-ID (R01-R19)")
     parser.add_argument("--file", default=None, help="Betroffene file (for R09)")
     parser.add_argument("--action", default="", help="Geplante action (z.B. 'edit file.yaml')")

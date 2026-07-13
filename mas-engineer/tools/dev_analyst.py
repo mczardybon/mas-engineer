@@ -31,8 +31,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import importlib.util
 spec = importlib.util.spec_from_file_location("dev_observer", OBSERVER_DIR)
-observer = importlib.util.modulese_from_spec(spec)
-spec.loader.exec_modulese(observer)
+observer = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(observer)
 
 
 # ─────────────────────────────────────────────────────────

@@ -31,8 +31,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import importlib.util
 spec = importlib.util.spec_from_file_location("dev_observer", OBSERVER_DIR)
-observer = importlib.util.modulese_from_spec(spec)
-spec.loader.exec_modulese(observer)
+observer = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(observer)
 
 
 # ─────────────────────────────────────────────────────────
@@ -243,10 +243,7 @@ def suggest(scanner: "observer.Scanner") -> str:
     suggestions = []
     
     # 1. max_steps compare (main agents)
-    main_yamls = [y for y in scanner.yamls if "planner" in y.rel_path.lower() and "sub_" not in y.rel_path
-                  or "executor" in y.rel_path.lower() and "sub_" not in y.rel_path
-                  or "starter" in y.rel_path.lower()
-                  or "controller" in y.rel_path.lower()]
+    main_yamls = [y for y in scanner.yamls if ("planner" in y.rel_path.lower() or "executor" in y.rel_path.lower() or "starter" in y.rel_path.lower() or "controller" in y.rel_path.lower()) and "sub_" not in y.rel_path]
     
     # We cannot read max_steps directly (no YAML parsing in architect)
     # Stattdessen: lineszahlen als Indikator

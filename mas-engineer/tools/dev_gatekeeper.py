@@ -34,7 +34,8 @@ def alog(action, agent, target, status, rule=""):
 
 def check_lock():
     if os.path.exists(LOCK_file):
-        print(f"🔴 MAS GEFRIERT: {open(LOCK_file).read().strip()}")
+        with open(LOCK_file) as f:
+            print(f"🔴 MAS GEFRIERT: {f.read().strip()}")
         sys.exit(1)
 
 def check_r01():

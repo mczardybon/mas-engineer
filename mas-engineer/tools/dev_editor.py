@@ -197,7 +197,7 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
     new_text = text.replace(von, nach, 1)
     if new_text == text:
         result["status"] = "no_change"
-        result["error"] = f"Text '{von}' not found in {rel_path}"
+        result["error"].append(f"Text '{von}' not found in {rel_path}")
         log(f"⚠️  Text not found: '{von}' in {rel_path}")
         return result
     full_path.write_text(new_text)
@@ -349,13 +349,15 @@ def validate_against_best_practices(agent_content, bp):
                         passed = not bool(re.search(cval, agent_content))
                     except re.error:
                         passed = False
-            
+
             elif ctypee == "range":
-                # Format: "300-900" -> min=300, max=900
+                # Format: "yaml.path.min-max" -> path=metadata.lines, range=100-200
                 try:
-                    parts = cval.split("-")
+                    parts = cval.rsplit(".", 1)
+                    range_val = parts[1] if len(parts) == 2 else cval
+                    path_part = parts[0] if len(parts) == 2 else ""
+                    keys = path_part.split(".") if path_part else []
                     y = yaml.safe_load(agent_content)
-                    keys = cval.split(".")
                     val = y
                     for k in keys:
                         if isinstance(val, dict):
@@ -363,18 +365,19 @@ def validate_against_best_practices(agent_content, bp):
                         else:
                             val = None
                             break
-                    if val is not None:
-                        passed = int(parts[0]) <= int(val) <= int(parts[1])
+                    range_parts = range_val.split("-")
+                    if val is not None and len(range_parts) == 2:
+                        passed = int(range_parts[0]) <= int(val) <= int(range_parts[1])
                 except Exception:
                     passed = False
-            if auto:
-                status = "✅" if passed else "❌"
-            else:
-                status = "✅" if passed else "ℹ️"
+        if auto:
+            status = "✅" if passed else "❌"
+        else:
+            status = "✅" if passed else "ℹ️"
             
-            if not passed:
-                findings.append((status, f"{pid}: {rule}"))
-    
+        if not passed:
+            findings.append((status, f"{pid}: {rule}"))
+
     return findings
 
 
