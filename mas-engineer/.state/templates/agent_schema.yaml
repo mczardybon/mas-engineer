@@ -199,7 +199,7 @@ agents:
       \ 16\n    passed: 13\n    failed: 1\n    warning: 1\n    info: 1\n    observations:\n\
       \      - check: 8\n        severity: \"info\"\n        detail: \"context_window\
       \ > max_tokens in alln 5 Tiers.\n                 Unterschiedliche Semantik\
-      \ — no Error.\"\n    score: \"13/16 ✅\"\n    summary: \"12 Checks bestanden.\
+      \ — no Error.\"\n    score: \"13/16 ✅\"\n    summary: \"12 Checks passed.\
       \ 1 Warning, 1 Info, 1 Info-Finding.\"\n```\n\n## Boandaries\n\n- ⛔ Only Cross-Reference\
       \ — patche NICHTS\n- ⛔ Only config.yaml, core Docs, Recipes — not Runtime\n\
       - ⛔ No Values erfind or recommend without User-confirmation"
@@ -500,7 +500,7 @@ For EVERY gefandene\
       4. ALLE Results consolidaten → a Report\n\n## Procedure HARDEN_CHECK\n\n\
       1. IF dev_analyst.py exists:\n     python3 {tools_dir}/dev_analyst.py --workspace\
       \ {workspace} --check-all\n   ELSE (Fallback):\n     ⚠️ \"dev_analyst.py not\
-      \ available — manual check empfohlen\"\n     find {workspace} -name \"*.yaml\"\
+      \ available — manual check recommended\"\n     find {workspace} -name \"*.yaml\"\
       \ -exec sh -c 'echo \"=== {} ===\"; python3 -c \"import yaml; yaml.safe_load(open(\\\
       \"{}\\\"))\" 2>&1 || echo \"⚠️ YAML-Error in {}\"' \\;\n2. Probleme after Schwere\
       \ kategorisieren:\n   \U0001F534 KRITISCH: YAML-Error, broken Tests\n   \U0001F7E0\
@@ -610,7 +610,7 @@ For EVERY gefandene\
       \ ready | error\n\n## Edge Cases\n- MAS-Installation not gefanden → \"No\
       \ MAS-Installation — Generic-Improver standalone\"\n- User-Workspace exists\
       \ already → \"Workspace exists. Ueberwwriten? (j/N)\"\n- YAML-translation\
-      \ fehlgeschlagen → rollback: delete copyrte Files\n- No Schreibrights\
+      \ failed → rollback: delete copyrte Files\n- No Schreibrights\
       \ → \"❌ No Rights for {path}\"\n\n\n  IF mode == \"dry-run\":\n    Execute\
       \ ALLE Steps AUSSER Patch from\n    Exportiere after dry-run.json\n    \"Dry-Run:\
       \ {N} Patches wuerden angewendet\"\n\n\n  # CROSS-FRAMEWORK: Registry-Push\n\
@@ -972,7 +972,7 @@ complete Protocolierung EVERYS Problems — no Error\
       \ framework-Monitoring. NO Target-Repo-Code read.\nInstallierte Rezepte:\
       \ $HOME/.config/goose/recipes/\nMemory/Checkpoints: {codebase_path}/.dev-team/\n\
       \n## \U0001F4CB EIN-CYCLE-ABLAUF (pro Scheduler-Trigger)\n\nDU MACHST GENAU\
-      \ EINEN DURCHLAUF — NOE SCHLEIFE.\nNach the Durchlauf is the Session ended.\
+      \ EINEN DURCHLAUF — NOE SCHLEIFE.\nNach the run is the Session ended.\
       \ Der Scheduler startet new.\n\n┌──────────────────────────────────────────────────────┐\n\
       │  EIN MAL (no repetition):                       │\n│                \
       \                                      │\n│  ① FORTSTEP LESEN (.dev-team/.heartbeat)\
@@ -1547,7 +1547,7 @@ complete Protocolierung EVERYS Problems — no Error\
       \  cp -r {workspace}/mas-engineer/.state/checkpoints/$target/docs   {workspace}/mas-engineer/\n\
       \nSTEP 4 — Abschluss:\n  signal='': 'Checkpoint #{id} ($target) againhergestellt'\n\
       \  Create newen Snapshot: task=SNAPSHOT, label='nach_remainderore_$target'\n\n\
-      ### Edge Cases RESTORE\n- id=0 → 'ID 0 ungueltig — firste ID is 1'\n- Checkpoint\
+      ### Edge Cases RESTORE\n- id=0 → 'ID 0 unvalid — firste ID is 1'\n- Checkpoint\
       \ uncomplete → signal='': 'Checkpoint uncomplete — recipe/ missing'\n\
       - equaltimeiger Access → temporaere Files nutzen\n\n## Task DIFF — Unterschied\
       \ between Checkpoints\n\nSTEP 1 — IDs aufloesen:\n  from_cp=$(ls -t {workspace}/mas-engineer/.state/checkpoints\
@@ -1623,7 +1623,7 @@ complete Protocolierung EVERYS Problems — no Error\
       \ {workspace}/mas-engineer/recipe/dev-mas-engineer.yaml\n      signal='': 'Backup\
       \ $d againhergestellt'\n      break\n    fi\n  done\n\nSTEP 3 — NICHTS gefanden:\
       \ Neuinstallation vorschlagen:\n  IF NICHTS FUNKTIONIERT:\n    signal='':\
-      \ 'No functioneverrendes Backup — Neuinstallation empfohlen'\n    'Execute: python3\
+      \ 'No functioneverrendes Backup — Neuinstallation recommended'\n    'Execute: python3\
       \ dev_workspace.py --init {workspace}'\n\nSTEP 4 — After remainderoration:\n\
       \  delegate to sub_mas-recovery-checkpoint (task=SNAPSHOT, label='nach_resurrection')\n\
       \  signal='': 'Resuscitation completed — Snapshot: nach_resurrection'\n\
@@ -1675,9 +1675,9 @@ complete Protocolierung EVERYS Problems — no Error\
       \ CHECK_YAML — YAML-Syntax before jedem Edit\n\nSTEP 1 — Existenz-check:\n\
       \  [ -f '{file_path}' ] || return 'File not gefanden: {file_path}'\n\nSTEP\
       \ 2 — YAML-Parse:\n  python3 -c \"import yaml; yaml.safe_load(open('{file_path}'))\"\
-      \ 2>&1\n  EXIT 0: signal='', observations[P3]: 'YAML gueltig: {N} Lines'\n\
+      \ 2>&1\n  EXIT 0: signal='', observations[P3]: 'YAML valid: {N} Lines'\n\
       \  EXIT != 0: signal='', observations[P1]: 'YAML-Error: {error_msg}'\n    recommendation:\
-      \ 'rollback from lastm Backup empfohlen'\n\n### Edge Cases CHECK_YAML\n- File\
+      \ 'rollback from lastm Backup recommended'\n\n### Edge Cases CHECK_YAML\n- File\
       \ empty (0 Bytes) → P2 warning\n- YAML with Python-Exceptions (not yaml.Error)\
       \ → P1 error  \n- Unicode-Error → P3 info: 'encoding issue, versuche utf-8'\n\
       - Binary-File detected → P1 error: 'No YAML-File (Binary)'\n\n## Task CHECK_SYNTAX\
@@ -1695,9 +1695,9 @@ complete Protocolierung EVERYS Problems — no Error\
       \ -path '*/.backups/*' -not -path '*/checkpoints/*' | wc -l)\n  ok=$((total\
       \ - $(grep -c '^FAIL' /tmp/immune_verify_$$)))\n  failed=$((total - ok))\n \
       \ score=$((ok * 100 / total))\n\nSTEP 3 — Report:\n  score == 100: signal=''\
-      \ — 'All {total} YAMLs gueltig'\n  score >= 80:  signal='' — '{ok}/{total}\
-      \ gueltig ({failed} Error)'\n  score < 80:   signal='' — 'Only {ok}/{total}\
-      \ gueltig — Recovery empfohlen'\n\n### Edge Cases VERIFY_STATE\n- No YAML-Files\
+      \ — 'All {total} YAMLs valid'\n  score >= 80:  signal='' — '{ok}/{total}\
+      \ valid ({failed} Error)'\n  score < 80:   signal='' — 'Only {ok}/{total}\
+      \ valid — Recovery recommended'\n\n### Edge Cases VERIFY_STATE\n- No YAML-Files\
       \ → P3 info: 'No YAMLs to check'\n- Permission deneverd → warning: 'Access-Error:\
       \ {file}'\n- Symlink-Loop → find -L vermeiden, only -type f\n\n    # MEMORY:\
       \ Result save\n    rememberMemory(\"goose-errors\", {\\\"yaml_file\\\"\
@@ -1744,7 +1744,7 @@ complete Protocolierung EVERYS Problems — no Error\
       \ + Tools + Docs):\n  errors=0\n  for f in $(find $fork_path/recipe -name '*.yaml'\
       \ -not -path '*/.backups/*'); do\n    python3 -c \"import yaml; yaml.safe_load(open('$f'))\"\
       \ 2>&1 || errors=$((errors+1))\n  done\n  if [ $errors -gt 0 ]; then\n    signal='':\
-      \ 'Fork has $errors YAML-Error — ABORT empfohlen'\n    return\n  fi\n\nSTEP\
+      \ 'Fork has $errors YAML-Error — ABORT recommended'\n    return\n  fi\n\nSTEP\
       \ 3 — Merge:\n  rm -rf {workspace}/mas-engineer\n  cp -r $fork_path {workspace}/mas-engineer\n\
       \nSTEP 4 — Clean up + confirm:\n  rm -f {workspace}/mas-engineer_active\n\
       \  rm -rf $fork_path\n  signal='': 'Merge successfully — $changed Files uebernommen'\n\
@@ -1784,7 +1784,7 @@ complete Protocolierung EVERYS Problems — no Error\
     instructions: "⛔ INVENTORY-check:\n  → check whether Sub-Agent/Tool/Function already\
       \ exists\n  → Nutze existdes, baue ONLY if nothing matchings da is\n\
       # sub_mas-recovery-timeline — Time Travel-System\n\nMAS-Engineer-internalal. Analyzed\
-      \ ALLE Checkpoints on YAML-Gueltigkeit.\nFindt the BESTEN (juengsten gueltigen)\
+      \ ALLE Checkpoints on YAML-Gueltigkeit.\nFindt the BESTEN (juengsten validen)\
       \ Checkpoint automatisch.\nKombineverrt Checkpoint-Data + changes.json + YAML-Health.\n\
       \n## Input\n```yaml\ntimeline_intake:\n  signal: ''\n  request_id: string\n\
       \  from: 'dev-mas-engineer'\n  to: 'sub_mas-recovery-timeline'\n  task: 'FIND_BEST|RESTORE_BEST|SHOW_PATH|ANALYZE'\n\
@@ -1798,14 +1798,14 @@ complete Protocolierung EVERYS Problems — no Error\
       \ 2>/dev/null\n    if [ $? -eq 0 ]; then\n      beste=$d\n      break\n    fi\n\
       \  done\n\nSTEP 2 — Result:\n  if [ -n \"$beste\" ]; then\n    label=$(cat\
       \ $checkpoint_dir/$beste/.label 2>/dev/null || echo 'without Label')\n    signal='':\
-      \ 'Bester Checkpoint: $beste — $label'\n  else\n    signal='': 'No gueltiger\
+      \ 'Bester Checkpoint: $beste — $label'\n  else\n    signal='': 'No valider\
       \ Checkpoint — Suche in .backups/'\n    # Fallback: Backups durchsuchen\n  \
       \  for d in $(ls -t {workspace}/mas-engineer/.backups 2>/dev/null); do\n   \
       \   for f in {workspace}/mas-engineer/.backups/$d/*dev-mas-engineer*; do\n \
       \       python3 -c \"import yaml; yaml.safe_load(open('$f'))\" 2>/dev/null &&\
       \ echo \"$f\" && break 2\n      done\n    done\n  fi\n\n### Edge Cases FIND_BEST\n\
       - No Checkpoints → '' info + Backup-Suche\n- All Checkpoints korrupt → ''\
-      \ error + Defib empfohlen\n- checkpoint_dir missing → mkdir + '' info\n\n## Task\
+      \ error + Defib recommended\n- checkpoint_dir missing → mkdir + '' info\n\n## Task\
       \ RESTORE_BEST — Restore\n\nSTEP 1 — Besten find (siehe FIND_BEST)\n\
       STEP 2 — Restore:\n  rm -rf {workspace}/mas-engineer/recipe\n  rm\
       \ -rf {workspace}/mas-engineer/tools\n  rm -rf {workspace}/mas-engineer/docs\n\
@@ -1816,7 +1816,7 @@ complete Protocolierung EVERYS Problems — no Error\
       \n  delegate to sub_mas-recovery-checkpoint (task=SNAPSHOT, label='nach_remainderore_best')\n\
       \  signal='': 'Wiederhergestellt on $beste — Neuer Snapshot: nach_remainderore_best'\n\
       \n### Edge Cases RESTORE_BEST\n- No bester Checkpoint → '' error + 'Defib\
-      \ empfohlen'\n- remainderoration fehlgeschlagen → '' error + manual rollback\
+      \ recommended'\n- remainderoration failed → '' error + manual rollback\
       \ vorschlagen\n\n## Task SHOW_PATH — Du bist here\n\nSTEP 1 — Timeline display:\n\
       \  echo '=== ZEITSTRAHL ==='\n  for d in $(ls -t {workspace}/mas-engineer/.state/checkpoints\
       \ 2>/dev/null); do\n    label=$(cat {workspace}/mas-engineer/.state/checkpoints/$d/.label\
@@ -1825,7 +1825,7 @@ complete Protocolierung EVERYS Problems — no Error\
       \nSTEP 2 — Current Position:\n  current=$(python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))\"\
       \ 2>/dev/null && echo '' || echo '')\n  echo '$current AKTUELL (here)'\n  if\
       \ echo \"$current\" | grep -q ''; then\n    echo 'Recommendation: recovery --remainderore-best'\n\
-      \  else\n    echo 'System laeuft — Checkpoint for naechste Change empfohlen'\n\
+      \  else\n    echo 'System laeuft — Checkpoint for naechste Change recommended'\n\
       \  fi\n\n## Task ANALYZE — damagesanalyse\n\nSTEP 1 — 7-Fragen-Diagnose:\n\
       \  Q1: [ -d {workspace} ]                         || echo 'XX Workspace missing'\n\
       \  Q2: [ -d {workspace}/mas-engineer ]             || echo 'XX MAS missing'\n\
@@ -1918,7 +1918,7 @@ complete Protocolierung EVERYS Problems — no Error\
       - G1: Degraded agent → score < 80 → Settings/Prompt/Instructions optimize\n\
       - G2: High failure rate → >10% failures/calls → timeout increase or prompt\
       \ clarify\n- G3: Loops detected → loop=warning or critical → instructions\
-      \ clarify (missinge ⛔-Rule?)\n- G4: Agent dead → resurrect fehlgeschlagen\
+      \ clarify (missinge ⛔-Rule?)\n- G4: Agent dead → resurrect failed\
       \ → durchgehen: is Agent obsolet? replace?\n\n### Type H — Anomaly-basierte\
       \ Optimization (via Session-Analyst)\n- H1: Duration-Anomaly → Session >2x ∅-Duration\
       \ → timeout or max_steps check\n- H2: Token-Anomaly → Tokens >3x ∅ → prompt\
@@ -1941,7 +1941,7 @@ complete Protocolierung EVERYS Problems — no Error\
       \ Logs rotieren\n\n### Type M — Migration (via Migration-Helper)\n- M1: Breaking\
       \ Changes → Migration before nextm Build einplan\n- M2: Non-Breaking → Optional,\
       \ can wait\n\n### Type N — Recipe-Management (via Recipe-Manager)\n- N1: Doppelte\
-      \ Recipes → Clean upn\n- N2: Alte Version → Update empfohlen\n- N3: Missing\
+      \ Recipes → Clean upn\n- N2: Alte Version → Update recommended\n- N3: Missing\
       \ Dependencies → add\n\n### Type O — Depthn-Fande (via cat the MAS-Files)\n\
       - O1: Instructions ≠ Ist-State → instructions sagen X (z.B. \"16 Checks\"\
       ), but ls/exec zeigt Y (z.B. 15 Checks)\n- O2: Reference on not-existente\
@@ -1994,9 +1994,9 @@ complete Protocolierung EVERYS Problems — no Error\
       \ Stop-Rules ergaenzen\n- FW2: Settings wrong → timeout/max_steps adjust\
       \ (BP-Konform)\n- FW3: Structure inkonsistent → Input/Output, Constitution-Reference\
       \ ergaenzen\n- FW4: Tests missing → pytest-Test create\n\n### Type BB — framework-Test\
-      \ (via MAS-Einstiegspunkt)\n- BB1: framework-Test fehlgeschlagen → Changes\
-      \ framework inkompatibel → ROLLBACK\n- BB2: framework-Test bestanden → ✅ Changes\
-      \ framework-kompatibel\n- BB3: framework slow (>120s) → Performance-Optimization\
+      \ (via MAS-Einstiegspunkt)\n- BB1: framework-Test failed → Changes\
+      \ framework incompatible → ROLLBACK\n- BB2: framework-Test passed → ✅ Changes\
+      \ framework-compatible\n- BB3: framework slow (>120s) → Performance-Optimization\
       \ check\n\n### Type CC — Memory/Resource-Optimization (via Session-DB + Guardian)\n\
       - CC1: OOM/MemoryError detected → Sub-Agent cancelled → timeout reduzieren\
       \ OR Task splitten\n- CC2: max_turns uebfirstepen (>3 Sessions) → max_steps\
@@ -2037,7 +2037,7 @@ complete Protocolierung EVERYS Problems — no Error\
       \ not exists → anlegen with: version: 1.0.0, history: [], metrics: {}, recommendation:\
       \ {status: \"ready\"}\n2. BERECHNE:\n   - Time seit last Rande: now - last_history_time\n\
       \   - Status from recommendation.status\n3. IF status == \"pause_recommended\"\
-      :\n   → \"ℹ️ Letzte {N} Rande(n) without Findings — Pause empfohlen. Fortfahren?\
+      :\n   → \"ℹ️ Letzte {N} Rande(n) without Findings — Pause recommended. Fortfahren?\
       \ (j/N)\"\n   IF User \"N\": → \"❌ Abgebrochen — naechste Rande later\"\n\
       \   IF User \"j\": → \"⚠️ Fortgesetzt despite Pause-Recommendation\"\n4. IF status\
       \ == \"blocked\":\n   → \"⛔ Timing blocked: {recommendation.reason}. Can\
@@ -2089,8 +2089,8 @@ For EVERY selected and KONFORME change:\n\n8a. BACKUP:\n  Delegate to\
       \ --add JSON-DATEI-EINTRAG\n\n8d. GUARDIAN-CHECK:\n  Delegate to sub_mas-agent-guardian\n\
       \  (task=CHECK, last_result=<patch-result>)\n  → Drift? → WARNUNG + ggf. ROLLBACK\n\
       \n### Edge Cases — STEP 8\n- YAML before invalid → ❌ ABBRECHEN for this\
-      \ File\n- Backup fehlgeschlagen → ❌ ABBRECHEN (no Patch without Backup)\n- Patch\
-      \ fehlgeschlagen → ROLLBACK from Backup, Error document\n- YAML nachher\
+      \ File\n- Backup failed → ❌ ABBRECHEN (no Patch without Backup)\n- Patch\
+      \ failed → ROLLBACK from Backup, Error document\n- YAML nachher\
       \ invalid → ROLLBACK, Error document\n- Guardian: Drift detected → ROLLBACK,\
       \ Error document\n- dev_changes.py fail → ⚠️ Warning, Patch bleibt (Doku\
       \ secondary)\n- Einzelerror → already angewandte changes bleiben (no Global-rollback)\n\
@@ -2138,7 +2138,7 @@ For EVERY selected and KONFORME change:\n\n8a. BACKUP:\n  Delegate to\
       \n\n### Edge Cases — STEP 10\n- guardian DRIFT_LOG timeout/error → \"⚠️\
       \ No Drift-Trend — fahre without fort\"\n- guardian.yaml exists not → \"\
       ℹ️ No Drift-Historie (firste Analyse)\"\n- Drift-Trend \"worsening\":\n  →\
-      \ \"\U0001F534 Drift-Advicee steigt! Weniger aggressive changes empfohlen.\"\
+      \ \"\U0001F534 Drift-Advicee steigt! Weniger aggressive changes recommended.\"\
       \n  → IF 3+ Sessions increased: Automatische Alreadyung (only 2 instead of 5 changes)\n\
       - feat Install → ❌ Error show, manual Installation clarify\n- framework\
       \ install ok, MAS fail → ⚠️ \"framework ok, MAS manual\"\n- User lehnt Install\
@@ -2366,7 +2366,7 @@ return\
       ## Input (from Orchestrator)\n- signal: HANDOVER\n- task: ANALYZE | RECHECK\n\
       - workspace: Path to Workspace\n- data: {request_id, sessions, focus: str (optional)}\n\
       \n- mode: mas | generic (default: mas)\n## Output (an Orchestrator)\n- status:\
-      \ COMPLETED | PARTIAL | FAILED\n- findings: [{type, file, alt_value, new_value_empfohlen,\
+      \ COMPLETED | PARTIAL | FAILED\n- findings: [{type, file, alt_value, new_value_recommended,\
       \ impact, sicherheit}]\n- scores: {timeout_score, config_score, prompt_score,\
       \ health_score, ...}\n- timestamp: ISO-Format\n\n## TIMING\n- max_dauer: 300s\
       \ (5 min)\n- at >5min: PARTIAL zurueckgeben with the was bisher da is\n\n##\
@@ -2400,7 +2400,7 @@ return\
       \  → Top-5 Drift-Typees, Top-3 driftende Agenten, Trend\n\n  additional: Drift-Korrelation\
       \ with changes.json\n  - Welche change has the Drift verursacht?\n  - Ist Drift-Advicee\
       \ gestiegen SEIT lastm removedment?\n  - If JA: \"⚠️ Drift-Advicee steigt\
-      \ — less aggressive changes empfohlen\"\n\n\U0001F4CA Analyse 8 — HEALTH\
+      \ — less aggressive changes recommended\"\n\n\U0001F4CA Analyse 8 — HEALTH\
       \ (via Guardian):\n  Delegate to sub_mas-agent-guardian\n  (task=HEALTH_REPORT,\
       \ state_path={workspace}/mas-engineer/.state/guardian.yaml)\n  → HEALTH-SCORE\
       \ (0-100), Ranking, Trend\n  → Which Agent is degradiert? (score < 80)\n\
@@ -2623,7 +2623,7 @@ return\
       \ tests/-Directory → \"ℹ️ No Tests — Coverage-Analyse (26) oversprungen\"\
       \n- No entries in changes.json (empty) → \"ℹ️ No Changes — Typees-Verteilung\
       \ (X2) not possible\"\n- Metrik-Analysen 24-28 >5min total → ⚠️ \"Only {N}\
-      \ from 5 newen Metrik-Analysen completed\"\n- All 5 newen Metriken fehlgeschlagen\
+      \ from 5 newen Metrik-Analysen completed\"\n- All 5 newen Metriken failed\
       \ → ⚠️ \"Only Kern + Depthn-Analysen available\"\n- TA 32-34 (System-Health)\
       \ >3min total → \"⚠️ Only {N} from 3 System-Analysen completed\"\n- MA 32-39\
       \ (System-Metriken) >5min total → \"⚠️ Only {N} from 8 System-Metriken completed\"\
@@ -2691,7 +2691,7 @@ return\
       \ = (failures + loops) / calls\n  → Findings: Type CC1 (failures >10%), CC3 (loops\
       \ >0)\n\n\U0001F4CA Metrik-Analyse 39 — SUB-AGENT-ENDPUNKT-VALIDIERUNG (via\
       \ check sub_recipes):\n  1. FOR EVERYN entry in sub_recipes:\n     a) Existiert\
-      \ the YAML-File?\n     b) YAML-Syntax gueltig?\n     c) name stimmt with filename?\n\
+      \ the YAML-File?\n     b) YAML-Syntax valid?\n     c) name stimmt with filename?\n\
       \  2. CHECK: Each entry has description + path?\n  → Findings: Type O2 (tote\
       \ Reference)\n  \n—\n### Edge Cases — STEP 3 (3 newe Metriken 29-31)\n- No\
       \ \"retry\"/\"guardian\" Sessions → \"ℹ️ No Recovery-eventse — Analyse\
@@ -2700,7 +2700,7 @@ return\
       ℹ️ Only 0 Randen — Duration-Vorhersage (31) oversprungen\"\n- Only 1 FULL_IMPROVEMENT\
       \ Session → \"ℹ️ Only 1 Rande — Trend (AA1/AA2) not possible\"\n- 3 newe Analysen\
       \ (29-31) >2min total → ⚠️ \"Only {N} from 3 Analysen completed\"\n- All\
-      \ 3 newen Analysen fehlgeschlagen → ⚠️ \"Only Kern + Depthn + 5 Metriken available\"\
+      \ 3 newen Analysen failed → ⚠️ \"Only Kern + Depthn + 5 Metriken available\"\
       \n- No Recovery-Data (no guardian-Log) → \"ℹ️ guardian.yaml missing — Recovery\
       \ without historische Data\"\n- changes.json has no prompt/instructions-entries\
       \ → \"ℹ️ No Prompt-changes in changes.json\"\n\n╚══════════════════════════════════════════════════════════════╝\n\
@@ -2746,7 +2746,7 @@ return\
       \ are about-/unterdimensioneverrt?\"\n       For EVERYN the 14 Sub-Agenten from\
       \ Step 3 (Metrik-Analyse 21):\n         Auslasdog_steps = ∅ Turns / max_steps\n\
       \         Auslasdog_timeout = ∅ Duration / timeout\n       → Extrahiere: agent,\
-      \ feld, is-value, should-value, empfohlener-value\n       → Type klassifizieren:\
+      \ feld, is-value, should-value, recommendeder-value\n       → Type klassifizieren:\
       \ Q1 (overdimensioneverrt → senken), Q2 (knapp → increase)\n\n  B12. GIT-Quality:\
       \ \"Has the last change Code-Quality improved?\"\n       git -C {workspace}\
       \ diff HEAD~1 --numstat\n       For EVERY changed File: added/deleted Lines,\
@@ -2805,7 +2805,7 @@ return\
       \ {workspace} --impact \"<change>\"\n  → Welche anderen Files betroffen?\n\
       \n\n  B22. SPEICHER-CHECK: \"Gab es OOM/MemoryError or Timeout-anomalies?\"\
       \n       From Depthn-Analyse 32: OOM-eventse, max_turns-aboutschreidogen,\
-      \ Timeout-anomalies\n       → Extrahiere: agent, event, count, empfohlener-value\n\
+      \ Timeout-anomalies\n       → Extrahiere: agent, event, count, recommendeder-value\n\
       \       → Type klassifizieren: CC1 (OOM), CC2 (max_turns), CC3 (Timeout), CC4\
       \ (Token)\n\n  B23. MCP/TOOL-CHECK: \"Welche Tools/MCPs have Error produziert?\"\
       \n       From Depthn-Analyse 33: Tool-not-foand, Plugin-Konflikte, Extension-Error\n\
@@ -2813,7 +2813,7 @@ return\
       \ DD1 (not-foand), DD2 (conflict), DD3 (extension), DD4 (syntax)\n\n  B24. SESSION-CHECK:\
       \ \"Ist the Session-DB intakt?\"\n       From Depthn-Analyse 34: DB-readonly,\
       \ missinge-Tables, DB-corrupted\n       → Extrahiere: problem, schweregrad,\
-      \ empfohlene-action\n       → Type klassifizieren: EE1 (readonly), EE2 (table),\
+      \ recommendede-action\n       → Type klassifizieren: EE1 (readonly), EE2 (table),\
       \ EE3 (corrupt), EE4 (empty)\n\n  B25. CONFIG-DRIFT: \"Welche Sub-Agenten weichen\
       \ from best-practices.yaml ab?\"\n       From Metrik-Analyse 32: timeout-, max_steps-,\
       \ provider-, model-Deviationen\n       → Extrahiere: agent, feld, is-value,\
@@ -2921,13 +2921,13 @@ For EVERYN Improvementsvorschlag:\n  Delegate to sub_mas-goose-expert\n\
       \  │ test-runner.yaml     │ prompt  │ 2 Z. │ 3 Z. │ ✅    │\n│ 3 │ D2  │ dev-mas-engineer\
       \     │ --scan  │ —    │ +S5  │ ⚠️    │\n\nFRAGE: \"Welche anwenden? (all /\
       \ 1,3 / no)\"\n\nNACH Selection: \"Feedback to Quality the Suggestions? (passt\
-      \ / to muche / to few / unclear)\"\n→ Logge Answer for next Durchlauf\
+      \ / to muche / to few / unclear)\"\n→ Logge Answer for next run\
       \ (Analyse 2: User-Correctionen)\n\nIF no → ABBRECHEN with Summary\n\
       \n### Edge Cases — STEP 7\n- User selects \"no\" → ✅ Pipeline sauber end,\
       \ 0 changes\n- User antwortet not (60s) → ABBRECHEN, no changes\n\
       - User selects invalide Number → Frage againholen (max 3×)\n- User sagt \"stop\"\
       /\"abort\" → sofort end, no changes\n- User Feedback \"to muche\"\
-      \ → next Durchlauf: only Top-3 instead of all Suggestions\n\n```\n╔══════════════════════════════════════════════════════════════╗\n\
+      \ → next run: only Top-3 instead of all Suggestions\n\n```\n╔══════════════════════════════════════════════════════════════╗\n\
       ║  STEP 8 — changes ANWENDEN                            ║\n╚══════════════════════════════════════════════════════════════╝\n\
       ```\
 For EVERY selected and KONFORME change:\n\n8a. BACKUP:\n  Delegate to\
@@ -2938,15 +2938,15 @@ For EVERY selected and KONFORME change:\n\n8a. BACKUP:\n  Delegate to\
       \ --add JSON-DATEI-EINTRAG\n\n8d. GUARDIAN-CHECK:\n  Delegate to sub_mas-agent-guardian\n\
       \  (task=CHECK, last_result=<patch-result>)\n  → Drift? → WARNUNG + ggf. ROLLBACK\n\
       \n### Edge Cases — STEP 8\n- YAML before invalid → ❌ ABBRECHEN for this\
-      \ File\n- Backup fehlgeschlagen → ❌ ABBRECHEN (no Patch without Backup)\n- Patch\
-      \ fehlgeschlagen → ROLLBACK from Backup, Error document\n- YAML nachher\
+      \ File\n- Backup failed → ❌ ABBRECHEN (no Patch without Backup)\n- Patch\
+      \ failed → ROLLBACK from Backup, Error document\n- YAML nachher\
       \ invalid → ROLLBACK, Error document\n- Guardian: Drift detected → ROLLBACK,\
       \ Error document\n- dev_changes.py fail → ⚠️ Warning, Patch bleibt (Doku\
       \ secondary)\n- Einzelerror → already angewandte changes bleiben (no Global-rollback)\n\
       \n```\n╔══════════════════════════════════════════════════════════════╗\n║ \
       \ \n### Edge Cases\n- 0 Findings receive → \"✅ Nots to designen — no Optimizationen\
       \ possible\"\n- All Patches impact=high (breaking) → \"⚠️ {N} breaking Changes\
-      \ — manual Check empfohlen\"\n- Goose-Check not possible → \"⚠️ Design\
+      \ — manual Check recommended\"\n- Goose-Check not possible → \"⚠️ Design\
       \ without Goose-Validation — manual check\"\n- No Priorisierung possible\
       \ (equalvalueige Patches) → chronologische Order"
     prompt: '📐 SI-DESIGNER (v1.0.0)
@@ -3023,12 +3023,12 @@ For EVERY selected and KONFORME change:\n\n8a. BACKUP:\n  Delegate to\
       \ \"ℹ️ Backup-Bloat: {N} newe Backups\"\n  \n8. FRAMEWORK-RUN-TEST:\n   IF\
       \ Changes an {workspace}/framework/ vorgenommen were:\n     Delegate\
       \ an MAS-Einstiegspunkt\n     (workspace={workspace}/framework)\n     → Execute\
-      \ KOMPLETTEN Target-Durchlauf:\n        MAS → Sub-Agenten → Analyse → Result\n\
-      \     → Timeout: 120s\n     → ERWARTET:\n       - MAS: \"✅ Bereit\"\n      \
-      \ - Planer: \"✅ Plan created\"\n       - execution: \"✅ Abgeschlossen\"\n\
-      \       - Result: Signal RESULT\n     IF ERFOLGREICH:\n       → \"✅ Integrationstest\
-      \ bestanden — framework laeuft with Changes\"\n     IF FEHLGESCHLAGEN:\n\
-      \       → \"\U0001F534 framework-Test fehlgeschlagen: {framework_error}\"\n\
+      \ COMPLETE Target-RUN:\n        MAS → Sub-Agenten → Analyse → Result\n\
+      \     → Timeout: 120s\n     → EXPECTED:\n       - MAS: \"✅ READY\"\n      \
+      \ - Planer: \"✅ Plan created\"\n       - execution: \"✅ completed\"\n\
+      \       - Result: Signal RESULT\n     IF SUCCESSFUL:\n       → \"✅ Integrationstest\
+      \ passed — framework runs with Changes\"\n     IF FAILED\n\
+       → "\U0001F534 framework-Test failed: {framework_error}"
       \       → \"ROLLBACK EMPFOHLEN! (j/N)\"\n   ELSE (no Target-Changes):\n\
       \     → \"ℹ️ No framework-Changes — framework-Test uebersprungen\"\n\n\
       6. GIT-DIFF-SCORE (Code-Quality):\n   git -C {workspace} diff HEAD~1 --numstat\n\
@@ -3064,9 +3064,9 @@ For EVERY selected and KONFORME change:\n\n8a. BACKUP:\n  Delegate to\
       \ ⚠️ \"Prompt-Quality gesunken. ROLLBACK? (j/N)\"\n\n8. INSTALL-VERGLEICH (Install-Drift\
       \ via MA 36):\n   From Step 3 (Metrik-Analyse 36): install_drift_score before\
       \ change\n   IF after change install_drift_score > before: ⚠️ \"Installation drift.\
-      \ update.sh --mas empfohlen\"\n\n9. BACKUP-VERGLEICH (Backup-Health via MA 34):\n\
+      \ update.sh --mas recommended\"\n\n9. BACKUP-VERGLEICH (Backup-Health via MA 34):\n\
       \   From Step 3 (Metrik-Analyse 34): backup_score before change\n   IF after\
-      \ change backup_score < before: ⚠️ \"Backup-Health gesunken. checkpoint empfohlen\"\
+      \ change backup_score < before: ⚠️ \"Backup-Health gesunken. checkpoint recommended\"\
       \n### Edge Cases — STEP 9\n- config-auditor: newe ❌ → \"⚠️ {N} newe Inkonsistenzen.\
       \ ROLLBACK? (j/N)\"\n- prompt-engineer: Score GESUNKEN → \"⚠️ Prompt schlechter.\
       \ ROLLBACK? (j/N)\"\n- test-runner: newe FAILURES → \"⚠️ {N} newe Failures.\
@@ -3078,7 +3078,7 @@ For EVERY selected and KONFORME change:\n\n8a. BACKUP:\n  Delegate to\
       \ LIST timeout → \"⚠️ Recipe-Comparison oversprungen\"\n- User lehnt rollback\
       \ ab → changes bleiben, Warning documented\n\n```\n╔══════════════════════════════════════════════════════════════╗\n\
       ║  \n### Edge Cases\n- Vorher-Data not existing → \"⚠️ No Baseline-Comparison\
-      \ — Validation without Vorher/Nachher\"\n- All Checks fehlgeschlagen → \"❗ System\
+      \ — Validation without Vorher/Nachher\"\n- All Checks failed → \"❗ System\
       \ instable — ROLLBACK EMPFOHLEN\"\n- Partsrgebnis (manche Checks gehen, manche\
       \ not) → DEGRADED + was geht\n- user lehnt rollback ab → document + furthermachen"
     prompt: '🛡️ SI-VALIDATOR (v1.0.0)
@@ -3253,7 +3253,7 @@ For EVERY selected and KONFORME change:\n\n8a. BACKUP:\n  Delegate to\
       \ {test_command} 2>&1 → EXIT-CODE + OUTPUT\n\n2. EXIT 0 (PASS):\n   → commsg\
       \ is validated\n   → dev-mas-engineer_status({task_id, status: \"verifying_passed\"\
       })\n   → FERTIG\n\n3. EXIT !=0 (FAIL):\n   → read {test_output_file}\n   → Analyze:\
-      \ Which Test fehlgeschlagen? Warum?\n   → Fixe the Code (only the fehlschlagenden\
+      \ Which Test failed? Warum?\n   → Fixe the Code (only the fehlschlagenden\
       \ Tests betreffend)\n   → git add {fixed_files}\n   → git commsg --amend --no-edit\
       \  (or newer commsg)\n   → attempt = attempt + 1\n\n4. RETRY:\n   IF attempt\
       \ < 3:\n     → Gehe to Step 1 (with attempt+1)\n   ELSE (attempt >= 3):\n\
@@ -3311,11 +3311,11 @@ For EVERY selected and KONFORME change:\n\n8a. BACKUP:\n  Delegate to\
       \ \"new\"\n    error: \"{git_error}\"\n    retry_possible: true|false\n  \n\
       \  IF retry_possible:\n    git worktree prune\n    git branch -D {branch} 2>/dev/null\n\
       \    → RETRY (max 2 attempts)\n  ELSE:\n    → executor_escalation an PLANNER\n\
-      ```\n\n## Worktree cleanup\n```\nFALL A — TASK ERFOLGREICH:\n  git worktree\
+      ```\n\n## Worktree cleanup\n```\nFALL A — TASK SUCCESSFUL:\n  git worktree\
       \ remove {path}\n  git branch -d {branch}\n  executor_worktree_removed:\n  \
-      \  merged: true\n    branch_deleted: true\n\nFALL B — TASK FEHLGESCHLAGEN (worktree_discard):\n\
+      \  merged: true\n    branch_deleted: true\n\nFALL B — TASK FAILED (worktree_discard):\n\
       \  git worktree remove --force {path}\n  git branch -D {branch}\n  executor_worktree_removed:\n\
-      \    merged: false\n    branch_deleted: true\n\nFALL C — WORKTREE-OP FEHLER:\n\
+      \    merged: false\n    branch_deleted: true\n\nFALL C — WORKTREE-OP ERROR:\n\
       \  executor_worktree_failed:\n    operation: \"remove\"\n    error: \"{git_error}\"\
       \n  → Eskalation (PROTOKOLL 7)\n```\n\n## Post-Execution Cleanup\n```\ngit worktree\
       \ prune       # C13: verwaiste Worktrees\ngit worktree list         # verifiziere\
@@ -3373,7 +3373,7 @@ For EVERY selected and KONFORME change:\n\n8a. BACKUP:\n  Delegate to\
       \n2. Result: valid / Error with Linesnumber\n\n\n\n## Procedure MULTI_PATCH\
       \ — Mehrere Files equaltimeig\n\nInput: [{file, old, new}, ...]\n1. For EVERYN\
       \ entry: BACKUP + PATCH + VALIDATE\n2. IF all OK: dev_changes.py --add\
-      \ \"MULTI_PATCH: {N} Files\"\n3. IF Error: ROLLBACK the fehlgeschlagenen,\
+      \ \"MULTI_PATCH: {N} Files\"\n3. IF Error: ROLLBACK the faileden,\
       \ andere bleiben\n4. ZEIGE: \"✅ {N}/{M} Files successfully\"\n## Procedure BACKUP\n\
       \n1. cp {workspace}/recipes/{file} {workspace}/.backups/TIMESTAMP/{file}\n\n\
       \n\n## Procedure CLONE — Neuen Agenten from Template\n\n1. dev_template_generator.py --create\
