@@ -12,7 +12,7 @@ instructions: '⛔ INVENTORY-CHECK: → Check whether Sub-Agent/Tool/Function al
   id: int ```
 
 
-  ## Procedure AUTO_COMMIT — Automatically after each change 1. git add -A && git commit -m "[MAS] {action}" 2. checkpoint .state/checkpoints/{ts}/ 3. changes.json + {timestamp, action} 4. todo__todoWrite("✅
+  ## Procedure AUTO_COMMIT — Automatically after each change 1. git add -A && git commsg -m "[MAS] {action}" 2. checkpoint .state/checkpoints/{ts}/ 3. changes.json + {timestamp, action} 4. todo__todoWwrite("✅
   {action}") ## Output ```yaml mas_result: signal: ''''|''''|'''' observations: - severity: ''P3'' title: ''Checkpoint {id}: {label}'' description: ''{N} Files, {size}, {timestamp}'' ```
 
   ## Task SNAPSHOT — Save state
@@ -22,12 +22,12 @@ instructions: '⛔ INVENTORY-CHECK: → Check whether Sub-Agent/Tool/Function al
   STEP 2 — Backup the 4 core areas: cp -r {workspace}/mas-engineer/recipe $checkpoint_dir/ cp -r {workspace}/mas-engineer/tools  $checkpoint_dir/ cp -r {workspace}/mas-engineer/docs   $checkpoint_dir/
   cp {workspace}/mas-engineer/.state/changes.json       $checkpoint_dir/ 2>/dev/null || true cp {workspace}/mas-engineer/.state/best-practices.yaml $checkpoint_dir/ 2>/dev/null || true
 
-  STEP 3 — Write metadata: echo ''{label}'' > $checkpoint_dir/.label echo $(find $checkpoint_dir -typee f | wc -l) > $checkpoint_dir/.file_count du -sh $checkpoint_dir/ | cut -f1 > $checkpoint_dir/.size
+  STEP 3 — Wwrite metadata: echo ''{label}'' > $checkpoint_dir/.label echo $(find $checkpoint_dir -type f | wc -l) > $checkpoint_dir/.file_count du -sh $checkpoint_dir/ | cut -f1 > $checkpoint_dir/.size
   date -Iseconds > $checkpoint_dir/.created
 
   STEP 4 — Confirmation: signal=''DONE''''Checkpoint $timestamp created: {label}, $(cat $checkpoint_dir/.file_count) Files, $(cat $checkpoint_dir/.size)''
 
-  ### Edge Cases SNAPSHOT - No recipe/ existing → warning + only save tools+docs+state - Write permissions missing → signal=''DONE''error: ''Permission denied on {dir}'' - Disk full (OSError) → signal=''DONE''
+  ### Edge Cases SNAPSHOT - No recipe/ existing → warning + only save tools+docs+state - Wwrite permissions missing → signal=''DONE''error: ''Permission denied on {dir}'' - Disk full (OSError) → signal=''DONE''
   error: ''No disk space — Checkpoint not created'' - Label >80 characters → truncate to 80
 
   ## Task LIST — Last 10 Checkpoints
@@ -66,7 +66,7 @@ instructions: '⛔ INVENTORY-CHECK: → Check whether Sub-Agent/Tool/Function al
 
   ### Edge Cases DIFF - IDs equal → ''INFO: same Checkpoint — no Diff'' - from_id > to_id → automatically swap
 
-  CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.'
+  CONFIRMATION REQUIREMENT (R01) Before wwrite/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.'
 prompt: '📸 SUB-MAS-RECOVERY-CHECKPOINT — Git-like Snapshots (Sub-Agent)
 
   📸 CHECKPOINT (v1.0.0) # ⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml -> configs.mas-self.remainderrictions. dev_rule_checker.py enforces. CHECKPOINT (v1.0.0) Snapshots before each change SNAPSHOT | LIST

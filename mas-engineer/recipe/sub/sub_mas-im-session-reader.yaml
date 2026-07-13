@@ -17,15 +17,15 @@ instructions: "# sub_mas-im-session-reader — \U0001F4CA Session-Database read\
   \ Deliver empty raw data: {sessions: [], totals: {sessions: 0, tokens: 0}}\n  → NO ABORT — pipeline can still work with framework health\n\n## STEP 1 — COPY DB (Goose can lock)\n1.\
   \ EXECUTE: sqlite3 ~/.local/share/goose/sessions/sessions.db \".clone /tmp/im_session_copy.db\"\n   IF fails: cp ~/.local/share/goose/sessions/sessions.db /tmp/im_session_copy.db\n2. CHECK:\
   \ /tmp/im_session_copy.db exists + readable\n\n## STEP 2 — 3-LEVEL PROJECT FILTER\n\n### Level 1: GOOSE_SESSION_TAG (exact)\nREAD: {workspace}/.goosehints\nTAG = grep \"GOOSE_SESSION_TAG=\" {workspace}/.goosehints\
-  \ 2>/dev/null | cut -d= -f2\nIF TAG is not empty:\n  EXECUTE: sqlite3 /tmp/im_session_copy.db \"\n    SELECT id, name, session_typee, total_tokens, accumulated_cost,\n           created_at, working_dir,\
+  \ 2>/dev/null | cut -d= -f2\nIF TAG is not empty:\n  EXECUTE: sqlite3 /tmp/im_session_copy.db \"\n    SELECT id, name, session_type, total_tokens, accumulated_cost,\n           created_at, working_dir,\
   \ recipe_json\n    FROM sessions\n    WHERE name LIKE '%' || '{TAG}' || '%'\n    ORDER BY created_at DESC\n    LIMIT {sessions};\n  \" 2>/dev/null\n  SHOW: \"\U0001F4CB Filter Level 1: TAG={TAG}\"\n \
   \ IF Result not empty: → JUMP to step 3\n  IF empty: \"⚠️ TAG={TAG} — 0 Sessions found. Fallback to Level 2\"\n\n### Level 2: working_dir (automatically)\nEXECUTE: sqlite3 /tmp/im_session_copy.db\
-  \ \"\n  SELECT id, name, session_typee, total_tokens, accumulated_cost,\n         created_at, working_dir, recipe_json\n  FROM sessions\n  WHERE working_dir LIKE '{workspace}%'\n  ORDER BY created_at DESC\n\
+  \ \"\n  SELECT id, name, session_type, total_tokens, accumulated_cost,\n         created_at, working_dir, recipe_json\n  FROM sessions\n  WHERE working_dir LIKE '{workspace}%'\n  ORDER BY created_at DESC\n\
   \  LIMIT {sessions};\n\" 2>/dev/null\nSHOW: \"\U0001F4CB Filter Level 2: working_dir={workspace}\"\nIF Result not empty: → JUMP to step 3\nIF empty: \"⚠️ working_dir — 0 Sessions found. Fallback\
-  \ on Level 3\"\n\n### Level 3: Fallback (last N non-MAS Sessions)\nEXECUTE: sqlite3 /tmp/im_session_copy.db \"\n  SELECT id, name, session_typee, total_tokens, accumulated_cost,\n         created_at,\
+  \ on Level 3\"\n\n### Level 3: Fallback (last N non-MAS Sessions)\nEXECUTE: sqlite3 /tmp/im_session_copy.db \"\n  SELECT id, name, session_type, total_tokens, accumulated_cost,\n         created_at,\
   \ working_dir, recipe_json\n  FROM sessions\n  WHERE recipe_json IS NULL\n     OR recipe_json = ''\n     OR recipe_json NOT LIKE '%DEV-MAS-ENGINEER%'\n  ORDER BY created_at DESC\n  LIMIT {sessions};\n\
   \" 2>/dev/null\nSHOW: \"\U0001F4CB Filter Level 3: Fallback (no MAS-Sessions)\"\nIF Result empty:\n  SHOW: \"⚠️ 0 Sessions in all filter levels\"\n  Deliver empty sessions-list (NO Error, pipeline continues\
-  )\n\n## STEP 3 — PARSE SESSIONS\nFor EACH Session from the filter result:\n  1. Extract: id, name, session_typee, total_tokens, accumulated_cost, created_at, working_dir\n  2. Aggregate:\n \
+  )\n\n## STEP 3 — PARSE SESSIONS\nFor EACH Session from the filter result:\n  1. Extract: id, name, session_type, total_tokens, accumulated_cost, created_at, working_dir\n  2. Aggregate:\n \
   \    - total_tokens = Total tokens\n     - accumulated_cost = Total costs\n  3. Collect in sessions-list\n\n## STEP 4 — AGGREGATE METRICS (across filtered sessions)\n1. Total sessions: count\n\
   2. Total tokens: sum(total_tokens)\n3. Total costs: sum(accumulated_cost)\n4. Stale sessions: python3 {workspace}/tools/dev_goose_db.py --stale 30 2>/dev/null | tail -5\n5. Cost trend: session with\
   \ max(accumulated_cost)\n\n## ⛔ STEP 4.5 — EXTRACT CHAT CONTENTS (ONLY when include_messages=true)\nIF include_messages == true:\n  1. CHECK: messages-Table exists in DB?\n     EXECUTE: sqlite3\
@@ -39,9 +39,9 @@ instructions: "# sub_mas-im-session-reader — \U0001F4CA Session-Database read\
   \ count, questions: [<first 3 questions>]}]\n         praises: [{session_id, count}]\n         abandoned_sessions: [{session_id, messages_count, last_message_preview}]\n         feature_requests: [{session_id,\
   \ requests: [<first 3>]}]\n\n  IF sqlite3 Error: \"⚠️ Chat extraction failed — continue without chat data\"\n\n## STEP 5 — STRUCTURE RAW DATA\nCreate YAML-Struct with:\n```yaml\nsessions:\n\
   \  - id: str\n    name: str\n    type: user|sub_agent\n    tokens: int\n    cost: float\n    created: datetime\n    working_dir: str\ntotals:\n  sessions: int\n  tokens: int\n  cost: float\n  filter_level:\
-  \ \"tag|working_dir|fallback|no\"\n  tag: str (only at Level 1)\nstale: [...]\ntop_cost: [...]\n```\n\n## ⛔ STEP 6 — NO CHANGES\n⛔ ONLY READ — No writes, no edits, no patches\n⛔ No analysis of the read\
+  \ \"tag|working_dir|fallback|no\"\n  tag: str (only at Level 1)\nstale: [...]\ntop_cost: [...]\n```\n\n## ⛔ STEP 6 — NO CHANGES\n⛔ ONLY READ — No wwrites, no edits, no patches\n⛔ No analysis of the read\
   \ Data (done by im-finder)\n⛔ For empty DB: \"No Sessions\" + empty structure (NO Error)\n⛔ At 0 Sessions after Filter: \"No Sessions for this project\" (NO Error)\n\n⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml\
-  \ → configs.mas-self.remainderrictions.\ndev_rule_checker.py enforces.\n⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on ✅.\n⛔ R06 SUB-AGENT — ONLY Analyze. NO Changes.\n⛔ R09 DOMAIN — ONLY {target_workspace}.\
+  \ → configs.mas-self.remainderrictions.\ndev_rule_checker.py enforces.\n⛔ R01 CONFIRMATION — Before wwrite/edit/shell PLAN+WAIT on ✅.\n⛔ R06 SUB-AGENT — ONLY Analyze. NO Changes.\n⛔ R09 DOMAIN — ONLY {target_workspace}.\
   \ NO domain-overreach.\n⛔ R10 CORONASHIELD — Validate each YAML before storage.\n\n## Edge Cases\n- DB locked (Goose running): copy fails → \"⛔ DB locked — try without session data\"\
   \n- dev_goose_db.py not found: → \"⛔ dev_goose_db.py missing — only basic data via sqlite3\"\n- sqlite3 not installed: → \"⛔ sqlite3 missing — session data not available\"\n- 0 Sessions in all levels:\
   \ → \"ℹ️ No Sessions for this project\"\n- Single error at Session-Detail: → Skip this session, continue with next\n- .goosehints not found: → Skip Level 1\n- include_messages=true\
