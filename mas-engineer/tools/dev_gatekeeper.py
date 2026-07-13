@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 dev_gatekeeper.py — Pre-Execute-Hook (R01 + R18 + R19 + R20 + R10 + R05 + Matrix)
-Will VOR jeder write/edit/shell/delete-action aufgerufen.
+Will be called BEFORE each write/edit/shell/delete action.
 BLOCKED if eine Rule verletzt ist.
 
 call: python3 dev_gatekeeper.py --write path --content "..."
@@ -190,7 +190,7 @@ def main():
 
     at = sys.argv[1].lstrip('-')
     if at not in ("write","edit","shell","delete"):
-        print(f"❌ Unbekannte action: {at}"); sys.exit(1)
+        print(f"❌ Unknown action: {at}"); sys.exit(1)
 
     global action_str; action_str = " ".join(sys.argv[2:])
     inhold = ""

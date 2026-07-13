@@ -85,13 +85,13 @@ def create_symlinks(project_path, dry_run=False):
                 ok(f"tools/ → Symlink exists already ({target})")
                 return True
             else:
-                warn(f"tools/ → Symlink points to {target}, not auf MAS")
-                info("Remove alten Symlink...")
+                warn(f"tools/ → Symlink points to {target}, not to MAS")
+                info("Remove old symlink...")
                 if not dry_run:
                     os.unlink(tools_dir)
         elif os.path.isdir(tools_dir):
-            warn(f"tools/ is a actual directory — skip")
-            info("Delete tools/ manuell und run --repair-symlinks aus")
+            warn(f"tools/ is an actual directory — skip")
+            info("Delete tools/ manually and run --repair-symlinks")
             return False
 
     if not dry_run:
@@ -101,7 +101,7 @@ def create_symlinks(project_path, dry_run=False):
 
 
 def create_project_config(project_path, project_name, dry_run=False):
-    """Creates project.yaml mit Metadaten — overwrites NEVER bestehende."""
+    """Creates project.yaml with metadata — never overwrites existing."""
     config_path = os.path.join(project_path, "project.yaml")
     if os.path.exists(config_path):
         info(f"project.yaml exists already — skipped")
@@ -130,7 +130,7 @@ def create_project_config(project_path, project_name, dry_run=False):
 
 
 def create_rules(project_path, dry_run=False):
-    """copyrt emptys Rule-System — overwrites NEVER bestehende."""
+    """Creates empty rule system — never overwrites existing."""
     rules_dir = os.path.join(project_path, ".state", "rules")
     rules_file = os.path.join(rules_dir, "rules.yaml")
     template_file = os.path.join(STATE_TEMPLATES, "user_rules_template.yaml")
@@ -175,7 +175,7 @@ def create_rules(project_path, dry_run=False):
 
 
 def create_guidelines(project_path, project_name_clean, dry_run=False):
-    """Creates 00-GUIDELINES.md — overwrites NEVER bestehende."""
+    """Creates 00-GUIDELINES.md — never overwrites existing."""
     guidelines_file = os.path.join(project_path, "00-GUIDELINES.md")
     if os.path.exists(guidelines_file):
         info(f"00-GUIDELINES.md exists already — skipped")
@@ -215,7 +215,7 @@ instructions: |
 ## Best Practices
 1. **Prompts**: < 300 Zeichen
 2. **Instructions**: < 2000 Zeichen
-3. **⛔-Rulen**: before jedem kritischen Step
+3. **⛔ Rules**: Run before each critical step
 4. **Version**: always in erster line
 5. **Namen**: sub_{{project}}-{function}
 
@@ -238,7 +238,7 @@ sub_mas-im-validator → validation
 
 ## Distribution
 ```bash
-dev_build.sh --project {project}   # → standalone ZIP ohne MAS
+dev_build.sh --project {project}   # → standalone ZIP without MAS
 ```
 """.format(VERSION=VERSION, project=project_name_clean, function="analyst")
 
@@ -250,12 +250,12 @@ dev_build.sh --project {project}   # → standalone ZIP ohne MAS
 
 
 def create_bp_checklist(project_path, dry_run=False):
-    """Creates BP-CHECKLIST.md mit 36 Feature-Typen — overwrites NEVER bestehende."""
+    """Creates BP-CHECKLIST.md with 36 feature types — never overwrites existing."""
     bp_target = os.path.join(project_path, 'BP-CHECKLIST.md')
     if os.path.exists(bp_target):
         info(f"BP-CHECKLIST.md exists already — skipped")
         return
-    # Copy aus Template (not hardcoded)
+    # Copy from template (not hardcoded)
     bp_template = os.path.join(STATE_TEMPLATES, 'bp_checklist.md')
     if os.path.exists(bp_template):
         if not dry_run:
@@ -269,12 +269,12 @@ def create_bp_checklist(project_path, dry_run=False):
 
 ## Settings optimization (typee A)
 - [ ] A1: timeout too low? (2+ timeouts in 10 calls?)
-- [ ] A2: max_steps too low? (will vor Abschluss erreicht?)
+- [ ] A2: max_steps too low? (will be reached before completion?)
 - [ ] A3: timeout too high? (Ø-Duration < 20% timeout?)
 - [ ] A4: max_steps too high? (Ø-Steps < 30% max?)
 
 ## Prompt-Quality (typee B)
-- [ ] B1: Prompt zu vage? (User asks 3× "what are you doing?")
+- [ ] B1: Prompt too vague? (User asks 3× "what are you doing?")
 - [ ] B2: Prompt too long? (> 500 Zeichen)
 - [ ] B3: Context missing? (Agent asks after Infos)
 - [ ] B4: Prompt ≠ Instructions? (Contradiction?)
@@ -292,7 +292,7 @@ def create_bp_checklist(project_path, dry_run=False):
 - [ ] D4: Unclear question?
 
 ## Detectionspattern (typee E)
-- [ ] E1: Command ohne Match?
+- [ ] E1: Command without match?
 - [ ] E2: pattern matcht wrong?
 - [ ] E3: Dead detection? (> 50 sessions no match)
 
@@ -346,7 +346,7 @@ def create_bp_checklist(project_path, dry_run=False):
 ## Structure (Type O)
 - [ ] O1: Instructions ≠ Ist-State?
 - [ ] O2: reference auf not-existente file?
-- [ ] O3: Veralteter Counter?
+- [ ] O3: Outdated counter?
 - [ ] O4: Hardcoded path?
 
 ## Tools (typee P)
@@ -361,7 +361,7 @@ def create_bp_checklist(project_path, dry_run=False):
 ## Git (typee R)
 - [ ] R1: Code reduziert? (✅ positivee)
 - [ ] R2: Code bloated? (⚠️ negativee)
-- [ ] R3: ⛔-Rulen vermehrt? (✅ Safety)
+- [ ] R3: ⛔ Rules increased? (✅ Safety)
 - [ ] R4: Prompt shortened? (✅ Token-Effizienz)
 - [ ] R5: New file? (⚠️ Only if needed)
 
@@ -446,7 +446,7 @@ def create_workflows(project_path, project_name_clean, dry_run=False):
         "project": project_name_clean,
         "workflows": {
             "build-test": {
-                "description": "Bauen und Test",
+                "description": "Build and Test",
                 "steps": [],
             },
             "analyse": {
@@ -547,7 +547,7 @@ def create_dashboard_scaffold(project_path, dry_run=False):
                 else:
                     warn(f".mas/mcp/ npm install: {r.stderr.strip()[:80]}")
             except FileNotFoundError:
-                warn(".mas/mcp/ npm: Node.js not installiert — npm install aboutsprungen")
+                warn(".mas/mcp/ npm: Node.js not installed — npm install skipped")
             except Exception as e:
                 warn(f".mas/mcp/ npm install failed: {str(e)[:80]}")
 
@@ -726,16 +726,16 @@ def copy_monitoring_files(project_path, dry_run=False):
 
 
 def create_goosehints(project_path, project_name_clean, dry_run=False):
-    """Creates .goosehints for Goose-Integration — overwrites NEVER bestehende."""
+    """Creates .goosehints for Goose-Integration — never overwrites existing."""
     goosehints_file = os.path.join(project_path, ".goosehints")
     if os.path.exists(goosehints_file):
         info(f".goosehints exists already — skipped")
         return
     content = f"""# .goosehints — Generic-Improver Integration
-# Dieses Projekt was mit dev_generic_init.py v{VERSION} initialized.
+# This project was initialized with dev_generic_init.py v{VERSION}.
 #
 # Tools via Symlink: tools/ → MAS-Installation
-# Analyse: Remote via im-* Agenten (sub_mas-im-pipeline)
+# Analysis: Remote via im-* agents (sub_mas-im-pipeline)
 # Distribution: dev_build.sh --project
 
 MAS_GENERIC_INIT_VERSION={VERSION}
@@ -744,9 +744,9 @@ MAS_TOOLS=symlink
 GOOSE_SESSION_TAG=[{project_name_clean}]
 
 # Session-Tagging:
-# Start jede Session mit [{project_name_clean}] ...
-# Der Generic-Improver filtert NUR these Sessions.
-# Ohne Tag: Fallback auf working_dir oder letzte not-MAS Sessions.
+# Start each session with [{project_name_clean}] ...
+# The Generic-Improver filters ONLY these sessions.
+# Without tag: Fallback to working_dir or last not-MAS sessions.
 """
     goosehints_file = os.path.join(project_path, ".goosehints")
     if not dry_run:
@@ -878,7 +878,7 @@ def cmd_init(project_name, dry_run=False, components="minimal"):
     if not dry_run:
         ok(f"Projekt '{project_name_clean}' initialized ({project_path})")
         ok(f"0 Agenten copyrt — Symlink + Guidelines statt copy")
-        info("tools/ → Symlink auf MAS-Installation")
+        ok("tools/ → Symlink to MAS installation")
         info("Analyse: remote via sub_mas-im-pipeline")
         info("Distribution: dev_build.sh --project → standalone ZIP")
         info("Dashboard: .mas/dashboards/ mit data.json for MCP App")
@@ -890,7 +890,7 @@ def cmd_init(project_name, dry_run=False, components="minimal"):
         info("  2. Optimiere mit sub_mas-im-pipeline (task=FULL_IMPROVEMENT)")
         info("  3. Distribuiere mit dev_build.sh --project")
         info("  4. Dashboard: goose session --with-extension 'node .mas/mcp/server.js'")
-        info("  5. Components nachinstallieren: --components rules,state,knowledge,constitution,recovery,monitoring")
+        info("  5. Install components: --components rules,state,knowledge,constitution,recovery,monitoring")
     return True
 
 
@@ -951,7 +951,7 @@ def cmd_bootstrap(project_name, dry_run=False, web_research=False):
     mas_tools = os.path.join(mas_source, "tools")
     dest_tools = os.path.join(project_path, "tools")
     if os.path.exists(dest_tools) and os.path.islink(dest_tools):
-        # Symlink durch echte files replace
+        # Replace symlink with actual files
         os.unlink(dest_tools)
     if not os.path.exists(dest_tools):
         os.makedirs(dest_tools, exist_ok=True)
@@ -1007,15 +1007,15 @@ def cmd_bootstrap(project_name, dry_run=False, web_research=False):
     header("✅ BOOTSTRAP ABGESCHLOSSEN")
     ok(f"Projekt '{project_name_clean}' is a complete MAS-framework")
     info("47 Sub-Agenten, 50+ Tools, Dashboard, Monitoring, Recovery")
-    info("Wechsel in das Directory und start Goose:")
+    info("Switch to the directory and start Goose:")
     info(f"  cd {project_path}")
     info(f"  goose run --recipe recipe/dev-mas-engineer.yaml")
     info(f"  oder: 'Zeig mir the framework Dashboard'")
     return True
 
 
-def cmd_status():
-    """Zeigt Status der MAS-Installation und Symlinks."""
+def show_status():
+    """Shows status of the MAS installation and symlinks."""
     header("MAS-Generic-Init Status")
     mas_state = get_mas_state()
 
@@ -1025,13 +1025,13 @@ def cmd_status():
     print(f"  SI-Agenten: {len(mas_state['si_agents'])}")
     print(f"  Tools: {len(mas_state['tools_list'])}")
 
-    # Check Symlinks im currentn Directory
+    # Check symlinks in current directory
     if os.path.exists("tools") and os.path.islink("tools"):
         target = os.readlink("tools")
         print(f"\nSymlink tools/ → {target}")
         print(f"  Valid: {'✅' if os.path.exists(target) else '❌'}")
     else:
-        print(f"\nNo Symlink im currentn Directory")
+        print(f"\nNo symlink in current directory")
 
     return True
 
@@ -1042,7 +1042,7 @@ def cmd_repair_symlinks():
     mas_state = get_mas_state()
 
     if not mas_state["tools_available"]:
-        error("MAS-Installation not found — can Symlink not reparieren")
+        error("MAS-Installation not found — cannot repair symlink")
         return False
 
     if os.path.exists("tools"):
@@ -1056,8 +1056,8 @@ def cmd_repair_symlinks():
             else:
                 ok("Symlink already correct")
         elif os.path.isdir("tools"):
-            error("tools/ is a actual directory — can not reparieren")
-            info("Delete tools/ und run --init again")
+            error("tools/ is an actual directory — cannot repair")
+            info("Delete tools/ and run --init again")
             return False
     else:
         os.symlink(MAS_TOOLS, "tools")

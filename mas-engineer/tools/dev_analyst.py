@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 """
-dev_analyst.py — 🔍 The quality checker des dev-mas-engineer
+dev_analyst.py — 🔍 The quality checker for the dev-mas-engineer
 ============================================================
 Version: 1.0.0
 Author: dev-mas-engineer (autonomous)
 
-Checks die Quality des frameworks:
-  - YAML-Syntax allr files
-  - File sizes und Anomalies
-  - settings-Completeness
-  - slash_command-Konflikte
+Checks the quality of the framework:
+  - YAML syntax of all files
+  - File sizes and anomalies
+  - settings completeness
+  - slash_command conflicts
   - UTF-8 encoding
 
-NOE framework-Dependency. Reine Standardlibrary.
+NO framework dependency. Pure standard library.
 
-VERWENDUNG:
-    python3 dev_analyst.py --check-all         # All Checks perform
-    python3 dev_analyst.py --yaml-syntax       # Only YAML-Syntax check
-    python3 dev_analyst.py --sizes             # Only File sizes check
+USAGE:
+    python3 dev_analyst.py --check-all         # Perform all checks
+    python3 dev_analyst.py --yaml-syntax       # Only YAML syntax check
+    python3 dev_analyst.py --sizes             # Only file sizes check
     python3 dev_analyst.py --settings          # Only settings check
     python3 dev_analyst.py --slashes           # Only slash_command check
 """
@@ -40,7 +40,7 @@ spec.loader.exec_module(observer)
 # ─────────────────────────────────────────────────────────
 
 def check_yaml_syntax(scanner: "observer.Scanner") -> str:
-    """Checks ALL YAML-files auf Syntax-Error."""
+    """Check all YAML files for syntax errors."""
     scanner._collect()
     
     python = sys.executable
@@ -70,16 +70,16 @@ def check_yaml_syntax(scanner: "observer.Scanner") -> str:
     out.append("")
     
     if errors:
-        out.append("  Errorhafte files:")
+        out.append("  Error files:")
         out.extend(errors)
     else:
-        out.append("  ✅ All YAML-files syntaktisch korrekt.")
+        out.append("  ✅ All YAML files syntactically correct.")
     
     return "\n".join(out)
 
 
 def check_sizes(scanner: "observer.Scanner") -> str:
-    """Checks File sizes auf Anomalies."""
+    """Check file sizes for anomalies."""
     scanner._collect()
     
     MAX_LINES = 800
@@ -110,7 +110,7 @@ def check_sizes(scanner: "observer.Scanner") -> str:
     out.append("")
     
     if too_small:
-        out.append(f"  ⚠️  Kla (< {MIN_LINES} lines):")
+        out.append(f"  ⚠️  Small (< {MIN_LINES} lines):")
         for f in too_small:
             out.append(f"      {f.rel_path} ({f.lines} lines)")
     
@@ -122,7 +122,7 @@ def check_sizes(scanner: "observer.Scanner") -> str:
         out.append(f"      {f.rel_path} ({f.lines} lines)")
     
     out.append("")
-    out.append("  📊 Top 5 smallste YAMLs:")
+    out.append("  📊 Top 5 smallest YAMLs:")
     for f in all_sorted[-5:]:
         out.append(f"      {f.rel_path} ({f.lines} lines)")
     
@@ -130,7 +130,7 @@ def check_sizes(scanner: "observer.Scanner") -> str:
 
 
 def check_settings(scanner: "observer.Scanner") -> str:
-    """Checks ob all YAMLs settings have."""
+    """Check if all YAMLs have settings."""
     scanner._collect()
     
     total = len(scanner.yamls)
@@ -145,7 +145,7 @@ def check_settings(scanner: "observer.Scanner") -> str:
     out.append("")
     
     if without:
-        out.append("  ⚠️  YAMLs ohne settings-Block:")
+        out.append("  ⚠️  YAMLs without settings block:")
         for y in without:
             out.append(f"      {y.rel_path}")
     else:
@@ -155,7 +155,7 @@ def check_settings(scanner: "observer.Scanner") -> str:
 
 
 def check_slashes(scanner: "observer.Scanner") -> str:
-    """Checks slash_command auf Konflikte."""
+    """Check slash_command for conflicts."""
     scanner._collect()
     
     cmds = {}
@@ -177,10 +177,10 @@ def check_slashes(scanner: "observer.Scanner") -> str:
         for cmd, paths in conflicts.items():
             out.append(f"      /{cmd}  →  {', '.join(paths)}")
     else:
-        out.append("  ✅ No Konflikte.")
+        out.append("  ✅ No conflicts.")
     
     out.append("")
-    out.append(f"  Eindeutige Commands ({len(unique)}):")
+    out.append(f"  Unique commands ({len(unique)}):")
     for cmd in sorted(unique.keys()):
         out.append(f"      /{cmd}")
     
@@ -246,7 +246,7 @@ def check_titles(scanner: "observer.Scanner") -> str:
 
 
 def check_all(scanner: "observer.Scanner") -> str:
-    """All Checks nacheinander."""
+    """Run all checks in sequence."""
     parts = []
     parts.append("#" * 60)
     parts.append(f"🔍 QUALITYS-ANALYSE")

@@ -4,7 +4,7 @@ dev_yaml_generator_generic.py — Generic-Version des YAML-Generators
 Generates sub_mas-*.yaml aus agent_schema.yaml (SOT) for User-Projekte.
 call: python3 dev_yaml_generator_generic.py --target <user-projekt> [--validate-only] [--diff]
   --target: Zieldirectory (User-Projekt)
-  --validate-only: Only validate ohne zu write
+  --validate-only: Only validate without writing
   --diff: Show Unterschiede zwischen generates und current
 """
 import os, sys, yaml

@@ -131,10 +131,10 @@ Each button: background #21262d, border #30363d, padding 8px 14px, border-radius
 
 if __name__ == "__main__":
     if not os.path.exists(STATUS_FILE):
-        print("ERROR: No Status-Data unter " + STATUS_FILE)
+        print("ERROR: No status data under " + STATUS_FILE)
         sys.exit(1)
     if not os.path.exists(SIGNAL_FILE):
-        print("ERROR: No Signal unter " + SIGNAL_FILE)
+        print("ERROR: No signal under " + SIGNAL_FILE)
         sys.exit(1)
     d = json.load(open(STATUS_FILE))
     sig = json.load(open(SIGNAL_FILE))

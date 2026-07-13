@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """dev_dashboard_refresh.py v1.0.0 — On-Demand Dashboard Generator
 =================================================================
-Will NUR auf User-Refresh aufgerufen. NO Daemon. NO Polling.
+Will be called on user refresh ONLY. NO daemon. NO polling.
 Generates Dashboard for den AKTUELLEN Workspace.
 
 call: python3 dev_dashboard_refresh.py

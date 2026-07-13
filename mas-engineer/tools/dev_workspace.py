@@ -30,7 +30,7 @@ from datetime import datetime
 try:
     import yaml
 except ImportError:
-    print("Error: yaml not installiert. pip3 install pyyaml")
+    print("Error: yaml not installed. pip3 install pyyaml")
     sys.exit(1)
 
 
@@ -118,7 +118,7 @@ def cmd_init_recovery(ws_dir):
             yaml.dump(d, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     ok("Phoenix-Recovery: immune, checkpoint, safezone, timeline, defib")
-    ok("checkpoints/.state/ angelegt")
+    ok("checkpoints/.state/ created")
 
 def cmd_init(ws_dir: str):
     """Workspace mit copy des installierten frameworks create."""
@@ -365,7 +365,7 @@ cd {ws} && python3 -m pytest framework/tests/ -q
         else:
             warn("Git: no commit (evtl. no Changes)")
     else:
-        warn("Git not available — Workspace ohne Versionierung")
+        warn("Git not available — Workspace without version control")
 
     log("")
     cmd_init_recovery(ws_dir)
@@ -870,7 +870,7 @@ description: 'v1.0.0 | framework: {description}'
 prompt: |
   {emoji} {display_name} (v1.0.0)
   ⛔ Reasonrulen:
-     1. NOTHING automatically anwenden
+     1. NOTHING automatically applied
      2. framework-governance.md beachten
   🎯 {description}
 
@@ -1417,7 +1417,7 @@ def main():
         if recipe:
             cmd_add_recipe(ws_dir, recipe)
         else:
-            error("No Recipe-Name angegeben")
+            info("No Recipe-Name specified")
     elif cmd == "--rollback" and ws_dir:
         cmd_rollback(ws_dir)
     elif cmd == "--project":
@@ -1429,9 +1429,9 @@ def main():
         if recipe:
             cmd_remove_recipe(recipe)
         else:
-            error("No Recipe-Name angegeben")
+            info("No Recipe-Name specified")
     else:
-        print(f"❌ Unbekannter Command: {cmd}")
+        print(f"❌ Unknown command: {cmd}")
         print(__doc__)
         sys.exit(1)
 

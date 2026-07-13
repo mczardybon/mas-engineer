@@ -32,7 +32,7 @@ from typing import Dict, List, Optional, Any, Tuple
 try:
     import yaml
 except ImportError:
-    print("❌ Error: pyyaml not installiert. pip3 install pyyaml")
+    print("❌ Error: pyyaml not installed. pip3 install pyyaml")
     sys.exit(1)
 
 # ──────────────────────────────────────────────
@@ -711,7 +711,7 @@ def refresh_agent(agent_name: str, dry_run: bool, workspace: str, sources: Optio
         with open(agent_path, "w", encoding="utf-8") as f:
             yaml.dump(agent_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
         
-        _update_changes_json(base, "REFRESH", f"Settings korrigiert in {agent_name}: timeout/max_steps auf Default")
+        _update_changes_json(base, "REFRESH", f"Settings corrected in {agent_name}: timeout/max_steps to default")
         print(f"  ✅ {agent_name} gefixed")
     
     return {

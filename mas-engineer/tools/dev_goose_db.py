@@ -309,7 +309,7 @@ def main():
     elif cmd == "--activity":
         cmd_activity()
     else:
-        print(f"❌ Unbekannt: {cmd}")
+        print(f"❌ Unknown: {cmd}")
         print(__doc__)
         sys.exit(1)
 

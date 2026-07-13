@@ -418,7 +418,7 @@ def main():
         print(json.dumps(results, indent=2, default=str))
         return
 
-    info("No Task angegeben. Nutze --batch, --group, oder --list-groups")
+    info("No Task specified. Use --batch, --group, or --list-groups")
     p.print_help()
 
 if __name__ == "__main__":

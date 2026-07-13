@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
 """
-dev_architect.py — 🧠 Das Gehirn des dev-mas-engineer
+dev_architect.py — 🧠 The brain of the dev-mas-engineer
 =====================================================
 Version: 1.0.0
 Author: dev-mas-engineer (autonomous)
 
-Erkennt pattern, Relationships und Gaps im framework.
-Nutz Rohdaten von dev_observer.py (oder scannt selbst).
+Detects patterns, relationships and gaps in the framework.
+Uses raw data from dev_observer.py (or scans itself).
 Adds NO framework knowledge (no SOTs, protocols, constitutions).
 
-NUTZT NUR structureelle Beobachtungen:
-  - Welche files exist?
-  - Welche Namen have sie?
-  - Welche Slash-Commands have sie?
-  - Wie are sie angeordnet?
+ONLY uses structural observations:
+  - Which files exist?
+  - What names do they have?
+  - What slash-commands do they have?
+  - How are they arranged?
 
-VERWENDUNG:
-    python3 dev_architect.py --analyze         # Komplette Architecture-Analyse
-    python3 dev_architect.py --quick            # Only Kern-Erknowledgese
-    python3 dev_architect.py --suggest          # Improvement suggestions generate
-    python3 dev_architect.py --impact <change> # Impact-Analyse for eine Change
+USAGE:
+    python3 dev_architect.py --analyze         # Complete architecture analysis
+    python3 dev_architect.py --quick            # Only core knowledge
+    python3 dev_architect.py --suggest          # Generate improvement suggestions
+    python3 dev_architect.py --impact <change> # Impact analysis for a change
 """
 
 import sys
 from pathlib import Path
 
-# Nutze dev_observer for Rohdaten
+# Use dev_observer for raw data
 OBSERVER_DIR = Path(__file__).parent / "dev_observer.py"
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -36,7 +36,7 @@ spec.loader.exec_module(observer)
 
 
 # ─────────────────────────────────────────────────────────
-# KERN-ANALYSE
+# CORE ANALYSIS
 # ─────────────────────────────────────────────────────────
 
 def analyze(scanner: "observer.Scanner") -> str:
@@ -45,7 +45,7 @@ def analyze(scanner: "observer.Scanner") -> str:
     
     out = []
     out.append("#" * 60)
-    out.append("🧠 ARCHITEKTUR-ANALYSE")
+    out.append("🧠 ARCHITECTURE ANALYSIS")
     out.append(f"🕐 {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     out.append("#" * 60)
     out.append("")

@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
 """
-dev_editor.py — ✏️ Die Hand des dev-mas-engineer
+dev_editor.py — ✏️ The hand of the dev-mas-engineer
 =================================================
 Version: 1.0.0
 Author: dev-mas-engineer (autonomous)
 
-Changes YAML-files im agent/ framework.
-Sicher: Backup VOR jeder Change, validation NACH jeder Change,
-Automatischer rollback bei Error.
+Changes YAML files in the agent/ framework.
+Safe: Backup BEFORE every change, validation AFTER every change,
+Automatic rollback on error.
 
-VERWENDUNG:
-    python3 dev_editor.py --patch <file> --von "<old>" --nach "<new>" --grund "<grund>"
+USAGE:
+    python3 dev_editor.py --patch <file> --from "<old>" --to "<new>" --reason "<reason>"
     python3 dev_editor.py --validate <file>
     python3 dev_editor.py --backup <file>
     python3 dev_editor.py --rollback <backup-dir> <file>
 
-BEISPIELE:
-    python3 dev_editor.py --patch "<workspace>/recipes/planner.yaml" \\
-        --von "max_steps: 300" --nach "max_steps: 150" \\
-        --grund "User-Request"
+EXAMPLES:
+    python3 dev_editor.py --patch "<workspace>/recipes/planner.yaml" \
+        --from "max_steps: 300" --to "max_steps: 150" \
+        --reason "User request"
 
     python3 dev_editor.py --validate "<workspace>/recipes/planner.yaml"
 
-NOE framework-Dependency. Reine Standardlibrary + subprocess.
+NO framework dependency. Pure standard library + subprocess.
 """
 
 import sys, os, subprocess, shutil, json, yaml, re
@@ -30,12 +30,12 @@ from pathlib import Path
 from datetime import datetime
 
 AGENT_DIR = None
-# --workspace <dir> has Vorrang
+# --workspace <dir> takes precedence
 for i, arg in enumerate(sys.argv):
     if arg == "--workspace" and i + 1 < len(sys.argv):
         AGENT_DIR = Path(sys.argv[i + 1]).resolve()
         break
-# Fallback: relativer Path from Tool aus
+# Fallback: relative path from tool
 if not AGENT_DIR:
     default = Path(__file__).parent.parent.parent.resolve()
     if (default / "recipes").exists() or any((d / "recipes").exists() for d in default.iterdir() if d.is_dir()):

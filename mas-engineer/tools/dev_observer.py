@@ -21,26 +21,26 @@ import os, sys, subprocess
 from pathlib import Path
 from datetime import datetime
 
-# Der agent/ directory ist im project-Root
-# tools/ liegt unter mas-engineer/tools/
+# The agent/ directory is in the project root
+# tools/ is under mas-engineer/tools/
 # Possible paths (depending on working directory):
-#   - Von tools/ aus:          ../../../
+#   - From tools/:                   ../../../
 #   - Von mas-engineer/ aus:   ../../
 #   - From project-Root aus:    .
 
 def resolve_agent_dir():
-    """Ermittelt AGENT_DIR — mit --workspace Support."""
-    # --workspace <dir> has Vorrang
+    """Determines AGENT_DIR — with --workspace support."""
+    # --workspace <dir> takes precedence
     for i, arg in enumerate(sys.argv):
         if arg == "--workspace" and i + 1 < len(sys.argv):
             ws = Path(sys.argv[i + 1]).resolve()
             if ws.exists():
                 return ws
-    # Fallback: relativer Path from Tool aus
+    # Fallback: relative path from tool
     default = Path(__file__).parent.parent.parent.resolve()
     if (default / "recipes").exists() or any((d / "recipes").exists() for d in default.iterdir() if d.is_dir()):
         return default
-    # Lastr Fallback
+    # Last fallback
     return Path.home() / ".config" / "goose" / "recipes"
 
 # modulesee-Level auf None gesetzt — will via get_agent_dir()/get_state_dir() lazy loaded
@@ -243,10 +243,10 @@ class Scanner:
             out.append(f"  /{y.slash_cmd:25s}  {y.rel_path} ({y.lines_total} Z)")
         out.append("")
         
-        # 3. YAMLs ohne Slash-Command
+        # 3. YAMLs without Slash-Command
         out.append(f"🔹 WITHOUT SLASH-COMMAND ({len(without_slash)})")
         out.append("━" * 40)
-        # Gruppieren after Directory
+        # Group by Directory
         groups = {}
         for y in without_slash:
             parent = str(Path(y.rel_path).parent)
@@ -263,8 +263,8 @@ class Scanner:
                 out.append(f"      {name}")
         out.append("")
         
-        # 4. Spezialistn
-        out.append(f"👥 SPEZIALISTEN ({len(specialists)})")
+        # 4. Specialists
+        out.append(f"👥 SPECIALISTS ({len(specialists)})")
         out.append("━" * 40)
         for y in sorted(specialists, key=lambda x: x.rel_path):
             name = Path(y.rel_path).stem.replace("specialist_", "")
@@ -305,7 +305,7 @@ class Scanner:
         # 9. Togetherfassung
         out.append("📦 SUMMARY")
         out.append("━" * 40)
-        out.append(f"  {len(yamls)} YAMLs ({len(with_slash)} mit, {len(without_slash)} ohne /)")
+        out.append(f"  {len(yamls)} YAMLs ({len(with_slash)} with, {len(without_slash)} without /)")
         out.append(f"  {len(specialists)} Spezialistn, {len(subs)} Sub-agents")
         out.append(f"  {len(mds)} Markdown, {len(pys)} Python")
         out.append(f"  {total_lines} lines Code/Doku")
@@ -328,7 +328,7 @@ class Scanner:
         out.append("📊 FRAMEWORK-OVERVIEW")
         out.append("━" * 40)
         out.append(f"  📁 {get_agent_dir().name}/  ({size:.0f} KB, {lines} lines)")
-        out.append(f"  📄 YAML:  {yamls}  ({with_slash} mit /, {yamls-with_slash} ohne)")
+        out.append(f"  📄 YAML:  {yamls}  ({with_slash} with /, {yamls-with_slash} without)")
         out.append(f"  👥 Spec:  {specialists}")
         out.append(f"  📋 Docs:  {mds}")
         out.append(f"  🐍 Py:    {pys}")

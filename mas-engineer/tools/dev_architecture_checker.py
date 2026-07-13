@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 dev_architecture_checker.py — Checks ob eine Change die MAS-Architektur betrifft (R15).
-Will von dev_rule_checker.py bei --check-architecture aufgerufen.
+Will be called FROM dev_rule_checker.py at --check-architecture.
 
 Architektur-Changes (must User absegnen):
   1. Neuen Agent/Tool create (CREATE)

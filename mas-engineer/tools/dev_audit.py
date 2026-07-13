@@ -105,7 +105,7 @@ def main():
     elif m == "--status": status()
     elif m == "--unlock": unlock()
     elif m == "--violations": violations()
-    else: print(f"❌ Unbekannt: {m}"); sys.exit(1)
+    else: print(f"❌ Unknown: {m}"); sys.exit(1)
 
 if __name__ == "__main__":
     main()

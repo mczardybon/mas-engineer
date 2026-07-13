@@ -1,18 +1,18 @@
-#!/usr/bin/env python3
-"""dev_agent_doctor.py — framework-Agent-Optimierer v1.0.0
+"""
+dev_agent_doctor.py — framework Agent Optimizer v1.0.0
 ============================================================
-Scant, bevaluest und optimiert framework-agents gegen Best-Practices.
-Nutzt MAS-Wissen (best-practices.yaml + framework-best-practices.yaml) um
-framework-agents automatically zu verbettern.
+Scans, evaluates and optimizes framework agents against best practices.
+Uses MAS knowledge (best-practices.yaml + framework-best-practices.yaml) to
+automatically improve framework agents.
 
 Usage:
-  python3 dev_agent_doctor.py                    All framework-agents scannen
+  python3 dev_agent_doctor.py                    Scan all framework-agents
   python3 dev_agent_doctor.py --agent recording  Only recording.yaml
   python3 dev_agent_doctor.py --scan             Deep Scan + Score
-  python3 dev_agent_doctor.py --fix              Automatic fixen
-  python3 dev_agent_doctor.py --watch            All 5 Min scannen
-  python3 dev_agent_doctor.py --export           Report als JSON
-  python3 dev_agent_doctor.py --help             Hilfe
+  python3 dev_agent_doctor.py --fix              Auto-fix
+  python3 dev_agent_doctor.py --watch            Scan all 5 min
+  python3 dev_agent_doctor.py --export           Report as JSON
+  python3 dev_agent_doctor.py --help             Help
 """
 
 import argparse, json, os, re, sys, time
@@ -23,7 +23,7 @@ from typeing import List, Dict, Optional
 try:
     import yaml
 except ImportError:
-    print("Error: yaml not installiert. pip3 install pyyaml")
+    print("Error: yaml not installed. pip3 install pyyaml")
     sys.exit(1)
 
 # ─── constantn ──────────────────────────────────────────────
@@ -32,7 +32,7 @@ TOOLS_DIR = Path(__file__).parent.resolve()
 STATE_DIR = TOOLS_DIR.parent / ".state"
 
 def get_framework_path(project_name=None):
-    """Determine Path to the framework-project (active oder benannt)."""
+    """Determine path to the framework-project (active or named)."""
     pp = WORKSPACE / "framework" / ".projects.yaml"
     if pp.exists():
         import yaml; data = yaml.safe_load(open(pp))
@@ -67,7 +67,7 @@ def info(msg): print(f"  {C['B']}..{ C['NC']} {msg}")
 def err(msg):  print(f"  {C['R']}XX{ C['NC']} {msg}")
 
 def load_best_practices():
-    """Load oder create framework-best-practices.yaml."""
+    """Load or create framework-best-practices.yaml."""
     if not BP_FILE.exists():
         STATE_DIR.mkdir(parents=True, exist_ok=True)
         bp = {
@@ -76,39 +76,39 @@ def load_best_practices():
             "best_practices": {
                 "prompt": [
                     {"id": "FW-P-001", "rule": "prompt contains tier-Markierung (standard/fast/deep)",
-                     "severity": "kritisch", "check": "contains", "values": ["(standard)", "(fast)", "(deep)"]},
+                     "severity": "critical", "check": "contains", "values": ["(standard)", "(fast)", "(deep)"]},
                     {"id": "FW-P-002", "rule": "prompt <= 800 Zeichen (not 2000+)",
-                     "severity": "wichtig", "check": "prompt_length", "max": 800},
+                     "severity": "important", "check": "prompt_length", "max": 800},
                 ],
                 "settings": [
                     {"id": "FW-S-001", "rule": "timeout 300-600 (not >900)",
-                     "severity": "wichtig", "check": "range", "path": "settings.timeout", "min": 300, "max": 600},
+                     "severity": "important", "check": "range", "path": "settings.timeout", "min": 300, "max": 600},
                     {"id": "FW-S-002", "rule": "max_steps <= 50 (no loopn)",
                      "severity": "kritisch", "check": "yaml_lte", "path": "settings.max_steps", "max": 50},
-                    {"id": "FW-S-003", "rule": "core-agents timeout 60-120 (schneller Start)",
-                     "severity": "kritisch", "check": "range", "path": "settings.timeout", "min": 60, "max": 120},
+                    {"id": "FW-S-003", "rule": "core-agents timeout 60-120 (faster start)",
+                     "severity": "critical", "check": "range", "path": "settings.timeout", "min": 60, "max": 120},
                 ],
                 "structure": [
                     {"id": "FW-ST-001", "rule": "instructions has Input-Block (signal, request_id, from, to)",
-                     "severity": "kritisch", "check": "contains_all", "values": ["signal:", "request_id:", "from:", "to:"]},
+                     "severity": "critical", "check": "contains_all", "values": ["signal:", "request_id:", "from:", "to:"]},
                     {"id": "FW-ST-002", "rule": "instructions referenceiert only existing files",
-                     "severity": "kritisch", "check": "file_refs_exist", "extensions": [".md", ".yaml"]},
+                     "severity": "critical", "check": "file_refs_exist", "extensions": [".md", ".yaml"]},
                     {"id": "FW-ST-003", "rule": "instructions has Constitution-reference",
-                     "severity": "wichtig", "check": "contains", "values": ["constitution"]},
+                     "severity": "important", "check": "contains", "values": ["constitution"]},
                 ],
                 "tests": [
                     {"id": "FW-T-001", "rule": "Agent has pytest in tests/",
-                     "severity": "wichtig", "check": "test_exists", "prefix": ""},
+                     "severity": "important", "check": "test_exists", "prefix": ""},
                 ]
             }
         }
         yaml.dump(bp, open(BP_FILE, "w"), default_flow_style=False, allow_unicode=True)
-        info(f"Knowledge-Base creates: {BP_FILE}")
+        info(f"Knowledge-Base created: {BP_FILE}")
         return bp
     return yaml.safe_load(open(BP_FILE))
 
 def find_framework_agents() -> List[Path]:
-    """Finde all YAML-Rezepte im framework."""
+    """Find all YAML recipes in the framework."""
     agents = []
     for sub in ["core", "specialists", "sub"]:
         d = FRAMEWORK_RECIPES / sub
@@ -117,14 +117,14 @@ def find_framework_agents() -> List[Path]:
     return agents
 
 def scan_agent(file_path: Path, bp: dict) -> dict:
-    """Scanne a agents gegen Best Practices."""
+    """Scan agents against best practices."""
     name = file_path.stem
     try:
         content = file_path.read_text(encoding="utf-8")
         data = yaml.safe_load(content)
     except Exception as e:
         return {"name": name, "score": 0, "passed": 0, "failed": 0, "total": 0,
-                "findings": [{"id": "PARSE", "rule": f"YAML-Error: {e}", "status": "XX", "severity": "kritisch"}],
+                "findings": [{"id": "PARSE", "rule": f"YAML-Error: {e}", "status": "XX", "severity": "critical"}],
                 "status": "rot dead", "error": str(e)}
 
     findings = []
@@ -135,7 +135,7 @@ def scan_agent(file_path: Path, bp: dict) -> dict:
         for p in practices:
             pid = p["id"]
             rule = p.get("rule", "?")
-            severity = p.get("severity", "wichtig")
+            severity = p.get("severity", "important")
             check = p.get("check", "contains")
             checked = False
 
@@ -197,7 +197,7 @@ def scan_agent(file_path: Path, bp: dict) -> dict:
             "findings": findings, "status": s}
 
 def full_scan(bp: dict, agent_filter: Optional[str] = None) -> List[dict]:
-    """Scanne all (oder gefilterte) agents."""
+    """Scan all (or filtered) agents."""
     agents = find_framework_agents()
     if not agents:
         err("No framework-agents found")
@@ -222,14 +222,14 @@ def show_report(results: List[dict]):
         print(f"  {i:2d}. {r['name']:<25} {sc}{r['score']:>3}{C['NC']}/100  {r.get('status','?')}")
         for f in r.get("findings", []):
             if f["status"] == "XX":
-                sev = C['R'] if f['severity'] == 'kritisch' else C['Y']
+                sev = C['R'] if f['severity'] == 'critical' else C['Y']
                 print(f"       {sev}{f['id']}{C['NC']}: {f['rule'][:70]}")
     scores = [r["score"] for r in results if "score" in r]
     if scores:
         avg = sum(scores) / len(scores)
         tp = sum(r.get("passed", 0) for r in results)
         tf = sum(r.get("failed", 0) for r in results)
-        print(f"\n  Total: {avg:.1f}/100  {tp}/{tp+tf} Checks bestanden")
+        print(f"\n  Total: {avg:.1f}/100  {tp}/{tp+tf} Checks passed")
         print(f"  Recommendation: {'--fix' if tf > 0 else 'Everything OK'}")
 
 def auto_fix(results: List[dict], bp: dict, agent_filter: Optional[str] = None):
@@ -276,9 +276,9 @@ def auto_fix(results: List[dict], bp: dict, agent_filter: Optional[str] = None):
             fp.rename(bak)
             fp.write_text(content, encoding="utf-8")
             changes.append(r["name"])
-            ok(f"{r['name']}: Fixes angewendet (Backup: {bak.name})")
+            ok(f"{r['name']}: Fixes applied (Backup: {bak.name})")
     if not changes:
-        info("No automatischen Fixes anwendbar")
+        info("No automatic fixes applicable")
 
 def watch_mode(bp: dict, interval: int = 300):
     """Watch-Mode: all N seconds scannen."""
@@ -349,7 +349,7 @@ def check_mas_agent(file_path: Path, bp: dict) -> dict:
     elif has_specialist_result:
         failed += 1; checks.append({"check": "output_format", "status": "XX", "detail": "specialist_result: (framework-Format!)"})
     else:
-        failed += 1; checks.append({"check": "output_format", "status": "XX", "detail": "Weder mas_result: still specialist_result:"})
+        failed += 1; checks.append({"check": "output_format", "status": "XX", "detail": "Neither mas_result: nor specialist_result:"})
     
     # C4: Mindestens 6 ⛔-Rulen
     shield_count = content.count("⛔")
@@ -395,17 +395,17 @@ def apply_lessons(results: List[dict], dry_run: bool = False, skip: Optional[Lis
             for c in r.get("checks", []):
                 if c["status"] == "XX":
                     info(f"  [DRY-RUN] {r['name']}: {c['detail']} -> dev_editor.py")
-        info("Trockenlauf finished - no Changeen")
+        info("Dry-run finished - no changes")
     else:
         total = sum(r.get("failed", 0) for r in results)
-        info(f"{total} Issues in {len(results)} agents - manuelle Bearbeitung via dev_editor.py")
+        info(f"{total} Issues in {len(results)} agents - manual editing via dev_editor.py")
     return []
 def show_apply_report(results: List[dict], dry_run: bool = False):
     """Show --apply-lessons Report."""
     print(f"\n{C['BD']}AGENT DOCTOR — MAS Apply-Lessons Report{C['NC']}")
     print(f"{'='*50}")
     print(f"  Zeit:   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"  mode:  {'DRY-RUN (only anshow)' if dry_run else 'AKTIV (mit Changes)'}")
+    print(f"  mode:  {'DRY-RUN (only show)' if dry_run else 'ACTIVE (with changes)'}")
     print(f"  Agents: {len(results)}")
     print()
     for i, r in enumerate(sorted(results, key=lambda x: x.get("score", 0)), 1):
@@ -420,9 +420,9 @@ def show_apply_report(results: List[dict], dry_run: bool = False):
     total_p = sum(r.get("passed", 0) for r in results)
     total_f = sum(r.get("failed", 0) for r in results)
     total_t = total_p + total_f
-    print(f"\n  Total: {avg:.1f}/100  {total_p}/{total_t} Checks bestanden ({total_f} offen)")
+    print(f"\n  Total: {avg:.1f}/100  {total_p}/{total_t} Checks passed ({total_f} open)")
     if dry_run:
-        print(f"  Laufen: python3 dev_agent_doctor.py --apply-lessons")
+        print(f"  Run: python3 dev_agent_doctor.py --apply-lessons")
 
 def main():
     p = argparse.argumentParser(description="dev_agent_doctor.py v1.0.0")
@@ -430,18 +430,18 @@ def main():
     p.add_argument("--project", typee=str, help="projectname (default: active)")
     p.add_argument("--all-projects", action="store_true", help="All projecte scannen")
     p.add_argument("--scan", action="store_true", help="Deep Scan")
-    p.add_argument("--fix", action="store_true", help="Automatic fixen")
-    p.add_argument("--watch", typee=int, nargs="?", const=300, help="Watch-Mode (Sek)")
+    p.add_argument("--fix", action="store_true", help="Automatic fix")
+    p.add_argument("--watch", typee=int, nargs="?", const=300, help="Watch-Mode (sec)")
     p.add_argument("--export", action="store_true", help="JSON-Export")
-    p.add_argument("--apply-lessons", action="store_true", help="Self-Improve-Lessons auf MAS-agents anwenden")
-    p.add_argument("--dry-run", action="store_true", help="Only anshow, nothing change")
+    p.add_argument("--apply-lessons", action="store_true", help="Apply Self-Improve-Lessons to MAS-agents")
+    p.add_argument("--dry-run", action="store_true", help="Only show, nothing change")
     p.add_argument("--skip", typee=str, help="Checks skip (kommasepariert: autonomie,settings,shield)")
     p.add_argument("--version", action="store_true", help="Version")
     args = p.parse_args()
     if args.apply_lessons:
         if not MAS_BP_FILE.exists():
             err(f"No Best-Practices found: {MAS_BP_FILE}")
-            err("Run first Self-Improvement aus.")
+            err("Run first Self-Improvement.")
             return
         bp = yaml.safe_load(open(MAS_BP_FILE))
         agents = find_mas_agents()
@@ -455,8 +455,8 @@ def main():
                 continue
             results.append(check_mas_agent(af, bp))
         show_apply_report(results, dry_run=args.dry_run)
-        info(f"  {len(results)} agents checked - {sum(r.get('failed',0) for r in results)} Issues offen")
-        info(f"  YAML-Schreib-Operation delegiert an: dev_editor.py --apply-lessons")
+        info(f"  {len(results)} agents checked - {sum(r.get('failed',0) for r in results)} Issues open")
+        info(f"  YAML write operation delegated to: dev_editor.py --apply-lessons")
         apply_lessons(results, dry_run=True, skip=skip_list)
         return
     if args.version:

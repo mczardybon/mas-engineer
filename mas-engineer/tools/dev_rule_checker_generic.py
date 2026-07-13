@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 dev_rule_checker_generic.py — method 9: Deterministischer Rule-Test (Generic)
-Will VOR jeder write/edit/shell action aufgerufen.
-Blocked actionen bei Hardening 5 ohne Confirmation.
+Will be called BEFORE each write/edit/shell action.
+Blocked actions at Hardening 5 without confirmation.
 Exit-Code 0 = OK, Exit-Code 1 = BLOCKED
 
 Generic: No MAS-Dependencies. Loads User-Rulen aus .state/rules/rules.yaml.
@@ -33,7 +33,7 @@ def check_confirmation():
 
 
 def _check_tests(action):
-    """Leads pytest aus und blocked if Tests fehlschlagen."""
+    """Runs pytest and blocks if tests fail."""
     import subprocess as _sp, os as _os
     cwd = _os.getcwd()
     # Check ob pytest exists
@@ -56,10 +56,10 @@ def _check_tests(action):
     except _sp.TimeoutExpired:
         return True, "Timeout (10s)"
     except FileNotFoundError:
-        return True, "pytest not installiert"
+        return True, "pytest not installed"
 
 def _get_project_profile(action=""):
-    """Ermittelt Projekt-Profil (small/medium/large) anhand file-Number."""
+    """Determines project profile (small/medium/large) based on file count."""
     import os as _os
     cwd = _os.getcwd()
     total = 0
@@ -184,7 +184,7 @@ def cmd_health():
 
 
 def _run_main_safe():
-    """Graceful degradation bei Errorn."""
+    """Graceful degradation on errors."""
     import sys, os, yaml, time, json, argparse
     action = " ".join(sys.argv[2:]) if len(sys.argv) > 2 else ""
     try:

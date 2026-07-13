@@ -177,7 +177,7 @@ def resolve_spec(spec):
     elif spec.endswith(".yaml"):
         filenames.append(spec)
     else:
-        warnings.append(f"Unbekannte Spezifikation: {spec}")
+        warnings.append(f"Unknown specification: {spec}")
 
     seen = set()
     unique = []
@@ -326,7 +326,7 @@ def main():
     elif cmd == "--cleanup-hidden":
         cmd_cleanup_hidden()
     else:
-        print(f"❌ Unbekannt: {cmd}")
+        print(f"❌ Unknown: {cmd}")
         print(__doc__)
         sys.exit(1)
 

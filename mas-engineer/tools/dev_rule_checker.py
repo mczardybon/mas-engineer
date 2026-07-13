@@ -379,7 +379,7 @@ def check_rule(rule_id, action=""):
             for pattern in install_patterns:
                 if pattern in akt:
                     return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
-                            "detail": "Install-Path verwendet — korrekt", "action": "OK"}
+                            "detail": "Install path used — correct", "action": "OK"}
             # CHECK 3: Source path (BLOCKED)
             source_patterns = ["mas-engineer/tools/", "mas-engineer/tools/dev_"]
             for pattern in source_patterns:
@@ -388,7 +388,7 @@ def check_rule(rule_id, action=""):
                             "detail": f"Source-Path erkannt ('{pattern}')! Nutze $MAS_TOOLS_DIR (Install-Path) statt Source",
                             "action": "BLOCKED"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
-                    "detail": "No Tool-call erkannt — R19 not anwendbar", "action": "OK"}
+                    "detail": "No tool-call detected — R19 not applicable", "action": "OK"}
 
         if rule_id == "R18":
             """DELEGATION DUTY: NEVER shell/write/edit yourself if sub-agent exists"""
@@ -397,7 +397,7 @@ def check_rule(rule_id, action=""):
             ist_selbst_mach = any(x in akt for x in ["shell", "write", "edit"])
             if not ist_selbst_mach:
                 return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
-                        "detail": "No shell/write/edit action — R18 not anwendbar", "action": "OK"}
+                        "detail": "No shell/write/edit action — R18 not applicable", "action": "OK"}
 
             # Check ob a passender Sub-Agent exists
             wf_path = os.path.join(BASE_DIR, ".state/workflows.yaml")
@@ -476,7 +476,7 @@ if __name__ == "__main__":
         if args.mode == "mas":
             r09_result = check_rule("R09", args.action or "")
             resultse = [r09_result]
-            # ALL anderen Rulen (ohne Duplikate via ID)
+            # ALL other rules (without duplicates via ID)
             gesehene_ids = {"R09", "R19"}
             for idx, r in enumerate(active_rules):
                 rid = r.get("id", f"G{idx:02d}")

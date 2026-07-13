@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 dev_write_filter.py — Write filter (content check before writing)
-Will VOM GATEKEEPER aufgerufen.
+Will be called FROM GATEKEEPER.
 Checks: Target-Path, YAML-Syntax, Encoding, Duplikate.
 
 call: python3 dev_write_filter.py --file path --content "content"

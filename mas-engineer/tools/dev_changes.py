@@ -16,7 +16,7 @@ VERWENDUNG:
     python3 dev_changes.py --rollback <id>           # rollback-Command generate
     python3 dev_changes.py --help                    # This help anshow
 
-NOE framework-Dependency. Reine Standardlibrary.
+NO framework dependency. Pure standard library.
 """
 
 import json, sys, os
@@ -282,7 +282,7 @@ def main():
         reason = sys.argv[3] if len(sys.argv) > 3 else ""
         print(mark_rolled_back(sys.argv[2], reason))
     else:
-        print(f"❌ Unbekannter Command: {cmd}")
+        print(f"❌ Unknown command: {cmd}")
         sys.exit(1)
 
 

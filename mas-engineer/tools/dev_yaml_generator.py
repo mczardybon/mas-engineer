@@ -6,7 +6,7 @@ call:
   
   --mode mas (default):  Nutzt .state/templates/agent_schema.yaml, writes after recipe/sub/
   --mode generic:        Nutzt --target/.state/templates/agent_schema.yaml, writes after --target/sub/
-  --validate-only:       Only validate ohne zu write
+  --validate-only:       Only validate without writing
   --diff:                Show Unterschiede zwischen generates und current
   --write:               Write generatede YAMLs (Default: only validate)
 """

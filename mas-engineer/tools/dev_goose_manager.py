@@ -256,7 +256,7 @@ def cmd_clear(what: str, force: bool):
         return
 
     if what not in targets:
-        print(f"❌ Unbekannt: {what}")
+        print(f"❌ Unknown: {what}")
         sys.exit(1)
 
     path, label = targets[what]

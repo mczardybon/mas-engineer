@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """dev_dashboard_data.py v1.0.0 — Dashboard Data Generator for MCP App
 ======================================================================
-Liest Monitoring-Data und writes JSON for the framework-Dashboard.
+Liest Monitoring data and writes JSON for the framework dashboard.
 Will via Goose Scheduler all 5 Min OR auf User-Refresh ausgeleads.
 
 Output: {workspace}/.mas/dashboards/data.json
