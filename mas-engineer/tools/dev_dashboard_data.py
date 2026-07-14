@@ -51,13 +51,23 @@ def get_git_log(path, count=10):
 
 def generate_data(ws):
     ws_abs = os.path.abspath(ws)
-    state_dir = os.path.join(ws_abs, 'mas-engineer', '.state')
-    dash_dir = os.path.join(ws_abs, '.mas', 'dashboards')
-    sub_dir = os.path.join(ws_abs, 'mas-engineer', 'recipe', 'sub')
-    dist_dir = os.path.join(ws_abs, 'dist')
-    docs_dir = os.path.join(ws_abs, 'mas-engineer', 'docs')
+    # Find the mas-engineer workspace (may be ws itself or ws/mas-engineer)
+    if os.path.isdir(os.path.join(ws_abs, 'recipe')):
+        # ws is already the mas-engineer directory
+        mas_root = ws_abs
+    elif os.path.isdir(os.path.join(ws_abs, 'mas-engineer', 'recipe')):
+        # ws is the parent of mas-engineer
+        mas_root = os.path.join(ws_abs, 'mas-engineer')
+    else:
+        mas_root = ws_abs
 
-    mode_file = os.path.join(ws_abs, '.mas-mode')
+    state_dir = os.path.join(mas_root, '.state')
+    dash_dir = os.path.join(mas_root, '.mas', 'dashboards')
+    sub_dir = os.path.join(mas_root, 'recipe', 'sub')
+    dist_dir = os.path.join(mas_root, 'dist')
+    docs_dir = os.path.join(mas_root, 'docs')
+
+    mode_file = os.path.join(mas_root, '.mas-mode')
     mode = open(mode_file).read().strip() if os.path.exists(mode_file) else 'mas'
 
     # ─── AGENTS ───
