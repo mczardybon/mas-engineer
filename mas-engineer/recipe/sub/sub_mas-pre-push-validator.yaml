@@ -29,7 +29,7 @@ instructions: |
 
   ## Procedure VALIDATE
 
-  Run the following 7 checks IN ORDER. Stop at the first failure if a hard
+  Run the following 8 checks IN ORDER. Stop at the first failure if a hard
   block is detected, but always collect all warnings.
 
   ### Check 1: P1 (high-severity) findings = 0
@@ -111,6 +111,17 @@ instructions: |
   git status --porcelain | head -20
   ```
   **Warning if:** uncommitted changes (push might miss them, but not blocked).
+
+  ### Check 8: No "missing Goose mechanism" anti-pattern (L01 from lessons-learned.md)
+  Catches the class of bug where im-designer proposes reimplementing a native
+  Goose mechanism (e.g. "add load on demand" when summon extension exists).
+  ```bash
+  cd $WORKSPACE
+  # Scan uncommitted/pushed changes for "missing mechanism" claims
+  python3 tools/dev_goose_expert_check.py --check-mechanism "$(git diff HEAD~1 -- recipe/ tools/ 2>/dev/null | head -200)"
+  ```
+  **Block if:** any "missing Goose mechanism" pattern found in uncommitted
+  or recently-pushed code/docs. See `docs/lessons-learned.md` L01.
 
   ## Output Format
 

@@ -86,13 +86,15 @@ instructions: |
   6. If verdict is `RESTRICTED`: include the caveat in the finding.issue text.
   7. If verdict is `CONFORM`: proceed normally.
 
-  **Why this is mandatory:**
+  ## Why this is mandatory:
   - Without goose-expert, im-finder reports architectural issues as "missing mechanisms" when
     in fact Goose already provides them (e.g. summon extension for "load on demand").
   - im-finder MUST not propose changes that violate Goose's rules or duplicate its native
     capabilities.
   - **Citation:** https://goose-docs.ai/docs/mcp/summon-mcp/ — "The Summon extension lets
     you load knowledge into goose's context and delegate tasks to subagents."
+  - See also: `docs/lessons-learned.md` L01-L03, and `tools/dev_goose_expert_check.py`
+    which automatically detects the "missing mechanism" anti-pattern.
 
   ⛔ FAILING TO SUMMON GOOSE-EXPERT = finding is REJECTED downstream by im-validator.
 
@@ -303,8 +305,14 @@ instructions: |
   2. IF mode == "mas": ANALYZE {workspace}/mas-engineer/ for ALL 53 types A-MM
   3. ELSE: ANALYZE {workspace}/ for ALL 53 types A-MM
   4. For each finding matching STEP 0.5 prefix list → ⛔ SUMMON sub_mas-goose-expert FIRST
-  5. WRITE findings to .state/pipeline/findings.yaml
-  6. RETURN signal=DONE with summary {total: int, by_type: dict, by_severity: dict, with_goose_verdict: int}
+  5. **⛔ AUTOMATIC L01 CHECK:** Before writing findings.yaml, run:
+     ```bash
+     python3 tools/dev_goose_expert_check.py --findings /tmp/draft_findings.yaml
+     ```
+     Any conflict = the finding is REWRITTEN to reference the native Goose mechanism
+     instead of proposing a custom implementation.
+  6. WRITE findings to .state/pipeline/findings.yaml
+  7. RETURN signal=DONE with summary {total: int, by_type: dict, by_severity: dict, with_goose_verdict: int}
 
   ## Severity Levels
   - 🔴 high (P1): breaks function, blocks work, security risk

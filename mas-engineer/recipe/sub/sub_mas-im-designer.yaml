@@ -84,6 +84,8 @@ instructions: |
     native architecture.
   - **The new STEP 0.5 is the ONLY way to know if a patch is actually
     needed or if Goose already has the mechanism.**
+  - See also: `docs/lessons-learned.md` L01-L03, and `tools/dev_goose_expert_check.py`
+    which automatically detects the "missing mechanism" anti-pattern.
 
   ⛔ FAILING TO SUMMON GOOSE-EXPERT = patch is REJECTED by im-validator downstream.
 
@@ -120,6 +122,14 @@ instructions: |
   3. Old value (current in file)
   4. New value (calculated after Type-Logic)
   5. Reason (Why this change? — MUST include goose-expert verdict from STEP 0.5)
+
+  ## STEP 1.5 — AUTOMATIC L01 CHECK (codifies L01 lessons-learned.md)
+  Before writing patches.yaml, run:
+  ```bash
+  python3 tools/dev_goose_expert_check.py --patches /tmp/draft_patches.yaml
+  ```
+  Any conflict = the patch is REWRITTEN to use the native Goose mechanism
+  (e.g. change "add load on demand" to "add `summon` extension to extensions:").
 
   ### Type-specific Patch-Logic (A-JJ):
   - A1: timeout → current × 1.5, max 3600
