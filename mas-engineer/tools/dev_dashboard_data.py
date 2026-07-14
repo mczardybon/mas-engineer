@@ -248,20 +248,22 @@ def generate_data(ws):
     }
 
 
-def send_dashboard_notification(data: dict = None):
+def send_dashboard_notification(data: dict = None, workspace: str = None):
     """Send MCP notification for realtime dashboard updates
-    
+
     This notifies the Goose UI dashboard to refresh its display.
     Call this after writing new data.json.
     """
-    import os
-    # Write a flag file that can be detected by MCP
-    flag_file = os.path.join(
-        os.environ.get('MAS_WORKSPACE', '.'),
-        '.mas', 'dashboards', '.updated'
-    )
+    import time
+    ws = workspace or os.environ.get('MAS_WORKSPACE', '.')
+    if ws == '.':
+        # Try to find correct workspace
+        if os.path.exists('/tmp/mas-engineer'):
+            ws = '/tmp/mas-engineer'
+    flag_dir = os.path.join(ws, '.mas', 'dashboards')
+    os.makedirs(flag_dir, exist_ok=True)
+    flag_file = os.path.join(flag_dir, '.updated')
     with open(flag_file, 'w') as f:
-        import time
         f.write(str(int(time.time())))
     return True
 
@@ -290,7 +292,7 @@ def main():
                    "build_size": data.get('build', {}).get('latest_size_kb', [])}, f, indent=2)
 
     # Send notification for realtime updates
-    send_dashboard_notification(data)
+    send_dashboard_notification(data, workspace=ws_abs)
 
     print(f"[OK] Dashboard Data written: {data_path}")
     print(f"   Agents: {data['agents']['total']} | Changes: {data['changes']['total']} | "

@@ -18,7 +18,7 @@ Usage:
 import argparse, json, os, re, sys, time
 from pathlib import Path
 from datetime import datetime
-from typeing import List, Dict, Optional
+from typing import List, Dict, Optional
 
 try:
     import yaml
@@ -425,17 +425,17 @@ def show_apply_report(results: List[dict], dry_run: bool = False):
         print(f"  Run: python3 dev_agent_doctor.py --apply-lessons")
 
 def main():
-    p = argparse.argumentParser(description="dev_agent_doctor.py v1.0.0")
-    p.add_argument("--agent", typee=str, help="Only determinesen agents")
-    p.add_argument("--project", typee=str, help="projectname (default: active)")
-    p.add_argument("--all-projects", action="store_true", help="All projecte scannen")
+    p = argparse.ArgumentParser(description="dev_agent_doctor.py v1.0.0")
+    p.add_argument("--agent", type=str, help="Only determine specific agents")
+    p.add_argument("--project", type=str, help="project name (default: active)")
+    p.add_argument("--all-projects", action="store_true", help="Scan all projects")
     p.add_argument("--scan", action="store_true", help="Deep Scan")
     p.add_argument("--fix", action="store_true", help="Automatic fix")
-    p.add_argument("--watch", typee=int, nargs="?", const=300, help="Watch-Mode (sec)")
+    p.add_argument("--watch", type=int, nargs="?", const=300, help="Watch-Mode (sec)")
     p.add_argument("--export", action="store_true", help="JSON-Export")
     p.add_argument("--apply-lessons", action="store_true", help="Apply Self-Improve-Lessons to MAS-agents")
     p.add_argument("--dry-run", action="store_true", help="Only show, nothing change")
-    p.add_argument("--skip", typee=str, help="Checks skip (kommasepariert: autonomie,settings,shield)")
+    p.add_argument("--skip", type=str, help="Skip checks (comma-separated: autonomy,settings,shield)")
     p.add_argument("--version", action="store_true", help="Version")
     args = p.parse_args()
     if args.apply_lessons:

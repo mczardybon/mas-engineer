@@ -238,8 +238,14 @@
     let lineChart = null;
 
     async function loadData() {
-      // In production, data comes from dev_dashboard_data.py via data.json
-      // We try to fetch it via the MCP bridge. For now, we request the agent to provide it.
+      // Load data via MCP request
+      try {
+        const data = await mcpApp.request('ui/dashboard/data', {});
+        if (data && !data.error) return data;
+      } catch(e) {
+        console.warn('MCP data request failed:', e);
+      }
+      // Fallback: try direct fetch
       try {
         const resp = await fetch('/data.json');
         if (resp.ok) return await resp.json();
@@ -398,17 +404,24 @@
     }
 
     async function fetchData() {
-      // Try to fetch fresh data via MCP
+      // Try MCP request first
       try {
         const data = await mcpApp.request('ui/dashboard/data', {});
-        if (data) {
+        if (data && !data.error) {
           render(data);
-          document.getElementById('timestamp-label').textContent = 
-            `Auto-refresh: ${new Date().toLocaleTimeString()}`;
+          document.getElementById('timestamp-label').textContent =
+            `Live: ${new Date().toLocaleTimeString()}`;
+          return;
         }
       } catch(e) {
-        // Fallback: trigger full dashboard refresh
-        await mcpApp.sendMessageToChat('refresh dashboard');
+        console.warn('MCP fetch failed, trying loadData:', e);
+      }
+      // Fallback: loadData + render
+      const data = await loadData();
+      if (data) {
+        render(data);
+        document.getElementById('timestamp-label').textContent =
+          `Live: ${new Date().toLocaleTimeString()}`;
       }
     }
 
@@ -438,11 +451,25 @@
     // Listen for dashboard update notifications from Goose
     function setupNotificationListener() {
       if (mcpApp.hostContext) {
-        mcpApp.notify('ui/notifications/subscribe', { 
-          events: ['dashboard:updated', 'agent:changed', 'dispatch:completed'] 
+        mcpApp.notify('ui/notifications/subscribe', {
+          events: ['dashboard:updated', 'agent:changed', 'dispatch:completed']
         });
       }
     }
+
+    // Global handler for dashboard update notifications
+    window.handleDashboardUpdate = function(params) {
+      console.log('Dashboard update received:', params);
+      if (params && (params.agents || params.version)) {
+        // Direct data update
+        render(params);
+        document.getElementById('timestamp-label').textContent =
+          `Pushed: ${new Date().toLocaleTimeString()}`;
+      } else {
+        // Trigger full refresh
+        fetchData();
+      }
+    };
 
     function doAction(cmd) {
       mcpApp.sendMessageToChat(cmd).catch(console.error);
