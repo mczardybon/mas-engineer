@@ -267,9 +267,21 @@ def send_dashboard_notification(data: dict = None, workspace: str = None):
     import time
     ws = workspace or os.environ.get('MAS_WORKSPACE', '.')
     if ws == '.':
-        # Try to find correct workspace
-        if os.path.exists('/tmp/mas-engineer'):
-            ws = '/tmp/mas-engineer'
+        # Try to find correct workspace by walking up the directory tree
+        # looking for a .mas directory (a MAS-Engineer workspace marker)
+        current = os.path.abspath('.')
+        while current != os.path.dirname(current):
+            if os.path.isdir(os.path.join(current, '.mas')):
+                ws = current
+                break
+            current = os.path.dirname(current)
+        else:
+            # Fallback: try common workspace locations
+            for candidate in [os.path.expanduser('~/mas-engineer'),
+                              os.path.expanduser('~/mas')]:
+                if os.path.isdir(candidate):
+                    ws = candidate
+                    break
     flag_dir = os.path.join(ws, '.mas', 'dashboards')
     os.makedirs(flag_dir, exist_ok=True)
     flag_file = os.path.join(flag_dir, '.updated')

@@ -12,7 +12,7 @@ Hilft dem MAS-Engineer the framework-Behavior zu verstehen:
 Token-Verbrauch, Kosten, Stale-Sessions, Message-Historie.
 
 Database can gesperrt be if Goose runs.
-→ Automatische copy after /tmp/ vor Analyse.
+→ Automatic copy before analysis (workspace path).
 
 VERWENDUNG:
     python3 dev_goose_db.py --sessions         # All Sessions mit Metadaten

@@ -1,15 +1,33 @@
 #!/usr/bin/env python3
 """dashboard_prd_template.py — Generates PRD for mas-framework-hub-dashboard
 =======================================================================
-Liest current Data aus /tmp/mas-dashboard-status.json und
-/tmp/mas-dashboard-signal.json, generates komplette PRD for
-Apps.createApp() mit exakten valueen.
+Reads current data from mas-dashboard-status.json and
+mas-dashboard-signal.json in the workspace, generates complete PRD for
+Apps.createApp() with exact values.
+
+Path resolution:
+  - Uses MAS_WORKSPACE env var, or
+  - Walks up the directory tree looking for .mas/dashboards/,
+  - Falls back to current directory
 """
 import json, os, sys
 
-STATUS_FILE = "/tmp/mas-dashboard-status.json"
-SIGNAL_FILE = "/tmp/mas-dashboard-signal.json"
+def _resolve_workspace():
+    ws = os.environ.get('MAS_WORKSPACE', '')
+    if ws and os.path.isdir(ws):
+        return ws
+    current = os.path.abspath('.')
+    while current != os.path.dirname(current):
+        if os.path.isdir(os.path.join(current, '.mas', 'dashboards')):
+            return current
+        current = os.path.dirname(current)
+    return os.path.abspath('.')
 
+WORKSPACE = _resolve_workspace()
+DASHBOARD_DIR = os.path.join(WORKSPACE, '.mas', 'dashboards')
+STATUS_FILE = os.path.join(DASHBOARD_DIR, 'mas-dashboard-status.json')
+SIGNAL_FILE = os.path.join(DASHBOARD_DIR, 'mas-dashboard-signal.json')
+OUTPUT_FILE = os.path.join(DASHBOARD_DIR, 'dashboard_prd_current.txt')
 def load_data():
     with open(STATUS_FILE) as f:
         data = json.load(f)
@@ -124,7 +142,7 @@ Title: "🎮 Actions"
 Each button: background #21262d, border #30363d, padding 8px 14px, border-radius 6px, cursor pointer.
 """
 
-    with open("/tmp/dashboard_prd_current.txt", "w") as f:
+    with open(OUTPUT_FILE, "w") as f:
         f.write(prd)
 
     print(prd)

@@ -2,7 +2,7 @@
 """
 dev_dispatch_tracer.py — Dispatch-Tracing for MAS
 =================================================
-Schreibt jeden delegate()-call in /tmp/mas-dispatch.ndjson.
+Writes every delegate() call to mas-dispatch.ndjson in the workspace.
 Das Dashboard reads these file und zeigt den Dispatch-Tree.
 
 Usage:
