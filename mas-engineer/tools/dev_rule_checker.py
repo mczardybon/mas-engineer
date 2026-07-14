@@ -57,7 +57,7 @@ def get_rules(mode=None):
                     norm_id = key.split("_")[0].upper()
                     rules.append({
                         "id": norm_id,
-                        "name": val.get("description", val.get("typee", key)),
+                        "name": val.get("description", val.get("type", key)),
                         "hardness": 5 if val.get("level") == "extreme" else (4 if val.get("level") == "strong" else 3)
                     })
         return rules
@@ -462,13 +462,13 @@ if __name__ == "__main__":
     parser.add_argument("--action", default="", help="Geplante action (z.B. 'edit file.yaml')")
     parser.add_argument("--mode", default="mas", help="Current mode")
     parser.add_argument("--all", action="store_true", help="All Rulen check")
-    parser.add_argument("--action-typee", default="unbekannt", help="typee der action: write|edit|delegate|shell")
+    parser.add_argument("--action-type", default="unbekannt", help="type of action: write|edit|delegate|shell")
     
     args = parser.parse_args()
     global CURRENT_MODE
     CURRENT_MODE = args.mode or "mas"
     
-    action_info = f"{args.action_typee}: {args.action}" if args.action else args.action_typee
+    action_info = f"{args.action_type}: {args.action}" if args.action else args.action_type
     
     if args.all:
         active_rules = get_rules(args.mode)

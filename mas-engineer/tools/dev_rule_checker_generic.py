@@ -225,7 +225,7 @@ def cmd_undo_last_rule():
     
     last = generated[-1]
     rid = last["id"]
-    atypee = last.get("action_typee", "unknown")
+    atype = last.get("action_type", "unknown")
     
     # Check if backup exists
     reg_path = ".state/rules/rules.yaml"
@@ -253,7 +253,7 @@ def cmd_undo_last_rule():
     with open(strike_file, 'w') as f:
         _j.dump(strikes, f, indent=2)
     
-    print(f"  Reason: {atypee}")
+    print(f"  Reason: {atype}")
     print(f"  Still in log: {len(generated)} rules")
     return 0
 
@@ -330,22 +330,22 @@ def check_strikes(action):
     except:
         strikes = {}
     
-    action_typee = analyse_action_typee(action)
-    if not action_typee:
+    action_type = analyse_action_type(action)
+    if not action_type:
         return
     
-    strikes[action_typee] = strikes.get(action_typee, 0) + 1
+    strikes[action_type] = strikes.get(action_type, 0) + 1
     with open(STRIKE_FILE, 'w') as f:
         json.dump(strikes, f)
     
-    if strikes[action_typee] >= 3:
-        generiere_rule(action_typee)
-        del strikes[action_typee]
+    if strikes[action_type] >= 3:
+        generiere_rule(action_type)
+        del strikes[action_type]
         with open(STRIKE_FILE, 'w') as f:
             json.dump(strikes, f)
-        print(f"  ✅ Auto-Rule generated for: {action_typee}")
+        print(f"  ✅ Auto-Rule generated for: {action_type}")
 
-def analyse_action_typee(action):
+def analyse_action_type(action):
     act = action.lower()
     if "/etc/" in act and ("write" in act or "edit" in act):
         return "system_config"
@@ -357,7 +357,7 @@ def analyse_action_typee(action):
         return "temp_files"
     return None
 
-def generiere_rule(action_typee):
+def generiere_rule(action_type):
     # Rule snapshot: backup before change
     reg_path = ".state/rules/rules.yaml"
     if os.path.exists(reg_path):
@@ -370,10 +370,10 @@ def generiere_rule(action_typee):
         "network_import": ("R-GEN-003", "Network import blocked", 5, "No network imports allowed"),
         "temp_files": ("R-GEN-004", "Temp files blocked", 4, "Temp files only with confirmation"),
     }
-    if action_typee not in rule_map:
+    if action_type not in rule_map:
         return
     
-    rid, name, hardness, text = rule_map[action_typee]
+    rid, name, hardness, text = rule_map[action_type]
     
     # Read rules.yaml
     reg_path = ".state/rules/rules.yaml"

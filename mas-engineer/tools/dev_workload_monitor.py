@@ -28,7 +28,7 @@ def scan_sessions(agent_name=None, hours=24):
             SELECT name, COUNT(*), COALESCE(SUM(total_tokens), 0), 
                    COALESCE(SUM(CAST(total_tokens > 50000 AS INTEGER)), 0)
             FROM sessions 
-            WHERE session_typee='sub_agent' AND created_at > ? AND name LIKE ?
+            WHERE session_type='sub_agent' AND created_at > ? AND name LIKE ?
             GROUP BY name
             ORDER BY 2 DESC
         """, (cutoff_str, f'%{agent_name}%'))
@@ -37,7 +37,7 @@ def scan_sessions(agent_name=None, hours=24):
             SELECT name, COUNT(*), COALESCE(SUM(total_tokens), 0),
                    COALESCE(SUM(CAST(total_tokens > 50000 AS INTEGER)), 0)
             FROM sessions 
-            WHERE session_typee='sub_agent' AND created_at > ?
+            WHERE session_type='sub_agent' AND created_at > ?
             GROUP BY name
             ORDER BY 2 DESC
         """, (cutoff_str,))

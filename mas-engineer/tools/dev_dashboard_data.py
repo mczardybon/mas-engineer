@@ -118,7 +118,7 @@ def generate_data(ws):
         ts = str(c.get('timestamp', c.get('ts', '?')))[:19]
         changes_last.append({'ts': ts, 'desc': action})
     changes_total = len(changes)
-    change_typees = {}
+    change_types = {}
     for c in changes:
         a = c.get('action', c.get('description', ''))
         if 'SI-RUN' in a or 'improve' in a.lower():
@@ -135,7 +135,7 @@ def generate_data(ws):
             k = 'Dashboard'
         else:
             k = 'Elseige'
-        change_typees[k] = change_typees.get(k, 0) + 1
+        change_types[k] = change_types.get(k, 0) + 1
 
     # ─── IMPROVEMENT ───
     schedule = yaml_load(os.path.join(state_dir, 'schedule.yaml'))
@@ -239,7 +239,7 @@ def generate_data(ws):
         "changes": {
             "total": changes_total,
             "last_10": changes_last,
-            "by_typee": change_typees,
+            "by_type": change_types,
         },
         "improvement": {
             "total_runs": si_runs,

@@ -112,7 +112,7 @@ def generate_dashboard(ws):
         changes_last.append(f"{ts} {action}")
 
     # Categorization
-    change_typees = {}
+    change_types = {}
     for c in changes:
         action = c.get('action', c.get('msg', c.get('description', '')))
         if 'SI-RUN' in action or 'improve' in action.lower():
@@ -129,7 +129,7 @@ def generate_dashboard(ws):
             key = 'Dashboard'
         else:
             key = 'Elseige'
-        change_typees[key] = change_typees.get(key, 0) + 1
+        change_types[key] = change_types.get(key, 0) + 1
 
     # ─── BUILD / DISTRIBUTION ───
     dist_zips = sorted(glob.glob(os.path.join(dist_dir, 'mas-framework-*.zip')))
@@ -282,7 +282,7 @@ def generate_dashboard(ws):
         'changes': {
             'total': changes_count,
             'last_10': changes_last,
-            'by_typee': change_typees
+            'by_type': change_types
         },
         'build': build_info,
         'git': {

@@ -92,7 +92,7 @@ def merge_findings(findings, registry_path, project):
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.argumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument('--findings', required=True)
     parser.add_argument('--registry', required=True)
     parser.add_argument('--project', required=True)

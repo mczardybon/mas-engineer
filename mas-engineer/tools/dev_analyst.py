@@ -285,7 +285,7 @@ def check_all(scanner: "observer.Scanner") -> str:
 
 def main():
     import argparse
-    parser = argparse.argumentParser(description="dev_analyst.py — Quality check")
+    parser = argparse.ArgumentParser(description="dev_analyst.py — Quality check")
     parser.add_argument("--check-all", action="store_true", help="All Checks")
     parser.add_argument("--yaml-syntax", action="store_true")
     parser.add_argument("--sizes", action="store_true")

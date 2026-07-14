@@ -51,11 +51,11 @@ def generate_prd(d, sig):
     for a in m["agent_scores"]:
         agents_rows += f'        <tr><td>{a["name"]}</td><td>{a["score"]}</td></tr>\n'
 
-    # Change typees
-    ctypees = m["changes_by_typee"]
-    ctypees_rows = ""
-    for k, v in sorted(ctypees.items(), key=lambda x: -x[1]):
-        ctypees_rows += f'        <tr><td>{k}</td><td>{v}</td></tr>\n'
+    # Change types
+    ctypes = m["changes_by_type"]
+    ctypes_rows = ""
+    for k, v in sorted(ctypes.items(), key=lambda x: -x[1]):
+        ctypes_rows += f'        <tr><td>{k}</td><td>{v}</td></tr>\n'
 
     # Dispatch-Tree
     dt = dp["tree"]

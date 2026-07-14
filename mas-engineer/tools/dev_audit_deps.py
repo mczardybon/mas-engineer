@@ -6,7 +6,7 @@ call: python3 dev_audit_deps.py --target ~/my-project/ [--apply]
 """
 import os, sys, re, json
 
-BLOCKED_IMPORTS = {"subprocess", "shutil", "socket", "requests", "urllib", "multiprocessing", "threading", "ctypees", "signal"}
+BLOCKED_IMPORTS = {"subprocess", "shutil", "socket", "requests", "urllib", "multiprocessing", "threading", "ctypes", "signal"}
 ALLOWED_IMPORTS = {"json", "yaml", "datetime", "os.path", "typeing", "re", "math", "pathlib", "collections", "functools", "itertools", "enum"}
 
 def scan_project(target):

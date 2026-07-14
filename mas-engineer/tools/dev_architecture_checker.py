@@ -48,7 +48,7 @@ def ist_architektur_change(action, file=""):
         # Check ob es only eine normale file ist
         if ".md" in d or "changes.json" in d or ".bak" in d:
             return False, ""
-        return True, "New file unbekannten typees — Architektur check"
+        return True, "New file unbekannten types — Architektur check"
     
     # 2. SOT-Rulen change
     if "workflows.yaml" in d:
@@ -98,7 +98,7 @@ def check_architecture(action, file=""):
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.argumentParser(description="Architektur-Check (R15)")
+    parser = argparse.ArgumentParser(description="Architektur-Check (R15)")
     parser.add_argument("--action", default="", help="Geplante action")
     parser.add_argument("--file", default="", help="Betroffene file")
     args = parser.parse_args()

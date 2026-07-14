@@ -389,13 +389,13 @@ def save_scan(scanner: Scanner):
 
 def main():
     import argparse
-    parser = argparse.argumentParser(description="dev_observer.py — framework Scanner")
+    parser = argparse.ArgumentParser(description="dev_observer.py — framework Scanner")
     parser.add_argument("--scan", action="store_true", help="Kompletter Scan")
     parser.add_argument("--quick", action="store_true", help="Only Overview")
-    parser.add_argument("--yaml", typee=str, help="Only eine file")
-    parser.add_argument("--yaml-dir", typee=str, help="Only a Directory")
+    parser.add_argument("--yaml", type=str, help="Only eine file")
+    parser.add_argument("--yaml-dir", type=str, help="Only a Directory")
     parser.add_argument("--save", action="store_true", help="Scan + in .state/ save")
-    parser.add_argument("--agent-path", typee=str, default=None)
+    parser.add_argument("--agent-path", type=str, default=None)
     
     args = parser.parse_known_args()[0]
     

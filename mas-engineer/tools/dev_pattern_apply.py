@@ -46,10 +46,10 @@ def apply_patterns(registry_path, project, threshold=0.3):
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.argumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument('--registry', required=True)
     parser.add_argument('--project', required=True)
-    parser.add_argument('--threshold', typee=float, default=0.3)
+    parser.add_argument('--threshold', type=float, default=0.3)
     args = parser.parse_args()
     result = apply_patterns(args.registry, args.project, args.threshold)
     print(json.dumps(result, indent=2))

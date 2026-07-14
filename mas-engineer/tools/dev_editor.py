@@ -301,25 +301,25 @@ def validate_against_best_practices(agent_content, bp):
         for practice in practices:
             pid = practice["id"]
             rule = practice["rule"]
-            ctypee = practice.get("check_typee", "")
+            ctype = practice.get("check_type", "")
             cval = practice.get("check_value", "")
             auto = practice.get("auto_apply", False)
             severity = practice.get("severity", "🟢 info")
             
             passed = False
             
-            if ctypee == "regex":
+            if ctype == "regex":
                 if isinstance(cval, str):
                     try:
                         passed = bool(re.search(cval, agent_content))
                     except re.error:
                         passed = False
                         
-            elif ctypee == "length":
+            elif ctype == "length":
                 threshold = int(cval) if cval.isdigit() else 500
                 passed = len(agent_content) <= threshold
                 
-            elif ctypee == "yaml":
+            elif ctype == "yaml":
                 try:
                     y = yaml.safe_load(agent_content)
                     keys = cval.split(".")
@@ -334,23 +334,23 @@ def validate_against_best_practices(agent_content, bp):
                 except Exception:
                     passed = False
                     
-            elif ctypee == "contains":
+            elif ctype == "contains":
                 passed = cval in agent_content
                 
-            elif ctypee == "contains_all":
+            elif ctype == "contains_all":
                 if isinstance(cval, list):
                     passed = all(c in agent_content for c in cval)
                 else:
                     passed = False
                     
-            elif ctypee == "grep":
+            elif ctype == "grep":
                 if isinstance(cval, str):
                     try:
                         passed = not bool(re.search(cval, agent_content))
                     except re.error:
                         passed = False
 
-            elif ctypee == "range":
+            elif ctype == "range":
                 # Format: "yaml.path.min-max" -> path=metadata.lines, range=100-200
                 try:
                     parts = cval.rsplit(".", 1)
@@ -490,17 +490,17 @@ def do_rollback(backup_path: str, rel_path: str) -> str:
 
 def main():
     import argparse
-    parser = argparse.argumentParser(description="dev_editor.py — framework-Editor")
-    parser.add_argument("--patch", typee=str, help="file (relativ zu agent/)")
-    parser.add_argument("--von", typee=str, default="", help="older Value")
-    parser.add_argument("--nach", typee=str, default="", help="newer Value")
-    parser.add_argument("--grund", typee=str, default="", help="Reason der Change")
-    parser.add_argument("--user", typee=str, default="Marius")
-    parser.add_argument("--risk", typee=str, default="niedrig")
-    parser.add_argument("--validate", typee=str, help="YAML validate + Best-Practice-Check")
-    parser.add_argument("--backup", typee=str, help="Only Backup")
-    parser.add_argument("--rollback-dir", typee=str, help="Backup-Directory")
-    parser.add_argument("--rollback-file", typee=str, help="file for rollback")
+    parser = argparse.ArgumentParser(description="dev_editor.py — framework-Editor")
+    parser.add_argument("--patch", type=str, help="file (relativ zu agent/)")
+    parser.add_argument("--von", type=str, default="", help="older Value")
+    parser.add_argument("--nach", type=str, default="", help="newer Value")
+    parser.add_argument("--grund", type=str, default="", help="Reason der Change")
+    parser.add_argument("--user", type=str, default="Marius")
+    parser.add_argument("--risk", type=str, default="niedrig")
+    parser.add_argument("--validate", type=str, help="YAML validate + Best-Practice-Check")
+    parser.add_argument("--backup", type=str, help="Only Backup")
+    parser.add_argument("--rollback-dir", type=str, help="Backup-Directory")
+    parser.add_argument("--rollback-file", type=str, help="file for rollback")
     
     args = parser.parse_known_args()[0]
     

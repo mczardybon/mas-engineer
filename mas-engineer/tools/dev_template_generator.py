@@ -9,7 +9,7 @@ Sources:
   4. recipe/template/agent_template.yaml → Reaelseruktur
 
 Modes:
-  --create     Agent new create (Name + Task + typee → YAML + SOT-entry)
+  --create     Agent new create (Name + Task + type → YAML + SOT-entry)
   --refresh    Check existing agent against target + fill gaps
   --refresh-all All 39 Sub-Agenten check
 
@@ -17,7 +17,7 @@ Optionen:
   --name NAME      Agenten-Name (z.B. log-analyzer)
   --emoji EMOJI    Emoji (z.B. 📊)
   --task "TEXT"    Kerntask
-  --typee sub|voll  Agent-typee (Default: sub)
+  --type sub|voll  Agent type (default: sub)
   --agent NAME     Only thesen Agent refreshen
   --dry-run        Only show, nothing change
   --diff           Unterschiede anshow
@@ -299,7 +299,7 @@ def _shorten(text: str, maxlen: int = 80) -> str:
         return text
     return text[:maxlen-3] + "..."
 
-def fill_template(sources: Dict, rules: Dict, name: str, emoji: str, task: str, agent_typee: str) -> str:
+def fill_template(sources: Dict, rules: Dict, name: str, emoji: str, task: str, agent_type: str) -> str:
     """
     Fills agent_template.yaml mit statischen + dynamischen placeholdern.
     """
@@ -465,7 +465,7 @@ def _add_sot_entry(workspace: str, name: str, task: str):
         # Find passende Kategorie oder haenge an
         data["agents"][agent_key] = {
             "name": f"sub_mas-{agent_key}",
-            "typee": "sub",
+            "type": "sub",
             "task": task,
             "desc": f"Automatic generates aus Template-Generator"
         }
@@ -510,7 +510,7 @@ def _add_sub_recipes_entry(workspace: str, name: str):
         print(f"  ⚠️  sub_recipes-Update Error: {e}")
         return False
 
-def write_agent(yaml_data: Dict, name: str, agent_typee: str, workspace: str, no_sot: bool = False) -> Dict:
+def write_agent(yaml_data: Dict, name: str, agent_type: str, workspace: str, no_sot: bool = False) -> Dict:
     """
     Schreibt Agent-YAML + updated SOT.
     """
@@ -778,7 +778,7 @@ def refresh_all(dry_run: bool, workspace: str) -> Dict:
 # ──────────────────────────────────────────────
 
 def main():
-    parser = argparse.argumentParser(description="dev_template_generator v2.0 — Agent-YAML Generator aus SOT+BP")
+    parser = argparse.ArgumentParser(description="dev_template_generator v2.0 — Agent-YAML Generator aus SOT+BP")
     
     # Mode (exklusiv)
     mode_group = parser.add_mutually_exclusive_group(required=True)
@@ -790,7 +790,7 @@ def main():
     parser.add_argument("--name", default="", help="Agenten-Name (z.B. log-analyzer)")
     parser.add_argument("--emoji", default="🔧", help="Emoji (Default: 🔧)")
     parser.add_argument("--task", default="", help="Kerntask")
-    parser.add_argument("--typee", default="sub", choices=["sub", "voll"], help="Agent-typee (Default: sub)")
+    parser.add_argument("--type", dest="agent_type", default="sub", choices=["sub", "voll"], help="Agent type (default: sub)")
     
     # Refresh-Optionen
     parser.add_argument("--agent", default="", help="Only thesen Agent refreshen (for --refresh)")
@@ -813,16 +813,16 @@ def main():
             sys.exit(1)
         
         print(f"\n🔨 GENERATE: {args.emoji} {args.name} — {_shorten(args.task, 60)}")
-        print(f"   typee: {args.typee}")
+        print(f"   type: {args.agent_type}")
         
         sources = load_all_sources(workspace)
         rules = build_rule_package(sources)
-        filled = fill_template(sources, rules, args.name, args.emoji, args.task, args.typee)
+        filled = fill_template(sources, rules, args.name, args.emoji, args.task, args.agent_type)
         yaml_data = build_yaml(filled, rules, args.name, args.emoji, args.task)
-        result = write_agent(yaml_data, args.name, args.typee, workspace, args.no_sot)
+        result = write_agent(yaml_data, args.name, args.agent_type, workspace, args.no_sot)
         
         if args.json:
-            result.update({"name": args.name, "emoji": args.emoji, "task": args.task, "typee": args.typee})
+            result.update({"name": args.name, "emoji": args.emoji, "task": args.task, "type": args.agent_type})
             # --json: AUSSCHLIESSLICH JSON output, no anderer Output
             # Redirect sys.stdout to capture any prior prints, then print only JSON
             print(json.dumps(result, indent=2, ensure_ascii=False))

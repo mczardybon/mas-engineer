@@ -127,7 +127,7 @@ def generate_yaml(name, emoji, task, output, workspace, mode='mas', auto_commit=
     }
 
 def main():
-    parser = argparse.argumentParser(description='Create BP-konforme Sub-Agent YAML')
+    parser = argparse.ArgumentParser(description='Create BP-konforme Sub-Agent YAML')
     parser.add_argument('--name', required=True)
     parser.add_argument('--emoji', default='\U0001f527')
     parser.add_argument('--task', required=True)

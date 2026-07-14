@@ -79,13 +79,13 @@ build_zip() {
     echo "  Mode:   MAS-only (no framework)"
 
     # Backup-directoryse ausclose
-    find "$WORKSPACE/mas-engineer" -name "__pycache__" -typee d -exec rm -rf {} + 2>/dev/null || true
+    find "$WORKSPACE/mas-engineer" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
     rm -rf "$WORKSPACE/mas-engineer/.state/checkpoints" 2>/dev/null || true
 
     cd "$WORKSPACE"
     
     # Clean up
-    find mas-engineer -typee d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+    find mas-engineer -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
     rm -f mas-engineer/.state/checkpoints/checkpoint_config.yaml 2>/dev/null || true
     
     # Build ZIP
@@ -174,7 +174,7 @@ build_project_zip() {
     fi
 
     # Backup-directoryse ausclose
-    find "$project_path" -name "__pycache__" -typee d -exec rm -rf {} + 2>/dev/null || true
+    find "$project_path" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
     # ZIP create
     cd "$WORKSPACE"

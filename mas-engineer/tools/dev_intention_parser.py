@@ -26,7 +26,7 @@ def save_workflows(data):
 
 def analyse_intention(text):
     result = {
-        "typee": "sub",
+        "type": "sub",
         "name": None,
         "task": text[:120],
         "remainderrictions": {"allowed_paths": [], "forbidden_paths": [], "requires_confirmation": True},
@@ -34,9 +34,9 @@ def analyse_intention(text):
     }
     t = text.lower()
     if any(w in t for w in ["autonomous", "vollagent", "eigener prompt"]):
-        result["typee"] = "voll"
+        result["type"] = "voll"
     elif any(w in t for w in ["function", "erweiterung", "in existierend"]):
-        result["typee"] = "intern"
+        result["type"] = "intern"
     name_match = re.search(r'(?:agent|tool|function)\s+(?:der|die|das)\s+(\w+)', t)
     if name_match:
         result["name"] = name_match.group(1) + "-agent"
@@ -60,7 +60,7 @@ def validate_sot():
             schema = yaml.safe_load(f)
     except Exception as e:
         return [f"Schema-Error: {e}"]
-    required = schema.get("agent_schema", {}).get("required", ["name", "typee", "task"])
+    required = schema.get("agent_schema", {}).get("required", ["name", "type", "task"])
     agents = wf.get("agents", {})
     for name, config in agents.items():
         if name.startswith("_"):

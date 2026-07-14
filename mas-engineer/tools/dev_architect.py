@@ -396,14 +396,14 @@ def generate_blueprint(feature_name):
 
 def main():
     import argparse
-    parser = argparse.argumentParser(description="dev_architect.py — Architecture-Analyse")
+    parser = argparse.ArgumentParser(description="dev_architect.py — Architecture-Analyse")
     parser.add_argument("--analyze", action="store_true", help="Komplette Analyse")
     parser.add_argument("--quick", action="store_true", help="Only Kern-Erknowledgese")
     parser.add_argument("--suggest", action="store_true", help="Improvement suggestions")
-    parser.add_argument("--impact", typee=str, help="Impact-Analyse for Change")
-    parser.add_argument("--blueprint", typee=str, help="blueprint for newen agents generate")
+    parser.add_argument("--impact", type=str, help="Impact-Analyse for Change")
+    parser.add_argument("--blueprint", type=str, help="blueprint for newen agents generate")
     parser.add_argument("--apply-best-practices", action="store_true", help="Best Practices anwenden")
-    parser.add_argument("--agent-path", typee=str, default=str(observer.AGENT_DIR))
+    parser.add_argument("--agent-path", type=str, default=str(observer.AGENT_DIR))
     
     args = parser.parse_known_args()[0]
     

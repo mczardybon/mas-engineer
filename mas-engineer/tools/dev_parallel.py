@@ -139,7 +139,7 @@ class ParalllPool:
         return self._results.get(task_id)
 
     # ─── Legacy API (backward compatible) ─────────────
-    def add_task(self, name: str, task_typee: str, payload: Dict):
+    def add_task(self, name: str, task_type: str, payload: Dict):
         """Add a Task to the Warteschlong hinzu (Legacy)."""
         if not hasattr(self, '_legacy_tasks'):
             self._legacy_tasks = []
@@ -147,7 +147,7 @@ class ParalllPool:
             self._legacy_failed = []
         self._legacy_tasks.append({
             "name": name,
-            "typee": task_typee,
+            "type": task_type,
             "payload": payload,
             "status": "queued",
             "added_at": datetime.now().isoformat()
@@ -160,10 +160,10 @@ class ParalllPool:
         task_start = time.time()
 
         try:
-            task_typee = task.get("typee", "unknown")
+            task_type = task.get("type", "unknown")
             payload = task.get("payload", {})
 
-            if task_typee == "subprocess":
+            if task_type == "subprocess":
                 import subprocess
                 cmd = payload.get("cmd", payload.get("command", ""))
                 if isinstance(cmd, str):
@@ -180,7 +180,7 @@ class ParalllPool:
                 }
                 task["status"] = "completed"
 
-            elif task_typee in ("delegate", "agent"):
+            elif task_type in ("delegate", "agent"):
                 agent = payload.get("agent", "")
                 ws = payload.get("workspace", "")
                 t = payload.get("task", "")
@@ -193,7 +193,7 @@ class ParalllPool:
                     }
                 task["status"] = "completed"
 
-            elif task_typee == "shell":
+            elif task_type == "shell":
                 import subprocess
                 cmd = payload.get("command", "")
                 cwd = payload.get("cwd", None)
@@ -209,7 +209,7 @@ class ParalllPool:
                     }
                 task["status"] = "completed"
 
-            elif task_typee == "python":
+            elif task_type == "python":
                 code = payload.get("code", "")
                 if code:
                     compiled = compile(code, "<task>", "exec")
@@ -323,13 +323,13 @@ def batch_dispatch(tasks: List[Dict], pool_size: int = 30) -> List[Dict]:
         if isinstance(t, str):
             pool.add_task(
                 name=t,
-                task_typee="delegate",
+                task_type="delegate",
                 payload={"command": t}
             )
         else:
             pool.add_task(
                 name=t.get("name", "unnamed"),
-                task_typee=t.get("typee", "delegate"),
+                task_type=t.get("type", "delegate"),
                 payload=t.get("payload", {})
             )
     return pool._legacy_run()
@@ -374,7 +374,7 @@ def dispatch_group(group_name: str, workspace: str, task: str, pool_size: int = 
     for agent in agents:
         tasks.append({
             "name": agent,
-            "typee": "delegate",
+            "type": "delegate",
             "payload": {
                 "agent": agent,
                 "workspace": workspace,
@@ -387,13 +387,13 @@ def dispatch_group(group_name: str, workspace: str, task: str, pool_size: int = 
 
 # ─── CLI ──────────────────────────────────────────
 def main():
-    p = argparse.argumentParser(description="dev_paralll.py v2.1.0")
-    p.add_argument("--batch", typee=str, help="JSON-Array from Tasks")
-    p.add_argument("--group", typee=str, help="agents-Gruppe dispatchen (analyse/test/fix/guard/docs)")
-    p.add_argument("--workspace", typee=str, default=os.getcwd(), help="Workspace-Path")
-    p.add_argument("--task", typee=str, default="SCAN", help="Task for Gruppen-Dispatch")
-    p.add_argument("--pool-size", typee=int, default=30, help="Max parallle Tasks")
-    p.add_argument("--timeout", typee=int, default=600, help="Timeout pro Batch (Sek)")
+    p = argparse.ArgumentParser(description="dev_paralll.py v2.1.0")
+    p.add_argument("--batch", type=str, help="JSON-Array from Tasks")
+    p.add_argument("--group", type=str, help="agents-Gruppe dispatchen (analyse/test/fix/guard/docs)")
+    p.add_argument("--workspace", type=str, default=os.getcwd(), help="Workspace-Path")
+    p.add_argument("--task", type=str, default="SCAN", help="Task for Gruppen-Dispatch")
+    p.add_argument("--pool-size", type=int, default=30, help="Max parallle Tasks")
+    p.add_argument("--timeout", type=int, default=600, help="Timeout pro Batch (Sek)")
     p.add_argument("--list-groups", action="store_true", help="Availablee Gruppen auflistn")
     p.add_argument("--status", action="store_true", help="Pool-status anshow")
     args = p.parse_args()

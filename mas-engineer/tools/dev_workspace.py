@@ -754,11 +754,11 @@ def cmd_status(ws_dir: str):
 MAS_TEMPLATE = Path(__file__).parent.parent / "recipe" / "template" / "agent_template.yaml"
 
 
-def _ask_typee():
-    """Interaktive typee-Selection: mas, specialist oder sub."""
+def _ask_type():
+    """Interaktive type-selection: mas, specialist oder sub."""
     print("\n📋 AGENT-GENERATOR v1.0.0")
     print("━" * 50)
-    print("What typee of agent would you like to create?")
+    print("What type of agent would you like to create?")
     print()
     print("  1) MAS — Sub-Agent (mas-engineer/recipe/sub/)")
     print("  2) framework — Specialist (framework/recipes/specialists/)")
@@ -780,13 +780,13 @@ def _ask_typee():
         print("  ❌ Invalid — bitte 1, 2 oder 3 enter")
 
 
-def _ask_name(agent_typee):
+def _ask_name(agent_type):
     """Interaktive Namensquery mit validation."""
     import re
     print()
-    if agent_typee == "mas_sub":
+    if agent_type == "mas_sub":
         hint = "Name (z.B. 'database-cleaner' → sub_mas-database-cleaner.yaml)"
-    elif agent_typee == "fw_specialist":
+    elif agent_type == "fw_specialist":
         hint = "Name (z.B. 'deploy' → deploy.yaml)"
     else:
         hint = "Name (z.B. 'config-writer' → sub_config-writer.yaml)"
@@ -818,19 +818,19 @@ def _ask_description():
     return desc or name.replace("-", " ").title(), emoji
 
 
-def _generate_agent(agent_typee, name, description, emoji, workspace):
+def _generate_agent(agent_type, name, description, emoji, workspace):
     """copyrt Template und replaces Platzholder. generated bei framework a minimum-YAML."""
     import shutil
 
     ws = Path(workspace)
 
-    if agent_typee == "mas_sub":
+    if agent_type == "mas_sub":
         dst_dir = ws / "mas-engineer" / "recipe" / "sub"
         filename = f"sub_mas-{name}.yaml"
         if not MAS_TEMPLATE.exists():
             print(f"  ❌ Template not found: {MAS_TEMPLATE}")
             return None
-    elif agent_typee == "fw_specialist":
+    elif agent_type == "fw_specialist":
         dst_dir = ws / "framework" / "recipes" / "specialists"
         filename = f"{name}.yaml"
     else:
@@ -850,7 +850,7 @@ def _generate_agent(agent_typee, name, description, emoji, workspace):
             print("  ❌ Skip")
             return None
 
-    if agent_typee == "mas_sub" and MAS_TEMPLATE.exists():
+    if agent_type == "mas_sub" and MAS_TEMPLATE.exists():
         content = MAS_TEMPLATE.read_text()
         content = content.replace("{NAME}", name.upper().replace("-", " "))
         content = content.replace("{name}", name.lower())
@@ -887,14 +887,14 @@ settings:
     return dst
 
 
-def _validate_agent(yaml_path, agent_typee):
+def _validate_agent(yaml_path, agent_type):
     """Validated gegen Best Practices (MAS) oder YAML (framework)."""
     import subprocess, yaml
 
     print()
     print(f"  🔍 Validiere {yaml_path.name}...")
 
-    if agent_typee == "mas_sub":
+    if agent_type == "mas_sub":
         editor = Path(__file__).parent / "dev_editor.py"
         if not editor.exists():
             print("  ℹ️ dev_editor.py not found — skip validation")
@@ -960,7 +960,7 @@ def _register_agent(name, description, emoji, workspace):
 """)
 
 
-def _show_summary(agent_typee, name, description, emoji, yaml_path):
+def _show_summary(agent_type, name, description, emoji, yaml_path):
     """Abclosede Togetherfassung."""
     ws = Path(os.getcwd())
 
@@ -968,16 +968,16 @@ def _show_summary(agent_typee, name, description, emoji, yaml_path):
     print("  ┌─────────────────────────────────────────────┐")
     print("  │  ✅ AGENT ERSTELLT                            │")
     print("  ├─────────────────────────────────────────────┤")
-    typee_label = {"mas_sub": "MAS Sub-Agent",
+    type_label = {"mas_sub": "MAS Sub-Agent",
                   "fw_specialist": "framework Specialist",
-                  "fw_sub": "framework Sub-Agent"}.get(agent_typee, agent_typee)
-    print(f"  │  typee:    {typee_label:<22}{'│':>10}")
+                  "fw_sub": "framework Sub-Agent"}.get(agent_type, agent_type)
+    print(f"  │  type:    {type_label:<22}{'│':>10}")
     print(f"  │  Name:   {name:<22}{'│':>10}")
     print(f"  │  Emoji:  {emoji:<22}{'│':>10}")
     print(f"  │  Path:   {str(yaml_path.relative_to(ws)):<22}{'│':>2}")
     print("  ├─────────────────────────────────────────────┤")
 
-    if agent_typee == "mas_sub":
+    if agent_type == "mas_sub":
         steps = [
             "1. dev_editor.py --validate <path> (bei Changeen)",
             "2. sub_recipes-entry in dev-mas-engineer.yaml",
@@ -1006,7 +1006,7 @@ def _load_projects():
             "version": "1.0.0", "last_updated": datetime.now().isoformat(),
             "active_project": "dev-team",
             "projects": {"dev-team": {"label": "DEV-TEAM", "created": "2026-06-13",
-                         "typee": "multi_agent_system", "agents": 0, "tests": 0,
+                         "type": "multi_agent_system", "agents": 0, "tests": 0,
                          "config": "dev-team/config.yaml", "status": "stable"}}
         }
         yaml.dump(data, open(pp, "w"), default_flow_style=False, allow_unicode=True)
@@ -1061,7 +1061,7 @@ def cmd_project_create(name, copy_from=None):
         
         # config.yaml
         cfg = {"version": "1.0.0", "project_name": name,
-               "project_typee": "multi_agent_system", "created": datetime.now().strftime("%Y-%m-%d")}
+               "project_type": "multi_agent_system", "created": datetime.now().strftime("%Y-%m-%d")}
         yaml.dump(cfg, open(pp / "config.yaml", "w"), default_flow_style=False, allow_unicode=True)
         
         print(f"  Ordnerstructure creates: framework/{name}/")
@@ -1071,7 +1071,7 @@ def cmd_project_create(name, copy_from=None):
         data["projects"] = {}
     data["projects"][name] = {
         "label": name.upper(), "created": datetime.now().strftime("%Y-%m-%d"),
-        "typee": "multi_agent_system", "agents": 0, "tests": 0,
+        "type": "multi_agent_system", "agents": 0, "tests": 0,
         "config": f"{name}/config.yaml", "status": "draft"
     }
     data["active_project"] = name
@@ -1113,7 +1113,7 @@ def cmd_project_show(name):
     p = data["projects"][name]
     print(f"\n  project: {name}")
     print(f"  Label:   {p.get('label', '?')}")
-    print(f"  typee:     {p.get('typee', '?')}")
+    print(f"  type:     {p.get('type', '?')}")
     print(f"  Agents:  {p.get('agents', 0)}")
     print(f"  Tests:   {p.get('tests', 0)}")
     print(f"  status:  {p.get('status', '?')}")
@@ -1264,13 +1264,13 @@ def cmd_doctor_init(target_path):
 
 def cmd_scaffold(args):
     """Hauptfunction for --scaffold."""
-    # Phase 1: typee
-    agent_typee, rel_dir, _ = _ask_typee()
-    if not agent_typee:
+    # Phase 1: type
+    agent_type, rel_dir, _ = _ask_type()
+    if not agent_type:
         return
 
     # Phase 2: Name
-    name = args.name if getattr(args, 'name', None) else _ask_name(agent_typee)
+    name = args.name if getattr(args, 'name', None) else _ask_name(agent_type)
     if not name:
         return
 
@@ -1284,20 +1284,20 @@ def cmd_scaffold(args):
 
     # Phase 4: Generate
     workspace = os.getcwd()
-    yaml_path = _generate_agent(agent_typee, name, desc, emoji, workspace)
+    yaml_path = _generate_agent(agent_type, name, desc, emoji, workspace)
     if not yaml_path:
         return
 
     # Phase 5: Validate
     if not getattr(args, 'no_validate', False):
-        _validate_agent(yaml_path, agent_typee)
+        _validate_agent(yaml_path, agent_type)
 
     # Phase 6: Registrieren (only MAS)
-    if agent_typee == "mas_sub":
+    if agent_type == "mas_sub":
         _register_agent(name, desc, emoji, workspace)
 
     # Phase 7: Togetherfassung
-    _show_summary(agent_typee, name, desc, emoji, yaml_path)
+    _show_summary(agent_type, name, desc, emoji, yaml_path)
 
 
 def cmd_install_check(ws_dir):

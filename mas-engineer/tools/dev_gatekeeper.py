@@ -99,7 +99,7 @@ def check_r05(at):
         if ts and jetzt - ts < 1800: return (True, "")
     return (False, "No Checkpoint <30 Min")
 
-def check_responsibility_matrix(action_typee, filepath=None, cmd=None):
+def check_responsibility_matrix(action_type, filepath=None, cmd=None):
     """
     Checks ob eine action durch die Responsibility-Matrix abgedeckt ist.
     
@@ -123,25 +123,25 @@ def check_responsibility_matrix(action_typee, filepath=None, cmd=None):
         matrix = yaml.safe_load(f)
     
     # 1. Check read_exceptions
-    if action_typee == "shell" and cmd:
+    if action_type == "shell" and cmd:
         cmd_base = cmd.split()[0] if cmd else ""
         for exc in matrix.get("read_exceptions", []):
             if exc.get("action") == "shell" and cmd_base in exc.get("cmds", []):
                 return ("self", None, None)
     
-    if action_typee in ["load", "delegate"]:
+    if action_type in ["load", "delegate"]:
         return ("self", None, None)
     
     # 2. Check file_map (Path-basiert)
     if filepath:
         for pattern, mapping in matrix.get("file_map", {}).items():
             if pattern in filepath or (filepath and filepath.endswith(pattern.replace("*", ""))):
-                agent = mapping.get(action_typee)
+                agent = mapping.get(action_type)
                 if agent:
                     return ("delegate", agent, None)
     
     # 3. Check action_map
-    entry = matrix.get("action_map", {}).get(action_typee)
+    entry = matrix.get("action_map", {}).get(action_type)
     if entry:
         agent = entry.get("agent")
         if agent is None:
@@ -149,7 +149,7 @@ def check_responsibility_matrix(action_typee, filepath=None, cmd=None):
         return ("delegate", agent, entry.get("task"))
     
     # 4. Nothing found
-    return ("blocked", None, f"No Sub-Agent for action '{action_typee}'")
+    return ("blocked", None, f"No Sub-Agent for action '{action_type}'")
 
 PRUEF_MATRIX = {
     "write": ["R01","R18","R19","R20","R10","R05"],
