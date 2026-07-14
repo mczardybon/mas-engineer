@@ -24,7 +24,7 @@ from pathlib import Path
 
 VERSION = "1.0.0"
 
-# constantn
+# constants
 MAS_CONFIG = os.path.expanduser("~/.config/goose/recipes")
 MAS_SUBS = os.path.join(MAS_CONFIG, "sub")
 MAS_TOOLS = os.path.join(MAS_CONFIG, "mas-engineer-tools")
@@ -39,6 +39,7 @@ else:
     MAS_DIR = WORKSPACE
 STATE_TEMPLATES = os.path.join(MAS_DIR, ".state", "templates")
 STATE_RULES = os.path.join(MAS_DIR, ".state", "rules")
+MAS_TOOLS = os.path.join(WORKSPACE, "tools")  # actual location of dev_*.py tools
 
 # Colors
 GREEN = "\033[0;32m"
@@ -466,12 +467,12 @@ def create_workflows(project_path, project_name_clean, dry_run=False):
 
 
 def create_git_infrastructure(project_path, dry_run=False):
-    """Creates .gitignore + .gitattributeses — overwrites NEVER bestehende."""
+    """Creates .gitignore + .gitattributes — overwrites NEVER bestehende."""
     gitignore_file = os.path.join(project_path, ".gitignore")
-    gitattributeses_file = os.path.join(project_path, ".gitattributeses")
+    gitattributes_file = os.path.join(project_path, ".gitattributes")
 
-    if os.path.exists(gitignore_file) and os.path.exists(gitattributeses_file):
-        info(f".gitignore + .gitattributeses exist already — skipped")
+    if os.path.exists(gitignore_file) and os.path.exists(gitattributes_file):
+        info(f".gitignore + .gitattributes exist already — skipped")
         return
 
     if not os.path.exists(gitignore_file):
@@ -491,15 +492,15 @@ dist/
                 f.write(gitignore_content)
         ok(f".gitignore")
 
-    if not os.path.exists(gitattributeses_file):
-        gitattributeses_content = """*.yaml linguist-language=YAML
+    if not os.path.exists(gitattributes_file):
+        gitattributes_content = """*.yaml linguist-language=YAML
 *.md linguist-detectable=true
 *.py linguist-detectable=true
 """
         if not dry_run:
-            with open(gitattributeses_file, "w") as f:
-                f.write(gitattributeses_content)
-        ok(f".gitattributeses")
+            with open(gitattributes_file, "w") as f:
+                f.write(gitattributes_content)
+        ok(f".gitattributes")
 
 
 def create_dashboard_scaffold(project_path, dry_run=False):
@@ -1067,7 +1068,7 @@ def cmd_repair_symlinks():
 
 
 def main():
-    parser = argparse.argumentParser(description="Generic-Init Tool v" + VERSION)
+    parser = argparse.ArgumentParser(description="Generic-Init Tool v" + VERSION)
     parser.add_argument("--init", metavar="PROJEKT", help="Projekt initialize")
     parser.add_argument("--bootstrap", metavar="PROJEKT", help="Complete MAS-framework bootstrap (generic-init + Portierung)")
     parser.add_argument("--status", action="store_true", help="Status anshow")

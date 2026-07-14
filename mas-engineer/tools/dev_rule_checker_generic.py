@@ -284,7 +284,7 @@ def main():
         if not ok:
             print(f"⛔⛔⛔⛔⛔ R09: {msg}")
             sys.exit(1)
-    parser = argparse.argumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("--check", help="Rule-ID")
     parser.add_argument("--action", default="", help="Planned action")
     parser.add_argument("--all", action="store_true", help="All rules")
