@@ -1,9 +1,31 @@
-title: Dashboard v2 Autorefresh
-description: Updated all 5 Minuten den Dashboard-Status-JSON
-settings:
-  max_turns: 3
-steps:
-- name: generate-status
-  action: 'python3 $HOME/.config/goose/recipes/mas-engineer-tools/dev_app_builder.py --generate --workspace ${MAS_WORKSPACE:-.}
+title: 📊 Dashboard v2 Autorefresh
+description: Updates the dashboard-status JSON every 5 minutes via dev_app_builder.py
+instructions: |
+  This recipe auto-refreshes the MAS-Engineer Dashboard v2 status JSON.
 
-    '
+  ⛔ ONLY {workspace} — NO changes outside the dashboard data directory.
+
+  ## Input
+  - workspace: path to the MAS-Engineer workspace (default: current directory)
+
+  ## What it does
+  1. Run: python3 $HOME/.config/goose/recipes/mas-engineer-tools/dev_app_builder.py --generate --workspace ${MAS_WORKSPACE:-.}
+  2. Verify the dashboard data was written to {workspace}/.mas/dashboards/
+  3. Report success or error
+
+  ## Output
+  - Updated dashboard data at .mas/dashboards/data.json
+  - Signal: DONE
+
+  ⛔ NO modifications to framework files.
+  ⛔ NO writes outside .mas/dashboards/.
+
+  This recipe replaces the legacy workflow-style file (which had only `steps:`
+  and no `prompt:` field). The single shell command from the original is now
+  invoked via the recipe's instructions section.
+prompt: 📊 Refresh the Dashboard v2 status JSON
+settings:
+  timeout: 300
+  max_steps: 30
+  goose_provider: deepseek
+  goose_model: deepseek-chat
