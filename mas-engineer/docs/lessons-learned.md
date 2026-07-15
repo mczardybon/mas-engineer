@@ -217,3 +217,52 @@ When you learn something hard-won from a session:
 - Pre-push validator: `recipe/sub/sub_mas-pre-push-validator.yaml`
 - Goose expert: `recipe/sub/sub_mas-goose-expert.yaml`
 - This file: `docs/lessons-learned.md`
+
+---
+
+## L08 — No AI coding agents (Copilot et al.) on this repo
+
+**Date:** 2026-07-14
+**Severity:** HIGH (security/policy)
+
+### Symptom
+After a legitimate `git push` (commit 93846de), GitHub Copilot attempted
+to start a workflow pipeline on the repository. The user explicitly
+forbade any AI coding agent from operating on this repo.
+
+### Rule (user-mandated)
+> User: "der GitHub Copilot soll nicht an dem repo machen"
+
+**AI coding agents are FORBIDDEN on this repository**, including but not
+limited to:
+- GitHub Copilot (any variant: `copilot`, `copilot-swe-agent`,
+  `copilot-pull-request-reviewer`, etc.)
+- Dependabot (when triggered by AI-driven upgrades)
+- Any other agent whose `actor` or `triggering_actor` matches known
+  AI bot patterns (`*-swe-agent`, `chatgpt`, `gpt-*`, `claude`,
+  `gemini`, `cursor`, `cody`, `codeium`)
+
+### Mechanism (defence in depth)
+
+1. **`.github/workflows/block-copilot.yml`** — listens to `workflow_run`
+   and cancels any run triggered by a forbidden actor.
+2. **`.github/workflows/ai-pipeline-kill-switch.yml`** — first step of
+   *every* workflow run is the guard. If `actor`/`triggering_actor`
+   matches a forbidden pattern, the run exits with status 1 *before*
+   any checkout/install/build.
+3. **`.github/CODEOWNERS`** — only `@mczardybon` is a code owner. Bots
+   are never added as reviewers.
+
+### How to verify
+```bash
+gh api repos/mczardybon/mas-engineer/actions/runs \
+  --jq '.workflow_runs[] | {name, actor: .actor.login, status, conclusion}'
+```
+All rows must show `actor.login == "mczardybon"` or `actor.login == "github-actions[bot]"`
+in a CI context that the human owner explicitly started.
+
+### How to extend the block list
+Add a new pattern to the `grep -qiE` regex in
+`.github/workflows/ai-pipeline-kill-switch.yml` and to the
+`FORBIDDEN_ACTORS` list in `.github/workflows/block-copilot.yml`.
+
