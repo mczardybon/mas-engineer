@@ -1,24 +1,23 @@
 # =============================================================================
-#  HARD-KILL: Any workflow run that mentions AI coding agents is terminated
-#  immediately at the very first step, before any checkout, install, or
-#  build is performed.
+#  HARD-KILL: Any workflow run triggered by GitHub Copilot (Cloud) is
+#  terminated immediately at the very first step, before any checkout,
+#  install, or build is performed.
 #
 #  This workflow is intentionally minimal: it does no work, and exists only
-#  to ensure that whenever Copilot (or any other AI agent) attempts to run
-#  a pipeline, the run ends with a clear "blocked" status.
+#  to ensure that whenever GitHub Copilot attempts to run a pipeline, the
+#  run ends with a clear "blocked" status.
+#
+#  Scope: ONLY GitHub Copilot. Other AI tools/agents are not affected.
 # =============================================================================
 
-name: 🛑 Hard-Stop AI Pipeline Attempts
+name: 🛑 Hard-Stop GitHub Copilot Pipeline Attempts
 
 on:
-  # Catch EVERY event that could start a pipeline.
   push:
     branches: ["*"]
   pull_request:
     branches: ["*"]
   workflow_dispatch:
-  schedule:
-    # Disabled — no cron line — to prevent accidental scheduled runs.
   repository_dispatch:
     types: ["*"]
   workflow_call:
@@ -31,37 +30,33 @@ on:
 permissions: {}
 
 concurrency:
-  # Only one instance of this guard runs at a time, and the newest wins.
-  group: block-ai-pipelines
+  group: block-copilot-pipelines
   cancel-in-progress: true
 
 jobs:
   stop:
     name: Stop pipeline
     runs-on: ubuntu-latest
-    # Skip entirely on runs initiated by the trusted account "mczardybon"
-    # (the human owner). For everyone else, run the guard.
     if: github.actor != 'mczardybon'
     steps:
-      - name: Detect AI coding agent
+      - name: Detect GitHub Copilot
         env:
           ACTOR: ${{ github.actor }}
           TRIGGERING_ACTOR: ${{ github.triggering_actor }}
         run: |
           echo "============================================================"
-          echo "  HARD-STOP guard — reviewing pipeline attempt"
+          echo "  Hard-Stop guard — reviewing pipeline attempt"
           echo "============================================================"
           echo "  Actor:         $ACTOR"
           echo "  Triggered by:  $TRIGGERING_ACTOR"
           echo ""
 
-          # Patterns that identify AI coding agents.
-          if echo "$ACTOR $TRIGGERING_ACTOR" | grep -qiE 'copilot|swe-agent|chatgpt|gpt-|claude|gemini|cursor|cody|codeium'; then
-            echo "  ⛔ AI coding agent detected. Aborting pipeline."
-            echo "  ⛔ This repository is closed to AI-initiated pipelines."
+          # ONLY GitHub Copilot (Cloud) is detected. Nothing else.
+          if echo "$ACTOR $TRIGGERING_ACTOR" | grep -qiE '^(copilot|copilot-swe-agent|copilot-pull-request-reviewer|github-copilot|copilot-chat)([[:space:]]|$)'; then
+            echo "  ⛔ GitHub Copilot detected. Aborting pipeline."
+            echo "  ⛔ This repository is closed to GitHub Copilot pipelines."
             echo "  ⛔ See: docs/lessons-learned.md L08"
-            # Non-zero exit → red ✗ status, but with a clear reason.
             exit 1
           fi
 
-          echo "  ✅ No AI coding agent detected. Allowing run to continue."
+          echo "  ✅ No GitHub Copilot detected. Allowing run to continue."

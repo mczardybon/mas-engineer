@@ -220,27 +220,31 @@ When you learn something hard-won from a session:
 
 ---
 
-## L08 — No AI coding agents (Copilot et al.) on this repo
+## L08 — No GitHub Copilot (Cloud) on this repo
 
 **Date:** 2026-07-14
 **Severity:** HIGH (security/policy)
 
 ### Symptom
-After a legitimate `git push` (commit 93846de), GitHub Copilot attempted
-to start a workflow pipeline on the repository. The user explicitly
-forbade any AI coding agent from operating on this repo.
+After a legitimate `git push` (commit 93846de), GitHub Copilot in the
+cloud attempted to start a workflow pipeline on the repository. The
+user explicitly forbade this.
 
 ### Rule (user-mandated)
 > User: "der GitHub Copilot soll nicht an dem repo machen"
 
-**AI coding agents are FORBIDDEN on this repository**, including but not
-limited to:
-- GitHub Copilot (any variant: `copilot`, `copilot-swe-agent`,
-  `copilot-pull-request-reviewer`, etc.)
-- Dependabot (when triggered by AI-driven upgrades)
-- Any other agent whose `actor` or `triggering_actor` matches known
-  AI bot patterns (`*-swe-agent`, `chatgpt`, `gpt-*`, `claude`,
-  `gemini`, `cursor`, `cody`, `codeium`)
+**Only GitHub Copilot (Cloud) is FORBIDDEN on this repository.** Other
+AI tools and agents are NOT in scope of this rule and remain allowed.
+
+The block list is restricted to GitHub Copilot identities only:
+- `copilot`
+- `copilot-swe-agent`
+- `copilot-pull-request-reviewer`
+- `github-copilot`
+- `copilot-chat`
+
+If the user later extends the rule to other AI tools, this list and
+the regex in the kill-switch are the only things to update.
 
 ### Mechanism (defence in depth)
 

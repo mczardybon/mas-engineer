@@ -1,17 +1,13 @@
 # =============================================================================
-#  BLOCK GITHUB COPILOT (and all other AI coding agents) FROM TRIGGERING
-#  CI/CD WORKFLOWS ON THIS REPOSITORY.
+#  BLOCK GITHUB COPILOT (Cloud) FROM TRIGGERING CI/CD WORKFLOWS ON THIS REPO.
 #
-#  Why: On 2026-07-14, after a legitimate push, GitHub Copilot attempted to
-#  start a pipeline run on this repo. The user (mczardybon) explicitly
-#  forbade this: "der GitHub Copilot soll nicht an dem repo machen".
-#
-#  This file does NOT define a pipeline to run. It exists purely as a
-#  declarative guard that cancels any AI-triggered workflow run before it
-#  can execute any step.
+#  Why: On 2026-07-14, after a legitimate push, GitHub Copilot in the cloud
+#  attempted to start a pipeline run on this repo. The user (mczardybon)
+#  explicitly forbade this: "der GitHub Copilot soll nicht an dem repo machen".
+#  Other AI tools/agents are NOT in scope — only GitHub Copilot Cloud.
 # =============================================================================
 
-name: 🚫 Block AI Coding Agents (Copilot, etc.)
+name: 🚫 Block GitHub Copilot (Cloud)
 
 on:
   # Trigger on EVERY workflow run, regardless of who started it.
@@ -25,12 +21,11 @@ on:
 permissions: {}
 
 jobs:
-  block-ai-agents:
-    name: Cancel runs started by AI coding agents
+  block-copilot:
+    name: Cancel runs started by GitHub Copilot
     runs-on: ubuntu-latest
-    # This guard only watches; it never produces artifacts or modifies state.
     steps:
-      - name: Log and cancel AI-triggered runs
+      - name: Log and cancel Copilot-triggered runs
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ACTOR: ${{ github.actor }}
@@ -39,21 +34,20 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           echo "============================================================"
-          echo "  AI-Agent Guard — reviewing workflow run"
+          echo "  GitHub Copilot (Cloud) guard — reviewing workflow run"
           echo "============================================================"
           echo "Repository:    $REPO"
           echo "Actor:         $ACTOR"
           echo "Triggered by:  $TRIGGERING_ACTOR"
           echo "Run ID:        $RUN_ID"
 
-          # -------------------------------------------------------------------------
-          # 1. The set of identities that are NOT allowed to start a pipeline.
-          # -------------------------------------------------------------------------
+          # ONLY GitHub Copilot (Cloud) is blocked. Nothing else.
           FORBIDDEN_ACTORS=(
             "copilot"
             "copilot-swe-agent"
             "copilot-pull-request-reviewer"
-            "github-actions[bot]"
+            "github-copilot"
+            "copilot-chat"
           )
 
           IS_FORBIDDEN=0
@@ -65,13 +59,10 @@ jobs:
             fi
           done
 
-          # -------------------------------------------------------------------------
-          # 2. If the actor is forbidden, cancel the run and exit.
-          # -------------------------------------------------------------------------
           if [[ $IS_FORBIDDEN -eq 1 ]]; then
             echo "  ⛔ CANCELLING workflow run $RUN_ID started by $TRIGGERING_ACTOR"
             gh run cancel "$RUN_ID" --repo "$REPO" || true
-            echo "  ⛔ CANCELLED — pipeline is NOT allowed on this repo."
+            echo "  ⛔ CANCELLED — GitHub Copilot is not allowed on this repo."
             exit 0
           fi
 
@@ -80,5 +71,5 @@ jobs:
       - name: Sentinel — workflow intentionally has no other steps
         run: |
           echo "  This workflow has no build/test/deploy steps."
-          echo "  Its only purpose is to guard against AI coding agents."
+          echo "  Its only purpose is to guard against GitHub Copilot (Cloud)."
           echo "  See: docs/lessons-learned.md L08"
