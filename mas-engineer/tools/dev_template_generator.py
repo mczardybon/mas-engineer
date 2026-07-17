@@ -823,7 +823,7 @@ def main():
         
         if args.json:
             result.update({"name": args.name, "emoji": args.emoji, "task": args.task, "type": args.agent_type})
-            # --json: AUSSCHLIESSLICH JSON output, no anderer Output
+            # --json: ONLY JSON output, no other output
             # Redirect sys.stdout to capture any prior prints, then print only JSON
             print(json.dumps(result, indent=2, ensure_ascii=False))
             return  # Exit immediately, no further output

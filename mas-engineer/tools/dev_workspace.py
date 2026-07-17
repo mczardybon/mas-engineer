@@ -561,7 +561,7 @@ def cmd_uninstall():
     log("=" * 60)
 
     n = 0
-    # Top-Level YAMLs (AUSSER dev-mas-engineer.yaml)
+    # Top-level YAMLs (EXCEPT dev-mas-engineer.yaml)
     for f in list(GOOSE_RECIPES.glob("*.yaml")):
         if f.name == "dev-mas-engineer.yaml":
             continue
@@ -574,7 +574,7 @@ def cmd_uninstall():
         shutil.rmtree(fw_dir)
         n += 1
 
-    # Docs (AUSSER mas-engineer/)
+    # Docs (EXCEPT mas-engineer/)
     if GOOSE_DOCS.exists():
         for item in list(GOOSE_DOCS.iterdir()):
             if item.name == "mas-engineer":
@@ -876,7 +876,7 @@ prompt: |
   {emoji} {display_name} (v1.0.0)
   ⛔ Reasonrulen:
      1. NOTHING automatically applied
-     2. framework-governance.md beachten
+     2. framework-governance.md noten
   🎯 {description}
 
 settings:

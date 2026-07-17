@@ -24,7 +24,7 @@ ARCHITEKTUR_DATEIEN = [
 ]
 
 # Allowed Changes (NOE Architektur)
-ERLAUBTE_PATTERNS = [
+ALLOWED_PATTERNS = [
     r"recipe/sub/sub_mas-\w+\.yaml$",  # Sub-Agent-Edit (not CREATE)
     r"tools/dev_\w+\.py$",              # Tool-Edit (not CREATE)
     r"\.state/knowledge/.*\.md",        # Wissen-files
@@ -67,7 +67,7 @@ def ist_architektur_change(action, file=""):
                 return True, f"{ad} change — protected Architektur-file"
     
     # 5. Allowed Changes (NOE Architektur)
-    for pat in ERLAUBTE_PATTERNS:
+    for pat in ALLOWED_PATTERNS:
         if re.search(pat, d):
             return False, ""
     

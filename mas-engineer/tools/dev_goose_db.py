@@ -19,7 +19,7 @@ VERWENDUNG:
     python3 dev_goose_db.py --session <id>     # Session-Details + Messages
     python3 dev_goose_db.py --stale [min]      # Stale-Sessions (>30min idle)
     python3 dev_goose_db.py --costs            # Kosten-Overview
-    python3 dev_goose_db.py --models           # Available Modelle
+    python3 dev_goose_db.py --models           # Available models
     python3 dev_goose_db.py --activity         # Activitys-Timeline
 """
 
@@ -239,7 +239,7 @@ def cmd_costs():
 
 
 def cmd_models():
-    """Available Modelle."""
+    """Available models."""
     conn = open_db()
     rows = conn.execute(
         "SELECT model_id, name, family, context_limit, reasoning, recommended FROM provider_inventory_models ORDER BY ordinal"

@@ -5,7 +5,7 @@ dev_changes.py — 📝 Das Memory des dev-mas-engineer
 Version: 1.0.0
 Author: dev-mas-engineer (autonomous)
 
-Dokumentiert JEDE Change am agent/ framework.
+Documents EVERY change to the agent/ framework.
 Enables rollback. Zeigt Historie.
 
 VERWENDUNG:

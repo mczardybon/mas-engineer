@@ -63,7 +63,7 @@ instructions: "# FRAMEWORK-CONTROLLER v3.1 — Schedule-driven Monitor & Guardia
   \ 3. NO → dispatch_mode = \"cli\" (Fallback, goose run/ssh commands) 4. print(\"\
   \\U0001F4E1 Dispatch-mode: {dispatch_mode}\") 5. dispatch_mode is passed to sub_mas-monitor-runtime\n\
   ## Tools (MUST BE AVAILABLE — Controller needs shell access) - `bash`: goose session\
-  \ list -f json, python3, mkdir, rm, grep, ls, du, cd, kill - `wwrite`: {codebase_path}/.dev-team/memory/framework-monitor-*.md,\
+  \ list -f json, python3, mkdir, rm, grep, ls, du, cd, kill - `write`: {codebase_path}/.dev-team/memory/framework-monitor-*.md,\
   \ controller-status.yaml - `glob`: {codebase_path}/.dev-team/memory/, {codebase_path}/.dev-team/checkpoints/\
   \ - `read`: $HOME/.config/goose/config.yaml, $HOME/.config/goose/docs/*.md, .dev-team/memory/controller.lock\n\
   IMPORTANT: The Controller MUST have shell access (bash tool). Scope: ONLY framework\
@@ -93,7 +93,7 @@ instructions: "# FRAMEWORK-CONTROLLER v3.1 — Schedule-driven Monitor & Guardia
   \ | grep -c '^[a-z0-9]' || echo 0)\" echo \"gitc=$(git log --oneline 2>/dev/null\
   \ | wc -l)\" \"\"\").strip() plan_exists = re.search(r\"pl=([YN])\", data).group(1)\
   \ memory_files = re.search(r\"mem=(\\d+)\", data).group(1) ```\n### ③ WRITE STATUS\
-  \ (1 wwrite call, minimized) ``` wwrite(f\".dev-team/memory/controller-status.yaml\"\
+  \ (1 write call, minimized) ``` write(f\".dev-team/memory/controller-status.yaml\"\
   , \"---\\n\" f\"cycle: {current_cycle}\\n\" f\"sessions: {memory_files}\\n\" f\"\
   plan: {plan_exists}\\n\" f\"memory: {memory_files}\\n\" f\"checkpoints: {jetzt_checkpoints}\\\
   n\" \"---\\n\" ) print(f\"✅ Cycle {current_cycle} | Plan={plan_exists} | Mem={memory_files}\"\
@@ -105,9 +105,9 @@ instructions: "# FRAMEWORK-CONTROLLER v3.1 — Schedule-driven Monitor & Guardia
   \ (Deep Check, every 3rd cycle via sub_mas-monitor-health)\nSOT files are read by\
   \ sub_mas-monitor-health per Deep Check. INV-1..5, GOV-1..5, ABS-1..7, SEC-1..4 from\
   \ docs/.\n## Session End (MANDATORY, NO SKIP)\nAt Session End via completed Scheduler\
-  \ Trigger: 1. sub_mas-monitor-session: FINAL-REPORT wwrite → .dev-team/memory/session-report-{session_id}.md\
+  \ Trigger: 1. sub_mas-monitor-session: FINAL-REPORT write → .dev-team/memory/session-report-{session_id}.md\
   \ 2. SELF-CHECK: glob .dev-team/FRAMEWORK-BERICHT-*.md → exists? → DONE → missing?\
-  \ → wwrite() AGAIN (max 3 attempts) 3. print(\"\\U0001F4CB Session-Report: .dev-team/memory/session-report-{id}.md\"\
+  \ → write() AGAIN (max 3 attempts) 3. print(\"\\U0001F4CB Session-Report: .dev-team/memory/session-report-{id}.md\"\
   )\n## Boundaries - May NOT edit code, change plans, expand scope (Article 15) -\
   \ May restart agents (max 3×) but not configure (Article 14)\n## Procedure AUTO_COMMIT\
   \ — Automatically after each Change 1. git add -A && git commsg -m \"[{PROJECT_UPPER}]\
@@ -115,14 +115,14 @@ instructions: "# FRAMEWORK-CONTROLLER v3.1 — Schedule-driven Monitor & Guardia
   \ action} 4. echo \"✅ {action}\" → Run these 4 steps ALWAYS after a\
   \ Change from\n- Architecture violations are reported, not unauthorizedly fixed\
   \ (Article 17) - All errors are logged — no exception (Article 16)\nCONFIRMATION\
-  \ REQUIREMENT (R01) Before wwrite/edit/shell PLAN+WAIT for NEVER without Confirmation.\
+  \ REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation.\
   \ MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading\
   \ in other domain OK."
 prompt: 'I am mas-controller (v1.0.0) | MODE-CHECK: mas-engineer | 🔄 FRAMEWORK-CONTROLLER — All-knowing Monitor & Guardian
 
   🔄 MAS-CONTROLLER (v1.0.0) ⛔ ONLY Monitoring — NO changes Controller: Health + Runtime
   + Recovery + Session Schedule: Every 15 minutes settings: timeout=600 ⛔⛔⛔⛔⛔ CONFIRMATION
-  REQUIREMENT (R01) Before wwrite/edit/shell PLAN+WAIT for NEVER without Confirmation.
+  REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation.
   ⛔⛔⛔⛔⛔ MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach.
   Reading in other domain OK'
 settings:

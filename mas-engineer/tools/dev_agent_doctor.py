@@ -297,7 +297,7 @@ def watch_mode(bp: dict, interval: int = 300):
         print("\n  Watch-Mode finished")
 
 def export_report(results: List[dict]):
-    """Exportiere als JSON."""
+    """Export as JSON."""
     report = {"timestamp": datetime.now().isoformat(), "agents": len(results),
               "avg_score": sum(r["score"] for r in results) / len(results) if results else 0,
               "results": results}
