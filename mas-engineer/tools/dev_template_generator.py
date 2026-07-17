@@ -3,7 +3,7 @@
 dev_template_generator.py v2.0.0 — Generates & refreshed Agent-YAMLs aus SOT + Best-Practices + Improvement-Plan
 
 Sources:
-  1. .state/workflows.yaml → configs.mas-self (remainderrictions, enforcement, recovery, signals)
+  1. .state/workflows.yaml → configs.mas-self (restrictions, enforcement, recovery, signals)
   2. .state/best-practices.yaml → 27 auto_apply Rulen
   3. .state/improvement-plan.json → open improvements
   4. recipe/template/agent_template.yaml → Reaelseruktur
@@ -189,11 +189,11 @@ def build_rule_package(sources: Dict) -> Dict:
     bp = sources.get("bp", {})
     improvement = sources.get("improvement", [])
     
-    # ── SOT remainderrictions ──
-    remainderrictions_raw = sot.get("remainderrictions", {})
+    # ── SOT restrictions ──
+    restrictions_raw = sot.get("restrictions", {})
     sot_remainderriction_lines = []
     for key in SOT_RESTRICTION_KEYS:
-        r = remainderrictions_raw.get(key)
+        r = restrictions_raw.get(key)
         if not r:
             continue
         if isinstance(r, dict):
@@ -203,7 +203,7 @@ def build_rule_package(sources: Dict) -> Dict:
         elif isinstance(r, list):
             for item in r:
                 sot_remainderriction_lines.append(f"  ⛔ {str(item)[:100]}")
-    sot_remainderrictions = "\n".join(sot_remainderriction_lines)
+    sot_restrictions = "\n".join(sot_remainderriction_lines)
     
     # ── SOT Enforcement ──
     enf = sot.get("enforcement", {})
@@ -275,7 +275,7 @@ def build_rule_package(sources: Dict) -> Dict:
     }
     
     return {
-        "sot_remainderrictions": sot_remainderrictions or "# No SOT-remainderrictions defines",
+        "sot_restrictions": sot_restrictions or "# No SOT-restrictions defines",
         "sot_enforcement": sot_enforcement or "# No SOT-Enforcement defines",
         "sot_recovery": sot_recovery or "# No SOT-Recovery defines",
         "sot_signals": sot_signals or "# No SOT-Signals defines",
@@ -338,7 +338,7 @@ settings:
     
     # Dynamische placeholder aus rules
     dynamic_replacements = {
-        "{SOT_RESTRICTIONS}": rules.get("sot_remainderrictions", ""),
+        "{SOT_RESTRICTIONS}": rules.get("sot_restrictions", ""),
         "{SOT_ENFORCEMENT}": rules.get("sot_enforcement", ""),
         "{SOT_RECOVERY}": rules.get("sot_recovery", ""),
         "{SOT_SIGNALS}": rules.get("sot_signals", ""),
@@ -392,7 +392,7 @@ def build_yaml(filled: str, rules: Dict, name: str, emoji: str, task: str) -> Di
         f"{emoji} {name.upper()} (v1.0.0)\n"
         f"⛔ NUR {scope} — NOE anderen actionen\n"
         f"⛔ NOE Changeen ohne Confirmation\n"
-        f"→ Siehe SOT: configs.mas-self.remainderrictions\n"
+        f"→ Siehe SOT: configs.mas-self.restrictions\n"
     )
     
     # Sichcreate prompt ≤ 500 Zeichen

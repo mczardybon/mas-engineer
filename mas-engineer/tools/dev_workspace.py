@@ -38,6 +38,7 @@ GOOSE_RECIPES = Path.home() / ".config" / "goose" / "recipes"
 GOOSE_FRAMEWORK_DIR = Path.home() / ".local" / "share" / "goose" / "_framework"
 GOOSE_DOCS = Path.home() / ".config" / "goose" / "docs"
 GOOSE_CONFIG = Path.home() / ".config" / "goose" / "config.yaml"
+TOOLS_DIR = GOOSE_RECIPES / "mas-engineer-tools"
 
 # Source-Repo for Python scripts, tests, project files
 AGENT_REPO = Path.home() / ".config" / "goose" / "recipes"
@@ -49,6 +50,10 @@ EXCLUDE_DOCS = {"mas-engineer"}
 
 def log(msg):
     print(msg)
+
+
+def info(msg):
+    print(f"📢 {msg}")
 
 
 def ok(msg):

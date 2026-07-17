@@ -122,7 +122,7 @@ def analyze(scanner: "observer.Scanner") -> str:
     cats = {
         "A: Core Dev": [], "B: Architecture": [], "C: Security": [],
         "D: Data & AI": [], "E: Ops & Infra": [], "F: Spezial": [],
-        "Sub-agents": [], "Elseige": []
+        "Sub-agents": [], "Other": []
     }
     
     # Only Spezialistn categorize

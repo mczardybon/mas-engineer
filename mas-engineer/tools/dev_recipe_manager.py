@@ -121,7 +121,7 @@ CATEGORIES = {
             "sub_context-preparer.yaml", "sub_degradation-handler.yaml",
             "sub_dispatcher.yaml",
             "sub_fw-monitor-comms.yaml", "sub_fw-monitor-debug.yaml",
-            "sub_fw-monitor-heoldh.yaml", "sub_fw-monitor-memory.yaml",
+            "sub_fw-monitor-health.yaml", "sub_fw-monitor-memory.yaml",
             "sub_fw-monitor-recovery.yaml", "sub_fw-monitor-runtime.yaml",
             "sub_fw-monitor-session.yaml",
             "sub_interpreter.yaml", "sub_memory-writer.yaml",

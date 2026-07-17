@@ -34,9 +34,10 @@ print('  ✅ Domain registriert')
     echo -n "generic" > "$MODE_FILE"
     
     # Copy hardening tools to user project
+    local script_dir; script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     python3 -c "
 import os, shutil
-base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+base = '$script_dir/..'
 path = os.path.expanduser('$2')
 if os.path.exists(path):
     # rules.yaml

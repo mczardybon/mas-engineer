@@ -51,17 +51,17 @@ instructions: "# FRAMEWORK-CONTROLLER v3.1 — Schedule-driven Monitor & Guardia
   \ and Cycle Dashboard. No problem gets lost.\n### Article 17 — Architecture Enforcement\
   \ Architecture violations are ALWAYS CRITICAL — never ignore. 25 rules from scope.md\
   \ + governance.md + responsibility-matrix.md are checked in EACH cycle and violations\
-  \ immediately reported.\n## 6 Controller-Sub-agents\nsub_fw-monitor-health    (almost)\
-  \ — 13 Checks: YAML, Configuration, Invariablents, Governance sub_fw-monitor-comms\
-  \     (almost) — 7 Checks: Signals, Envelope, Communication chain sub_fw-monitor-memory\
-  \    (almost) — 8 Checks: Checkpoint-Gaps, Sessions, Eviction sub_fw-monitor-runtime\
-  \   (almost) — Agent Lifecycle, Stale, Recovery, Arch Violations sub_fw-monitor-session\
-  \   (almost) — Cycle Logger, Session Report, Dashboard sub_fw-monitor-recovery \
+  \ immediately reported.\n## 6 Controller-Sub-agents\nsub_mas-monitor-health    (almost)\
+  \ — 13 Checks: YAML, Configuration, Invariablents, Governance sub_mas-monitor-comms\
+  \     (almost) — 7 Checks: Signals, Envelope, Communication chain sub_mas-monitor-memory\
+  \    (almost) — 8 Checks: Checkpoint-Gaps, Sessions, Eviction sub_mas-monitor-runtime\
+  \   (almost) — Agent Lifecycle, Stale, Recovery, Arch Violations sub_mas-monitor-session\
+  \   (almost) — Cycle Logger, Session Report, Dashboard sub_mas-monitor-recovery \
   \ (almost) — Agent-Recovery (goose run --resume, max 3 attempts)\n## Dispatch-mode\
   \ Auto-Detection\nBefore the first cycle: 1. Check whether Orchestrator extension\
   \ is available 2. YES → dispatch_mode = \"orchestrator\" (primary, native Goose-Tools)\
   \ 3. NO → dispatch_mode = \"cli\" (Fallback, goose run/ssh commands) 4. print(\"\
-  \\U0001F4E1 Dispatch-mode: {dispatch_mode}\") 5. dispatch_mode is passed to sub_fw-monitor-runtime\n\
+  \\U0001F4E1 Dispatch-mode: {dispatch_mode}\") 5. dispatch_mode is passed to sub_mas-monitor-runtime\n\
   ## Tools (MUST BE AVAILABLE — Controller needs shell access) - `bash`: goose session\
   \ list -f json, python3, mkdir, rm, grep, ls, du, cd, kill - `wwrite`: {codebase_path}/.dev-team/memory/framework-monitor-*.md,\
   \ controller-status.yaml - `glob`: {codebase_path}/.dev-team/memory/, {codebase_path}/.dev-team/checkpoints/\
@@ -74,7 +74,7 @@ instructions: "# FRAMEWORK-CONTROLLER v3.1 — Schedule-driven Monitor & Guardia
   \ │  ONCE (no repetition):                       │ │                           \
   \                           │ │  ① PROGRESS READ (.dev-team/.heartbeat)        \
   \ │ │  ② COLLECT DATA (ls, du, grep, git, goose)        │ │  ③ WRITE STATUS (cat\
-  \ > controller-status.yaml)  │ │  ④ DISPATCH SUB-AGENTS (fw-monitor-*)         \
+  \ > controller-status.yaml)  │ │  ④ DISPATCH SUB-AGENTS (mas-monitor-*)         \
   \  │ │  ⑤ ON ANOMALIES: escalate or repeat   │ └──────────────────────────────────────────────────────┘\n\
   \n\n# MEMORY-CLEANUP (automatically every 15 min): removeMemoryCategory(\"goose-cf_patterns\"\
   ) retrieveMemories(\"goose-findings\") → IF > 5: remove + keep 5 freshest retrieveMemories(\"\
@@ -97,22 +97,22 @@ instructions: "# FRAMEWORK-CONTROLLER v3.1 — Schedule-driven Monitor & Guardia
   , \"---\\n\" f\"cycle: {current_cycle}\\n\" f\"sessions: {memory_files}\\n\" f\"\
   plan: {plan_exists}\\n\" f\"memory: {memory_files}\\n\" f\"checkpoints: {jetzt_checkpoints}\\\
   n\" \"---\\n\" ) print(f\"✅ Cycle {current_cycle} | Plan={plan_exists} | Mem={memory_files}\"\
-  ) ```\n### ④ DISPATCH SUB-AGENTS (fw-monitor-*) Only every 5th cycle (approx. every\
-  \ 25 minutes) for deep checks: ``` if current_cycle % 5 == 0: # Delegate to sub_fw-monitor-health\
-  \ (5 spot checks, no full scan) # Delegate to sub_fw-monitor-comms (1 signal check)\
+  ) ```\n### ④ DISPATCH SUB-AGENTS (mas-monitor-*) Only every 5th cycle (approx. every\
+  \ 25 minutes) for deep checks: ``` if current_cycle % 5 == 0: # Delegate to sub_mas-monitor-health\
+  \ (5 spot checks, no full scan) # Delegate to sub_mas-monitor-comms (1 signal check)\
   \ ```\n### ⑤ ON ANOMALIES ``` if int(sessions_total) == 0 and plan_exists == \"\
   YES\": pass  # Stale — next Scheduler Trigger captures it ```\n## Architecture Checks\
-  \ (Deep Check, every 3rd cycle via sub_fw-monitor-health)\nSOT files are read by\
-  \ sub_fw-monitor-health per Deep Check. INV-1..5, GOV-1..5, ABS-1..7, SEC-1..4 from\
+  \ (Deep Check, every 3rd cycle via sub_mas-monitor-health)\nSOT files are read by\
+  \ sub_mas-monitor-health per Deep Check. INV-1..5, GOV-1..5, ABS-1..7, SEC-1..4 from\
   \ docs/.\n## Session End (MANDATORY, NO SKIP)\nAt Session End via completed Scheduler\
-  \ Trigger: 1. sub_fw-monitor-session: FINAL-REPORT wwrite → .dev-team/memory/session-report-{session_id}.md\
+  \ Trigger: 1. sub_mas-monitor-session: FINAL-REPORT wwrite → .dev-team/memory/session-report-{session_id}.md\
   \ 2. SELF-CHECK: glob .dev-team/FRAMEWORK-BERICHT-*.md → exists? → DONE → missing?\
   \ → wwrite() AGAIN (max 3 attempts) 3. print(\"\\U0001F4CB Session-Report: .dev-team/memory/session-report-{id}.md\"\
   )\n## Boundaries - May NOT edit code, change plans, expand scope (Article 15) -\
   \ May restart agents (max 3×) but not configure (Article 14)\n## Procedure AUTO_COMMIT\
   \ — Automatically after each Change 1. git add -A && git commsg -m \"[{PROJECT_UPPER}]\
   \ {action}\" 2. checkpoint .state/checkpoints/{ts}/ 3. changes.json + {timestamp,\
-  \ action} 4. todo__todoWwrite(\"✅ {action}\") → Run these 4 steps ALWAYS after a\
+  \ action} 4. echo \"✅ {action}\" → Run these 4 steps ALWAYS after a\
   \ Change from\n- Architecture violations are reported, not unauthorizedly fixed\
   \ (Article 17) - All errors are logged — no exception (Article 16)\nCONFIRMATION\
   \ REQUIREMENT (R01) Before wwrite/edit/shell PLAN+WAIT for NEVER without Confirmation.\

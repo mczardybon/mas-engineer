@@ -130,7 +130,7 @@ def build_status(ws):
         elif 'FW-' in action or 'framework' in action.lower():
             key = 'Framework'
         else:
-            key = 'Elseige'
+            key = 'Other'
         change_types[key] = change_types.get(key, 0) + 1
 
     # ─── CHECKPOINTS ───

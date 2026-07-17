@@ -50,8 +50,8 @@ def get_rules(mode=None):
         if os.path.exists(WORKFLOWS_DATEI):
             with open(WORKFLOWS_DATEI) as f:
                 wf = yaml.safe_load(f)
-            remainderrictions = wf.get("configs", {}).get("mas-self", {}).get("remainderrictions", {})
-            for key, val in remainderrictions.items():
+            restrictions = wf.get("configs", {}).get("mas-self", {}).get("restrictions", {})
+            for key, val in restrictions.items():
                 if key.startswith("r") and isinstance(val, dict):
                     # Normierte ID: R19 aus r19_path_hierarchie, R01 aus r01_confirmation usw.
                     norm_id = key.split("_")[0].upper()
@@ -84,8 +84,8 @@ def check_rule(rule_id, action=""):
         try:
             with open(WORKFLOWS_DATEI) as f:
                 wf = yaml.safe_load(f)
-            remainderrictions = wf.get("configs", {}).get("mas-self", {}).get("remainderrictions", {})
-            for key, val in remainderrictions.items():
+            restrictions = wf.get("configs", {}).get("mas-self", {}).get("restrictions", {})
+            for key, val in restrictions.items():
                 if key.startswith("r") and isinstance(val, dict):
                     norm_id = key.split("_")[0].upper()
                     rules.append({

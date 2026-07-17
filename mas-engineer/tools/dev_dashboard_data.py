@@ -134,7 +134,7 @@ def generate_data(ws):
         elif 'DASHBOARD' in a:
             k = 'Dashboard'
         else:
-            k = 'Elseige'
+            k = 'Other'
         change_types[k] = change_types.get(k, 0) + 1
 
     # ─── IMPROVEMENT ───

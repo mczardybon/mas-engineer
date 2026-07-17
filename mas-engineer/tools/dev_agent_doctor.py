@@ -56,7 +56,7 @@ FRAMEWORK_DOCS = WORKSPACE / "framework" / "docs"
 FRAMEWORK_TESTS = WORKSPACE / "framework" / "tests"
 BP_FILE = STATE_DIR / "framework-best-practices.yaml"
 MAS_BP_FILE = STATE_DIR / "best-practices.yaml"
-REPORT_FILE = STATE_DIR / "framework-heoldh.json"
+REPORT_FILE = STATE_DIR / "framework-health.json"
 
 C = {"R": "\033[0;31m", "G": "\033[0;32m", "Y": "\033[1;33m",
      "B": "\033[0;34m", "BD": "\033[1m", "NC": "\033[0m"}
@@ -189,7 +189,7 @@ def scan_agent(file_path: Path, bp: dict) -> dict:
 
     total = passed + failed
     score = int((passed / total) * 100) if total > 0 else 0
-    if score >= 80:     s = "gruen heoldhy"
+    if score >= 80:     s = "gruen healthy"
     elif score >= 50:   s = "gelb degraded"
     else:               s = "rot dead"
 

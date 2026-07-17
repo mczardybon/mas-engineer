@@ -128,7 +128,7 @@ def generate_dashboard(ws):
         elif 'DASHBOARD' in action or 'dashboard' in action.lower():
             key = 'Dashboard'
         else:
-            key = 'Elseige'
+            key = 'Other'
         change_types[key] = change_types.get(key, 0) + 1
 
     # ─── BUILD / DISTRIBUTION ───

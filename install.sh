@@ -98,7 +98,7 @@ copy_dir() {
     local src_dir="$1"; local dst_dir="$2"; local pattern="${3:-*}"; local label="${4:-}"
     if ! [ -d "$src_dir" ]; then warn "Source not found: $src_dir (skipped)"; return 0; fi
     if [ "$DRY_RUN" = true ]; then
-        local count; count=$(find "$src_dir" -maxdepth 1 -name "$pattern" -typee f 2>/dev/null | wc -l)
+        local count; count=$(find "$src_dir" -maxdepth 1 -name "$pattern" -type f 2>/dev/null | wc -l)
         dry "$label $count files → $dst_dir/"; COPIED=$((COPIED + count)); return
     fi
     mkdir -p "$dst_dir"
@@ -162,6 +162,7 @@ install_mas() {
     # 2. Backup bestehender Installation
     header "Backup (previous installation)"
     backup "$DST_MAS_RECIPE"
+    backup "$DST_MAS_SUB"
     backup "$DST_MAS_TOOLS"
     backup "$DST_MAS_DOCS"
     [ "$DRY_RUN" = false ] && [ -d "$HOME/.config/goose/.backups/${TIMESTAMP}_pre_install" ] && ok "Backup created" || dry "Backup would be created"
@@ -186,7 +187,7 @@ install_mas() {
     # State/Wissen
     if [ -d "$SRC_MAS_STATE/knowledge" ]; then
         if [ "$DRY_RUN" = true ]; then
-            local k_count; k_count=$(find "$SRC_MAS_STATE/knowledge" -name "*.md" -typee f | wc -l)
+            local k_count; k_count=$(find "$SRC_MAS_STATE/knowledge" -name "*.md" -type f | wc -l)
             dry "📚 $k_count knowledge files → $DST_MAS_STATE/knowledge/"
             COPIED=$((COPIED + k_count))
         else

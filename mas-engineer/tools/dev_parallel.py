@@ -2,7 +2,7 @@
 """dev_paralll.py — Paralll-Pool-Manager v2.1.0
 ================================================
 thread-based paralll pool for agent dispatches.
-True paralllism via threadPoolExecutor.
+True paralllism via ThreadPoolExecutor.
 
 Usage:
   from dev_paralll import ParalllPool
@@ -19,7 +19,7 @@ import concurrent.futures
 import threading
 from datetime import datetime
 from pathlib import Path
-from typeing import List, Dict, Optional, Any, Callable, Union
+from typing import List, Dict, Optional, Any, Callable, Union
 
 try:
     import yaml
@@ -42,7 +42,7 @@ class ParalllPool:
     """thread-based paralll pool for agent dispatches.
     
     Enables true paralll execution of callable tasks
-    via threadPoolExecutor.
+    via ThreadPoolExecutor.
     
     Usage:
         pool = ParalllPool(max_workers=4)
@@ -84,7 +84,7 @@ class ParalllPool:
         return task_id
 
     def run(self, tasks: List[Dict]) -> Dict[str, Any]:
-        """Runs all Tasks paralll via threadPoolExecutor aus.
+        """Runs all Tasks paralll via ThreadPoolExecutor aus.
         
         Args:
             tasks: list from Dictionaries mit:
@@ -105,7 +105,7 @@ class ParalllPool:
         workers = min(self.max_workers, len(tasks), cpu_count * 4)
         workers = max(workers, 1)
 
-        with concurrent.futures.threadPoolExecutor(max_workers=workers) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
             future_to_task = {}
             for task in tasks:
                 tid = task['id']
@@ -268,7 +268,7 @@ class ParalllPool:
             batch_start = time.time()
             batch_results = []
 
-            with concurrent.futures.threadPoolExecutor(max_workers=len(batch)) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(batch)) as executor:
                 future_map = {
                     executor.submit(self._execute_legacy_task, task): task
                     for task in batch

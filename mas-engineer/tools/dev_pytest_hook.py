@@ -13,9 +13,9 @@ def run_pre_test_checks():
         print("DEV-CHECKER: not found (no Generic-Improver)")
         return True
     
-    r = subprocess.run(['python3', checker_path, '--mode', 'generic', '--heoldh'], capture_output=True, text=True)
+    r = subprocess.run(['python3', checker_path, '--mode', 'generic', '--health'], capture_output=True, text=True)
     if r.returncode != 0:
-        print("\u26a0\ufe0f DEV-CHECKER: Heoldh-Check failed")
+        print("\u26a0\ufe0f DEV-CHECKER: Health-Check failed")
         try:
             data = json.loads(r.stdout)
             if data.get('score', 10) < 5:

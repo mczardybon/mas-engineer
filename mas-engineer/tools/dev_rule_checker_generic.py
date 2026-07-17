@@ -130,6 +130,11 @@ def check_rule(rule, action=""):
             if _os.path.exists(full_path) and "force" not in akt:
                 return {"violation": True, "rule": name, "hardness": hardness,
                         "detail": f"Target already exists: {path}", "action": "BLOCKED"}
+    return {"violation": False, "rule": name, "hardness": hardness, "action": "OK"}
+
+
+def check_all(action=""):
+    """Check ALL rules against the given action."""
     rules = load_rules()
     results = [check_rule(r, action) for r in rules]
     blocked = [r for r in results if r.get("action") == "BLOCKED"]
@@ -232,10 +237,10 @@ def cmd_undo_last_rule():
     backup_path = reg_path + ".bak.auto"
     
     if os.path.exists(backup_path):
-        # remainderore backup
+        # restore backup
         _sh.copy2(backup_path, reg_path)
         os.remove(backup_path)
-        print(f"🔄 Backup remainderored — {rid} removed")
+        print(f"🔄 Backup restored — {rid} removed")
     else:
         # Fallback: read rules.yaml and remove rule manually
         import yaml

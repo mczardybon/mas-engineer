@@ -1,7 +1,7 @@
 #!/bin/bash
 # Start the MAS Dashboard HTTP server
-MAS_WORKSPACE="/home/marius/agent_new_start/mas-agent"
-NODE="/usr/lib/goose/resources/bin/node"
+MAS_WORKSPACE="$(cd "$(dirname "$0")/.." && pwd)"
+NODE="${NODE:-node}"
 SERVER="$MAS_WORKSPACE/.mas/mcp/server.js"
 PORT=3000
 

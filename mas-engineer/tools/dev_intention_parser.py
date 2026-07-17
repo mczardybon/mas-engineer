@@ -29,7 +29,7 @@ def analyse_intention(text):
         "type": "sub",
         "name": None,
         "task": text[:120],
-        "remainderrictions": {"allowed_paths": [], "forbidden_paths": [], "requires_confirmation": True},
+        "restrictions": {"allowed_paths": [], "forbidden_paths": [], "requires_confirmation": True},
         "workflow_steps": []
     }
     t = text.lower()
@@ -45,7 +45,7 @@ def analyse_intention(text):
         result["name"] = (words[1] if len(words) > 1 else words[0] if words else "agent") + "-agent" if len(words) > 0 else "agent"
     path_patterns = re.findall(r'(?:may|should|only|not|exclusively)\s+([\w/.-]+)', t)
     if path_patterns:
-        result["remainderrictions"]["allowed_paths"] = [p for p in path_patterns if 'not' not in p and 'may' not in p]
+        result["restrictions"]["allowed_paths"] = [p for p in path_patterns if 'not' not in p and 'may' not in p]
     if any(w in t for w in ["cancel", "stopp", "error cancel"]):
         result["workflow_steps"].append({"id": "main", "action": "shell", "cmd": "", "on_error": "abort"})
     else:

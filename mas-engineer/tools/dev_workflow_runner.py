@@ -70,7 +70,6 @@ def run_workflow(name, params, wfs):
                     os.unlink(tf.name)
                 else:
                     r = subprocess.run(cmd_str, shell=True, capture_output=True, text=True, timeout=timeout)
-                r = subprocess.run(cmd_str, shell=True, capture_output=True, text=True, timeout=timeout)
                 out = (r.stdout.strip() + "\n" + r.stderr.strip()).strip()
                 ok = r.returncode == 0
             elif action == "signal":
