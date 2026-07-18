@@ -243,6 +243,9 @@ def generate_dashboard(ws):
 
     # ─── HISTORY ───
     history = load_json(HISTORY_FILE, {"health_trend": [], "build_size": [], "dispatch_volume": []})
+    # Ensure all keys exist (backward compat with old history files)
+    for key in ("health_trend", "build_size", "dispatch_volume"):
+        history.setdefault(key, [])
 
     now_str = datetime.now().strftime('%H:%M')
     mas_health = 100

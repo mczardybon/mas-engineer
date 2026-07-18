@@ -67,7 +67,7 @@ def status():
         print("Letzte Violations:")
         for e in eintraege[-5:]:
             if e.get('status') in ('BLOCKED','CRITICAL'):
-                print(f"   {e['ts'][:19]} | {e['status']} | {e['rule']} | {e['ziel'][:60]}")
+                print(f"   {e['ts'][:19]} | {e['status']} | {e['rule']} | {e.get('ziel') or e.get('target', '?')[:60]}")
     if os.path.exists(LOCK_FILE):
         print(f"🔴 MAS GEFRIERT: {open(LOCK_FILE).read().strip()}")
 

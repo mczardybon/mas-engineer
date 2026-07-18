@@ -1,0 +1,169 @@
+version: "1.0.0"
+title: SUB-MAS-RECOVERY-DEFIB — Emergency Resuscitation (Sub-agent)
+description: 'v1.0.0 | MAS-internal: Last resort for total failure. Minimal-Config + Resuscitation.'
+instructions: "⛔ INVENTORY-check:
+  → check whether Sub-Agent/Tool/Function already exists
+  → Use existing, build ONLY if nothing matching exists
+# sub_mas-recovery-defib — Emergency-Resuscitation
+
+MAS-Engineer-internal. Der LETZTE resort — if NICHTS more functioneverrt.
+Kein YAML parst? No Sub-Agent startet? DEFIB is the Answer.
+Ladt a minimale Emergency-Config (ONLY immune + timeline) and stellt step by step again her.
+
+ACHTUNG: DEFIB DESTROYED the current State.
+ONLY anwenden if ALLE othern Recovery-Levels versagen.
+
+## Input
+```yaml
+defib_intake:
+  signal: ''
+  request_id: string
+  from: 'dev-mas-engineer'
+  to: 'sub_mas-recovery-defib'
+  task: 'DEFIB|RESURRECT|DIAGNOSE'
+  workspace: string
+```
+
+## Output
+```yaml
+mas_result:
+  signal: ''|''|''
+  observations:
+    - severity: 'P1'|'P2'|'P3'
+      title: string
+      description: string
+  recovery_step: string
+```
+
+## Task DEFIB — Minimal-Config load
+
+STEP 1 — Minimal-Config writen (ONLY immune + timeline):
+  cat > {workspace}/mas-engineer/recipe/dev-mas-engineer.yaml << 'ENDOFFILE'
+version: 1.0.0
+title: 'EMERGENCY-MAS — Recovery-Mode'
+description: 'v1.0.0 | Minimale Config for Resuscitation'
+sub_recipes:
+  - name: sub_mas-recovery-immune
+    path: ./sub/sub_mas-recovery-immune.yaml
+    description: 'YAML-Praevention'
+  - name: sub_mas-recovery-timeline
+    path: ./sub/sub_mas-recovery-timeline.yaml
+    description: 'Bestpunkt-Suche'
+instructions: |
+  EMERGENCY-MAS AKTIV.
+  ONLY Recovery-Sub-Agents loaded.
+  Execute recovery --restore-best from.
+prompt: |
+  EMERGENCY-MAS (v1.0.0)
+  RECOVERY-Mode active
+  ONLY Recovery-Commands
+  immune + timeline
+
+
+  ⛔⛔⛔⛔⛔ CONFIRMATION-REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT on
+  NEVER without Confirmation.
+  ⛔⛔⛔⛔⛔ MODE-DOMAIN-COUPLING (R09) ONLY mas-engineer/
+  NEVER framework import. Read in other Domain OKsettings:
+  timeout: 30
+  max_steps: 10
+  goose_provider: openai
+  goose_model: filtered/deepseek/deepseek-chat
+ENDOFFILE
+
+STEP 2 — Sub-Agents validate:
+  for agent in immune checkpoint safezone timeline; do
+    path={workspace}/mas-engineer/recipe/sub/sub_mas-recovery-$agent.yaml
+    if [ -f \"$path\" ]; then
+      python3 -c \"import yaml; yaml.safe_load(open('$path'))\" 2>/dev/null || echo 'WARN: $agent.yaml korrupt'
+    else
+      echo 'WARN: $agent.yaml missing'
+    fi
+  done
+
+STEP 3 — Minimal-Config validate + confirm:
+  python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))\"
+  signal='': 'Minimal-Config loaded — Recovery-Mode active'
+  'Als naechstes: recovery --restore-best or recovery --resurrect'
+
+### Edge Cases DEFIB
+- Schreibrights missing → '' error + 'chmod?'
+- immune.yaml missing → '' warning + only timeline load
+- All Sub-Agents missing → '' error + only instructions (pure text config)
+- Already Defib-Mode active → '' info + nothing do
+
+## Task RESURRECT — Stepweise Resuscitation
+
+STEP 1 — Besten Checkpoint via timeline:
+  delegate to sub_mas-recovery-timeline (task=FIND_BEST)
+  IF CHECKPOINT GEFUNDEN:
+    delegate to sub_mas-recovery-timeline (task=RESTORE_BEST)
+
+STEP 2 — NO Checkpoint: Backups search:
+  IF NO CHECKPOINT:
+  for d in $(ls -t {workspace}/mas-engineer/.backups 2>/dev/null); do
+    python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/.backups/$d/recipe_dev-mas-engineer.yaml'))\" 2>/dev/null
+    if [ $? -eq 0 ]; then
+      cp {workspace}/mas-engineer/.backups/$d/recipe_dev-mas-engineer.yaml {workspace}/mas-engineer/recipe/dev-mas-engineer.yaml
+      signal='': 'Backup $d againhergestellt'
+      break
+    fi
+  done
+
+STEP 3 — NICHTS gefanden: Neuinstallation vorschlagen:
+  IF NICHTS FUNKTIONIERT:
+    signal='': 'No functioneverrendes Backup — Neuinstallation recommended'
+    'Execute: python3 dev_workspace.py --init {workspace}'
+
+STEP 4 — After restoration:
+  delegate to sub_mas-recovery-checkpoint (task=SNAPSHOT, label='nach_resurrection')
+  signal='': 'Resuscitation completed — Snapshot: nach_resurrection'
+  'Execute update --mas um newe Version to activeieren'
+
+### Edge Cases RESURRECT
+- Checkpoint existing but korrupt → skip, naechsten try
+- Backup existing but uncomplete → '' warning + manual Nacharbeit
+- Weder Checkpoint still Backup → '' error + --init
+
+## Task DIAGNOSE — Total Damage-Analysis
+
+STEP 1 — 7-Fragen:
+  error=0
+  [ -d {workspace} ]                         || error=$((error+1))
+  [ -d {workspace}/mas-engineer ]             || error=$((error+1))
+  [ -f {workspace}/mas-engineer/recipe/dev-mas-engineer.yaml ] || error=$((error+1))
+  [ -d {workspace}/mas-engineer/recipe/sub ]  || error=$((error+1))
+  [ -d {workspace}/mas-engineer/tools ]       || error=$((error+1))
+  [ -d {workspace}/mas-engineer/.state ]      || error=$((error+1))
+  python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))\" 2>/dev/null || error=$((error+1))
+
+STEP 2 — Damage Level + Action:
+  action=''
+  if [ $error -eq 0 ]; then  action='No Recovery noetig'
+  elif [ $error -le 3 ]; then action='recovery --restore-best'
+  elif [ $error -le 5 ]; then action='recovery --resurrect'
+  else                        action='recovery --defib -> --init'
+  fi
+
+  echo '(error)/7 Error — Recommendation: $action'
+  signal=''|''|'' je after Level
+
+  CONFIRMATION-REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT on
+  NEVER without Confirmation.
+  MODE-DOMAIN-COUPLING (R09) ONLY mas-engineer/
+  NEVER framework import. Read in other Domain OK."
+prompt: '📦 SUB-MAS-RECOVERY-DEFIB — Emergency Resuscitation (Sub-agent)
+
+⚡ DEFIB (v1.0.0)
+⛔ ONLY Defib — NOE othern Changes
+⛔ ONLY Recovery — nothing patchen
+ DEFIB (v1.0.0)
+ NOTFALL — lastr resort
+ DEFIB | RESURRECT | DIAGNOSE
+ settings: timeout=120
+⛔ INVENTORY before NEUBAU — check whether Tool/Agent already exists
+→ Siehe MASTER-CONSTITUTION Art. 1-6 (zentrale Rules)'
+settings:
+  timeout: 120
+  max_steps: 40
+  goose_provider: openai
+  goose_model: filtered/deepseek/deepseek-chat

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MAS-Engineer Dispatch Monitor</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0d1117; color: #c9d1d9; margin: 0; padding: 20px; }
+    h1 { color: #58a6ff; border-bottom: 1px solid #21262d; padding-bottom: 10px; }
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 16px; margin: 10px 0; }
+    .metric { display: inline-block; margin-right: 30px; }
+    .metric .label { color: #8b949e; font-size: 12px; }
+    .metric .value { font-size: 28px; font-weight: bold; color: #58a6ff; }
+    .status-ok { color: #3fb950; }
+    .status-warn { color: #d29922; }
+    .status-err { color: #f85149; }
+  </style>
+</head>
+<body>
+  <h1>📊 MAS-Engineer Dispatch Monitor</h1>
+  <div class="card">
+    <div class="metric">
+      <div class="label">Total Dispatches</div>
+      <div class="value" id="total">0</div>
+    </div>
+    <div class="metric">
+      <div class="label">Running</div>
+      <div class="value status-warn" id="running">0</div>
+    </div>
+    <div class="metric">
+      <div class="label">Done</div>
+      <div class="value status-ok" id="done">0</div>
+    </div>
+    <div class="metric">
+      <div class="label">Errors</div>
+      <div class="value status-err" id="errors">0</div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Workspace</h3>
+    <code id="workspace">/tmp/mas-engineer/mas-engineer</code>
+    <h3>Mode</h3>
+    <code>framework</code>
+  </div>
+  <script>
+    async function refresh() {
+      try {
+        const r = await fetch('data.json');
+        const d = await r.json();
+        document.getElementById('total').textContent = d.dispatch?.total || 0;
+        document.getElementById('running').textContent = d.dispatch?.active || 0;
+        document.getElementById('done').textContent = d.dispatch?.done || 0;
+        document.getElementById('errors').textContent = d.dispatch?.failed || 0;
+        document.getElementById('workspace').textContent = d.workspace || '';
+      } catch (e) {
+        console.error('refresh failed', e);
+      }
+    }
+    refresh();
+    setInterval(refresh, 5000);
+  </script>
+</body>
+</html>

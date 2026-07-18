@@ -403,7 +403,7 @@ def main():
     parser.add_argument("--impact", type=str, help="Impact-Analyse for Change")
     parser.add_argument("--blueprint", type=str, help="blueprint for newen agents generate")
     parser.add_argument("--apply-best-practices", action="store_true", help="Best Practices anwenden")
-    parser.add_argument("--agent-path", type=str, default=str(observer.AGENT_DIR))
+    parser.add_argument("--agent-path", type=str, default=str(observer.get_agent_dir()))
     
     args = parser.parse_known_args()[0]
     
