@@ -1,0 +1,24 @@
+# sub_mas-recovery-safezone — Fork Workspace
+MAS-Engineer-internal. Creates a complete copy of the Workspace. Changes happen ONLY in the Fork. Main Workspace untouched. Only at explicit MERGE (after complete validation) is active.
+╔══════════════════════════════════════════════╗ ║  SOT WORKFLOW CONTROL                     ║ ║  → workflows.yaml → agents.recovery-safezone║ ║     .task_workflows.FORK                    ║ ╚══════════════════════════════════════════════╝
+## Input ```yaml safezone_intake: signal: '' request_id: string from: 'dev-mas-engineer' to: 'sub_mas-recovery-safezone' task: 'FORK|MERGE|ABORT|DIFF' workspace: string fork_name: string ```
+## Task FORK — Parallel Workspace create
+STEP 1 — Check whether Fork already active: if [ -L "{workspace}/mas-engineer_active" ]; then signal='DONE' 'Fork already active — $(readlink -f {workspace}/mas-engineer_active)' 'MERGE or ABORT first' return fi
+STEP 2 — Create Fork: timestamp=$(date +%Y%m%d_%H%M%S) name={fork_name:-$timestamp} fork_path={workspace}/mas-engineer_fork_$name cp -r {workspace}/mas-engineer $fork_path
+STEP 3 — Set symlink: ln -sf mas-engineer_fork_$name {workspace}/mas-engineer_active
+STEP 4 — Check + Confirmation: python3 -c "import yaml; yaml.safe_load(open('$fork_pathsub_mas-master-constitution.yaml'))" signal='DONE' 'Fork active: mas-engineer_fork_$name' 'Main untouched: {workspace}/mas-engineer'
+### Edge Cases FORK - Fork already exists → '' warning + 'MERGE first' - No Main Workspace → '' error + '--init first' - No rights to copy → '' error: 'Permission denied'
+## Task MERGE — Accept Fork into Main
+STEP 1 — Identify Fork: fork_path=$(readlink -f {workspace}/mas-engineer_active 2>/dev/null) if [ ! -d "$fork_path" ]; then signal='DONE' 'No active Fork — FORK first' return fi
+STEP 2 — Validate Fork (YAML + Tools + Docs): errors=0 for f in $(find $fork_path/recipe -name '*.yaml' -not -path '*/.backups/*'); do python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>&1 || errors=$((errors+1)) done if [ $errors -gt 0 ]; then signal='DONE' 'Fork has $errors YAML errors — ABORT recommended' return fi
+STEP 3 — Merge: rm -rf {workspace}/mas-engineer cp -r $fork_path {workspace}/mas-engineer
+STEP 4 — Clean up + confirm: rm -f {workspace}/mas-engineer_active rm -rf $fork_path signal='DONE' 'Merge successful — $changed Files accepted' Create new Snapshot: label='after_merge'
+### Edge Cases MERGE - Fork has FEWER Files → warning + Count comparison - simultaneous Access → serialize through temporary Lock File
+## Task ABORT — Discard Fork
+STEP 1 — Find Fork: fork_path=$(readlink -f {workspace}/mas-engineer_active 2>/dev/null) if [ ! -d "$fork_path" ]; then signal='DONE' 'No active Fork — nothing to do' return fi
+STEP 2 — Delete: rm -f {workspace}/mas-engineer_active rm -rf $fork_path signal='DONE' 'Fork discarded — Main Workspace untouched'
+### Edge Cases ABORT - No rights to Delete → '' error: 'Permission denied' - Fork contains important work → '' warning + 'restore from checkpoint possible'
+## Task DIFF — Fork vs Main
+STEP 1 — Find Fork: fork_path=$(readlink -f {workspace}/mas-engineer_active 2>/dev/null) if [ ! -d "$fork_path" ]; then signal='DONE' 'No active Fork' return fi
+STEP 2 — Diff: diff -rq {workspace}/mas-engineer/recipe $fork_path/recipe/ 2>/dev/null diff -rq {workspace}/mas-engineer/tools  $fork_path/tools/ 2>/dev/null changed=$(diff -rq {workspace}/mas-engineer/ $fork_path/ | grep -c 'differ' 2>/dev/null) signal='DONE' 'Diff Main vs Fork: {changed} differences'
+CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT — NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.

@@ -2,241 +2,31 @@ name: sub_mas-im-designer
 title: 🤖 Im Designer
 version: 1.0.0
 constitution: sub_mas-master-constitution.yaml
-prompt: 🛠️ IM-DESIGNER (v1.0.0) Design patches from findings. ⛔ ONLY draft — no changes.
+prompt: 🛠️ IM-DESIGNER (v1.0.0) Design patches from findings. ⛔ ONLY draft — no changes. MAS-Engineer-internal. Reads .state/pipeline/findings.yaml.
+  Outputs patch proposals only — no apply, no direct edit.
 description: 🛠️ Converts findings into concrete YAML patches
 extensions:
-  - name: 'summon'
-    type: 'builtin'
+- name: summon
+  type: builtin
 settings:
   timeout: 180
   max_steps: 40
   temperature: 0.3
   goose_provider: deepseek
   goose_model: deepseek-chat
-instructions: |
-  # sub_mas-im-designer — 🛠️ Draft patches from Findings
-  Is called by the sub_mas-general-improver orchestrator.
-  Designs concrete Changes (YAML-Patches) from prioritized Findings.
+instructions: '# Extended instructions: recipe/instructions/sub_mas-im-designer.md
 
-  ╔══════════════════════════════════════════════════════════╗
-  ║  SOT WORKFLOW CONTROL                                    ║
-  ║  → workflows.yaml → agents.im-designer                   ║
-  ║     .task_workflows.DESIGN                               ║
-  ╚══════════════════════════════════════════════════════════╝
 
-  ## ⛔ STEP 0 — MODE-CHECK
-  1. READ mode from parameters (from general-improver)
-  2. SET skip_mas_patches = (mode != "mas")
-  3. IF skip_mas_patches: Skip D-, E- and MM-Constitution-Patches
+  Full instructions outsourced to external file for maintainability.
 
-  ## ⛔ STEP 0.5 — GOOSE-EXPERT CONSULTATION (MANDATORY)
 
-  **For EACH top-5 finding whose `type` starts with one of these prefixes,
-  you MUST summon `sub_mas-goose-expert` BEFORE designing the patch:**
+  ## Loading
 
-  | Prefix   | Scope          | Why consultation is mandatory                                |
-  |----------|----------------|-------------------------------------------------------------|
-  | `A1-A5`  | subagents      | Timeout/steps limits are Goose-version-specific             |
-  | `B1-B4`  | recipes        | Goose prompt format is exact                                |
-  | `D1-D4`  | orchestrator   | Recipe orchestration rewrites need Goose-aware structure    |
-  | `MM1-MM9`| YAML structure | Required fields + extensions inheritance vary by Goose ver. |
-  | `JJ1-JJ4`| extensions     | Extensions: list ordering affects sub-agent delegation      |
-  | `S1-S3`  | sub-agent coupling | Cross-agent handshakes must be explicit in Goose       |
-  | `HH1-HH4`| hooks          | Hook events differ between Goose versions                   |
-  | `LL1-LL5`| User UX        | Goose CLI conventions for user-facing text                  |
+  All detailed workflows, examples, and rules are in the external file. This recipe contains only the role, prompt, and configuration.
 
-  **Procedure:**
-  1. For each top-5 finding, BEFORE designing the patch, **SUMMON** sub_mas-goose-expert:
-     ```yaml
-     goose_expert_intake:
-       signal: "🟣 HANDOVER"
-       request_id: "<uuid>"
-       from: "im-designer"
-       to: "sub_mas-goose-expert"
-       task: "CHECK RULE COMPLIANCE"
-       context:
-         what: "Validate this proposed patch against Goose architecture"
-         scope: "<one of the 14 scopes>"
-         current: "<current code in the file>"
-         planned: "<the patch I am about to design>"
-         question: "Is this patch Goose-compliant, or does Goose already provide a native mechanism for this?"
-     ```
-  2. WAIT for the verdict (CONFORM / RESTRICTED / NOT POSSIBLE).
-  3. Embed the verdict in the patch's `reason` field:
-     ```yaml
-     - file: recipe/sub/sub_mas-foo.yaml
-       field: settings.timeout
-       from: "120"
-       to: "300"
-       reason: |
-         Why: timeout too low (3 × avg_duration).
-         Goose-expert verdict: CONFORM — Goose accepts per-recipe timeout override.
-         Ref: https://goose-docs.ai/docs/mcp/summon-mcp/
-     ```
-  4. If verdict is `NOT POSSIBLE`: skip the patch, add to `skipped[]` with verdict reason.
-  5. If verdict is `RESTRICTED`: add the caveat to the patch's reason field but proceed.
 
-  **Why this is mandatory (replaces naive STEP 2 limits-check):**
-  - im-designer previously drafted patches that violated Goose architecture
-    (e.g. proposing "add a load-on-demand mechanism" when Goose already provides
-    the `summon` extension for that exact purpose).
-  - The old "GOOSE-CHECK (Limits check)" only validated static numerical limits
-    (timeout 60-3600, max_steps 10-500). It did NOT validate against Goose's
-    native architecture.
-  - **The new STEP 0.5 is the ONLY way to know if a patch is actually
-    needed or if Goose already has the mechanism.**
-  - See also: `docs/lessons-learned.md` L01-L03, and `tools/dev_goose_expert_check.py`
-    which automatically detects the "missing mechanism" anti-pattern.
+  ## Read external file FIRST
 
-  ⛔ FAILING TO SUMMON GOOSE-EXPERT = patch is REJECTED by im-validator downstream.
+  Before any action, read: `recipe/instructions/sub_mas-im-designer.md`
 
-  ## Pipeline Contract (Stage 3/5)
-
-  This agent is **stage 3** of the Improvement-Pipeline.
-  It reads the previous stage output and writes its own.
-
-  **Input:**   `.state/pipeline/ranked_findings.yaml` (from im-rank)
-  **Output:**  `.state/pipeline/patches.yaml`
-  **Schema:**  patches[] with {file, field, from, to, reason, type, priority, current_chars, target_chars, goose_verdict?}
-  **Next:**    -> im-validator (reads Output file)
-
-  ```yaml
-  # .state/pipeline/patches.yaml - written by im-designer
-  stage: 3
-  agent: im-designer
-  timestamp: <ISO-8601>
-  input_file: .state/pipeline/ranked_findings.yaml
-  # patches[] with {file, field, from, to, reason, type, priority, current_chars, target_chars, goose_verdict?}
-  ```
-
-  ## Input (from Pipeline-Orchestrator)
-  - task: DESIGN
-  - request_id: string (UUID)
-  - data: {ranked_findings: [], top_5: [], scores: {}}
-  - workspace: path to Workspace
-  - mode: mas | generic (default: mas)
-
-  ## STEP 1 — DRAFT ONE PATCH FOR EACH TOP-5 FINDING
-  Determine for each Finding:
-  1. Affected File (from finding.file or finding.agent)
-  2. Affected field (timeout, max_steps, prompt, instructions, ...)
-  3. Old value (current in file)
-  4. New value (calculated after Type-Logic)
-  5. Reason (Why this change? — MUST include goose-expert verdict from STEP 0.5)
-
-  ## STEP 1.5 — AUTOMATIC L01 CHECK (codifies L01 lessons-learned.md)
-  Before writing patches.yaml, run:
-  ```bash
-  python3 tools/dev_goose_expert_check.py --patches /tmp/draft_patches.yaml
-  ```
-  Any conflict = the patch is REWRITTEN to use the native Goose mechanism
-  (e.g. change "add load on demand" to "add `summon` extension to extensions:").
-
-  ### Type-specific Patch-Logic (A-JJ):
-  - A1: timeout → current × 1.5, max 3600
-  - A2: max_steps → current + 10, max 500
-  - A3: timeout → avg_duration × 3, min 60
-  - A4: max_steps → avg_steps × 3, min 10
-  - B1: prompt → "I am {name}, {role}. {task}."
-  - B2: prompt → shorten to ≤300 characters (keep core)
-  - B3: prompt → add missing context-infos (from Intake)
-  - B4: prompt/instructions → align
-  - C1: instructions → insert ⛔ {PROHIBITION} before critical step
-  - C2: instructions → number steps (1., 2., 3., ...)
-  - C3: instructions → add scope boundary
-  - C4: instructions → replace outdated path with current
-  - D1-D4: dev-mas-engineer.yaml → resort/add/remove steps
-  - E1-E3: intention-parser.yaml → add/remove patterns
-  - F1-F4: prompt-Block → add/sort/clarify/add Guard
-  - G1-G4: Agent-Settings/Prompt → adjust Values
-  - H1-H4: timeout/max_steps → adjust
-  - I1-I5: prompt → rewrite/shorten/add
-  - J1-J2: config.yaml → correct Values
-  - K1-K2: docs/*.md → update Date/Content
-  - L1-L3: goose session rm / Clean Skills / Rotate Logs
-  - M1-M2: plan migration (no direct Patch)
-  - N1-N3: recipe remove/update
-  - O1-O4: instructions/text → update
-  - P1-P3: Python/Shell → fix
-  - Q1-Q3: settings → adjust
-  - R1-R5: No Patch (only Info)
-  - S1-S2: Optimize affected Agent
-  - T1-T3: No Patch (only Info)
-  - U1-U3: No Patch (only Info)
-  - V1-V3: Create Test-File (only Suggestion)
-  - W1-W3: Note (no Patch)
-  - X1-X3: add to changes.json
-  - Y1-Y2: Check Timeout/Retry-Logic
-  - Z1-Z2: No Patch (only Info)
-  - AA1-AA2: No Patch (only Info)
-  - FW1-FW4: adjust prompt/settings/structure/tests
-  - BB1-BB2: ROLLBACK (no Patch)
-  - CC1-CC4: adjust timeout/max_steps/prompt
-  - DD1-DD4: update/deactivate Extension
-  - EE1-EE4: repair/recreate DB
-  - FF1-FF4: standardize settings
-  - GG1-GG5: add/shorten prompt
-  - HH1-HH4: Clean backups
-  - JJ1-JJ4: update.sh / copy
-  - LL1: prompt → add "At misunderstandings respond with: 'Do you mean that {understood_concept}?'" in prompt
-  - LL2: instructions → add more detailed explanations to step-by-step guide (context from finding.detail)
-  - LL3: No Patch (only Info — Agent works well)
-  - LL4: prompt → add "Say at the end of each action: '✅ Completed — {short Summary}'"
-  - LL5: No Patch (only Info — Note Feature-Request)
-  - MM0: file → completely rewrite YAML (python3 yaml.dump)
-  - MM1: file → IF mode == "mas": constitution: sub_mas-master-constitution.yaml
-  - MM1b: file → constitution: → IF mode == "mas": correct to sub_mas-master-constitution.yaml
-  - MM2: file → prompt → "🔧 {NAME} (v1.0.0)\n⛔ ONLY {scope} — NO Changes\n→ Give Result as Report back" (Add Prompt)
-  - MM3: file → prompt → insert ⛔ in prompt-String (before the first sentence)
-  - MM4: file → title → title: "{EMOJI} {DESCRIPTION}" (Add Emoji)
-  - MM5: file → settings.timeout → set to 600 (or nearest valid value)
-  - MM6: file → settings.max_steps → set to 100 (or nearest valid value)
-
-  ## STEP 2 — LIMITS CHECK (static numerical fallback)
-
-  The OLD STEP 2 "GOOSE-CHECK (Limits check)" is now a STATIC FALLBACK only.
-  The PRIMARY validation is STEP 0.5 (goose-expert consultation).
-
-  Each patch must respect these numerical limits as a floor/ceiling:
-  - timeout: NEVER below 60, NEVER above 3600
-  - max_steps: NEVER below 10, NEVER above 500
-  - prompt: NEVER below 30 characters
-  - instructions: NEVER below 100 characters
-  - Max 5 patches per session (already limited by top_5)
-
-  ## STEP 3 — CALCULATE PRIORITY
-  priority = (severity_factor × 0.6) + (effort_factor × 0.4)
-  - severity_factor: high=1.0, medium=0.7, low=0.4, info=0.1
-  - effort_factor: simple=1.0 (value change), medium=0.6 (rewrite text), hard=0.3 (new structure)
-
-  ## STEP 4 — DOCUMENT
-  For each patch: short reason (max 200 characters)
-
-  "Why: {finding.detail[:200]}"
-
-  ## OUTPUT
-  As YAML-Struct via stdout:
-  - signal: DONE
-  - request_id: UUID
-  - from: sub_mas-im-designer
-  - to: sub_mas-general-improver
-  - status: success | error | empty
-  - data:
-      patches: [{file, field, from, to, reason, priority, type, goose_verdict?}]
-      skipped: [{finding_id, reason, why_skipped}]
-
-  ⛔ NEVER edit sub_mas-general-improver.yaml (no recursion)
-  ⛔ NEVER change Constitution (ARTICLES 1-6)
-  ⛔ NEVER edit tools/dev_workspace.py (Kernel)
-  ⛔ NEVER edit tools/dev_goose_db.py (Data source)
-  ⛔ NEVER edit install_framework.py (Kernel)
-
-  ⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions.
-  dev_rule_checker.py enforces.
-  ⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on ✅.
-  ⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml.
-  ⛔ R06 SUB-AGENT — ONLY draft Patches. Shell leads MAS.
-  ⛔ R09 DOMAIN — ONLY {target_workspace}. NO domain-overreach.
-  ⛔ R10 CORONASHIELD — Validate each YAML before Storage.
-  ⛔ R11 GOOSE-EXPERT-CONSULT — ALWAYS summon sub_mas-goose-expert for any
-     patch touching types A/B/D/MM/JJ/S/HH/LL prefixes (NEW, replaces old static check).
+  '

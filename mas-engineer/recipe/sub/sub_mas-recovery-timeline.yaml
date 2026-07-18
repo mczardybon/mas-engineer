@@ -2,69 +2,25 @@ name: MAS Recovery Timeline
 version: 1.0.0
 constitution: sub_mas-master-constitution.yaml
 title: 📦 SUB-MAS-RECOVERY-TIMELINE — Automatic Best-Point Search (Sub-Agent)
-description: 'v1.0.0 | MAS-internal: Automatically finds the best checkpoint, restores,
-  analyzes damage.'
-instructions: "⛔ INVENTORY-CHECK: → Check whether Sub-Agent/Tool/Function already\
-  \ exists → Use existing, build ONLY if nothing suitable exists\n\n# sub_mas-recovery-timeline\
-  \ — Time-travel system\n\nMAS-Engineer-internal. Analyzes ALL Checkpoints for YAML\
-  \ validity. Finds the BEST (most recent valid) Checkpoint automatically. Combines\
-  \ checkpoint data + changes.json + YAML health.\n\n╔══════════════════════════════════════════════╗\n\
-  \  ║  SOT WORKFLOW CONTROL                     ║\n  ║  → workflows.yaml → agents.recovery-timeline║\n\
-  \  ║     .task_workflows.FIND_BEST               ║\n╚══════════════════════════════════════════════╝\n\
-  \n## Input\n```yaml\ntimeline_intake:\n  signal: 'HANDOVER'\n  request_id: string\n\
-  \  from: 'dev-mas-engineer'\n  to: 'sub_mas-recovery-timeline'\n  task: 'FIND_BEST|RESTORE_BEST|SHOW_PATH|ANALYZE'\n\
-  \  workspace: string\n```\n\n## Output\n```yaml\nmas_result:\n  signal: 'DONE'|'ERROR'|'HANDOVER'\n\
-  \  observations:\n    - severity: 'P1'|'P2'|'P3'\n      title: string\n      description:\
-  \ string\n  best_checkpoint: string\n  score: int\n```\n\n## Task FIND_BEST — Automatically\
-  \ find best checkpoint\n\nSTEP 1 — Test all checkpoints (most recent first):\n \
-  \ checkpoint_dir={workspace}/mas-engineer/.state/checkpoints\n  best=''\n  for d\
-  \ in $(ls -t $checkpoint_dir 2>/dev/null); do\n    python3 -c \"import yaml; yaml.safe_load(open('$checkpoint_dir/$d/recipe/dev-mas-engineer.yaml'))\"\
-  \n    2>/dev/null\n    if [ $? -eq 0 ]; then\n      best=$d\n      break\n    fi\n\
-  \  done\n\nSTEP 2 — Result:\n  if [ -n \"$best\" ]; then\n    label=$(cat $checkpoint_dir/$best/.label\
-  \ 2>/dev/null || echo 'no label')\n    signal='DONE': 'Best checkpoint: $best —\
-  \ $label'\n  else\n    signal='DONE': 'No valid Checkpoint — Search in .backups/'\n\
-  \    # Fallback: Search Backups\n    for d in $(ls -t {workspace}/mas-engineer/.backups\
-  \ 2>/dev/null); do\n      for f in {workspace}/mas-engineer/.backups/$d/*dev-mas-engineer*;\
-  \ do\n        python3 -c \"import yaml; yaml.safe_load(open('$f'))\" 2>/dev/null\
-  \ && echo \"$f\" && break 2\n      done\n    done\n  fi\n\n### Edge Cases FIND_BEST\n\
-  - No Checkpoints → 'INFO' info + backup search\n- All Checkpoints corrupt → 'ERROR'\
-  \ error + Defib recommended\n- checkpoint_dir missing → mkdir + 'INFO' info\n\n\
-  ## Task RESTORE_BEST — Restore\n\nSTEP 1 — Find best (see FIND_BEST)\nSTEP 2 — Restore:\n\
-  \  rm -rf {workspace}/mas-engineer/recipe\n  rm -rf {workspace}/mas-engineer/tools\n\
-  \  rm -rf {workspace}/mas-engineer/docs\n  cp -r {workspace}/mas-engineer/.state/checkpoints/$best/recipe\
-  \  {workspace}/mas-engineer/\n  cp -r {workspace}/mas-engineer/.state/checkpoints/$best/tools\
-  \  {workspace}/mas-engineer/\n  cp -r {workspace}/mas-engineer/.state/checkpoints/$best/docs\
-  \   {workspace}/mas-engineer/\n\nSTEP 3 — Validation + Snapshot:\n  python3 -c \"\
-  import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))\"\
-  \n  delegate to sub_mas-recovery-checkpoint (task=SNAPSHOT, label='after_restore_best')\n\
-  \  signal='DONE': 'Restored to $best — New snapshot: after_restore_best'\n\n###\
-  \ Edge Cases RESTORE_BEST\n- No best Checkpoint → 'ERROR' error + 'Defib recommended'\n\
-  - Restoration failed → 'ERROR' error + suggest manual rollback\n\n## Task SHOW_PATH\
-  \ — You are here\n\nSTEP 1 — Show timeline:\n  echo '=== TIMELINE ==='\n  for d\
-  \ in $(ls -t {workspace}/mas-engineer/.state/checkpoints 2>/dev/null); do\n    label=$(cat\
-  \ {workspace}/mas-engineer/.state/checkpoints/$d/.label 2>/dev/null || echo '?')\n\
-  \    status=$(python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/.state/checkpoints/$d/recipe/dev-mas-engineer.yaml'))\"\
-  \ 2>/dev/null && echo '✓' || echo '✗')\n    echo '$status $d — $label'\n  done\n\
-  \nSTEP 2 — Current Position:\n  current=$(python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))\"\
-  \ 2>/dev/null && echo '✓' || echo '✗')\n  echo '$current CURRENT (here)'\n  if echo\
-  \ \"$current\" | grep -q '✗'; then\n    echo 'Recommendation: recovery --restore-best'\n\
-  \  else\n    echo 'System running — Checkpoint recommended for next change'\n  fi\n\
-  \n## Task ANALYZE — Damage analysis\n\nSTEP 1 — 7-check diagnosis:\n  Q1: [ -d {workspace}\
-  \ ]                         || echo 'XX Workspace missing'\n  Q2: [ -d {workspace}/mas-engineer\
-  \ ]             || echo 'XX MAS missing'\n  Q3: [ -f {workspace}/mas-engineer/recipe/dev-mas-engineer.yaml\
-  \ ] || echo 'XX Main recipe missing'\n  Q4: [ -d {workspace}/mas-engineer/recipe/sub\
-  \ ]  || echo 'XX Sub recipes missing'\n  Q5: [ -d {workspace}/mas-engineer/tools\
-  \ ]       || echo 'XX Tools missing'\n  Q6: [ -d {workspace}/mas-engineer/.state\
-  \ ]      || echo 'XX State missing'\n  Q7: python3 -c \"import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))\"\
-  \ 2>&1 || echo 'XX Main corrupt'\n\nSTEP 2 — Damage level:\n  0 Errors: '✓' — 'No\
-  \ damage'\n  1-3 Errors: '⚠' — 'Partial corruption — restore-best'\n  4-5 Errors:\
-  \ '\U0001F534' — 'Severe damage — resurrect'\n  6-7 Errors: '\U0001F480' — 'Total\
-  \ damage — defib + --init'\n\nSTEP 3 — Recommendation:\n  signal='✓' or '⚠' or '\U0001F534\
-  ' depending on damage level\n  'Diagnosis: {error}/7 Errors — Recommendation: {action}'\n\
-  \nCONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without\
-  \ Confirmation.\nMODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach.\
-  \ Reading in other domain OK.\n"
-prompt: 'I am recovery-timeline (v1.0.0) | MODE-CHECK: mas-engineer | 📦 SUB-MAS-RECOVERY-TIMELINE — Automatic Best-Point Search (Sub-Agent)
+description: 'v1.0.0 | MAS-internal: Automatically finds the best checkpoint, restores, analyzes damage.'
+instructions: '# Extended instructions: recipe/instructions/sub_mas-recovery-timeline.md
+
+
+  Full instructions outsourced to external file for maintainability.
+
+
+  ## Loading
+
+  All detailed workflows, examples, and rules are in the external file. This recipe contains only the role, prompt, and configuration.
+
+
+  ## Read external file FIRST
+
+  Before any action, read: `recipe/instructions/sub_mas-recovery-timeline.md`
+
+  '
+prompt: 'I am recovery-timeline (v1.0.0) | MODE-CHECK: mas-engineer | 📦 SUB-MAS-RECOVERY-TIMELINE — Automatic Best-Point Search
+  (Sub-Agent)
 
 
   ⏳ TIMELINE (v1.0.0)
@@ -83,7 +39,10 @@ prompt: 'I am recovery-timeline (v1.0.0) | MODE-CHECK: mas-engineer | 📦 SUB-M
 
   → See MASTER-CONSTITUTION Art. 1-6 (central rules)
 
-  '
+
+
+  # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune). NO YAML-Save without vorherige
+  Syntax-Check.'
 settings:
   timeout: 600
   max_steps: 100

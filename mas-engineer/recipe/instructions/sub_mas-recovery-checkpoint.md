@@ -1,0 +1,156 @@
+⛔ INVENTORY-CHECK: → Check whether Sub-Agent/Tool/Function already exists → Use existing, build ONLY if nothing suitable exists
+# sub_mas-recovery-checkpoint — Snapshot-System
+
+MAS-Engineer-internal. Creates complete workspace snapshots before changes.
+Stores recipe/ + tools/ + docs/ + state/ in .state/checkpoints/{timestamp}/.
+Enables: "Restore state from before 3 steps."
+
+╔══════════════════════════════════════════════╗
+║  SOT WORKFLOW CONTROL                       ║
+║  → workflows.yaml → agents.recovery-checkpoint║
+║     .task_workflows.SNAPSHOT                ║
+╚══════════════════════════════════════════════╝
+
+## Input
+```yaml
+checkpoint_intake:
+  signal: ''
+  request_id: string
+  from: 'dev-mas-engineer'
+  to: 'sub_mas-recovery-checkpoint'
+  task: 'SNAPSHOT|LIST|RESTORE|DIFF'
+  workspace: string
+  label: string
+  id: int
+  from_id: int  # for DIFF task
+  to_id: int    # for DIFF task
+```
+
+## Procedure
+AUTO_COMMIT — Automatically after each change
+1. git add -A && git commit -m "[MAS] {action}"
+2. checkpoint .state/checkpoints/{ts}/
+3. changes.json + {timestamp, action}
+4. echo("✅ {action}")
+
+## Output
+```yaml
+mas_result:
+  signal: 'DONE'|'ERROR'|'HANDOVER'
+  observations:
+    - severity: 'P3'
+      title: 'Checkpoint {id}: {label}'
+      description: '{N} Files, {size}, {timestamp}'
+```
+
+## Task SNAPSHOT — Save state
+
+STEP 1 — Timestamp + Directory:
+  timestamp=$(date +%Y%m%d_%H%M%S)
+  checkpoint_dir={workspace}/mas-engineer/.state/checkpoints/$timestamp
+  mkdir -p $checkpoint_dir
+
+STEP 2 — Backup the 4 core areas:
+  cp -r {workspace}/mas-engineer/recipe $checkpoint_dir/
+  cp -r {workspace}/mas-engineer/tools  $checkpoint_dir/
+  cp -r {workspace}/mas-engineer/docs   $checkpoint_dir/
+  cp {workspace}/mas-engineer/.state/changes.json       $checkpoint_dir/ 2>/dev/null || true
+  cp {workspace}/mas-engineer/.state/best-practices.yaml $checkpoint_dir/ 2>/dev/null || true
+
+STEP 3 — Write metadata:
+  echo '{label}' > $checkpoint_dir/.label
+  echo $(find $checkpoint_dir -type f | wc -l) > $checkpoint_dir/.file_count
+  du -sh $checkpoint_dir/ | cut -f1 > $checkpoint_dir/.size
+  date -Iseconds > $checkpoint_dir/.created
+
+STEP 4 — Confirmation:
+  signal='DONE'
+  echo "Checkpoint $timestamp created: {label}, $(cat $checkpoint_dir/.file_count) Files, $(cat $checkpoint_dir/.size)"
+
+### Edge Cases SNAPSHOT
+- No recipe/ existing → warning + only save tools+docs+state
+- Write permissions missing → signal='ERROR' error: 'Permission denied on {dir}'
+- Disk full (OSError) → signal='ERROR' error: 'No disk space — Checkpoint not created'
+- Label >80 characters → truncate to 80
+
+## Task LIST — Last 10 Checkpoints
+
+STEP 1 — Check existence:
+  checkpoint_dir={workspace}/mas-engineer/.state/checkpoints
+  if [ ! -d "$checkpoint_dir" ] || [ -z "$(ls -A $checkpoint_dir 2>/dev/null)" ]; then
+    signal='HANDOVER'
+    echo 'No Checkpoints existing — Create first with SNAPSHOT'
+    return
+  fi
+
+STEP 2 — Formatted list:
+  echo '=== LAST 10 CHECKPOINTS ==='
+  echo ' #  Timestamp          Label                        Files  Size'
+  ls -t $checkpoint_dir | head -10 | while read d; do
+    label=$(cat $checkpoint_dir/$d/.label 2>/dev/null || echo '?')
+    files=$(cat $checkpoint_dir/$d/.file_count 2>/dev/null || echo '?')
+    size=$(cat $checkpoint_dir/$d/.size 2>/dev/null || echo '?')
+    echo "  $d  $label  ${files}  ${size}"
+  done
+
+### Edge Cases LIST
+- No checkpoints/-Directory → 'INFO: No Checkpoints'
+- Broken .label or .size → '?' show + still list
+
+## Task RESTORE — Restore checkpoint
+
+STEP 1 — Identify checkpoint:
+  target=$(ls -t {workspace}/mas-engineer/.state/checkpoints | sed -n '{id}p')
+  if [ -z "$target" ]; then
+    signal='HANDOVER'
+    echo "Checkpoint #{id} not found"
+    return
+  fi
+
+STEP 2 — YAML-check:
+  python3 -c "import yaml; yaml.safe_load(open('{workspace}/mas-engineer/.state/checkpoints/$target/recipe/dev-mas-engineer.yaml'))"
+  if [ $? -ne 0 ]; then
+    signal='HANDOVER'
+    echo "Checkpoint #{id} has YAML-Error"
+    return
+  fi
+
+STEP 3 — Restore:
+  rm -rf {workspace}/mas-engineer/recipe
+  rm -rf {workspace}/mas-engineer/tools
+  rm -rf {workspace}/mas-engineer/docs
+  cp -r {workspace}/mas-engineer/.state/checkpoints/$target/recipe {workspace}/mas-engineer/
+  cp -r {workspace}/mas-engineer/.state/checkpoints/$target/tools  {workspace}/mas-engineer/
+  cp -r {workspace}/mas-engineer/.state/checkpoints/$target/docs   {workspace}/mas-engineer/
+
+STEP 4 — Completion:
+  signal='DONE'
+  echo "Checkpoint #{id} ($target) restored"
+  instructions: Create new Snapshot: task=SNAPSHOT, label='after_restore_$target'
+
+### Edge Cases RESTORE
+- id=0 → 'ID 0 invalid — first ID is 1'
+- Checkpoint incomplete → signal='HANDOVER' 'Checkpoint incomplete — recipe/ missing'
+- Concurrent access → use temporary files
+
+## Task DIFF — Difference between checkpoints
+
+STEP 1 — Resolve IDs:
+  from_cp=$(ls -t {workspace}/mas-engineer/.state/checkpoints | sed -n '{from_id}p')
+  to_cp=$(ls -t {workspace}/mas-engineer/.state/checkpoints | sed -n '{to_id}p')
+
+STEP 2 — Compare:
+  diff -rq {workspace}/mas-engineer/.state/checkpoints/$from_cp/recipe/ {workspace}/mas-engineer/.state/checkpoints/$to_cp/recipe/ 2>/dev/null || true
+  diff -rq {workspace}/mas-engineer/.state/checkpoints/$from_cp/tools/  {workspace}/mas-engineer/.state/checkpoints/$to_cp/tools/  2>/dev/null || true
+
+STEP 3 — Summary:
+  changed=$(diff -rq {workspace}/mas-engineer/.state/checkpoints/$from_cp/ {workspace}/mas-engineer/.state/checkpoints/$to_cp/ 2>/dev/null | grep -c 'differ' || echo 0)
+  signal='DONE'
+  echo "Diff {from_id}..{to_id}: {changed} changes"
+
+### Edge Cases DIFF
+- IDs equal → 'INFO: same Checkpoint — no Diff'
+- from_id > to_id → automatically swap
+
+CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation.
+MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.

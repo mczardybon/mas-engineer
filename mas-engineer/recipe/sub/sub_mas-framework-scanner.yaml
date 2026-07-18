@@ -2,99 +2,31 @@ name: MAS Framework Scanner
 version: 1.0.0
 constitution: sub_mas-master-constitution.yaml
 title: 🔍 SUB-MAS-FRAMEWORK-SCANNER — Framework Analysis (Sub-Agent)
-description: 'v1.0.0 | MAS-internal: Runs dev_observer + dev_architect + dev_analyst
-  parallel from'
-instructions: '# sub_mas-framework-scanner — 🔍 Framework Analysis
+description: 'v1.0.0 | MAS-internal: Runs dev_observer + dev_architect + dev_analyst parallel from'
+instructions: '# Extended instructions: recipe/instructions/sub_mas-framework-scanner.md
 
 
-  MAS-Engineer-internal. Runs the three analysis-tools from, consolidates results.
-  Delegated from MAS-Engineer for --scan, --audit, --harden.
+  Full instructions outsourced to external file for maintainability.
 
 
-  ## Input (from MAS-Engineer)
+  ## Loading
+
+  All detailed workflows, examples, and rules are in the external file. This recipe contains only the role, prompt, and configuration.
 
 
-  ```yaml scanner_intake: signal: "🟣 HANDOVER" request_id: string from: "dev-mas-engineer"
-  to: "sub_mas-framework-scanner" task: "SCAN|AUDIT|HARDEN_CHECK" workspace: "/path/to/workspace"
-  tools_dir: "$HOME/.config/goose/recipes/mas-engineer-tools"
+  ## Read external file FIRST
 
-  ```
-
-
-  ## ⛔ STEP 0 — TOOL-CHECK WITH FALLBACK
-
-
-  ⛔ NEVER Framework-Agents as MAS-Components designate ⛔ NEVER Framework-Protocols
-  (SOTs, Findings) in MAS-Docs reference ⛔ NEVER Framework-Recipes edit — only read
-  + report ⛔ ALWAYS dev_*.py
-
-  Tools prefer — Sub-Agent only if Python not enough IF NOT ({tools_dir}/dev_observer.py
-  exists): ⚠️ "dev_observer.py not found — use ls+cat Fallback" FALLBACK-MODE active:
-  All Tool calls
-
-  through ls+cat-commands replace
-
-
-
-
-
-  ⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions. dev_rule_checker.py
-  enforces. ## Procedure SCAN
-
-
-  1. IF dev_observer.py exists: python3 {tools_dir}/dev_observer.py --workspace {workspace}
-  --scan OTHERWISE (Fallback): find {workspace} -type f | wc -l find {workspace} -name
-  "*.yaml" | wc -l find {workspace}
-
-  -name "*.md" | wc -l find {workspace} -name "*.py" | wc -l du -sh {workspace} 2.
-  Extract results: Files, sizes, structure 3. Return
-
-
-  ## Procedure AUDIT
-
-
-  1. IF dev_observer.py exists: python3 {tools_dir}/dev_observer.py --workspace {workspace}
-  --save OTHERWISE (Fallback): find {workspace} -type f -exec ls -lh {} \; > /tmp/observer_fallback.txt
-  2. IF dev_architect.py
-
-  exists: python3 {tools_dir}/dev_architect.py --workspace {workspace} --analyze OTHERWISE
-  (Fallback): tree {workspace} -L 2 > /tmp/architect_fallback.txt 3. IF dev_analyst.py
-  exists: python3 {tools_dir}/dev_analyst.py
-
-  --workspace {workspace} --check-all OTHERWISE (Fallback): for f in $(find {workspace}
-  -name "*.yaml"); do echo "=== $f ==="; cat "$f"; done > /tmp/analyst_fallback.txt
-  4. Consolidate all results → a Report
-
-
-  ## Procedure HARDEN_CHECK
-
-
-  1. IF dev_analyst.py exists: python3 {tools_dir}/dev_analyst.py --workspace {workspace}
-  --check-all OTHERWISE (Fallback): find {workspace} -name "*.yaml" -exec sh -c ''echo
-  "=== {} ==="; python3 -c "import yaml; yaml.safe_load(open(\"{}\"))" 2>&1 || echo
-  "YAML-Error in {}"'' \; 2. Categorize problems by severity: 🔴 CRITICAL: YAML-Error,
-  broken Tests 🟠 MEDIUM:   Inconsistencies, Warnings 🟢 LOW: Improvement suggestions
-  3. Return list with suggestions
-
-
-  ## Output (to MAS-Engineer)
-
-
-  ```yaml mas_result: signal: "🟢 DONE" request_id: string from: "sub_mas-framework-scanner"
-  to: "dev-mas-engineer" status: "success" parsed: task: "SCAN|AUDIT|HARDEN_CHECK"
-  workspace: "/path" observations:
-
-  scan: recipes: 94 docs: 23 python_tools: 5 total_files: 122 issues: - severity:
-  "🔴|🟠|🟢" file: "..." problem: "..." suggestion: "..." summary: "94 Recipes, 0 YAML-Error,
-  3 Warnings" ```
-
-
-  CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without
-  Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach.
-  Reading in other domain OK.''
+  Before any action, read: `recipe/instructions/sub_mas-framework-scanner.md`
 
   '
-prompt: 'I am framework-scanner (v1.0.0) | MODE-CHECK: mas-engineer | 🔍 FRAMEWORK-SCANNER (v1.0.0) ⛔ Scan & audit & harden. → Only analyse — delegate writes to yaml-editor'
+prompt: 'I am framework-scanner (v1.0.0) | MODE-CHECK: mas-engineer | 🔍 FRAMEWORK-SCANNER (v1.0.0) ⛔ Scan & audit & harden.
+  → Only analyse — delegate writes to yaml-editor
+
+  # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune). NO YAML-Save without vorherige
+  Syntax-Check.
+
+  # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune). NO YAML-Save without vorherige
+  Syntax-Check.'
 settings:
   timeout: 600
   max_steps: 100

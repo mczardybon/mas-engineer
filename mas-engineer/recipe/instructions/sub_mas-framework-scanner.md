@@ -1,0 +1,39 @@
+# sub_mas-framework-scanner — 🔍 Framework Analysis
+
+MAS-Engineer-internal. Runs the three analysis-tools from, consolidates results. Delegated from MAS-Engineer for --scan, --audit, --harden.
+
+## Input (from MAS-Engineer)
+
+```yaml scanner_intake: signal: "🟣 HANDOVER" request_id: string from: "dev-mas-engineer" to: "sub_mas-framework-scanner" task: "SCAN|AUDIT|HARDEN_CHECK" workspace: "/path/to/workspace" tools_dir: "$HOME/.config/goose/recipes/mas-engineer-tools"
+```
+
+## ⛔ STEP 0 — TOOL-CHECK WITH FALLBACK
+
+⛔ NEVER Framework-Agents as MAS-Components designate ⛔ NEVER Framework-Protocols (SOTs, Findings) in MAS-Docs reference ⛔ NEVER Framework-Recipes edit — only read + report ⛔ ALWAYS dev_*.py
+Tools prefer — Sub-Agent only if Python not enough IF NOT ({tools_dir}/dev_observer.py exists): ⚠️ "dev_observer.py not found — use ls+cat Fallback" FALLBACK-MODE active: All Tool calls
+through ls+cat-commands replace
+
+
+
+
+⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions. dev_rule_checker.py enforces. ## Procedure SCAN
+
+1. IF dev_observer.py exists: python3 {tools_dir}/dev_observer.py --workspace {workspace} --scan OTHERWISE (Fallback): find {workspace} -type f | wc -l find {workspace} -name "*.yaml" | wc -l find {workspace}
+-name "*.md" | wc -l find {workspace} -name "*.py" | wc -l du -sh {workspace} 2. Extract results: Files, sizes, structure 3. Return
+
+## Procedure AUDIT
+
+1. IF dev_observer.py exists: python3 {tools_dir}/dev_observer.py --workspace {workspace} --save OTHERWISE (Fallback): find {workspace} -type f -exec ls -lh {} \; > /tmp/observer_fallback.txt 2. IF dev_architect.py
+exists: python3 {tools_dir}/dev_architect.py --workspace {workspace} --analyze OTHERWISE (Fallback): tree {workspace} -L 2 > /tmp/architect_fallback.txt 3. IF dev_analyst.py exists: python3 {tools_dir}/dev_analyst.py
+--workspace {workspace} --check-all OTHERWISE (Fallback): for f in $(find {workspace} -name "*.yaml"); do echo "=== $f ==="; cat "$f"; done > /tmp/analyst_fallback.txt 4. Consolidate all results → a Report
+
+## Procedure HARDEN_CHECK
+
+1. IF dev_analyst.py exists: python3 {tools_dir}/dev_analyst.py --workspace {workspace} --check-all OTHERWISE (Fallback): find {workspace} -name "*.yaml" -exec sh -c 'echo "=== {} ==="; python3 -c "import yaml; yaml.safe_load(open(\"{}\"))" 2>&1 || echo "YAML-Error in {}"' \; 2. Categorize problems by severity: 🔴 CRITICAL: YAML-Error, broken Tests 🟠 MEDIUM:   Inconsistencies, Warnings 🟢 LOW: Improvement suggestions 3. Return list with suggestions
+
+## Output (to MAS-Engineer)
+
+```yaml mas_result: signal: "🟢 DONE" request_id: string from: "sub_mas-framework-scanner" to: "dev-mas-engineer" status: "success" parsed: task: "SCAN|AUDIT|HARDEN_CHECK" workspace: "/path" observations:
+scan: recipes: 94 docs: 23 python_tools: 5 total_files: 122 issues: - severity: "🔴|🟠|🟢" file: "..." problem: "..." suggestion: "..." summary: "94 Recipes, 0 YAML-Error, 3 Warnings" ```
+
+CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.'
