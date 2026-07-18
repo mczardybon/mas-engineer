@@ -36,9 +36,34 @@ R01 confirmation first.
 
 ## Available prompts
 
-| Prompt | Builds | Time | Tests |
-|--------|--------|------|-------|
-| [research-team.txt](research-team.txt) | 5-agent research pipeline + dashboard | ~3 min | 14/14 PASS |
+| Prompt | Architecture | Agents | Tests |
+|--------|--------------|--------|-------|
+| [research-team.txt](research-team.txt) | Sequential + verification gate | 5 | 14/14 PASS |
+| [customer-support.txt](customer-support.txt) | Linear with escalation gate | 3 | 13/13 PASS |
+| [code-reviewer.txt](code-reviewer.txt) | Parallel fan-out + aggregator | 4 | 21/21 PASS |
+| [content-pipeline.txt](content-pipeline.txt) | 3-tier hierarchical (research → parallel creative → editor gate) | 6 | 28/28 PASS |
+| [data-analyzer.txt](data-analyzer.txt) | Iterative loop with convergence check (max 3 iterations) | 7 | 30/30 PASS |
+| [security-scanner.txt](security-scanner.txt) | Hybrid mesh (4 parallel scanners → correlator → prioritizer → patch loop) | 11 | 38/38 PASS |
+
+## Architecture patterns covered
+
+Each example showcases a different multi-agent architecture pattern:
+
+- **research-team** — classic sequential pipeline with mandatory source-verifier
+  gate. Every fact must be backed by a real URL before it reaches the user.
+- **customer-support** — linear ticket flow with escalation gate. Simple,
+  but enforces routing rules (auto-respond vs human handoff).
+- **code-reviewer** — parallel fan-out: 4 reviewers run in parallel,
+  aggregator merges findings. Maximum throughput.
+- **content-pipeline** — 3-tier hierarchical tree: research must complete
+  before 3 parallel writers start; every output passes an editor gate
+  before the manager publishes.
+- **data-analyzer** — iterative loop with convergence detection. Runs up
+  to 3 iterations of profile → quality → insight → critic; exits when
+  insights stabilize.
+- **security-scanner** — hybrid mesh: 4 parallel scanners (SAST/DAST/SBOM/Secret)
+  feed a correlator, then a prioritizer, then an optional deep-dive loop
+  for critical findings. Most complex pattern.
 
 ## Anatomy of a good MAS-Engineer prompt
 

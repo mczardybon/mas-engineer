@@ -1,0 +1,149 @@
+Build a complete Multi-Agent System called "content-pipeline" at
+/tmp/content-pipeline. Do NOT just plan it — actually create the
+files, run live tests, and report results.
+
+ARCHITECTURE: Hierarchical tree with manager + 3 tiers (5 agents)
+
+  topic input
+      |
+      v
+  pipeline-manager          (root — orchestrates, enforces gates)
+      |
+      +-- tier 1 (research) --------------------------+
+      |                                              |
+      +-> topic-researcher                            |
+              (gathers facts, sources, angles)       |
+              |                                       |
+              +-- tier 2 (parallel creative) --------+
+              |                                       |
+              +-> writer-blogger                      |
+              |   (writes blog draft)                |
+              |                                       |
+              +-> writer-social                       |
+              |   (writes social posts)              |
+              |                                       |
+              +-> writer-newsletter                   |
+                  (writes newsletter version)        |
+                      |                               |
+                      +-- tier 3 (gate) -----------+   |
+                      |                           |   |
+                      +-> editor-quality-checker  |   |
+                          (one per channel, OK)   |   |
+                          |                       |   |
+                          v                       |   |
+                      pipeline-manager <----------+   |
+                      (final gate: publish)            |
+
+
+STEP 1 — Initialize the project skeleton
+Run: python3 ~/.config/goose/recipes/tools/dev_generic_init.py
+     --init /tmp/content-pipeline --components all
+
+STEP 2 — Create 5 agents in /tmp/content-pipeline/recipe/sub/:
+
+1. pipeline-manager.yaml
+   - Root orchestrator. Receives {topic, target_channels}
+   - Dispatches to topic-researcher, then awaits 3 parallel writers
+   - Enforces quality gate: every piece must pass editor check
+   - Final output: {research_summary, deliverables: {...}}
+   - HARD GATE: blocks publish if any editor reports severity>high
+
+2. topic-researcher.yaml
+   - Takes a topic, returns:
+     {facts: [str], sources: [{url, title, credibility}],
+      angles: [str], keywords: [str]}
+   - TIER 1 — must complete before tier 2 starts.
+
+3. writer-blogger.yaml  (TIER 2 — parallel)
+   - Receives {topic, research}
+   - Writes 800-1200 word blog draft
+   - Returns: {channel: "blog", markdown, meta_description, word_count}
+
+4. writer-social.yaml  (TIER 2 — parallel)
+   - Receives {topic, research}
+   - Writes 5 social posts (twitter, linkedin, mastodon) + 1 thread
+   - Returns: {channel: "social", posts: [{platform, text, hashtags}]}
+
+5. writer-newsletter.yaml  (TIER 2 — parallel)
+   - Receives {topic, research}
+   - Writes email newsletter (subject, preview, body, CTA)
+   - Returns: {channel: "email", subject, preview, body_markdown, cta}
+
+(All 3 writers run in PARALLEL after researcher. The orchestrator
+fans them out via 3 sub_recipes and waits for all.)
+
+STEP 3 — Create the editor layer (used as gate):
+   /tmp/content-pipeline/recipe/sub/editor-quality-checker.yaml
+   - Receives {piece} (one writer output)
+   - Checks: factual claims vs research, tone, brand voice, length,
+     clarity, grammar
+   - Returns: {approved: bool, score: int, issues: [str]}
+
+STEP 4 — Create orchestrator root recipe
+/tmp/content-pipeline/recipe/content-pipeline.yaml that documents
+the 3-tier tree and references all 6 sub-recipes. Manager is
+sub_recipe of root; manager internally references researcher + 3
+writers + editor.
+
+STEP 5 — DASHBOARD SETUP (mandatory)
+a) cd /tmp/content-pipeline
+b) mkdir -p .mas/mcp
+c) Copy MCP server files from mas-engineer:
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/server.js .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/package.json .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/dashboard.html .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/mas-dispatch-monitor.html
+        .mas/mcp/
+d) cd .mas/mcp && npm install
+e) Register content-pipeline-dashboard extension in
+   ~/.config/goose/config.yaml (under extensions:)
+f) First dashboard-data refresh:
+   - python3 ~/.config/goose/recipes/tools/dev_dashboard_data.py
+     /tmp/content-pipeline
+g) Verify dashboard:
+   - cat /tmp/content-pipeline/.mas/dashboards/data.json
+     | python3 -m json.tool
+   - Check that "agents.total" >= 6 and "agents.healthy" == "agents.total"
+   - Check that "project_name" = "content-pipeline"
+   - Check that "workspace" = "/tmp/content-pipeline"
+
+STEP 6 — LIVE TEST (mandatory):
+a) goose run --recipe /tmp/content-pipeline/recipe/content-pipeline.yaml
+   --no-session --explain
+b) goose run --recipe /tmp/content-pipeline/recipe/sub/pipeline-manager.yaml
+   --no-session --explain
+c) goose run --recipe /tmp/content-pipeline/recipe/sub/topic-researcher.yaml
+   --no-session --explain
+d) goose run --recipe /tmp/content-pipeline/recipe/sub/writer-blogger.yaml
+   --no-session --explain
+e) goose run --recipe /tmp/content-pipeline/recipe/sub/writer-social.yaml
+   --no-session --explain
+f) goose run --recipe /tmp/content-pipeline/recipe/sub/writer-newsletter.yaml
+   --no-session --explain
+g) goose run --recipe
+   /tmp/content-pipeline/recipe/sub/editor-quality-checker.yaml
+   --no-session --explain
+h) python3 -c "import yaml; [yaml.safe_load(open(f))
+   for f in ['/tmp/content-pipeline/recipe/content-pipeline.yaml',
+            '/tmp/content-pipeline/recipe/sub/pipeline-manager.yaml',
+            '/tmp/content-pipeline/recipe/sub/topic-researcher.yaml',
+            '/tmp/content-pipeline/recipe/sub/writer-blogger.yaml',
+            '/tmp/content-pipeline/recipe/sub/writer-social.yaml',
+            '/tmp/content-pipeline/recipe/sub/writer-newsletter.yaml',
+            '/tmp/content-pipeline/recipe/sub/editor-quality-checker.yaml']]"
+i) Test MCP server starts: timeout 5 node
+   /tmp/content-pipeline/.mas/mcp/server.js
+   (should print "Framework Dashboard MCP Server running" on stderr
+    before timeout)
+
+STEP 7 — Report:
+- List all 7 yaml files created with line counts.
+- Show dashboard data.json summary (12 keys, 6 agents).
+- Show MCP server files installed.
+- Show extension registration in config.yaml.
+- Show PASS/FAIL for 7+7+1+1+12 = 28 checks.
+- Show any YAML errors with line numbers.
+
+Critical: the tree has 3 tiers. TIER 1 strictly precedes TIER 2.
+TIER 2's 3 writers run in PARALLEL. TIER 3 (editor) gates every
+output. pipeline-manager enforces the gates.

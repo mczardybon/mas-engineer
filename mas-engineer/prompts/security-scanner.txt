@@ -1,0 +1,195 @@
+Build a complete Multi-Agent System called "security-scanner" at
+/tmp/security-scanner. Do NOT just plan it — actually create the
+files, run live tests, and report results.
+
+ARCHITECTURE: Hybrid mesh — parallel fan-out + sequential scan layers
+             + iterative deep-dive loop (8 agents)
+
+  target input (repo / image / network)
+      |
+      v
+  scan-orchestrator              (root)
+      |
+      +-- parallel start ------------+
+      |                              |
+      +-> sast-scanner               |  layer 1 (static analysis)
+      |                              |
+      +-> dast-scanner               |  layer 1 (dynamic probes)
+      |                              |
+      +-> sbom-analyzer              |  layer 1 (deps + licenses)
+      |                              |
+      +-> secret-detector            |  layer 1 (creds, tokens)
+      |                              |
+      parallel end --------------------+
+      |
+      v
+  threat-correlator               (layer 2 — correlates findings)
+      |
+      v
+  exploit-prioritizer             (layer 3 — exploitability score)
+      |
+      +-- if critical OR high → iterative deep-dive loop
+      |       loop max 2x:
+      |           vuln-deep-analyzer
+      |           patch-generator
+      |           patch-validator
+      |       (stops if patch validates clean)
+      |
+      v
+  remediation-report-builder      (final report)
+
+
+STEP 1 — Initialize the project skeleton
+Run: python3 ~/.config/goose/recipes/tools/dev_generic_init.py
+     --init /tmp/security-scanner --components all
+
+STEP 2 — Create 8 agents in /tmp/security-scanner/recipe/sub/:
+
+1. scan-orchestrator.yaml (ROOT)
+   - Receives {target, scan_type: "full"|"fast"}
+   - Fans out 4 parallel scanners
+   - Calls correlator → prioritizer → optional deep-dive loop → report
+   - HARD GATE: any critical vuln blocks scan completion without
+     a generated patch that passes validator.
+
+2. sast-scanner.yaml (LAYER 1 — parallel)
+   - Static analysis: code patterns, dataflow, dangerous sinks
+   - Returns: {findings: [{file, line, type, cwe, severity, snippet}]}
+
+3. dast-scanner.yaml (LAYER 1 — parallel)
+   - Dynamic analysis: HTTP probes, injection attempts
+   - Returns: {findings: [{endpoint, method, status, type, severity}]}
+
+4. sbom-analyzer.yaml (LAYER 1 — parallel)
+   - SBOM, dependency CVE lookup, license compliance
+   - Returns: {components: int, vulns: [{component, cve, severity,
+              fixed_in}], license_issues: [...]}
+
+5. secret-detector.yaml (LAYER 1 — parallel)
+   - Hardcoded secrets, API keys, tokens, certs
+   - Returns: {secrets: [{file, line, kind, severity, redacted_preview}]}
+
+6. threat-correlator.yaml (LAYER 2 — sequential)
+   - Receives all 4 layer-1 results
+   - Finds chains: e.g. secret-leak + sast-input-validation
+   - Returns: {chains: [{findings: [ids], attack_path, severity}],
+              deduped_findings, total_count}
+
+7. exploit-prioritizer.yaml (LAYER 3 — sequential)
+   - Scores each finding/chain: exploitability, impact, exposure
+   - Returns: {prioritized: [{id, exploitability, cvss, ranking}],
+              top_chains: [...]}
+
+8. vuln-deep-analyzer.yaml (LOOP — iterative)
+   - For one specific vuln/chain
+   - Returns: {root_cause, attack_scenario, blast_radius,
+              recommended_fix_strategy}
+
+9. patch-generator.yaml (LOOP — iterative)
+   - Receives {vuln, deep_analysis}
+   - Returns: {patch_diff, rationale, side_effects}
+
+10. patch-validator.yaml (LOOP — iterative)
+    - Receives {patch}
+    - Returns: {passes: bool, new_issues: [...], regression_risk}
+
+11. remediation-report-builder.yaml (FINAL)
+    - Receives all results
+    - Returns: {executive_summary, critical_findings, all_chains,
+               patches_generated, patches_validated, next_steps,
+               compliance_status}
+
+STEP 3 — Create orchestrator root recipe
+/tmp/security-scanner/recipe/security-scanner.yaml that documents
+the hybrid mesh: 4 parallel scanners → correlator → prioritizer →
+optional iterative loop (deep-analyzer → patch-gen → patch-val) →
+report-builder.
+
+STEP 4 — DASHBOARD SETUP (mandatory)
+a) cd /tmp/security-scanner
+b) mkdir -p .mas/mcp
+c) Copy MCP server files from mas-engineer:
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/server.js .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/package.json .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/dashboard.html .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/mas-dispatch-monitor.html
+        .mas/mcp/
+d) cd .mas/mcp && npm install
+e) Register security-scanner-dashboard extension in
+   ~/.config/goose/config.yaml (under extensions:)
+f) First dashboard-data refresh:
+   - python3 ~/.config/goose/recipes/tools/dev_dashboard_data.py
+     /tmp/security-scanner
+g) Verify dashboard:
+   - cat /tmp/security-scanner/.mas/dashboards/data.json
+     | python3 -m json.tool
+   - Check that "agents.total" >= 11 and "agents.healthy" == total
+   - Check that "project_name" = "security-scanner"
+   - Check that "workspace" = "/tmp/security-scanner"
+
+STEP 5 — LIVE TEST (mandatory):
+a) goose run --recipe
+   /tmp/security-scanner/recipe/security-scanner.yaml
+   --no-session --explain
+b) goose run --recipe
+   /tmp/security-scanner/recipe/sub/scan-orchestrator.yaml
+   --no-session --explain
+c) goose run --recipe
+   /tmp/security-scanner/recipe/sub/sast-scanner.yaml
+   --no-session --explain
+d) goose run --recipe
+   /tmp/security-scanner/recipe/sub/dast-scanner.yaml
+   --no-session --explain
+e) goose run --recipe
+   /tmp/security-scanner/recipe/sub/sbom-analyzer.yaml
+   --no-session --explain
+f) goose run --recipe
+   /tmp/security-scanner/recipe/sub/secret-detector.yaml
+   --no-session --explain
+g) goose run --recipe
+   /tmp/security-scanner/recipe/sub/threat-correlator.yaml
+   --no-session --explain
+h) goose run --recipe
+   /tmp/security-scanner/recipe/sub/exploit-prioritizer.yaml
+   --no-session --explain
+i) goose run --recipe
+   /tmp/security-scanner/recipe/sub/vuln-deep-analyzer.yaml
+   --no-session --explain
+j) goose run --recipe
+   /tmp/security-scanner/recipe/sub/patch-generator.yaml
+   --no-session --explain
+k) goose run --recipe
+   /tmp/security-scanner/recipe/sub/patch-validator.yaml
+   --no-session --explain
+l) goose run --recipe
+   /tmp/security-scanner/recipe/sub/remediation-report-builder.yaml
+   --no-session --explain
+m) python3 -c "import yaml; [yaml.safe_load(open(f))
+   for f in ['/tmp/security-scanner/recipe/security-scanner.yaml',
+            '/tmp/security-scanner/recipe/sub/scan-orchestrator.yaml',
+            '/tmp/security-scanner/recipe/sub/sast-scanner.yaml',
+            '/tmp/security-scanner/recipe/sub/dast-scanner.yaml',
+            '/tmp/security-scanner/recipe/sub/sbom-analyzer.yaml',
+            '/tmp/security-scanner/recipe/sub/secret-detector.yaml',
+            '/tmp/security-scanner/recipe/sub/threat-correlator.yaml',
+            '/tmp/security-scanner/recipe/sub/exploit-prioritizer.yaml',
+            '/tmp/security-scanner/recipe/sub/vuln-deep-analyzer.yaml',
+            '/tmp/security-scanner/recipe/sub/patch-generator.yaml',
+            '/tmp/security-scanner/recipe/sub/patch-validator.yaml',
+            '/tmp/security-scanner/recipe/sub/remediation-report-builder.yaml']]"
+n) Test MCP server starts: timeout 5 node
+   /tmp/security-scanner/.mas/mcp/server.js
+   (should print "Framework Dashboard MCP Server running" on stderr
+    before timeout)
+
+STEP 6 — Report:
+- List all 12 yaml files created with line counts.
+- Show dashboard data.json summary (12 keys, 11+ agents).
+- Show MCP server files installed.
+- Show extension registration in config.yaml.
+- Show PASS/FAIL for 12+12+1+1+12 = 38 checks.
+- Show any YAML errors with line numbers.
+
+Critical: 4 scanners PARALLEL. Correlator + prioritizer SEQUENTIAL.
+Deep-dive loop iterates only for critical/high. Loop has hard cap 2x.
+Report-builder always runs last.

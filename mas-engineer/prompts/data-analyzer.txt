@@ -1,0 +1,163 @@
+Build a complete Multi-Agent System called "data-analyzer" at
+/tmp/data-analyzer. Do NOT just plan it — actually create the files,
+run live tests, and report results.
+
+ARCHITECTURE: Iterative loop with convergence check (6 agents)
+
+  dataset input
+      |
+      v
+  analysis-loop-controller   (runs up to N iterations)
+      |
+      +-> iteration 1, 2, ... N --------------------+
+      |                                              |
+      +-> data-profiler                             |
+      |   (schema, types, missing values, stats)    |
+      |       |                                      |
+      |       v                                      |
+      |   data-quality-checker                       |
+      |   (anomalies, outliers, drift)               |
+      |       |                                      |
+      |       v                                      |
+      |   insight-generator                          |
+      |   (hypotheses, correlations, patterns)       |
+      |       |                                      |
+      |       v                                      |
+      |   critic-reviewer                            |
+      |   (verifies insights, looks for false pos)  |
+      |       |                                      |
+      |       v                                      |
+      |   convergence-checker                        |
+      |   (have insights stopped changing?)          |
+      |       |                                      |
+      |       v                                      |
+      |   <loop back to data-profiler if not done>  |
+      |                                              |
+      +----------------------------------------------+
+      |
+      v
+  final-report-compiler      (assembles all iterations)
+      |
+      v
+  report to user
+
+
+STEP 1 — Initialize the project skeleton
+Run: python3 ~/.config/goose/recipes/tools/dev_generic_init.py
+     --init /tmp/data-analyzer --components all
+
+STEP 2 — Create 6 agents in /tmp/data-analyzer/recipe/sub/:
+
+1. analysis-loop-controller.yaml
+   - Orchestrator. Tracks iteration count (max 3).
+   - Receives {dataset_description, max_iterations=3}
+   - Loops: profile → quality → insight → critic → convergence
+   - If convergence says "stable" OR max reached → exit loop
+   - Calls final-report-compiler
+   - Returns: {iterations: [...], final_report}
+
+2. data-profiler.yaml
+   - Input: {dataset_description, previous_profile? (for diff)}
+   - Output: {schema, types, row_count, missing_pct, numeric_stats,
+             categorical_cardinality, sample_rows}
+   - On iteration > 1: also returns {delta_from_previous}
+
+3. data-quality-checker.yaml
+   - Input: {profile}
+   - Output: {duplicates, outliers, null_patterns, drift_score,
+             quality_score: 0-100}
+
+4. insight-generator.yaml
+   - Input: {profile, quality}
+   - Output: {hypotheses: [{claim, confidence, evidence}],
+              correlations: [{vars, r, p}],
+              patterns: [str]}
+
+5. critic-reviewer.yaml
+   - Input: {insights, profile, quality}
+   - Output: {verified: [int], rejected: [{claim, reason}],
+              refined: [{claim, refinement}],
+              confidence_adjustments: {claim: delta}}
+
+6. convergence-checker.yaml
+   - Input: {previous_insights, current_insights, iteration}
+   - Output: {stable: bool, change_pct: float, recommendation:
+              "continue" | "stop_converged" | "stop_stalled"}
+
+7. final-report-compiler.yaml
+   - Input: {iterations, final_insights}
+   - Output: {executive_summary, key_findings, recommendations,
+              methodology, iterations_log}
+
+STEP 3 — Create orchestrator root recipe
+/tmp/data-analyzer/recipe/data-analyzer.yaml that references the
+controller as a sub_recipe. Controller internally references the
+6 other agents. Maximum 3 iterations. Loop terminates on convergence.
+
+STEP 4 — DASHBOARD SETUP (mandatory)
+a) cd /tmp/data-analyzer
+b) mkdir -p .mas/mcp
+c) Copy MCP server files from mas-engineer:
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/server.js .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/package.json .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/dashboard.html .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/mas-dispatch-monitor.html
+        .mas/mcp/
+d) cd .mas/mcp && npm install
+e) Register data-analyzer-dashboard extension in
+   ~/.config/goose/config.yaml (under extensions:)
+f) First dashboard-data refresh:
+   - python3 ~/.config/goose/recipes/tools/dev_dashboard_data.py
+     /tmp/data-analyzer
+g) Verify dashboard:
+   - cat /tmp/data-analyzer/.mas/dashboards/data.json
+     | python3 -m json.tool
+   - Check that "agents.total" = 7 and "agents.healthy" = 7
+   - Check that "project_name" = "data-analyzer"
+   - Check that "workspace" = "/tmp/data-analyzer"
+
+STEP 5 — LIVE TEST (mandatory):
+a) goose run --recipe /tmp/data-analyzer/recipe/data-analyzer.yaml
+   --no-session --explain
+b) goose run --recipe
+   /tmp/data-analyzer/recipe/sub/analysis-loop-controller.yaml
+   --no-session --explain
+c) goose run --recipe /tmp/data-analyzer/recipe/sub/data-profiler.yaml
+   --no-session --explain
+d) goose run --recipe
+   /tmp/data-analyzer/recipe/sub/data-quality-checker.yaml
+   --no-session --explain
+e) goose run --recipe /tmp/data-analyzer/recipe/sub/insight-generator.yaml
+   --no-session --explain
+f) goose run --recipe /tmp/data-analyzer/recipe/sub/critic-reviewer.yaml
+   --no-session --explain
+g) goose run --recipe /tmp/data-analyzer/recipe/sub/convergence-checker.yaml
+   --no-session --explain
+h) goose run --recipe
+   /tmp/data-analyzer/recipe/sub/final-report-compiler.yaml
+   --no-session --explain
+i) python3 -c "import yaml; [yaml.safe_load(open(f))
+   for f in ['/tmp/data-analyzer/recipe/data-analyzer.yaml',
+            '/tmp/data-analyzer/recipe/sub/analysis-loop-controller.yaml',
+            '/tmp/data-analyzer/recipe/sub/data-profiler.yaml',
+            '/tmp/data-analyzer/recipe/sub/data-quality-checker.yaml',
+            '/tmp/data-analyzer/recipe/sub/insight-generator.yaml',
+            '/tmp/data-analyzer/recipe/sub/critic-reviewer.yaml',
+            '/tmp/data-analyzer/recipe/sub/convergence-checker.yaml',
+            '/tmp/data-analyzer/recipe/sub/final-report-compiler.yaml']]"
+j) Test MCP server starts: timeout 5 node
+   /tmp/data-analyzer/.mas/mcp/server.js
+   (should print "Framework Dashboard MCP Server running" on stderr
+    before timeout)
+
+STEP 6 — Report:
+- List all 8 yaml files created with line counts.
+- Show dashboard data.json summary (12 keys, 7 agents).
+- Show MCP server files installed.
+- Show extension registration in config.yaml.
+- Show PASS/FAIL for 8+8+1+1+12 = 30 checks.
+- Show any YAML errors with line numbers.
+
+Critical: the loop runs MAX 3 iterations. Convergence must be
+checked AFTER every iteration. If stable or stalled → exit. The
+controller MUST refuse to run more than max_iterations.

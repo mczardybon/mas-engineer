@@ -1,0 +1,103 @@
+Build a complete Multi-Agent System called "customer-support" at
+/tmp/customer-support. Do NOT just plan it — actually create the files,
+run live tests, and report results.
+
+ARCHITECTURE: Linear pipeline (3 agents, sequential flow)
+
+  user message
+      |
+      v
+  intent-router        (classifies: billing|tech|general)
+      |
+      v
+  specialist-handler   (handles the actual issue)
+      |
+      v
+  empathic-responder   (adds empathy, formats final reply)
+
+
+STEP 1 — Initialize the project skeleton
+Run: python3 ~/.config/goose/recipes/tools/dev_generic_init.py
+     --init /tmp/customer-support --components all
+
+STEP 2 — Create 3 agents in /tmp/customer-support/recipe/sub/:
+
+1. intent-router.yaml
+   - Reads user message
+   - Classifies into one of: "billing", "technical", "general"
+   - Returns: {category: str, confidence: float, reasoning: str}
+   - If confidence < 0.6, falls back to "general"
+
+2. specialist-handler.yaml (sub_recipes based on category)
+   - Receives {category, user_message}
+   - Dispatches to the matching handler:
+     * billing-handler: handles invoices, refunds, subscriptions
+     * tech-handler: handles bugs, errors, integrations
+     * general-handler: handles questions, feedback
+   - Returns: {solution: str, steps: [str], needs_escalation: bool}
+
+3. empathic-responder.yaml
+   - Receives {user_message, solution, steps}
+   - Adds empathy (acknowledges frustration if any)
+   - Formats final reply as: greeting + empathy + solution + steps + offer
+   - Returns: final customer-facing response string
+
+STEP 3 — Create orchestrator root recipe /tmp/customer-support/recipe/
+customer-support.yaml that references all 3 sub-recipes via sub_recipes.
+The orchestrator runs them in strict sequence:
+intent-router → specialist-handler → empathic-responder
+
+STEP 4 — DASHBOARD SETUP (mandatory)
+a) Set up MCP dashboard for the new project:
+   - cd /tmp/customer-support
+   - mkdir -p .mas/mcp
+   - Copy MCP server files from mas-engineer:
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/server.js .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/package.json .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/dashboard.html .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/mas-dispatch-monitor.html
+        .mas/mcp/
+   - Run: cd .mas/mcp && npm install
+   - Register customer-support-dashboard extension in
+     ~/.config/goose/config.yaml (under extensions:)
+b) First dashboard-data refresh:
+   - python3 ~/.config/goose/recipes/tools/dev_dashboard_data.py
+     /tmp/customer-support
+c) Verify dashboard:
+   - cat /tmp/customer-support/.mas/dashboards/data.json | python3 -m json.tool
+     (must have: version, timestamp, workspace, mode, project_name,
+      agents, changes, improvement, dispatch, build, health,
+      health_trend)
+   - Check that "agents.total" = 3 and "agents.healthy" = 3
+   - Check that "project_name" = "customer-support"
+   - Check that "workspace" = "/tmp/customer-support"
+
+STEP 5 — LIVE TEST (mandatory):
+a) goose run --recipe /tmp/customer-support/recipe/customer-support.yaml
+   --no-session --explain
+b) goose run --recipe /tmp/customer-support/recipe/sub/intent-router.yaml
+   --no-session --explain
+c) goose run --recipe /tmp/customer-support/recipe/sub/specialist-handler.yaml
+   --no-session --explain
+d) goose run --recipe /tmp/customer-support/recipe/sub/empathic-responder.yaml
+   --no-session --explain
+e) python3 -c "import yaml; [yaml.safe_load(open(f))
+   for f in ['/tmp/customer-support/recipe/customer-support.yaml',
+            '/tmp/customer-support/recipe/sub/intent-router.yaml',
+            '/tmp/customer-support/recipe/sub/specialist-handler.yaml',
+            '/tmp/customer-support/recipe/sub/empathic-responder.yaml']]"
+f) Test MCP server starts: timeout 5 node /tmp/customer-support/.mas/mcp/
+   server.js
+   (should print "Framework Dashboard MCP Server running" on stderr
+    before timeout)
+
+STEP 6 — Report:
+- List all 4 yaml files created with line counts.
+- Show dashboard data.json summary (12 keys, 3 agents).
+- Show MCP server files installed.
+- Show extension registration in config.yaml.
+- Show PASS/FAIL for 4+5+4 = 13 checks.
+- Show any YAML errors with line numbers.
+
+Critical: the pipeline is STRICTLY LINEAR. No agent may skip ahead
+or invoke another. intent-router MUST run first.

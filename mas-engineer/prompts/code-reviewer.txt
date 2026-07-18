@@ -1,0 +1,131 @@
+Build a complete Multi-Agent System called "code-reviewer" at
+/tmp/code-reviewer. Do NOT just plan it — actually create the files,
+run live tests, and report results.
+
+ARCHITECTURE: Parallel fan-out then aggregator (4 agents)
+
+  code input
+      |
+      v
+  review-orchestrator
+      |
+      +-- parallel start -----------------------+
+      |                                         |
+      +-> style-reviewer     (lint, formatting) |
+      |                                         |
+      +-> security-reviewer  (vulns, secrets)   |
+      |                                         |
+      +-> perf-reviewer      (perf, complexity) |
+      |                                         |
+      +-> test-reviewer      (coverage, edge)   |
+      |                                         |
+      parallel end (all 4 results) --------------+
+      |
+      v
+  review-aggregator   (merges + prioritizes)
+      |
+      v
+  final review report
+
+
+STEP 1 — Initialize the project skeleton
+Run: python3 ~/.config/goose/recipes/tools/dev_generic_init.py
+     --init /tmp/code-reviewer --components all
+
+STEP 2 — Create 4 parallel agents + 1 aggregator in
+         /tmp/code-reviewer/recipe/sub/:
+
+1. style-reviewer.yaml
+   - Reviews code for: lint errors, formatting, naming conventions,
+     import order, dead code
+   - Returns: {issues: [{file, line, severity, message, suggestion}]}
+
+2. security-reviewer.yaml (MANDATORY — security gate)
+   - Reviews code for: hardcoded secrets, SQL injection, XSS,
+     insecure dependencies, missing auth checks
+   - Returns: {issues: [{file, line, severity, cwe_id, fix}]}
+   - This is a hard quality gate. Any HIGH severity issue
+     blocks the merge.
+
+3. perf-reviewer.yaml
+   - Reviews code for: O(n^2) loops, blocking I/O, memory leaks,
+     redundant computation, missing caching
+   - Returns: {issues: [{file, line, severity, impact_ms, fix}]}
+
+4. test-reviewer.yaml
+   - Reviews code for: missing tests, edge cases, mock coverage,
+     flaky patterns
+   - Returns: {issues: [{file, line, severity, missing_scenarios}]}
+
+5. review-aggregator.yaml
+   - Receives {style_issues, security_issues, perf_issues, test_issues}
+   - Merges into a single prioritized list (critical, high, medium, low)
+   - Calculates overall score (0-100)
+   - Decides: approve | request_changes | needs_discussion
+   - Returns: {score, decision, summary, all_issues_sorted}
+
+STEP 3 — Create orchestrator root recipe
+/tmp/code-reviewer/recipe/code-reviewer.yaml that runs the 4 reviewers
+in PARALLEL (no dependencies between them) and then dispatches to
+review-aggregator. Document the parallel execution in instructions.
+
+STEP 4 — DASHBOARD SETUP (mandatory)
+a) Set up MCP dashboard for the new project:
+   - cd /tmp/code-reviewer
+   - mkdir -p .mas/mcp
+   - Copy MCP server files from mas-engineer:
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/server.js .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/package.json .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/dashboard.html .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/mas-dispatch-monitor.html
+        .mas/mcp/
+   - Run: cd .mas/mcp && npm install
+   - Register code-reviewer-dashboard extension in
+     ~/.config/goose/config.yaml (under extensions:)
+b) First dashboard-data refresh:
+   - python3 ~/.config/goose/recipes/tools/dev_dashboard_data.py
+     /tmp/code-reviewer
+c) Verify dashboard:
+   - cat /tmp/code-reviewer/.mas/dashboards/data.json | python3 -m json.tool
+     (must have: version, timestamp, workspace, mode, project_name,
+      agents, changes, improvement, dispatch, build, health,
+      health_trend)
+   - Check that "agents.total" = 5 and "agents.healthy" = 5
+   - Check that "project_name" = "code-reviewer"
+   - Check that "workspace" = "/tmp/code-reviewer"
+
+STEP 5 — LIVE TEST (mandatory):
+a) goose run --recipe /tmp/code-reviewer/recipe/code-reviewer.yaml
+   --no-session --explain
+b) goose run --recipe /tmp/code-reviewer/recipe/sub/style-reviewer.yaml
+   --no-session --explain
+c) goose run --recipe /tmp/code-reviewer/recipe/sub/security-reviewer.yaml
+   --no-session --explain
+d) goose run --recipe /tmp/code-reviewer/recipe/sub/perf-reviewer.yaml
+   --no-session --explain
+e) goose run --recipe /tmp/code-reviewer/recipe/sub/test-reviewer.yaml
+   --no-session --explain
+f) goose run --recipe /tmp/code-reviewer/recipe/sub/review-aggregator.yaml
+   --no-session --explain
+g) python3 -c "import yaml; [yaml.safe_load(open(f))
+   for f in ['/tmp/code-reviewer/recipe/code-reviewer.yaml',
+            '/tmp/code-reviewer/recipe/sub/style-reviewer.yaml',
+            '/tmp/code-reviewer/recipe/sub/security-reviewer.yaml',
+            '/tmp/code-reviewer/recipe/sub/perf-reviewer.yaml',
+            '/tmp/code-reviewer/recipe/sub/test-reviewer.yaml',
+            '/tmp/code-reviewer/recipe/sub/review-aggregator.yaml']]"
+h) Test MCP server starts: timeout 5 node /tmp/code-reviewer/.mas/mcp/
+   server.js
+   (should print "Framework Dashboard MCP Server running" on stderr
+    before timeout)
+
+STEP 6 — Report:
+- List all 6 yaml files created with line counts.
+- Show dashboard data.json summary (12 keys, 5 agents).
+- Show MCP server files installed.
+- Show extension registration in config.yaml.
+- Show PASS/FAIL for 6+6+5+4 = 21 checks.
+- Show any YAML errors with line numbers.
+
+Critical: the 4 reviewer agents MUST run in parallel. No sequential
+dependencies. The aggregator only runs after ALL 4 have completed.
