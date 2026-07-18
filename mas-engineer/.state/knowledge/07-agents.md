@@ -1,31 +1,31 @@
-# Agents-Aboutsicht
+# Agents-Overview
 
 ## MAS-Sub-Agents (39) — recipe/sub/sub_mas-*.yaml
 
-### Kategorie Analysis (9)
+### Category Analysis (9)
 | Agent | description |
 |:------|:-------------|
-| framework-knowledge | framework Concepts verstehen & blueprints |
-| framework-scanner | framework analyzen (SCAN/AUDIT/HARDEN) |
-| session-analyst | Session-Korrelation & Anomalien |
+| framework-knowledge | understand framework concepts & blueprints |
+| framework-scanner | analyze framework (SCAN/AUDIT/HARDEN) |
+| session-analyst | Session-Correlation & Anomalies |
 | config-auditor | Config-Consistency (16 Checks) |
-| prompt-engineer | Prompt-Qualitaet (10 Kriterien) |
-| goose-expert | Goose-Rulekonformitaet (14 Scopes) |
-| im-finder | 🔍 Optimierungspotential (37 Feature-typeeeen) |
-| im-designer | 🛠️ Patches from Findings entwerfen |
-| im-validator | ✅ Changes validate & rollback |
+| prompt-engineer | Prompt-Quality (10 Criteria) |
+| goose-expert | Goose-Rule-conformity (14 Scopes) |
+| im-finder | 🔍 Optimization potential (37 Feature-types) |
+| im-designer | 🛠️ Design patches from findings |
+| im-validator | ✅ Validate changes & rollback |
 
-### Kategorie Recovery (6)
+### Category Recovery (6)
 | Agent | description |
 |:------|:-------------|
-| recovery-checkpoint | Git-similare Snapshots |
+| recovery-checkpoint | Git-similar Snapshots |
 | recovery-defib | Emergency-Resuscitation |
-| recovery-immune | Coronashield YAML-Praevention |
-| recovery-safezone | Paralller Fork-Workspace |
-| recovery-timeline | Automatische Best point-Suche |
-| migration-helper | framework Migrations planen |
+| recovery-immune | Coronashield YAML-Prevention |
+| recovery-safezone | Parallel Fork-Workspace |
+| recovery-timeline | Automatic Best-Point-Search |
+| migration-helper | Plan framework Migrations |
 
-### Kategorie Monitoring (6)
+### Category Monitoring (6)
 | Agent | description |
 |:------|:-------------|
 | agent-guardian | Death/Drift/Loop-Monitoring |
@@ -35,37 +35,37 @@
 | monitor-session | Session-Status-Monitor |
 | mas-controller | Scheduler (all 15min) |
 
-### Kategorie Management (7)
+### Category Management (7)
 | Agent | description |
 |:------|:-------------|
 | goose-admin | Goose-Components (Skills/Sessions/Logs) |
-| recipe-manager | Recipes installieren/deinstallieren |
-| yaml-editor | Sicheres YAML-Edit |
+| recipe-manager | Install/uninstall recipes |
+| yaml-editor | Safe YAML-Edit |
 | worktree-manager | Git-Worktree-Manager |
 | verification-runner | Result-Check |
-| summarizer | Togetherfassung |
+| summarizer | Summarization |
 | interpreter | Interpretation |
 
-### Kategorie Self-Improve & Konstitution (12)
+### Category Self-Improve & Constitution (12)
 | Agent | description |
 |:------|:-------------|
-| general-improver | 🔬 Improvement-Pipeline Orchestrator (6 Leveln) |
-| im-session-reader | 📊 Session-Database read & Rohdaten |
-| im-finder | 🔍 Optimierungspotential detect (37 typeeeen) |
-| im-rank | 📊 Findings priorisieren & filter |
-| im-designer | 🛠️ Patches from Findings entwerfen |
-| im-validator | ✅ Changes validate & rollback |
-| general-improver | 🔬 Verbetterungs-Pipeline (v2, backwards-compat) |
+| general-improver | 🔬 Improvement-Pipeline Orchestrator (6 Levels) |
+| im-session-reader | 📊 Read Session-Database & Raw-Data |
+| im-finder | 🔍 Detect optimization potential (37 types) |
+| im-rank | 📊 Prioritize & filter findings |
+| im-designer | 🛠️ Design patches from findings |
+| im-validator | ✅ Validate changes & rollback |
+| general-improver | 🔬 Improvement-Pipeline (v2, backwards-compat) |
 | dashboard-live | 📊 Live-Dashboard-Update |
 | generic-init | 🌍 Generic-Improver Initialization (v3: Symlink + Guidelines, no copy) |
-| master-constitution | ⚖️ MAS-Konstitution |
-| test-runner | 🧪 Tests fromexecuten & detect regressions |
+| master-constitution | ⚖️ MAS-Constitution |
+| test-runner | 🧪 Execute tests & detect regressions |
 
-### Kategorie Generierung (3)
+### Category Generation (3)
 | Agent | description |
 |:------|:-------------|
-| doc-generator | Docs auf Aktualitaet check |
-| signal-generator | Signale (CP_DONE/ERROR/SESSION_END) |
+| doc-generator | Check docs for currency |
+| signal-generator | Signals (CP_DONE/ERROR/SESSION_END) |
 | degradation-handler | Degradation-Recovery |
 
 ## framework Specialists (47) — specialist_*.yaml
@@ -107,16 +107,15 @@ sub_fw-monitor-session
 Git-Administration: init, commit, status, log, diff. NO push without ✅.
 
 ### 🧬 sub_mas-python-repair
-Python-Code-Reparatur: compile (Syntax), analyze (AST), fix (Code-Change), validate (Health-Check).
+Python-Code-Repair: compile (Syntax), analyze (AST), fix (Code-Change), validate (Health-Check).
 
 ### 📝 sub_mas-doc-writer
-Markdown-Documentation: create, update, consistency (Links check).
+Markdown-Documentation: create, update, consistency (check links).
 
 ### 🔧 sub_mas-json-utility
-JSON-Operationen: validate (Syntax), format (indent+sort), append (entry add).
+JSON-Operations: validate (Syntax), format (indent+sort), append (add entry).
 ### 🏗️ sub_mas-recipe-designer
-New Sub-Agents design, designen, in SOT entryen, Wissen update. Tasks: CONCEIVE, DESIGN, WORKFLOWS, SOT, KNOWLEDGE, FULL.
+Design new Sub-Agents, design them, enter in SOT, update knowledge. Tasks: CONCEIVE, DESIGN, WORKFLOWS, SOT, KNOWLEDGE, FULL.
 
 ### 📋 sub_mas-health-reporter
-Daily Gesundheitsbericht about MAS-State create. Tasks: REPORT (Status sammeln), COMPARE (Trends), MARKDOWN (Report formatieren), FULL (alls).
-
+Create daily Health-Report about MAS-State. Tasks: REPORT (collect status), COMPARE (trends), MARKDOWN (format report), FULL (all).

@@ -6,7 +6,7 @@ cd ~/agent_test/work && bash mas-engineer/tools/dev_build.sh
 
 ### What happens:
 1. __pycache__ + .backups + .state/checkpoints will be deleted before build
-2. zip -r aus Workspace-Root:
+2. zip -r from Workspace-Root:
    - installr.sh, update.sh, .mas-mode, .gitignore
    - framework/.projects.yaml
    - framework/$PROJECT/ (recipes + docs + config + tests + python)
@@ -14,12 +14,12 @@ cd ~/agent_test/work && bash mas-engineer/tools/dev_build.sh
 3. Exclusions: *.git* .backups __pycache__ *.pyc *.pyo improve-log*
 4. validation: 5 Cores, 47 Specialists, 44 FW-Subs, 36 MAS-Subs, >=40 Tools, no pycache
 
-### Modi:
+### Modes:
 | Command | Description |
 |:-------|:-------------|
-| dev_build.sh | framework mode (only activees Projekt) |
-| dev_build.sh --full | FULL mode (MAS + ALL Projekte aus .projects.yaml) |
-| dev_build.sh --dry-run | Only check, nothing bauen |
+| dev_build.sh | framework mode (only active Project) |
+| dev_build.sh --full | FULL mode (MAS + ALL Projects from .projects.yaml) |
+| dev_build.sh --dry-run | Only check, build nothing |
 | dev_build.sh --version x.y.z | Set version |
 
 ## Installation (installr.sh)
@@ -39,7 +39,7 @@ cd dist && unzip mas-framework-*.zip && ./installr.sh
 | Step | Source | Target |
 |:-------:|:-------|:-----|
 | F1 | framework/dev-team/ | ~/.local/share/goose/framework/ |
-| F2 | 4 Core-Rezepte | ~/.config/goose/recipes/ |
+| F2 | 4 Core-Recipes | ~/.config/goose/recipes/ |
 | F3 | core/specialist-constitution.yaml | ~/.config/goose/recipes/core/ |
 | F4 | specialist_*.yaml (47) | ~/.config/goose/recipes/ |
 | F5 | sub_*.yaml (44) | ~/.config/goose/recipes/ |
@@ -50,16 +50,16 @@ cd dist && unzip mas-framework-*.zip && ./installr.sh
 ## Update (update.sh)
 | Command | Description |
 |:-------|:-------------|
-| ./update.sh --mas | Only MAS aus Workspace sync |
-| ./update.sh --framework | Only framework aus Workspace sync |
+| ./update.sh --mas | Only sync MAS from Workspace |
+| ./update.sh --framework | Only sync framework from Workspace |
 | ./update.sh --mas --dry-run | MAS-Dry run |
 | ./update.sh --help | Help |
 
 ## Auto-Build (dev_autobuild.sh)
 | Command | Description |
 |:-------|:-------------|
-| dev_autobuild.sh | Auto-Build (checks ob commit seit letztem ZIP) |
-| dev_autobuild.sh --force | Always bauen |
+| dev_autobuild.sh | Auto-Build (checks whether commit since last ZIP) |
+| dev_autobuild.sh --force | Always build |
 | dev_autobuild.sh --status | Only check |
 | dev_autobuild.sh --install | Build + install |
 

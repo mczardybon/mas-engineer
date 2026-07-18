@@ -4,52 +4,52 @@
 ```
 ┌──────────────────────────────────────────────────┐
 │  DEV-MAS-ENGINEER (dev-mas-engineer.yaml)        │
-│  - Entwickelt/aboutwacht/testet/patcht framework │
+│  - Develops/monitors/tests/patches the framework │
 │  - 36 Sub-Agents (sub_mas-*.yaml)              │
 │  - 43 Tools (mas-engineer-tools/)                │
-│  - Runs ALWAYS (auch without framework)            │
+│  - Runs ALWAYS (also without framework)            │
 └──────────┬───────────────────────────────────────┘
            │ delegate()
            ▼
 ┌──────────────────────────────────────────────────┐
 │  FRAMEWORK v1.0.0                               │
 │  - 4 Core-Recipes (executor, planner, ...)       │
-│  - 47 Specialists (sicherheit, backend, ...)     │
+│  - 47 Specialists (security, backend, ...)     │
 │  - 44 Sub-Agents (sub_dispatcher, ...)          │
-│  - Runs ALWAYS (auch without MAS)                  │
+│  - Runs ALWAYS (also without MAS)                  │
 └──────────────────────────────────────────────────┘
 ```
 
-## rolesverteilung
-- **MAS = Developer des frameworks** (analyzed, patcht, testet, deployt)
-- **framework = productivsystem** (weiss nothing from MAS)
-- **User = Entscheider** (MAS schlaegt before, User decides)
+## Role Distribution
+- **MAS = Developer of the framework** (analyzes, patches, tests, deploys)
+- **framework = production system** (knows nothing about MAS)
+- **User = Decision-Maker** (MAS proposes beforehand, User decides)
 
 ## Domain separation (R09)
 - MAS writes ONLY in mas-engineer/
 - framework writes ONLY in framework/
-- Read in andere domain ist OK
-- Durchgesetzt via: registry.yaml + dev_rule_checker.py R09
+- Read in other domain is OK
+- Enforced via: registry.yaml + dev_rule_checker.py R09
 
-## directorystruktur (Workspace)
+## Directory Structure (Workspace)
 ```
 work/
-├── mas-engineer/         ← MAS (autonomouser Developer)
+├── mas-engineer/         ← MAS (autonomous Developer)
 │   ├── recipe/           → dev-mas-engineer.yaml + sub/sub_mas-*.yaml
 │   ├── tools/            → 43 Dev-Tools
 │   ├── docs/             → Manifest, Governance, Procedures
 │   ├── plans/            → Dashboard-blueprints
-│   └── .state/           → Rules, Domains, Agents, Wissen
-├── framework/            ← FRAMEWORK (productivsystem)
+│   └── .state/           → Rules, Domains, Agents, Knowledge
+├── framework/            ← FRAMEWORK (production system)
 │   └── dev-team/
 │       ├── recipes/      → 47 Specialists + 44 Subs + 4 Cores
 │       ├── docs/         → Governance, Protocols, Boundaries
 │       ├── config.yaml
 │       ├── tests/        → pytest
-│       └── python/       → Admin-Skripte
+│       └── python/       → Admin Scripts
 ├── installr.sh, update.sh, .mas-mode
-├── repo/                 → HomeAssistant-Core (anderes Projekt)
-└── dist/                 → Gebaute ZIPs
+├── repo/                 → HomeAssistant-Core (other project)
+└── dist/                 → Built ZIPs
 ```
 
 ## Installation targets (after ./installr.sh)
@@ -60,8 +60,8 @@ work/
 ├── planner.yaml              ← FW Core 2/4
 ├── framework-controller.yaml ← FW Core 3/4
 ├── framework-starter.yaml    ← FW Core 4/4
-├── specialist_*.yaml (47)    ← Direkt auffindbar for delegate()
-├── sub_*.yaml (44)           ← Direkt auffindbar for delegate()
+├── specialist_*.yaml (47)    ← Directly findable for delegate()
+├── sub_*.yaml (44)           ← Directly findable for delegate()
 ├── sub/sub_mas-*.yaml (36)   ← MAS-Sub-Agents
 ├── core/specialist-constitution.yaml
 └── mas-engineer-tools/ (43)  ← Tools
@@ -72,14 +72,14 @@ work/
 
 ## Hardening System (Methods 1+5+6+9+10)
 ```
-prompt_1 (800 tokens)  → ⛔⛔⛔⛔⛔ NIE deleted
-prompt_2 (500 tokens)  → ⛔⛔⛔ bleibt bis Turn-End
-prompt_3 (300 tokens)  → ⛔ can verschwinden
+prompt_1 (800 tokens)  → ⛔⛔⛔⛔⛔ NEVER deleted
+prompt_2 (500 tokens)  → ⛔⛔⛔ remains until turn end
+prompt_3 (300 tokens)  → ⛔ can disappear
 ```
 
-| Method | Mechanismus | Tool |
+| Method | Mechanism | Tool |
 |:-------:|:------------|:-----|
-| 5 | Reaktivierungs-Anker (all 5 steps) | dev_rule_refresh.sh |
+| 5 | Reactivation anchor (all 5 steps) | dev_rule_refresh.sh |
 | 6 | Hardening Propagation (at delegate) | dev_haerte_propagation.py |
-| 9 | Rule-Test (before jeder action) | dev_rule_checker.py |
-| 10 | Multi-Prompt (3 Leveln) | prompt_1+prompt_2+prompt_3 |
+| 9 | Rule-Test (before every action) | dev_rule_checker.py |
+| 10 | Multi-Prompt (3 levels) | prompt_1+prompt_2+prompt_3 |

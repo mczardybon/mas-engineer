@@ -1,6 +1,6 @@
-# Installation — ZIP-Struktur und Zielorte
+# Installation — ZIP Structure and Target Locations
 
-## ZIP-Struktur (1:1 Workspace)
+## ZIP Structure (1:1 Workspace)
 mas-framework-v1.0.0_TIMESTAMP.zip
 ├── framework/
 │   └── dev-team/
@@ -8,7 +8,7 @@ mas-framework-v1.0.0_TIMESTAMP.zip
 │       ├── recipes/         47 Specialists + 44 Subs + 4 Cores
 │       ├── docs/            Governance, Protocols, Boundaries
 │       ├── tests/           pytest
-│       └── python/          Admin-Skripte
+│       └── python/          Admin Scripts
 ├── mas-engineer/
 │   ├── recipe/
 │   │   ├── dev-mas-engineer.yaml
@@ -17,7 +17,7 @@ mas-framework-v1.0.0_TIMESTAMP.zip
 │   ├── tools/               43 Dev-Tools
 │   ├── docs/                Manifest, Governance, Procedures
 │   ├── plans/               Dashboard-blueprints
-│   └── .state/              Rulen, Domains, Agents, Wissen
+│   └── .state/              Rules, Domains, Agents, Knowledge
 ├── installr.sh
 ├── update.sh
 └── .mas-mode
@@ -27,20 +27,20 @@ mas-framework-v1.0.0_TIMESTAMP.zip
 ./installr.sh --mas            → Only MAS
 ./installr.sh --framework      → Only framework
 ./installr.sh --dry-run        → Dry run
-./installr.sh --status         → Status anshow
+./installr.sh --status         → Status display
 
 ## Updates (Developer)
-./update.sh --mas               → MAS aus Workspace sync
-./update.sh --framework         → framework aus Workspace sync
-./update.sh --mas --dry-run     → MAS-Dry run
+./update.sh --mas               → MAS sync from workspace
+./update.sh --framework         → framework sync from workspace
+./update.sh --mas --dry-run     → MAS dry run
 
 ## Build (Developer)
-bash mas-engineer/tools/dev_build.sh              → ZIP bauen
-bash mas-engineer/tools/dev_build.sh --full        → MAS + ALL Projekte
+bash mas-engineer/tools/dev_build.sh              → Build ZIP
+bash mas-engineer/tools/dev_build.sh --full        → MAS + ALL projects
 bash mas-engineer/tools/dev_build.sh --dry-run     → Only check
 bash mas-engineer/tools/dev_build.sh --version x.y.z
 
-## Installationslogik (installr.sh)
+## Installation Logic (installr.sh)
 install_mas():
   M1: cp dev-mas-engineer.yaml → recipes/
   M2: cp sub_mas-*.yaml (36)   → recipes/sub/

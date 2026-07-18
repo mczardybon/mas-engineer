@@ -1,49 +1,49 @@
-# Recovery-System — 5 Leveln
+# Recovery System — 5 Levels
 
 ## Level 1: IMMUNE (Coronashield)
-YAML-Praevention before jedem Edit.
-- CHECK_YAML: YAML-Syntax before jedem Save
-- CHECK_SYNTAX: Python + Shell Syntax vor Ausfuehrung
-- VERIFY_STATE: Total-State check (all Rezepte valide?)
+YAML prevention before every edit.
+- CHECK_YAML: YAML syntax before every save
+- CHECK_SYNTAX: Python + Shell syntax before execution
+- VERIFY_STATE: Total state check (all recipes valid?)
 Tool: dev_rule_checker.py --check R10
 Sub:  sub_mas-recovery-immune
 
-## Level 2: CHECKPOINT (Git-similare Snapshots)
-memoryt den Workspace-State.
-- SNAPSHOT: .state/checkpoints/{timestamp}/ mit recipe/ + tools/ + docs/ + state/
-- LIST: Letzte 10 Checkpoints anshow
-- RESTORE <id>: Checkpoint againhcreate
-- DIFF <a>..<b>: Unterschied zwischen Checkpoints
+## Level 2: CHECKPOINT (Git-like snapshots)
+Memorizes the workspace state.
+- SNAPSHOT: .state/checkpoints/{timestamp}/ with recipe/ + tools/ + docs/ + state/
+- LIST: Show last 10 checkpoints
+- RESTORE <id>: Recreate checkpoint
+- DIFF <a>..<b>: Difference between checkpoints
 Sub: sub_mas-recovery-checkpoint
-Checkpoints: ~47 im .state/checkpoints/ (ca. 180 MB)
+Checkpoints: ~47 in .state/checkpoints/ (approx. 180 MB)
 
-## Level 3: SAFEZONE (Fork-Workspace)
-Arbeite in a copy, merge erst bei Success.
-- FORK: Paralllen Workspace create
-- MERGE: Changeen in Main aboutnehmen
-- ABORT: Fork verwerfen
-- DIFF: Unterschied zwischen Fork und Main
+## Level 3: SAFEZONE (Fork Workspace)
+Work in a copy, merge only on success.
+- FORK: Create parallel workspace
+- MERGE: Take changes into main
+- ABORT: Discard fork
+- DIFF: Difference between fork and main
 Sub: sub_mas-recovery-safezone
 
-## Level 4: TIMELINE (Automatische Best point-Suche)
-Findet den besten Checkpoint automatically.
-- FIND_BEST: Analyzed all Checkpoints, finds den optimalen
-- RESTORE_BEST: Automatic againhcreate
-- SHOW_PATH: Zeigt den founden Path
+## Level 4: TIMELINE (Automatic best point search)
+Finds the best checkpoint automatically.
+- FIND_BEST: Analyzes all checkpoints, finds the optimal one
+- RESTORE_BEST: Automatic recreate
+- SHOW_PATH: Shows the found path
 Sub: sub_mas-recovery-timeline
 
-## Level 5: DEFIB (Emergency-Resuscitation)
-Last resort bei Total failure.
-- DEFIB: minimum-Config load (only immune + checkpoint)
-- RESURRECT: Stepweise aus Backup againbeleben
-- DIAGNOSE: Total failure-Analysis
+## Level 5: DEFIB (Emergency Resuscitation)
+Last resort on total failure.
+- DEFIB: Load minimum config (only immune + checkpoint)
+- RESURRECT: Stepwise revive from backup
+- DIAGNOSE: Total failure analysis
 Sub: sub_mas-recovery-defib
 
 ## Commands
-recovery --checkpoint     # Snapshot create
-recovery --list           # Letzte 10 Checkpoints
-recovery --remainderore <id>   # Wiederhcreate
-recovery --diff <a>..<b>  # Unterschied
+recovery --checkpoint     # Create snapshot
+recovery --list           # Last 10 checkpoints
+recovery --restore <id>   # Recreate
+recovery --diff <a>..<b>  # Difference
 recovery --defib          # Emergency
 recovery --diagnose       # Analysis
 recovery --resurrect      # Resuscitate
