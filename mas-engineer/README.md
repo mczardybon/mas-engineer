@@ -28,9 +28,29 @@ goose run --recipe recipe/sub/sub_mas-demo-runner.yaml --no-session
 
 Or just say "Run the demo." in any goose session.
 
-Full instructions: [docs/DEMO-RESEARCH-TEAM.md](docs/DEMO-RESEARCH-TEAM.md)
+## Try the prompt yourself
 
-Expected output: 5 YAML files + dashboard + 14/14 tests PASS in ~3 min.
+**Want to write your own MAS-Engineer prompts? See real examples:**
+
+```
+prompts/
+├── README.md              ← how to write prompts
+└── research-team.txt      ← full working prompt, ready to copy-paste
+```
+
+The [prompts/research-team.txt](prompts/research-team.txt) file is the
+exact prompt that built the 5-agent research team at `/tmp/research-team`.
+Copy it, modify the agents, change the output path, and run it. It
+follows the 6-step pattern: initialize → create agents → wire them →
+dashboard → live test → report.
+
+More prompts: [prompts/README.md](prompts/README.md)
+
+## Documentation
+
+- [docs/DEMO-RESEARCH-TEAM.md](docs/DEMO-RESEARCH-TEAM.md) — Run the research-team demo
+- [prompts/](prompts/) — Copy-paste prompts to use as templates
+- [prompts/research-team.txt](prompts/research-team.txt) — The full demo prompt
 
 ## Use MAS-Engineer for your own work
 

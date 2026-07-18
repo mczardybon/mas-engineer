@@ -1,0 +1,100 @@
+Build a complete Multi-Agent System called "research-team" at
+/tmp/research-team. Do NOT just plan it — actually create the files,
+run live tests, and report results.
+
+STEP 1 — Initialize the project skeleton
+Run: python3 ~/.config/goose/recipes/tools/dev_generic_init.py
+     --init /tmp/research-team --components all
+
+STEP 2 — Create 5+ interconnected agents in
+         /tmp/research-team/recipe/sub/:
+
+1. research-orchestrator.yaml (root: /tmp/research-team/recipe/
+   research-team.yaml)
+   - Main entry point. Receives user query.
+   - Decomposes into sub-tasks.
+   - Dispatches to specialists.
+   - Collects results.
+   - Returns synthesized final answer WITH CITATIONS.
+
+2. web-searcher.yaml
+   - Uses web_search to find sources.
+   - Returns: list of {url, title, snippet, source_domain}.
+
+3. source-verifier.yaml (MANDATORY — quality gate)
+   - Receives raw search results from web-searcher.
+   - Filters low-quality, spam, irrelevant, single-source claims.
+   - Cross-checks facts against multiple sources.
+   - Returns ONLY verified facts with confidence score (0-1) and URLs.
+
+4. fact-extractor.yaml
+   - Receives verified sources from source-verifier.
+   - Extracts specific facts, numbers, dates, quotes.
+   - Returns {claim, evidence, source_url}.
+
+5. synthesizer.yaml
+   - Receives structured facts from fact-extractor.
+   - Combines into coherent answer.
+   - Adds inline citations [1], [2], [3].
+   - Returns final research report.
+
+STEP 3 — Create the orchestrator root recipe research-team.yaml
+that references all 5 sub-recipes via sub_recipes field.
+
+STEP 4 — DASHBOARD SETUP (mandatory)
+a) Set up MCP dashboard for the new project:
+   - cd /tmp/research-team
+   - mkdir -p .mas/mcp
+   - Copy MCP server files from mas-engineer:
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/server.js .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/package.json .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/dashboard.html .mas/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/mas-dispatch-monitor.html
+        .mas/mcp/
+   - Run: cd .mas/mcp && npm install
+   - Register framework-dashboard extension in
+     ~/.config/goose/config.yaml (under extensions:)
+b) First dashboard-data refresh:
+   - python3 ~/.config/goose/recipes/tools/dev_dashboard_data.py
+     /tmp/research-team
+c) Verify dashboard:
+   - cat /tmp/research-team/.mas/dashboards/data.json | python3 -m json.tool
+     (must have: version, timestamp, workspace, mode, project_name,
+      agents, changes, improvement, dispatch, build, health,
+      health_trend)
+   - Check that "agents.total" = 5 and "agents.healthy" = 5
+   - Check that "project_name" = "research-team"
+   - Check that "workspace" = "/tmp/research-team"
+
+STEP 5 — LIVE TEST (mandatory):
+a) goose run --recipe /tmp/research-team/recipe/research-team.yaml
+   --no-session --explain
+b) goose run --recipe /tmp/research-team/recipe/sub/web-searcher.yaml
+   --no-session --explain
+c) goose run --recipe /tmp/research-team/recipe/sub/source-verifier.yaml
+   --no-session --explain
+d) goose run --recipe /tmp/research-team/recipe/sub/fact-extractor.yaml
+   --no-session --explain
+e) goose run --recipe /tmp/research-team/recipe/sub/synthesizer.yaml
+   --no-session --explain
+f) python3 -c "import yaml; [yaml.safe_load(open(f))
+   for f in ['/tmp/research-team/recipe/research-team.yaml',
+            '/tmp/research-team/recipe/sub/web-searcher.yaml',
+            '/tmp/research-team/recipe/sub/source-verifier.yaml',
+            '/tmp/research-team/recipe/sub/fact-extractor.yaml',
+            '/tmp/research-team/recipe/sub/synthesizer.yaml']]"
+g) Test MCP server starts: timeout 5 node /tmp/research-team/.mas/mcp/
+   server.js
+   (should print "Framework Dashboard MCP Server running" on stderr
+    before timeout)
+
+STEP 6 — Report:
+- List all 6 yaml files created with line counts.
+- Show dashboard data.json summary (12 keys, 5 agents).
+- Show MCP server files installed.
+- Show extension registration in config.yaml.
+- Show PASS/FAIL for 5+6+4 = 15 checks.
+- Show any YAML errors with line numbers.
+
+Critical: every research result MUST pass through source-verifier
+before reaching the user. No unverified claims in the final output.
