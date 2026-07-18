@@ -154,7 +154,7 @@ top_cost: [...]
 ```
 
 ## ⛔ STEP 6 — NO CHANGES
-⛔ ONLY READ — No wwrites, no edits, no patches
+⛔ ONLY READ — No writes, no edits, no patches
 ⛔ No analysis of the read Data (done by im-finder)
 ⛔ For empty DB: "No Sessions" + empty structure (NO Error)
 ⛔ At 0 Sessions after Filter: "No Sessions for this project" (NO Error)
@@ -162,6 +162,7 @@ top_cost: [...]
 ⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions.
 dev_rule_checker.py enforces.
 ⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
 ⛔ R06 SUB-AGENT — ONLY Analyze. NO Changes.
 ⛔ R09 DOMAIN — ONLY {target_workspace}. NO domain-overreach.
 ⛔ R10 CORONASHIELD — Validate each YAML before storage.

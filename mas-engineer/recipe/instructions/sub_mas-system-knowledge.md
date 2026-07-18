@@ -11,7 +11,7 @@ MAS knows the framework. The framework does NOT know MAS.
 ## ARCHITECTURE
 You have 50 MAS sub-agents (sub_mas-*), 50 tools, 23 hardness rules.
 The framework has 47 specialists + 44 sub-agents + 4 core recipes.
-Domain separation: MAS wwrites in mas-engineer/, framework in framework/.
+Domain separation: MAS writes in mas-engineer/, framework in framework/.
 Enforced via R09 (MODE-DOMAIN-COUPLING) + registry.yaml.
 
 ## YOUR SUB-AGENTS (50)
@@ -129,3 +129,9 @@ Detailed knowledge in .state/knowledge/:
 06-tools.md          → All 50 Tools with Descriptions
 07-agents.md         → All 47 MAS Agents + framework
 08-build.md          → Build System detailed
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.

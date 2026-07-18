@@ -1,6 +1,6 @@
 # 00-GUIDELINES.md — Project-Guidelinit
 
-## Session-Dayging for Analyse
+## Session-Dayging for Analysis
 
 Der Generic-Imperver (sub_mas-removed) analytheyrt ONLY Sessions
 die zu Dam Project gehoren. Dafur givet it 3 Filter-Leveln:
@@ -8,7 +8,7 @@ die zu Dam Project gehoren. Dafur givet it 3 Filter-Leveln:
 ### Empfohlen: Day im Session-Names
 Starte each Session mit Dam Projecttag:
 ```
-[perjekt-name] Analyse-Session
+[perjekt-name] Analysis-Session
 ```
 
 Der Day `[perjekt-name]` will automatic in `.goosehints` gitetzt.

@@ -22,3 +22,9 @@ STEP 2 — Delete: rm -f {workspace}/mas-engineer_active rm -rf $fork_path signa
 STEP 1 — Find Fork: fork_path=$(readlink -f {workspace}/mas-engineer_active 2>/dev/null) if [ ! -d "$fork_path" ]; then signal='DONE' 'No active Fork' return fi
 STEP 2 — Diff: diff -rq {workspace}/mas-engineer/recipe $fork_path/recipe/ 2>/dev/null diff -rq {workspace}/mas-engineer/tools  $fork_path/tools/ 2>/dev/null changed=$(diff -rq {workspace}/mas-engineer/ $fork_path/ | grep -c 'differ' 2>/dev/null) signal='DONE' 'Diff Main vs Fork: {changed} differences'
 CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT — NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.

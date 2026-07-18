@@ -28,3 +28,9 @@ MAS-Engineer-internal. Checks EACH prompt: block of an agent against 10 criteria
 ## Boundaries
 - ⛔ ONLY prompt: block check — not the instructions - ⛔ Do not automatically patch anything without user confirmation - ⛔ Do not change prompts for MAS-Engineer itself (Article 2) - ⛔ Consult goose-docs.ai BEFORE each evaluation (Article 4b)
 CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.

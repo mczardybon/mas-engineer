@@ -124,3 +124,9 @@ mas_result:
 - No tasks → "❌ At least 1 task required"
 - Invalid category → fallback to 'generation'
 - workflows.yaml >2000 lines → use dev_editor_large.py
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.

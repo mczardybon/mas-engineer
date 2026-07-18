@@ -170,7 +170,8 @@ All code, comments, strings, YAML descriptions, docstrings — must be
 **pure English**. No mixed German/English. The user is German-speaking
 but the codebase is English-only.
 
-Pre-push validator check 6 enforces this via grep for [äöüßÄÖÜ].
+Pre-push validator check 6 enforces this via a hex-escape grep pattern
+that matches the umlaut characters ae, oe, ue, ss (and their uppercase forms).
 
 ---
 

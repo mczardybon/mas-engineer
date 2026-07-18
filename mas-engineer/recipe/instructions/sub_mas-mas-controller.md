@@ -51,3 +51,9 @@ At Session End via completed Scheduler Trigger: 1. sub_mas-monitor-session: FINA
 ## Procedure AUTO_COMMIT — Automatically after each Change 1. git add -A && git commsg -m "[{PROJECT_UPPER}] {action}" 2. checkpoint .state/checkpoints/{ts}/ 3. changes.json + {timestamp, action} 4. echo "✅ {action}" → Run these 4 steps ALWAYS after a Change from
 - Architecture violations are reported, not unauthorizedly fixed (Article 17) - All errors are logged — no exception (Article 16)
 CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.

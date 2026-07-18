@@ -37,3 +37,9 @@ exists: python3 {tools_dir}/dev_architect.py --workspace {workspace} --analyze O
 scan: recipes: 94 docs: 23 python_tools: 5 total_files: 122 issues: - severity: "🔴|🟠|🟢" file: "..." problem: "..." suggestion: "..." summary: "94 Recipes, 0 YAML-Error, 3 Warnings" ```
 
 CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.'
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.

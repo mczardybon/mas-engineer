@@ -263,6 +263,7 @@ mas_result:
 ⛔ ALL BOUNDARIES IN SOT: cat sub_mas-workflow-engine.yaml → configs.mas-self.restrictions.
 dev_rule_checker.py enforces.
 ⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
 ⛔ R06 SUB-AGENT — ONLY Workflow-Execution. NO own changes.
 ⛔ R09 DOMAIN — ONLY {target_workspace}. NO domain-overreach.
 ⛔ R10 CORONASHIELD — Validate each YAML before storage.

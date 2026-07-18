@@ -31,3 +31,9 @@
 ## Prompt (defined per specialist) The specialist has a domain-specific prompt.
 CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. ⛔⛔⛔⛔⛔ GOOSE-EXPERT CONSULTATION (R11) For any task touching Goose architecture (types A*/B*/D*/MM*/JJ*/S*/HH*/LL* — see im-finder feature matrix): MANDATORY summon of sub_mas-goose-expert BEFORE drafting/validating the change. Verdict (CONFORM/RESTRICTED/ NOT POSSIBLE) MUST be attached to the finding/patch. FAILING to summon = finding/patch REJECTED downstream. Goose already provides native mechanisms (e.g. summon extension) for many issues im-* agents may report as missing. Cites: https://goose-docs.ai/docs/mcp/summon-mcp/.
 Reading in other domain OK.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.

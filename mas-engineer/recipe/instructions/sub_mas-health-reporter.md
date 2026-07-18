@@ -235,3 +235,9 @@ STEP 4 — Output:
 - No Sub-agents found → "⚠️ No Agent-YAML-Files in {workspace}/recipe/sub/"
   - No previous report for COMPARE → "ℹ️ First report — no Compare possible"
 - Timeout at data collection → Partial report with Note
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.

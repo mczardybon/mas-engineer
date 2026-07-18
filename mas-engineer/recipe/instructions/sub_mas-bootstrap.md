@@ -35,7 +35,7 @@ Use this when you want to:
    IF NO: "⛔ MAS installation not found at ~/.config/goose/recipes/"
 - Source: ~/.config/goose/recipes/mas-engineer/  OR  current workspace
 2. CHECK: {project_path} already exists?
-   IF YES: "⚠️ Target exists. Overwwrite? (y/N)" — ABORT if not confirmed
+   IF YES: "⚠️ Target exists. Overwrite? (y/N)" — ABORT if not confirmed
 3. IF YES: Confirm with user:
    "This will copy ALL 48 sub-agents, 50 tools, and the full MAS infrastructure.
     This is NOT a lightweight user framework — it's a MAS-Engineer clone.
@@ -118,3 +118,9 @@ mas_result:
 
 CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without confirmation.
 MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain overreach. Reading in other domain OK.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.

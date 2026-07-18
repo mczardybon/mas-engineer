@@ -19,3 +19,9 @@ STEP 3 — Report: score == 100: signal='DONE'— 'All {total} YAMLs valid' scor
 ### Edge Cases VERIFY_STATE - No YAML files → P3 info: 'No YAMLs to check' - Permission denied → warning: 'Access-Error: {file}' - Symlink loop → find -L avoid, only -type f
 # MEMORY: Result save rememberMemory("goose-errors", {\"yaml_file\": \"$file\", \"status\": \"$status\"}) SHOW: "🧠 Result in Memory"
 CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.

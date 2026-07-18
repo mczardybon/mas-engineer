@@ -83,3 +83,9 @@ As YAML-Struct via stdout:
 dev_rule_checker.py enforces.
 ⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on ✅.
 ⛔ R09 DOMAIN — ONLY {target_workspace}. NO domain-overreach.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.

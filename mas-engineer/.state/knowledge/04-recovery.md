@@ -36,7 +36,7 @@ Sub: sub_mas-recovery-timeline
 Last resort bei Total failure.
 - DEFIB: minimum-Config load (only immune + checkpoint)
 - RESURRECT: Stepweise aus Backup againbeleben
-- DIAGNOSE: Total failure-Analyse
+- DIAGNOSE: Total failure-Analysis
 Sub: sub_mas-recovery-defib
 
 ## Commands
@@ -45,5 +45,5 @@ recovery --list           # Letzte 10 Checkpoints
 recovery --remainderore <id>   # Wiederhcreate
 recovery --diff <a>..<b>  # Unterschied
 recovery --defib          # Emergency
-recovery --diagnose       # Analyse
+recovery --diagnose       # Analysis
 recovery --resurrect      # Resuscitate

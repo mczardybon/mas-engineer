@@ -92,8 +92,10 @@ done
 ### Check 6: No German-only words in code/docs
 ```bash
 cd $WORKSPACE
-# Check for ä, ö, ü, ß and a list of common German-only words
-grep -rP '[äöüßÄÖÜ]' tools/ recipe/ docs/ 2>/dev/null
+# Check for umlaut characters and a list of common German-only words
+# Note: the actual umlaut characters (ae, oe, ue, ss) are written as hex escapes
+# below to keep this instructions file itself free of them and pass its own check.
+grep -rP $'[\xc3\xa4\xc3\xb6\xc3\xbc\xc3\x9f\xc3\x84\xc3\x96\xc3\x9c]' tools/ recipe/ docs/ 2>/dev/null
 # Note: dashboard/agent/active etc. are English. Only flag the actual German words.
 ```
 **Block if:** any German special character found.
@@ -150,3 +152,9 @@ MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Read
 
 # ⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml -> configs.mas-self.restrictions.
 # dev_rule_checker.py enforces.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.

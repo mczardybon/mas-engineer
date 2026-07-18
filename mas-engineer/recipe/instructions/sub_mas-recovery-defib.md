@@ -23,3 +23,9 @@ STEP 1 — 7 checks: error=0 [ -d {workspace} ]                         || error
 STEP 2 — Damage level + action: action='' if [ $error -eq 0 ]; then  action='No recovery needed' elif [ $error -le 3 ]; then action='recovery --restore-best' elif [ $error -le 5 ]; then action='recovery --resurrect' else                        action='recovery --defib -> --init' fi
 echo '(error)/7 Error — Recommendation: $action' signal='DONE'|'ERROR'|'WARNING' depending on level
 CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.

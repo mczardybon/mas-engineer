@@ -63,7 +63,7 @@
 ### PHASE C1 — Footer-Footers (KK2, KK3, KK4, KK5)
 - **Was:** 4 standardisierte Footer-Zeilen in jeden betroffenen Recipe-prompt einbauen:
   - KK2: `## dev_rule_checker\npython3 tools/dev_rule_checker.py --all --action "{action}"`
-  - KK3: `## R01 CONFIRMATION\nBefore wwrite/edit — Show plan + WAIT for ✅`
+  - KK3: `## R01 CONFIRMATION\nBefore write/edit — Show plan + WAIT for ✅`
   - KK4: `## R09 DOMAIN\nMode determines domain. mas→mas-engineer/, framework→framework/`
   - KK5: `## R10 CORONASHIELD\nEvery YAML must be validated before storing (via sub_mas-recovery-immune)`
 - **Wo:** alle Dateien in der KK-Liste (41 + 10 + 6 + 6 = unique ~30 Dateien)

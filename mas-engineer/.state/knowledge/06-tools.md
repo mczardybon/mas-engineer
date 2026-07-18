@@ -15,7 +15,7 @@
 | dev_autobuild.sh | 47 | Auto-Build after git commit |
 | dev_mode.sh | 128 | Mode switch (MAS/Generic/framework) |
 
-## Analyse & Architecture
+## Analysis & Architecture
 | Tool | lines | Purpose |
 |:-----|:------:|:------|
 | dev_observer.py | 413 | Scan framework (files, structure) |

@@ -12,7 +12,7 @@ DEV-MAS-ENGINEER
   ├── shell → .state/changes.json (Documentation)
   └── apps → Dashboard-App (Live-Data)
 
-REGEL: Sub-Agent = NUR Analyse. Shell selbst ausexecuten.
+REGEL: Sub-Agent = NUR Analysis. Shell selbst ausexecuten.
 
 ## framework (intern)
 FRAMEWORK-STARTER (User-Interface)

@@ -2,7 +2,7 @@
 
 ## MAS-Sub-Agents (39) — recipe/sub/sub_mas-*.yaml
 
-### Kategorie Analyse (9)
+### Kategorie Analysis (9)
 | Agent | description |
 |:------|:-------------|
 | framework-knowledge | framework Concepts verstehen & blueprints |

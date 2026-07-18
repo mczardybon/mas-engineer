@@ -123,7 +123,7 @@
   - S1: Lowster Score → ∅ allr Metriken am schlechtest → optimize
   - S2: Score gefalln → Ranking-Absteiger → untersuchen warum
 
-  ### Type T — Session-Content-Quality (via User-Message-Analyse)
+  ### Type T — Session-Content-Quality (via User-Message-Analysis)
   Detect: User-Zufriedenheit.
   - T1: Hohe negativeee-Quote → >20% User-answers are negative → Response-Quality untersuchen
   - T2: Many follow-ups → >10% User asks after ("was?", "wie?", "again") → answers make precise
@@ -135,7 +135,7 @@
   - U2: Steigender Trend → Agent will better → Optimierungen wirken
   - U3: Stabiler Trend → ✅ No Handlungsbedarf
 
-  ### Type V — Test-Coverage (via tests/-Directory-Analyse)
+  ### Type V — Test-Coverage (via tests/-Directory-Analysis)
   Detect: Test-Gaps.
   - V1: No Tests → Tool has 0 Tests im tests/-Directory → Test retrofit
   - V2: Lowe Abdeckung → <50% getestet → Tests add
@@ -165,7 +165,7 @@
 
   ### Type AA — Duration forecast (via Session-DB + Verlauf)
   Detect: Performance-Trend.
-  - AA1: Runden will longer → >20% mehr time als before 5 Runden → Analysen reduce
+  - AA1: Runden will longer → >20% mehr time als before 5 Runden → Analysisn reduce
   - AA2: Runden will shorter → ✅ Effizienz steigt
 
   ### Type FW — Framework agent optimization (via dev_agent_doctor.py)
