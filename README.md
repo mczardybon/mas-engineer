@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/agents-52-success?style=for-the-badge" alt="Agents">
+  <img src="https://img.shields.io/badge/agents-52-blue?style=for-the-badge" alt="Agents">
   <img src="https://img.shields.io/badge/tools-45-success?style=for-the-badge" alt="Tools">
   <img src="https://img.shields.io/badge/self--improvement-7_stages-blue?style=for-the-badge" alt="Self-Improvement">
   <img src="https://img.shields.io/badge/recovery-5_stages-orange?style=for-the-badge" alt="Recovery">
@@ -91,7 +91,7 @@ gantt
 | **Don't Need** | **MAS-Engineer Handles It** |
 |----------------|----------------------------|
 | 🐍 Python knowledge | Talk naturally. It writes the YAML. |
-| 📖 Framework API docs | 52 agents already know their jobs. |
+| 📖 Framework API docs | 52 sub-agents already know their jobs. |
 | 🔧 Editing config files | Conversation → automatic generation. |
 | 📊 Dashboard setup | One command. Per project. Forever. |
 | 🔄 CI/CD for agents | Auto-commit, auto-checkpoint, auto-improve. |
@@ -187,7 +187,7 @@ The same result. **Done through conversation.**
 └────────────────────────────────────────────────┘
 
 **Time invested: a few minutes of conversation.**
-**52 agents did the work behind the scenes.**
+**52 sub-agents did the work behind the scenes.**
 ```
 
 <p align="center">
@@ -203,9 +203,9 @@ The same result. **Done through conversation.**
   <table>
     <tr>
       <td align="center"><h2>🛡️</h2><b>52</b><br>Ready-to-Use<br>Sub-Agents</td>
-      <td align="center"><h2>🔧</h2><b>50</b><br>total (42 Python,<br>6 Shell, 2 other)</td>
-      <td align="center"><h2>🔄</h2><b>8</b><br>Stage Self-<br>Improvement</td>
-      <td align="center"><h2>🏥</h2><b>5</b><br>Stage<br>Recovery</td>
+      <td align="center"><h2>🔧</h2><b>45</b><br>Tools (43 Python,<br>2 MCP dashboard)<br><sub>(npm install needed)</sub></td>
+      <td align="center"><h2>🔄</h2><b>7</b><br>Stage Self-<br>Improvement<br><sub>(E2E-tested)</sub></td>
+      <td align="center"><h2>🏥</h2><b>5</b><br>Stage<br>Recovery<br><sub>(designed)</sub></td>
       <td align="center"><h2>📊</h2><b>Free</b><br>Dashboard<br>Per Project</td>
       <td align="center"><h2>📜</h2><b>23</b><br>Active<br>Rules</td>
     </tr>
@@ -226,7 +226,7 @@ The same result. **Done through conversation.**
 | **Recovery from failure** | `max_retry_limit=2` | ✅ 5 stages: Immune→Checkpoint→Safezone→Timeline→Defib |
 | **Per-project dashboard** | Enterprise plan 💰 | ✅ Free, refreshable, every project |
 | **Enforced governance** | Manual coding of guardrails | ✅ 11-article Constitution + 23 active Rules |
-| **Framework generator** | ❌ | ✅ `--bootstrap` → standalone system in one command |
+| **Framework generator** | ❌ | ✅ `--bootstrap` recipe (DEPLOY) + `--package-team` recipe (PACKAGE_TEAM) — *recipe-only, E2E test pending* |
 | **Who it's for** | Python developers who love APIs | **Anyone who needs an agent system** |
 
 ---
@@ -236,14 +236,14 @@ The same result. **Done through conversation.**
 | | **MAS-Engineer** | CrewAI | MetaGPT | AutoGPT | LangGraph |
 |---|---|---|---|---|---|
 | **Natural Language Interface** | ✅ Core design | ❌ | ✅ CLI only | ❌ | ❌ |
-| **Pre-built Agents** | **52** | 0 | 5 roles | 0 (builder) | 0 |
-| **Self-Improvement** | ✅ 7-stage pipeline | ❌ | ❌ | ❌ | ❌ |
-| **Recovery System** | ✅ 5 stages | ❌ | ❌ | ❌ | ❌ |
-| **Framework Bootstrap** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Dashboard per System** | ✅ Free MCP app | 💰 AMP | ❌ | Built-in | LangSmith |
+| **Pre-built Agents** | 52 | 0 | 5 roles | 0 (builder) | 0 |
+| **Self-Improvement** | ✅ 7-stage pipeline (E2E-tested) | ❌ | ❌ | ❌ | ❌ |
+| **Recovery System** | ✅ 5 stages (designed) | ❌ | ❌ | ❌ | ❌ |
+| **Framework Bootstrap** | Recipe-defined, E2E test pending | ❌ | ❌ | ❌ | ❌ |
+| **Dashboard per System** | ✅ Free MCP app (needs `npm install`) | 💰 AMP | ❌ | Built-in | LangSmith |
 | **Constitution + Rules** | ✅ 11 art. + 23 active rules | Guardrails (limited) | ❌ | ❌ | ❌ |
 | **Install** | `./install.sh` | `pip install` | `pip install` | Docker | `pip install` |
-| **GitHub Stars** | ⭐ (you decide) | 54k | 69k | 185k | 36k |
+| **GitHub Stars** | New project, zero so far | 54k | 69k | 185k | 36k |
 
 ---
 
@@ -278,7 +278,7 @@ flowchart TB
     subgraph ENGINEER["MAS-Engineer"]
         E1["🧠 Natural Language Interface"]
         E2["52 Sub-Agents · 45 tools (43 Python, 2 MCP)"]
-        E3["8-Stage Self-Improvement · 5-Stage Recovery"]
+        E3["7-Stage Self-Improvement · 5-Stage Recovery"]
         E4["23 Active Rules · SOT Registry"]
     end
     subgraph SYSTEM["Your Multi-Agent System"]
@@ -373,12 +373,12 @@ flowchart LR
 
 | | Feature | What It Does |
 |---|---|---|
-| 🛡️ | **52 Sub-Agents** | Monitoring, Recovery, Improvement, Analysis, Management, Documentation, Utilities — all YAML-defines, all tested, all ready |
-| 🔄 | **8-Stage Self-Improvement** | IM pipeline: Read sessions → Detect issues (53 documented patterns) → Rank → Design patches → Apply → Validate → Push improvements |
+| 🛡️ | **52 Sub-Agents** | Monitoring, Recovery, Improvement, Analysis, Management, Documentation, Utilities — YAML-defined; core IM-pipeline E2E-tested via `e2e-results/2026-07-19/` |
+| 🔄 | **7-Stage Self-Improvement** | IM pipeline: Read sessions → Detect issues (53 documented patterns) → Rank → Design patches → Apply → Validate → Push improvements |
 | 🏥 | **5-Stage Phoenix Recovery** | Immune (prevention) → Checkpoint (snapshots) → Safezone (isolated fork) → Timeline (best-point search) → Defib (emergency minimal config) |
 | 📊 | **Per-Project Dashboard** | MCP app with health status, agent list, change history, performance metrics. Refreshable via Goose scheduler. Free. |
 | 📜 | **Constitution + Rules** | 11 articles governing ALL agents + 23 enforced rules with hardness levels (R01-R23) |
-| 🚀 | **Bootstrap Deployment** | `--bootstrap` creates a standalone MAS-Engineer distribution. All 52 sub-agents + 45 tools (43 Python, 2 MCP) + dashboard + recovery. Installable anywhere. |
+| 🚀 | **Bootstrap Deployment** | `sub_mas-bootstrap` (DEPLOY) and `sub_mas-team-packager` (PACKAGE_TEAM) recipes exist to bundle MAS-Engineer or a single team for distribution. **Recipe-defined, E2E test still pending** — see [HOWTO-PACKAGE-TEAM.md](mas-engineer/docs/HOWTO-PACKAGE-TEAM.md) for the design. |
 | 🔍 | **Web Research** | Before creating or improving, searches goose-docs.ai, GitHub, and PyPI for current best practices |
 | 🤝 | **R18 Delegation** | If a sub-agent can handle the task, the Engineer MUST delegate. No re-inventing wheels. |
 | 📝 | **Auto-Documentation** | Every change logged to `changes.json`. Every operation auto-committed to git. Every session analyzed for improvement. |
@@ -390,8 +390,8 @@ flowchart LR
 | Use Case | How MAS-Engineer Helps |
 |----------|------------------------|
 | 🏢 **Enterprise** | Deploy internal agent systems for HR, support, analytics, code review — without a dedicated AI engineering team |
-| 🧪 **Research** | Start from 52 working agents. Experiment with self-improving architectures. Measure before/after scores. Publish. |
-| 🚀 **Startups** | Prototype AI agent products in minutes. Deploy standalone via `--bootstrap`. Iterate by conversation, not code commits. |
+| 🧪 **Research** | Start from 52 sub-agents. Experiment with self-improving architectures. Measure before/after scores. Publish. |
+| 🚀 **Startups** | Prototype AI agent products in minutes. Use the `sub_mas-team-packager` recipe (recipe-defined, E2E test pending) to package a team. Iterate by conversation, not code commits. |
 | 🎓 **Education** | Learn multi-agent systems by seeing 52 real, working implementations. Understand delegation, recovery, governance through practice. |
 
 ---
@@ -406,7 +406,7 @@ MAS-Engineer is built on five beliefs:
 
 3. **Recovery should be automatic, not manual.** Five stages of protection ensure you never lose work.
 
-4. **52 well-designed agents are better than an empty SDK.** You shouldn't start from zero. You should start from a complete, working system.
+4. **52 well-designed sub-agents are better than an empty SDK.** You shouldn't start from zero. You should start from a complete, working system.
 
 5. **Rules should be enforced, not suggested.** If a rule matters, it should be enforced at runtime — not written in a best-practices document.
 
@@ -444,7 +444,7 @@ A: See [`e2e-results/2026-07-19-demo-runner-ARCHIVED-script-failure/`](e2e-resul
 A: Yes. MAS-Engineer runs on Goose, which supports OpenAI, Anthropic Claude, Ollama (local), Groq, and any OpenAI-compatible provider.
 
 **Q: How is this different from AutoGPT?**  
-A: AutoGPT is a single autonomous agent. MAS-Engineer is 52 specialized agents working together. AutoGPT executes tasks. MAS-Engineer **builds and maintains complete multi-agent systems**.
+A: AutoGPT is a single autonomous agent. MAS-Engineer is 52 sub-agents working together. AutoGPT executes tasks. MAS-Engineer **builds and maintains complete multi-agent systems**.
 
 **Q: Can I extend it?**  
 A: Yes. Add new sub-agents by creating YAML files. Register them in workflows.yaml. The Engineer discovers them automatically. Or talk to the Engineer: "I need a new agent that monitors database performance" — it delegates to `intention-parser` and `recipe-designer`.
@@ -525,7 +525,7 @@ MAS-Engineer is released under the **GNU Affero General Public License v3.0** (A
     <code>cd &lt;repo&gt; && ./install.sh && goose run --recipe dev-mas-engineer</code>
   </p>
   <p align="center">
-    <b>52 agents are waiting. What do you want to build?</b>
+    <b>52 sub-agents are waiting. What do you want to build?</b>
   </p>
   <br>
 </p>
