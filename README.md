@@ -256,10 +256,11 @@ flowchart TD
     ENGINEER --> IP["Improvement Pipeline\n7 agents"]
     ENGINEER --> MON["Monitoring\n7 agents"]
     ENGINEER --> REC["Recovery\n5 agents"]
-    ENGINEER --> UT["Utility\n11 agents"]
+    ENGINEER --> UT["Utility\n10 agents"]
     ENGINEER --> AN["Analysis\n7 agents"]
     ENGINEER --> MG["Management\n7 agents"]
-    FB & IP & MON & REC & UT & AN & MG --> TOOLS["45 total (43 Python, 2 MCP)"]
+    ENGINEER --> POC["Internal POC Tools\n3 agents"]
+    FB & IP & MON & REC & UT & AN & MG & POC --> TOOLS["45 total (43 Python, 2 MCP)"]
 ```
 
 ---

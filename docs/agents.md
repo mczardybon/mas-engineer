@@ -11,6 +11,7 @@ pie title 52 Sub-Agents by Category
     "Analysis" : 7
     "Utility" : 10
     "Management" : 7
+    "Internal POC Tools" : 3
 ```
 
 ---
@@ -149,6 +150,16 @@ Administration and system operation.
 | `sub_mas-dashboard-refresh` | On-demand dashboard data generation | dev_dashboard_refresh.py |
 | `sub_mas-doc-generator` | Framework documentation currency checker | yaml-editor |
 | `sub_mas-degradation-handler` | Treatment plans for degraded agents | (none) |
+
+## Internal POC Tools (3 agents)
+
+MAS-internal proof-of-concept tools. Not part of the 7 user-facing categories, but counted toward the 52-shipped total. Use these to validate or extend MAS-Engineer itself.
+
+| Agent | Task | Delegates To |
+|-------|------|:------------:|
+| `sub_mas-demo-runner` | Build research-team demo framework + run 14 live tests | (none) |
+| `sub_mas-pre-push-validator` | 8 checks before git push (gatekeeper) | (none) |
+| `sub_mas-team-packager` | Package a team as a standalone, goose-installable bundle | (none) |
 
 ---
 
