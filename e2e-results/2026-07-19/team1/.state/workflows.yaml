@@ -1,0 +1,93 @@
+# ════════════════════════════════════════════
+# CODE-REVIEW-TEAM — Workflow Registry
+# SOT: This file is the single source of truth for agent registration
+# ════════════════════════════════════════════
+
+version: 1.0.0
+team: code-review-team
+created_at: '2026-07-19T19:10:00+00:00'
+description: 'Multi-Agent Code Review System — 3 specialized sub-agents'
+
+agents:
+  static-analyzer:
+    name: static-analyzer
+    version: 1.0.0
+    title: '🔬 SUB-MAS-STATIC-ANALYZER — Python syntax & lint analysis'
+    description: 'Scans Python source for syntax errors, lint violations, and code quality issues'
+    recipe_path: './recipe/sub/sub_mas-static-analyzer.yaml'
+    instructions_path: './recipe/sub/sub_mas-static-analyzer.md'
+    category: analysis
+    status: active
+
+  security-scanner:
+    name: security-scanner
+    version: 1.0.0
+    title: '🛡️ SUB-MAS-SECURITY-SCANNER — Security vulnerability analysis'
+    description: 'Scans source for SQL injection, hardcoded secrets, unsafe deserialization, and more'
+    recipe_path: './recipe/sub/sub_mas-security-scanner.yaml'
+    instructions_path: './recipe/sub/sub_mas-security-scanner.md'
+    category: analysis
+    status: active
+
+  code-reviewer:
+    name: code-reviewer
+    version: 1.0.0
+    title: '📋 SUB-MAS-CODE-REVIEWER — Finding synthesis & report'
+    description: 'Synthesizes static analysis + security scanning results into unified review report'
+    recipe_path: './recipe/sub/sub_mas-code-reviewer.yaml'
+    instructions_path: './recipe/sub/sub_mas-code-reviewer.md'
+    category: synthesis
+    status: active
+
+workflows:
+  full_review:
+    name: 'Full Code Review'
+    description: 'Runs static analysis and security scan in parallel, then synthesizes results'
+    steps:
+      - step: 1
+        action: 'delegate'
+        agent: 'static-analyzer'
+        mode: 'async'
+        params:
+          task: 'STATIC_ANALYZE'
+      - step: 1
+        action: 'delegate'
+        agent: 'security-scanner'
+        mode: 'async'
+        params:
+          task: 'SECURITY_SCAN'
+      - step: 2
+        action: 'delegate'
+        agent: 'code-reviewer'
+        mode: 'sync'
+        depends_on: ['static-analyzer', 'security-scanner']
+        params:
+          task: 'SYNTHESIZE_REVIEW'
+    parallel_steps:
+      - step_1: ['static-analyzer', 'security-scanner']
+
+configs:
+  mas-self:
+    version: 1.0.0
+    paths:
+      recipes_dir: './recipe/sub/'
+      state_dir: './.state/'
+    restrictions:
+      r01: 'No changes without user confirmation'
+      r05: 'auto_commit: git+checkpoint'
+      r06: 'sub_agent = analysis only, shell itself'
+      r09: 'Strict domain separation'
+      r10: 'Validate every YAML before storing'
+      r18: 'Delegate to specialized sub-agents'
+      r20: 'No direct write access'
+      r21: 'Every action is logged'
+    signals:
+      handover: '🟣 HANDOVER'
+      done: '🟢 DONE'
+      blocked: '🟠 BLOCKED'
+      error: '🔴 ERROR'
+    recovery:
+      level_1: 'Try different path'
+      level_2: 'Reduce scope'
+      level_3: 'Restart with doubled max_turns'
+      level_4: 'Escalate to user'

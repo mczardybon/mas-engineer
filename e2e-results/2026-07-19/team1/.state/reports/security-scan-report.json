@@ -1,0 +1,100 @@
+{
+  "meta": {
+    "agent": "security-scanner",
+    "file_reviewed": "vulnerable_app.py",
+    "workspace": "/workspace/team1",
+    "generated_at": "2026-07-19T19:14:00Z",
+    "tools_used": ["pattern-matching", "regex-analysis"]
+  },
+  "sql_injection": [
+    {
+      "file": "vulnerable_app.py",
+      "line": 5,
+      "cwe_id": "CWE-89",
+      "severity": "CRITICAL",
+      "code": "SQLI-001",
+      "message": "SQL injection via f-string interpolation in query building. Unsanitized user input 'username' is interpolated into SQL query.",
+      "snippet": "query = f\"SELECT * FROM users WHERE name = '{username}'\"",
+      "recommendation": "Use parameterized queries: conn.execute('SELECT * FROM users WHERE name = ?', (username,))"
+    }
+  ],
+  "hardcoded_secrets": [
+    {
+      "file": "vulnerable_app.py",
+      "line": 2,
+      "cwe_id": "CWE-798",
+      "severity": "CRITICAL",
+      "code": "SEC-001",
+      "message": "Database password hardcoded in source code. Anyone with repository access can read it.",
+      "snippet": "DB_PASSWORD = \"SuperSecret123!\"",
+      "recommendation": "Use environment variables (os.environ.get('DB_PASSWORD')) or a secrets manager"
+    }
+  ],
+  "unsafe_deserialization": [
+    {
+      "file": "vulnerable_app.py",
+      "line": 8,
+      "cwe_id": "CWE-502",
+      "severity": "HIGH",
+      "code": "DESER-001",
+      "message": "Unsafe deserialization via pickle.load() — RCE vector when data comes from untrusted source",
+      "snippet": "def load_data(filename):\n    with open(filename, 'rb') as f: return pickle.load(f)",
+      "recommendation": "Use safe format like JSON (json.load(f)). If pickle required, authenticate source with HMAC."
+    }
+  ],
+  "command_injection": [
+    {
+      "file": "vulnerable_app.py",
+      "line": 10,
+      "cwe_id": "CWE-78",
+      "severity": "HIGH",
+      "code": "CMDI-001",
+      "message": "Command injection via shell=True with f-string interpolation of user input",
+      "snippet": "return subprocess.call(f\"echo {cmd}\", shell=True)",
+      "recommendation": "Avoid shell=True. Use subprocess.run(['echo', cmd]) with list arguments."
+    }
+  ],
+  "xss_vulnerabilities": [],
+  "insecure_dependencies": [
+    {
+      "file": "vulnerable_app.py",
+      "line": 1,
+      "cwe_id": "CWE-1104",
+      "severity": "MEDIUM",
+      "code": "DEP-001",
+      "message": "pickle is a known RCE vector — use with trusted data only",
+      "snippet": "import sqlite3, pickle, subprocess",
+      "recommendation": "Replace with json or msgpack; or restrict pickle to authenticated/tamper-proofed data"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 1,
+      "cwe_id": "CWE-1104",
+      "severity": "MEDIUM",
+      "code": "DEP-002",
+      "message": "subprocess is a frequent source of command injection (especially with shell=True)",
+      "snippet": "import sqlite3, pickle, subprocess",
+      "recommendation": "Use subprocess without shell=True. Whitelist allowed commands."
+    }
+  ],
+  "path_traversal": [
+    {
+      "file": "vulnerable_app.py",
+      "line": 7,
+      "cwe_id": "CWE-22",
+      "severity": "LOW",
+      "code": "PT-001",
+      "message": "The filename parameter in load_data() doesn't validate path components, enabling potential path traversal",
+      "snippet": "def load_data(filename):\n    with open(filename, 'rb') as f: return pickle.load(f)",
+      "recommendation": "Validate/resolve paths with os.path.abspath() and check against an allowed base directory"
+    }
+  ],
+  "overview": {
+    "files_scanned": 1,
+    "total_issues": 7,
+    "critical_count": 2,
+    "high_count": 2,
+    "medium_count": 2,
+    "low_count": 1
+  }
+}

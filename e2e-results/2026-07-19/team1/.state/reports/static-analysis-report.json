@@ -1,0 +1,95 @@
+{
+  "meta": {
+    "agent": "static-analyzer",
+    "file_reviewed": "vulnerable_app.py",
+    "workspace": "/workspace/team1",
+    "generated_at": "2026-07-19T19:14:00Z",
+    "tools_used": ["python3 compile()", "ast.parse()", "grep"]
+  },
+  "syntax_errors": [],
+  "lint_issues": [
+    {
+      "file": "vulnerable_app.py",
+      "line": 1,
+      "severity": "P3",
+      "code": "W0611",
+      "message": "import pickle — module unused in the file",
+      "suggestion": "Remove pickle or use it within the codebase"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 1,
+      "severity": "P4",
+      "code": "E401",
+      "message": "Multiple imports on one line: import sqlite3, pickle, subprocess",
+      "suggestion": "Split into separate lines: import sqlite3 / import pickle / import subprocess"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 2,
+      "severity": "P1",
+      "code": "S105",
+      "message": "Hardcoded password 'SuperSecret123!' assigned to DB_PASSWORD",
+      "suggestion": "Never read — dead code. Remove or move to environment variable"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 5,
+      "severity": "P1",
+      "code": "S364",
+      "message": "SQL injection — f-string query concatenation: f\"SELECT * FROM users WHERE name = '{username}'\"",
+      "suggestion": "Use parameterized query: conn.execute('SELECT * FROM users WHERE name = ?', (username,))"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 8,
+      "severity": "P3",
+      "code": "B301",
+      "message": "pickle.load(f) — unsafe deserialization (arbitrary code execution)",
+      "suggestion": "Use json.load() or a safe serialization format"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 10,
+      "severity": "P1",
+      "code": "S605",
+      "message": "subprocess.call(f\"echo {cmd}\", shell=True) — command injection via f-string with shell=True",
+      "suggestion": "Use subprocess.call(['echo', cmd]) without shell=True"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 11,
+      "severity": "P3",
+      "code": "W1201",
+      "message": "divide(a, b): return a / b — no zero-division guard",
+      "suggestion": "Add if b == 0: raise ValueError('division by zero') or check before call"
+    }
+  ],
+  "structure_issues": [
+    {
+      "file": "vulnerable_app.py",
+      "line": 2,
+      "severity": "P5",
+      "code": "R0201",
+      "message": "DB_PASSWORD is assigned at module level but never referenced anywhere in the code",
+      "suggestion": "Dead code — delete the line entirely (keeps hardcoded secrets out of source)"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 8,
+      "severity": "P3",
+      "code": "B301",
+      "message": "pickle.load() — unsafe deserialization (arbitrary code execution risk)",
+      "suggestion": "Use json or other safe serialization formats"
+    }
+  ],
+  "overview": {
+    "files_scanned": 1,
+    "total_issues": 10,
+    "p1_count": 4,
+    "p2_count": 0,
+    "p3_count": 4,
+    "p4_count": 1,
+    "p5_count": 1
+  }
+}

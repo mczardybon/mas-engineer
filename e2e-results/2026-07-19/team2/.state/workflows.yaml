@@ -1,0 +1,243 @@
+version: 1.0.0
+configs:
+  data-quality-team:
+    type: sub-agent-team
+    version: 1.0.0
+    description: Automated dataset quality assessment — profiles, detects anomalies, and scores quality (0-100)
+    paths:
+      source_dir: '{workspace}/team2'
+      recipe_dir: '{workspace}/team2/recipe'
+      tools_dir: '{workspace}/team2/tools'
+      state_dir: '{workspace}/team2/.state'
+    restrictions:
+      r01_no_dataset_modifications:
+        level: extreme
+        description: NEVER modify input datasets — analysis only
+      r10_coronashield:
+        level: extreme
+        description: EVERY YAML must be validated via yaml.safe_load before storing
+    agents:
+      data-profiler:
+        name: sub_data-profiler
+        type: sub
+        tier: balanced
+        token_budget: 20000
+        task_workflows:
+          PROFILE: wf_dq_profile
+      anomaly-detector:
+        name: sub_anomaly-detector
+        type: sub
+        tier: balanced
+        token_budget: 20000
+        task_workflows:
+          DETECT: wf_dq_detect
+      quality-reporter:
+        name: sub_quality-reporter
+        type: sub
+        tier: balanced
+        token_budget: 20000
+        task_workflows:
+          REPORT: wf_dq_report
+task_workflows:
+  wf_dq_profile:
+    desc: Profile a dataset — analyze structure, columns, types, and missing values
+    steps:
+      - id: load_dataset
+        action: shell
+        cmd: |
+          python3 -c "
+          import pandas as pd, json, sys
+          fp = '$file_path'
+          if fp.endswith('.csv'):
+              df = pd.read_csv(fp, nrows=$sample_size)
+          elif fp.endswith('.json'):
+              df = pd.read_json(fp)
+          elif fp.endswith('.jsonl'):
+              df = pd.read_json(fp, lines=True)
+          else:
+              print('ERROR: Unsupported format')
+              sys.exit(1)
+          profile = {
+              'rows': len(df),
+              'columns': len(df.columns),
+              'column_names': list(df.columns),
+              'missing_summary': {
+                  'total_cells': int(df.size),
+                  'total_missing': int(df.isnull().sum().sum()),
+                  'missing_pct': float(round(df.isnull().sum().sum() / df.size * 100, 2))
+              }
+          }
+          print(json.dumps(profile, indent=2))
+          "
+        timeout: 60
+      - id: analyze_types
+        action: shell
+        cmd: |
+          python3 -c "
+          import pandas as pd, json
+          fp = '$file_path'
+          if fp.endswith('.csv'):
+              df = pd.read_csv(fp, nrows=1000)
+          elif fp.endswith('.json'):
+              df = pd.read_json(fp)
+          else:
+              df = pd.read_json(fp, lines=True)
+          col_types = []
+          for col in df.columns:
+              info = {'name': col, 'dtype': str(df[col].dtype)}
+              if pd.api.types.is_numeric_dtype(df[col]):
+                  info['detected_type'] = 'numeric'
+                  info['stats'] = {
+                      'min': float(df[col].min()) if df[col].notna().any() else None,
+                      'max': float(df[col].max()) if df[col].notna().any() else None,
+                      'mean': float(round(df[col].mean(), 2)) if df[col].notna().any() else None,
+                      'median': float(round(df[col].median(), 2)) if df[col].notna().any() else None,
+                      'unique_values': int(df[col].nunique())
+                  }
+              elif pd.api.types.is_object_dtype(df[col]):
+                  info['detected_type'] = 'categorical'
+                  info['stats'] = {
+                      'unique_values': int(df[col].nunique()),
+                      'top_values': df[col].value_counts().head(5).to_dict()
+                  }
+              else:
+                  info['detected_type'] = 'other'
+              info['missing'] = int(df[col].isnull().sum())
+              info['missing_pct'] = float(round(df[col].isnull().sum() / len(df) * 100, 2))
+              col_types.append(info)
+          print(json.dumps({'column_details': col_types}, indent=2))
+          "
+        timeout: 60
+        depends_on:
+          - load_dataset
+      - id: generate_profile_output
+        action: shell
+        cmd: echo 'Profile complete'
+        timeout: 10
+        depends_on:
+          - analyze_types
+  wf_dq_detect:
+    desc: Detect anomalies — outliers, duplicates, and integrity issues
+    steps:
+      - id: detect_duplicates
+        action: shell
+        cmd: |
+          python3 -c "
+          import pandas as pd, json
+          fp = '$file_path'
+          if fp.endswith('.csv'):
+              df = pd.read_csv(fp)
+          elif fp.endswith('.json'):
+              df = pd.read_json(fp)
+          else:
+              df = pd.read_json(fp, lines=True)
+          exact_dups = df.duplicated(keep=False).sum()
+          result = {
+              'duplicates': {
+                  'exact_duplicate_rows': int(exact_dups),
+                  'exact_duplicate_pct': float(round(exact_dups / len(df) * 100, 2)),
+                  'duplicate_groups': int(exact_dups / 2) if exact_dups > 0 else 0
+              }
+          }
+          print(json.dumps(result, indent=2))
+          "
+        timeout: 60
+      - id: detect_outliers
+        action: shell
+        cmd: |
+          python3 -c "
+          import pandas as pd, numpy as np, json
+          fp = '$file_path'
+          if fp.endswith('.csv'):
+              df = pd.read_csv(fp)
+          elif fp.endswith('.json'):
+              df = pd.read_json(fp)
+          else:
+              df = pd.read_json(fp, lines=True)
+          numeric_cols = df.select_dtypes(include=[np.number]).columns
+          outlier_results = []
+          total_outliers = 0
+          for col in numeric_cols:
+              vals = df[col].dropna()
+              if len(vals) < 4:
+                  continue
+              q1, q3 = vals.quantile(0.25), vals.quantile(0.75)
+              iqr = q3 - q1
+              lower, upper = q1 - 1.5*iqr, q3 + 1.5*iqr
+              outliers = vals[(vals < lower) | (vals > upper)]
+              if len(outliers) > 0:
+                  outlier_results.append({
+                      'column': col,
+                      'method': 'iqr',
+                      'outlier_count': int(len(outliers)),
+                      'outlier_pct': float(round(len(outliers) / len(vals) * 100, 2)),
+                      'outlier_min': float(outliers.min()),
+                      'outlier_max': float(outliers.max()),
+                      'bounds': {'lower': float(lower), 'upper': float(upper)}
+                  })
+                  total_outliers += len(outliers)
+          result = {
+              'outliers': {
+                  'total_outlier_cells': int(total_outliers),
+                  'per_column': outlier_results
+              }
+          }
+          print(json.dumps(result, indent=2))
+          "
+        timeout: 60
+        depends_on:
+          - detect_duplicates
+      - id: generate_detect_output
+        action: shell
+        cmd: echo 'Anomaly detection complete'
+        timeout: 10
+        depends_on:
+          - detect_outliers
+  wf_dq_report:
+    desc: Synthesize quality report — score 0-100 with recommendations
+    steps:
+      - id: compute_score
+        action: shell
+        cmd: |
+          python3 -c "
+          import json
+          profile = $profile
+          anomalies = $anomalies
+          missing_pct = profile.get('missing_summary', {}).get('missing_pct', 0)
+          completeness = max(0, 100 - missing_pct)
+          dup_pct = anomalies.get('duplicates', {}).get('exact_duplicate_pct', 0)
+          uniqueness = max(0, 100 - dup_pct)
+          integrity_count = len(anomalies.get('integrity_issues', []))
+          consistency = max(0, 100 - integrity_count * 5)
+          outlier_cells = anomalies.get('outliers', {}).get('total_outlier_cells', 0)
+          total_cells = profile.get('rows', 1) * profile.get('columns', 1)
+          outlier_rate = min(100, (outlier_cells / total_cells) * 100) if total_cells > 0 else 0
+          accuracy = max(0, 100 - outlier_rate * 2)
+          structural = 85
+          score = int(round(completeness*0.30 + consistency*0.25 + uniqueness*0.20 + accuracy*0.15 + structural*0.10))
+          rating = 'Excellent' if score >= 90 else 'Good' if score >= 70 else 'Fair' if score >= 50 else 'Poor' if score >= 25 else 'Critical'
+          result = {
+              'quality_score': score,
+              'rating': rating,
+              'components': {
+                  'completeness': {'score': round(completeness, 1), 'weight': 0.30, 'contribution': round(completeness*0.30, 1)},
+                  'consistency': {'score': round(consistency, 1), 'weight': 0.25, 'contribution': round(consistency*0.25, 1)},
+                  'uniqueness': {'score': round(uniqueness, 1), 'weight': 0.20, 'contribution': round(uniqueness*0.20, 1)},
+                  'accuracy': {'score': round(accuracy, 1), 'weight': 0.15, 'contribution': round(accuracy*0.15, 1)},
+                  'structural': {'score': round(structural, 1), 'weight': 0.10, 'contribution': round(structural*0.10, 1)}
+              },
+              'recommendations': {
+                  'critical': [],
+                  'important': [],
+                  'suggested': []
+              }
+          }
+          print(json.dumps(result, indent=2))
+          "
+        timeout: 30
+      - id: generate_report_output
+        action: shell
+        cmd: echo 'Quality report generated'
+        timeout: 10
+        depends_on:
+          - compute_score

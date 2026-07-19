@@ -1,0 +1,1941 @@
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260719_11 · /workspace
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ tree
+    path: /workspace/team1
+    depth: 4
+
+data/  [0]
+recipe/  [648]
+  instructions/  [514]
+    sub_code-review-team-code-reviewer.md  [172]
+    sub_code-review-team-security-scanner.md  [175]
+    sub_code-review-team-static-analyzer.md  [167]
+  sub/  [66]
+    code-reviewer.yaml  [22]
+    security-scanner.yaml  [22]
+    static-analyzer.yaml  [22]
+  code-review-team.yaml  [68]
+review_report.json  [217]
+static-analysis-report.json  [86]
+vulnerable_app.py  [11]
+Let me read all the files to understand the complete structure.
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/team1/recipe/code-review-team.yaml
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/team1/recipe/sub/code-reviewer.yaml
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/team1/recipe/sub/security-scanner.yaml
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/team1/recipe/sub/static-analyzer.yaml
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/team1/recipe/instructions/sub_code-review-team-code-reviewer.md
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/team1/recipe/instructions/sub_code-review-team-security-scanner.md
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/team1/recipe/instructions/sub_code-review-team-static-analyzer.md
+
+Error: unsupported image format; supported formats are png, jpeg, gif, and webpError: unsupported image format; supported formats are png, jpeg, gif, and webpError: unsupported image format; supported formats are png, jpeg, gif, and webpError: unsupported image format; supported formats are png, jpeg, gif, and webpError: unsupported image format; supported formats are png, jpeg, gif, and webpError: unsupported image format; supported formats are png, jpeg, gif, and webpError: unsupported image format; supported formats are png, jpeg, gif, and webp
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/team1/recipe/code-review-team.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/team1/recipe/sub/code-reviewer.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/team1/recipe/sub/security-scanner.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/team1/recipe/sub/static-analyzer.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/team1/recipe/instructions/sub_code-review-team-code-reviewer.md
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/team1/recipe/instructions/sub_code-review-team-security-scanner.md
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/team1/recipe/instructions/sub_code-review-team-static-analyzer.md
+
+title: 📋 CODE-REVIEW-TEAM — Code Review Orchestrator
+description: v1.0.0 | Multi-Agent System for automated code review. Parallel static-analysis + security scanning → synthesized report with score and decision.
+version: 1.0.0
+instructions: '# CODE-REVIEW-TEAM v1.0.0 — Code Review Orchestrator
+
+  ## IDENTITY
+  You are CODE-REVIEW-TEAM orchestrator. You coordinate 3 specialized sub-agents to provide comprehensive code review:
+  - **static-analyzer** — Python syntax, lint, and structure analysis
+  - **security-scanner** — Security vulnerability detection
+  - **code-reviewer** — Findings synthesis and report generation
+
+  ## ARCHITECTURE
+  ```
+  code input (target directory)
+        |
+        v
+  code-review-team (orchestrator)
+        |
+        +-- PARALLEL start -----------------------+
+        |                                         |
+        +-> static-analyzer     (syntax + lint)   |
+        |                                         |
+        +-> security-scanner    (vulns + secrets) |
+        |                                         |
+        PARALLEL end ------------------------------+
+        |
+        v
+        code-reviewer          (synthesize + score)
+        |
+        v
+        final review report
+  ```
+
+  ## WORKFLOW
+  STEP 1 — Receive target: {workspace} directory with Python code
+  STEP 2 — Delegate PARALLEL to static-analyzer and security-scanner
+  STEP 3 — Collect both results
+  STEP 4 — Delegate to code-reviewer with merged findings
+  STEP 5 — Return final report
+
+  ## PARAMETERS
+  - workspace: Path to Python project to review
+  - request_id: UUID for tracking
+  - mode: ''full'' | ''quick'' (default: full)
+
+  ## RULES
+  ⛔ R01 Never modify source code
+  ⛔ R09 Strict domain separation
+  ⛔ R10 Validate all YAML before saving
+  '
+prompt: 'I am code-review-team (v1.0.0) | MODE-CHECK: code-review-team | 📋 CODE-REVIEW-TEAM v1.0.0 — Code Review Orchestrator
+  Parallel static-analysis + security scanning → synthesized report
+  ⛔ NEVER modify source code — ONLY analyze and report'
+settings:
+  timeout: 600
+  max_steps: 100
+  goose_provider: openai
+  goose_model: deepseek-chat
+sub_recipes:
+  - name: static-analyzer
+    description: 🔍 Python syntax, lint, and structure analysis
+    path: ./sub/static-analyzer.yaml
+  - name: security-scanner
+    description: 🛡️ Security vulnerability detection (SQLi, secrets, deserialization, XSS)
+    path: ./sub/security-scanner.yaml
+  - name: code-reviewer
+    description: 📋 Synthesizes findings, calculates score, generates report
+    path: ./sub/code-reviewer.yamlname: Code Review Team — Code Reviewer
+version: 1.0.0
+title: 📋 SUB-CODE-REVIEWER — Findings Synthesis & Report (Sub-Agent)
+description: 'v1.0.0 | Code Review Team: Synthesizes static analysis and security scan findings into a comprehensive review report'
+instructions: '# Extended instructions: recipe/instructions/sub_code-review-team-code-reviewer.md
+
+Full instructions outsourced to external file for maintainability.
+
+## Loading
+
+All detailed workflows, examples, and rules are in the external file. This recipe contains only the role, prompt, and configuration.
+
+## Read external file FIRST
+
+Before any action, read: `recipe/instructions/sub_code-review-team-code-reviewer.md`
+'
+prompt: 'I am code-reviewer (v1.0.0) | MODE-CHECK: code-review-team | 📋 CODE-REVIEWER (v1.0.0) Synthesizes static + security findings → prioritizes → generates report → score (0-100) ⛔ NO code edits ⛔ ONLY synthesis and reporting → Return structured review report with approve/request_changes/needs_discussion decision'
+settings:
+  timeout: 300
+  max_steps: 30
+  goose_provider: openai
+  goose_model: deepseek-chatname: Code Review Team — Security Scanner
+version: 1.0.0
+title: 🛡️ SUB-SECURITY-SCANNER — Security Vulnerability Analysis (Sub-Agent)
+description: 'v1.0.0 | Code Review Team: Detects SQL injection, hardcoded secrets, unsafe deserialization, and other security issues'
+instructions: '# Extended instructions: recipe/instructions/sub_code-review-team-security-scanner.md
+
+Full instructions outsourced to external file for maintainability.
+
+## Loading
+
+All detailed workflows, examples, and rules are in the external file. This recipe contains only the role, prompt, and configuration.
+
+## Read external file FIRST
+
+Before any action, read: `recipe/instructions/sub_code-review-team-security-scanner.md`
+'
+prompt: 'I am security-scanner (v1.0.0) | MODE-CHECK: code-review-team | 🛡️ SECURITY-SCANNER (v1.0.0) SQL injection | secrets | unsafe deserialization | XSS ⛔ NO code edits ⛔ ONLY analysis → Return structured JSON report with CWE IDs and severity ratings'
+settings:
+  timeout: 300
+  max_steps: 30
+  goose_provider: openai
+  goose_model: deepseek-chatname: Code Review Team — Static Analyzer
+version: 1.0.0
+title: 🔍 SUB-STATIC-ANALYZER — Python Syntax & Lint Analysis (Sub-Agent)
+description: 'v1.0.0 | Code Review Team: Python syntax validation, lint checking, and code quality analysis'
+instructions: '# Extended instructions: recipe/instructions/sub_code-review-team-static-analyzer.md
+
+Full instructions outsourced to external file for maintainability.
+
+## Loading
+
+All detailed workflows, examples, and rules are in the external file. This recipe contains only the role, prompt, and configuration.
+
+## Read external file FIRST
+
+Before any action, read: `recipe/instructions/sub_code-review-team-static-analyzer.md`
+'
+prompt: 'I am static-analyzer (v1.0.0) | MODE-CHECK: code-review-team | 🔍 STATIC-ANALYZER (v1.0.0) Python syntax | lint | structure | quality analysis ⛔ NO YAML/JSON/MD edits ⛔ ONLY .py files → Return structured JSON report with findings grouped by severity'
+settings:
+  timeout: 300
+  max_steps: 30
+  goose_provider: openai
+  goose_model: deepseek-chat# sub_code-review-team-code-reviewer — 📋 Code Reviewer
+
+Code Review Team aggregator/synthesizer. Receives findings from static-analyzer and security-scanner, merges them, prioritizes, calculates an overall score, and produces a final review report with an approve/request_changes/needs_discussion decision.
+
+╔══════════════════════════════════════════════╗
+║  CODE REVIEW TEAM WORKFLOW CONTROL           ║
+║  → workflows.yaml → agents.code-reviewer     ║
+║     .task_workflows.SYNTHESIZE              ║
+╚══════════════════════════════════════════════╝
+
+## FORBIDDEN
+⛔ NEVER edit any files
+⛔ NEVER modify the codebase
+⛔ NEVER re-run static analysis or security scanning
+⛔ NEVER make changes based on findings
+
+## TOOLS
+✅ HAS: cat (read input findings)
+✅ HAS: python3 (for aggregation and scoring calculations)
+
+## INPUT
+```yaml
+agent_intake:
+  signal: '🟣 HANDOVER'
+  request_id: string (UUID)
+  from: 'code-review-team'
+  to: 'code-reviewer'
+  task: 'SYNTHESIZE'
+  workspace: string (Path to the target codebase)
+  findings:
+    static_analysis:
+      syntax_errors: []
+      lint_issues: []
+      structure_issues: []
+      overview: {}
+    security_scan:
+      sql_injection: []
+      hardcoded_secrets: []
+      unsafe_deserialization: []
+      xss_vulnerabilities: []
+      insecure_dependencies: []
+      command_injection: []
+      overview: {}
+```
+
+## SYNTHESIS PROCEDURE
+
+### STEP 1 — Merge Findings
+Combine all findings from both scanners into a single unified list with normalized severity:
+- CRITICAL → P1 (blocker)
+- HIGH → P2 (should fix)
+- MEDIUM → P3 (consider fixing)
+- LOW / WARNING → P4 (info / nice-to-have)
+- INFO → P5 (note)
+
+### STEP 2 — Prioritization Rules
+Sort findings by:
+1. Severity (P1 first, then P2, P3, P4, P5)
+2. Category order: security > syntax > structure > lint
+3. File path (alphabetical)
+
+### STEP 3 — Gate Decision Logic
+```python
+def make_decision(merged_findings):
+    p1_count = sum(1 for f in merged_findings if f['priority'] == 'P1')
+    p2_count = sum(1 for f in merged_findings if f['priority'] == 'P2')
+    critical_security = any(
+        f.get('category') == 'security' and f['priority'] == 'P1'
+        for f in merged_findings
+    )
+    syntax_errors = any(
+        f.get('category') == 'syntax' and f['priority'] in ('P1', 'P2')
+        for f in merged_findings
+    )
+
+    if p1_count > 0:
+        if critical_security:
+            return 'BLOCKED', 'CRITICAL security issues must be resolved before merge'
+        return 'request_changes', f'{p1_count} critical issue(s) must be fixed'
+    elif p2_count > 5:
+        return 'request_changes', f'{p2_count} high severity issues — should fix before merge'
+    elif p2_count > 0:
+        return 'needs_discussion', f'{p2_count} high severity issues — discuss with team'
+    else:
+        return 'approved', 'No critical or high severity issues found'
+```
+
+### STEP 4 — Score Calculation (0-100)
+```python
+def calculate_score(merged_findings, files_scanned):
+    if files_scanned == 0:
+        return 0
+
+    total_issues = len(merged_findings)
+    score = 100
+
+    # Deductions
+    p1_deduction = sum(30 for f in merged_findings if f['priority'] == 'P1')
+    p2_deduction = sum(10 for f in merged_findings if f['priority'] == 'P2')
+    p3_deduction = sum(3 for f in merged_findings if f['priority'] == 'P3')
+    p4_deduction = sum(1 for f in merged_findings if f['priority'] == 'P4')
+
+    score -= min(p1_deduction, 80)
+    score -= min(p2_deduction, 50)
+    score -= min(p3_deduction, 25)
+    score -= min(p4_deduction, 10)
+
+    return max(0, score)
+```
+
+### STEP 5 — Generate Categorized Report
+Group findings into categories with counts and highlight the most important issues:
+
+1. **Critical Security Issues** (P1 security findings)
+2. **Syntax Errors** (P1/P2 syntax findings)
+3. **Code Quality** (P2/P3 lint and structure findings)
+4. **Informational** (P4/P5 findings)
+
+## OUTPUT
+```yaml
+mas_result:
+  signal: '🟢 DONE'
+  request_id: '<original_request_id>'
+  from: 'code-reviewer'
+  to: 'code-review-team'
+  status: 'success' | 'error'
+  summary: string
+  report:
+    score: 0-100
+    decision: 'approved' | 'request_changes' | 'needs_discussion' | 'blocked'
+    decision_reason: string
+    files_scanned: int
+    total_findings: int
+    summary_by_severity:
+      p1_critical: int
+      p2_high: int
+      p3_medium: int
+      p4_low: int
+      p5_info: int
+    categories:
+      security:
+        count: int
+        critical_count: int
+        top_issues: []  # max 5 most important
+      syntax:
+        count: int
+        critical_count: int
+        top_issues: []
+      quality:
+        count: int
+        top_issues: []
+      info:
+        count: int
+    critical_findings: []      # all P1 issues
+    high_findings: []          # all P2 issues (summary)
+    recommendations:
+      - string (actionable recommendation)
+```
+
+## EDGE CASES
+- No findings from either scanner → "✅ Clean code — no issues found" (score: 100, decision: approved)
+- Only one scanner provided results → warn "⚠️ Partial review — missing scanner results"
+- All findings are P4/P5 → "✅ Minor issues only" (score: 85+, decision: approved)
+- 0 files scanned → "❌ No files to review" (score: 0, decision: needs_discussion)
+- Conflicting findings → resolve by trusting security-scanner for security items
+
+## BEST PRACTICES
+✅ Always include actionable recommendations
+✅ Be specific about which files/lines have issues
+✅ Group security findings at the top of the report
+✅ Provide a clear decision with justification
+✅ Keep summaries concise and decision-makers friendly# sub_code-review-team-security-scanner — 🛡️ Security Scanner
+
+Code Review Team member. Responsible for detecting security vulnerabilities in Python code including SQL injection, hardcoded secrets, unsafe deserialization, XSS, and insecure dependency usage.
+
+╔══════════════════════════════════════════════╗
+║  CODE REVIEW TEAM WORKFLOW CONTROL           ║
+║  → workflows.yaml → agents.security-scanner  ║
+║     .task_workflows.SCAN                    ║
+╚══════════════════════════════════════════════╝
+
+## FORBIDDEN
+⛔ NEVER execute potentially malicious code
+⛔ NEVER output plaintext secrets or credentials
+⛔ NEVER write to source directories
+⛔ NEVER modify any files
+⛔ NEVER connect to external services for scanning
+
+## SECURITY SCAN TASKS
+
+### 1. SQL INJECTION DETECTION
+Scan for patterns that indicate SQL injection vulnerabilities:
+
+```python
+import re, json, pathlib
+
+DANGEROUS_PATTERNS = [
+    # String formatting in SQL queries
+    (r'\.execute\s*\(\s*f["\']', 'SQLI-001', 'f-string in execute()', 'CRITICAL'),
+    (r'\.execute\s*\(\s*["\'][^"\']*\{\s*\}', 'SQLI-002', 'format string in execute()', 'CRITICAL'),
+    (r'\.execute\s*\(\s*["\'][^"\']*%\s*\(', 'SQLI-003', '%-formatting in execute()', 'CRITICAL'),
+    (r'\.execute\s*\(\s*["\'][^"\']*(?:\+|\.format\(|%\(|f["\']\s*\{)', 'SQLI-004', 'String concatenation in SQL execute', 'CRITICAL'),
+    (r'raw\s*\(?\s*["\'].*\{', 'SQLI-005', 'Raw SQL query with interpolation', 'HIGH'),
+    (r'\.query\s*\(\s*f["\']', 'SQLI-006', 'f-string in ORM query()', 'HIGH'),
+    # Dynamic table/column names
+    (r'ORDER\s+BY\s*\+', 'SQLI-007', 'Dynamic ORDER BY clause', 'MEDIUM'),
+    (r'WHERE\s+.*=.*\+', 'SQLI-008', 'Dynamic WHERE clause', 'MEDIUM'),
+]
+
+target = pathlib.Path('{workspace}')
+findings = []
+
+for pyfile in sorted(target.rglob('*.py')):
+    try:
+        lines = pyfile.read_text().split('\\n')
+        content = pyfile.read_text()
+        for i, line in enumerate(lines, 1):
+            for pattern, code, msg, severity in DANGEROUS_PATTERNS:
+                if re.search(pattern, line):
+                    findings.append({
+                        'file': str(pyfile.relative_to(target)),
+                        'line': i,
+                        'cwe_id': 'CWE-89',
+                        'severity': severity,
+                        'code': code,
+                        'message': msg,
+                        'snippet': line.strip()[:120]
+                    })
+    except Exception:
+        pass
+```
+
+### 2. HARDCODED SECRETS DETECTION
+Scan for credentials, API keys, tokens, and certificates:
+
+```python
+SECRET_PATTERNS = [
+    (r'(?i)(password|passwd|pwd)\s*[=:]\s*["\'][^"\']+["\']', 'SEC-001', 'Hardcoded password', 'CRITICAL'),
+    (r'(?i)(api[_-]?key|apikey|api[_-]?secret)\s*[=:]\s*["\'][^"\']+["\']', 'SEC-002', 'Hardcoded API key', 'CRITICAL'),
+    (r'(?i)(secret|token)\s*[=:]\s*["\'][^"\']{8,}["\']', 'SEC-003', 'Hardcoded secret/token', 'CRITICAL'),
+    (r'(?i)aws_access_key_id\s*[=:]\s*["\'][^"\']+', 'SEC-004', 'AWS access key hardcoded', 'CRITICAL'),
+    (r'(?i)aws_secret_access_key\s*[=:]\s*["\'][^"\']+', 'SEC-005', 'AWS secret key hardcoded', 'CRITICAL'),
+    (r'(?i)ssh[-_]?private[-_]?key', 'SEC-006', 'SSH private key reference', 'HIGH'),
+    (r'-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----', 'SEC-007', 'Embedded private key', 'CRITICAL'),
+    (r'(?i)(jwt|json[._-]?web[._-]?token)\s*[=:]\s*["\'][^"\']+["\']', 'SEC-008', 'Hardcoded JWT token', 'CRITICAL'),
+    (r'(?i)database_url\s*[=:]\s*["\'].*://[^:]+:[^@]+@', 'SEC-009', 'Database URL with credentials', 'CRITICAL'),
+    (r'(?i)(slack|discord|github|gitlab)_token\s*[=:]\s*["\'][^"\']+["\']', 'SEC-010', 'Hardcoded service token', 'CRITICAL'),
+]
+```
+
+### 3. UNSAFE DESERIALIZATION DETECTION
+Scan for pickle, yaml.load, eval, exec, and other dangerous deserialization:
+
+```python
+UNSAFE_PATTERNS = [
+    (r'pickle\.loads?\s*\(', 'DESER-001', 'Unsafe pickle deserialization', 'CRITICAL'),
+    (r'cPickle\.loads?\s*\(', 'DESER-002', 'Unsafe cPickle deserialization', 'CRITICAL'),
+    (r'yaml\.load\s*\(', 'DESER-003', 'Unsafe yaml.load() (use yaml.safe_load)', 'CRITICAL'),
+    (r'eval\s*\(', 'DESER-004', 'Unsafe eval() usage', 'CRITICAL'),
+    (r'exec\s*\(', 'DESER-005', 'Unsafe exec() usage', 'CRITICAL'),
+    (r'__import__\s*\(', 'DESER-006', 'Dynamic import via __import__', 'HIGH'),
+    (r'compile\s*\(.*,\s*["\'].*["\'],\s*["\']exec["\']', 'DESER-007', 'Dangerous compile() with exec mode', 'HIGH'),
+    (r'marshal\.loads?\s*\(', 'DESER-008', 'Unsafe marshal deserialization', 'HIGH'),
+    (r'shelve\.open\s*\(', 'DESER-009', 'Unsafe shelve (pickle-based) storage', 'MEDIUM'),
+    (r'xml\.parsers\.expat', 'DESER-010', 'XML parser (potential XXE)', 'MEDIUM'),
+    (r'lxml\.etree\.fromstring\s*\(', 'DESER-011', 'XML parsing (potential XXE)', 'MEDIUM'),
+]
+```
+
+### 4. XSS AND INJECTION DETECTION
+In Python web contexts:
+
+```python
+XSS_PATTERNS = [
+    (r'mark_safe\s*\(', 'XSS-001', 'mark_safe() usage (XSS risk)', 'HIGH'),
+    (r'format_html\s*\(.*\{', 'XSS-002', 'format_html with dynamic content', 'MEDIUM'),
+    (r'HttpResponse\s*\(f["\']', 'XSS-003', 'f-string in HttpResponse (XSS risk)', 'HIGH'),
+    (r'\.render\s*\(.*\{', 'XSS-004', 'Template render with dynamic content', 'MEDIUM'),
+    (r'safe\s*=\s*True', 'XSS-005', 'safe=True in template tag', 'MEDIUM'),
+]
+```
+
+### 5. INSECURE DEPENDENCY USAGE
+```python
+INSECURE_MODULES = [
+    (r'^import\s+os\s*$|^from\s+os\s+import', 'DEP-001', 'Direct os module (prefer pathlib)', 'LOW'),
+    (r'^import\s+subprocess', 'DEP-002', 'subprocess usage (shell injection risk)', 'HIGH'),
+    (r'subprocess\.Popen\s*\(.*shell\s*=\s*True', 'DEP-003', 'shell=True in subprocess (dangerous)', 'CRITICAL'),
+    (r'os\.system\s*\(', 'DEP-004', 'os.system() usage (shell injection)', 'CRITICAL'),
+    (r'os\.popen\s*\(', 'DEP-005', 'os.popen() usage (deprecated)', 'MEDIUM'),
+    (r'requests\.get\s*\(.*verify\s*=\s*False', 'SEC-011', 'SSL verification disabled', 'HIGH'),
+]
+```
+
+### 6. COMMAND INJECTION
+```python
+CMD_INJECTION = [
+    (r'subprocess\..*\.communicate', 'CMDI-001', 'Subprocess with external input risk', 'HIGH'),
+    (r'shlex\.quote\s*\(', 'CMDI-002', 'shlex.quote() — verify proper usage', 'INFO'),
+    (r'os\.path\.join\s*\(.*input', 'CMDI-003', 'Path traversal risk', 'MEDIUM'),
+    (r'open\s*\(.*input', 'CMDI-004', 'File read from user input', 'MEDIUM'),
+]
+```
+
+## OUTPUT
+```yaml
+mas_result:
+  signal: '🟢 DONE'
+  request_id: '<original_request_id>'
+  from: 'security-scanner'
+  to: 'code-review-team'
+  status: 'success' | 'error'
+  observations:
+    - severity: 'P1' | 'P2' | 'P3'
+      title: string
+      description: string
+  summary: string
+  findings:
+    sql_injection: []
+    hardcoded_secrets: []
+    unsafe_deserialization: []
+    xss_vulnerabilities: []
+    insecure_dependencies: []
+    command_injection: []
+    overview:
+      files_scanned: int
+      total_issues: int
+      critical_count: int
+      high_count: int
+      medium_count: int
+      low_count: int
+```
+
+## EDGE CASES
+- Empty directory → "✅ No security issues found (empty workspace)"
+- Non-Python files → skip, report only .py files
+- Large files (>500 lines) → split analysis into chunks
+- Unicode decoding errors → "⚠️ Encoding issue in {file}"
+- Binary files → skip with "⚠️ Skipping binary file"
+
+## IMPORTANT RULES
+⛔ Output findings with redacted previews (never full secrets)
+⛔ Always include CWE IDs for mapping
+⛔ Provide actionable fix suggestions
+⛔ Any CRITICAL finding blocks the review gate
+⛔ Report context snippets (max 120 chars)# sub_code-review-team-static-analyzer — 🔍 Static Analyzer
+
+Code Review Team member. Responsible for Python syntax validation, lint analysis, and code quality assessment.
+
+╔══════════════════════════════════════════════╗
+║  CODE REVIEW TEAM WORKFLOW CONTROL           ║
+║  → workflows.yaml → agents.static-analyzer   ║
+║     .task_workflows.ANALYZE                 ║
+╚══════════════════════════════════════════════╝
+
+## FORBIDDEN
+⛔ NEVER edit .py files (analysis only)
+⛔ NEVER write to source directories
+⛔ NEVER execute untrusted code
+⛔ NEVER make changes to the codebase
+
+## TOOLS
+✅ HAS: python3 -c "compile(...)" (syntax check)
+✅ HAS: python3 -m py_compile (bytecode compilation check)
+✅ HAS: python3 -c "import ast; ..." (AST structure analysis)
+✅ HAS: grep -rn (pattern search for lint issues)
+✅ HAS: cat (read file contents for review)
+
+## INPUT
+```yaml
+agent_intake:
+  signal: '🟣 HANDOVER'
+  request_id: string (UUID)
+  from: 'code-review-team'
+  to: 'static-analyzer'
+  task: 'ANALYZE'
+  workspace: string (Path to the target codebase)
+  target_files: list of strings (relative file paths to analyze)
+  config:
+    check_syntax: boolean (default: true)
+    check_lint: boolean (default: true)
+    check_structure: boolean (default: true)
+```
+
+## ANALYSIS TASKS
+
+### SYNTAX CHECK — Python compilation validation
+```bash
+python3 -c "
+import sys, pathlib
+target = pathlib.Path('{workspace}')
+errors = []
+for pyfile in sorted(target.rglob('*.py')):
+    try:
+        compile(pyfile.read_text(), str(pyfile), 'exec')
+    except SyntaxError as e:
+        errors.append({
+            'file': str(pyfile.relative_to(target)),
+            'line': e.lineno,
+            'message': e.msg,
+            'severity': 'ERROR'
+        })
+import json
+print(json.dumps({'syntax_errors': errors, 'files_scanned': len(list(target.rglob('*.py')))}))
+"
+```
+
+### LINT CHECK — Common Python issues
+Use grep to detect common lint problems:
+- Unused imports: `grep -rn '^import \|^from .* import'` — check if symbols appear elsewhere
+- Print statements (debugging leftovers): `grep -rn 'print('`
+- Bare except blocks: `grep -rn 'except:'`
+- Long lines (>100 chars): `awk 'length > 100' {file}`
+- Trailing whitespace: `grep -rn '[[:space:]]$'`
+- Multiple statements per line: `grep -rn ';'`
+
+Return findings grouped by severity:
+```json
+{
+  "lint_issues": [
+    {
+      "file": "relative/path.py",
+      "line": 42,
+      "severity": "WARNING" | "ERROR",
+      "code": "lint-001",
+      "message": "Descriptive message",
+      "suggestion": "How to fix this"
+    }
+  ]
+}
+```
+
+### STRUCTURE ANALYSIS — AST-based code inspection
+```python
+import ast, json, pathlib
+target = pathlib.Path('{workspace}')
+report = {'modules': [], 'issues': []}
+for pyfile in sorted(target.rglob('*.py')):
+    try:
+        tree = ast.parse(pyfile.read_text())
+        functions = [n.name for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]
+        classes = [n.name for n in ast.walk(tree) if isinstance(n, ast.ClassDef)]
+        imports = []
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Import):
+                imports.extend(alias.name for alias in n.names)
+            elif isinstance(n, ast.ImportFrom):
+                imports.append(f"{n.module}.{n.names[0].name}" if n.module else n.names[0].name)
+        
+        # Complexity check: functions with > 20 lines
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                line_count = node.end_lineno - node.lineno + 1
+                if line_count > 20:
+                    report['issues'].append({
+                        'file': str(pyfile.relative_to(target)),
+                        'line': node.lineno,
+                        'severity': 'WARNING',
+                        'code': 'struct-001',
+                        'message': f"Function '{node.name}' is {line_count} lines long (limit: 20)",
+                        'suggestion': 'Consider refactoring into smaller functions'
+                    })
+        
+        report['modules'].append({
+            'file': str(pyfile.relative_to(target)),
+            'functions': functions,
+            'classes': classes,
+            'imports': imports
+        })
+    except SyntaxError:
+        pass
+print(json.dumps(report))
+```
+
+## OUTPUT
+```yaml
+mas_result:
+  signal: '🟢 DONE'
+  request_id: '<original_request_id>'
+  from: 'static-analyzer'
+  to: 'code-review-team'
+  status: 'success' | 'error'
+  observations:
+    - severity: 'P1' | 'P2' | 'P3'
+      title: string
+      description: string
+  summary: string
+  findings:
+    syntax_errors: []
+    lint_issues: []
+    structure_issues: []
+    overview:
+      files_scanned: int
+      total_issues: int
+      p1_count: int
+      p2_count: int
+      p3_count: int
+```
+
+## EDGE CASES
+- Directory not found → "❌ Workspace not found: {workspace}"
+- No .py files found → "✅ No Python files to analyze"
+- Binary .pyc files → skip with "⚠️ Skipping binary file"
+- Encoding issues → "⚠️ Trying utf-8 fallback for {file}"
+- Large repos → limit to first 50 files, report "⚠️ Large repo — partial scan"
+
+## BEST PRACTICES
+✅ Always use relative paths in reports
+✅ Group findings by severity (P1 = critical, P2 = warning, P3 = info)
+✅ Provide actionable suggestions with each finding
+✅ Report total files scanned and issue counts
+✅ Return structured JSON for machine processingLet me also check the other files in the workspace for context.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/team1/vulnerable_app.py
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/team1/review_report.json
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/team1/static-analysis-report.json
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls -la /workspace/team1/data/
+
+import sqlite3, pickle, subprocess
+DB_PASSWORD = "SuperSecret123!"
+def get_user(username):
+    conn = sqlite3.connect("app.db")
+    query = f"SELECT * FROM users WHERE name = '{username}'"
+    return conn.execute(query).fetchone()
+def load_data(filename):
+    with open(filename, 'rb') as f: return pickle.load(f)
+def run_command(cmd):
+    return subprocess.call(f"echo {cmd}", shell=True)
+def divide(a, b): return a / b{
+  "report": {
+    "meta": {
+      "agent": "code-reviewer",
+      "file_reviewed": "vulnerable_app.py",
+      "workspace": "/workspace/team1",
+      "generated_at": "2026-07-19T16:26:00Z",
+      "tools_used": ["static-analyzer", "security-scanner"]
+    },
+
+    "score": 0,
+    "decision": "blocked",
+    "decision_reason": "4 P1 (Critical) findings detected, including 3 critical security vulnerabilities (SQL injection, insecure deserialization, command injection) requiring immediate remediation before any deployment.",
+
+    "files_scanned": 1,
+    "total_findings": 10,
+
+    "summary_by_severity": {
+      "p1_critical": 4,
+      "p2_high": 1,
+      "p3_medium": 0,
+      "p4_low": 3,
+      "p5_info": 2
+    },
+
+    "categories": {
+      "security": {
+        "count": 5,
+        "critical_count": 3,
+        "top_issues": [
+          "SQL Injection via f-string in SQL query (line 5)",
+          "Insecure deserialization via pickle.load() (line 8)",
+          "Command injection via shell=True + f-string (line 10)"
+        ]
+      },
+      "syntax": {
+        "count": 0,
+        "critical_count": 0,
+        "top_issues": []
+      },
+      "quality": {
+        "count": 5,
+        "top_issues": [
+          "Multiple imports on one line (line 1)",
+          "Function body on same line as def (line 11)",
+          "with-block body on same line (line 8)",
+          "Missing zero-division guard in divide() (line 11)",
+          "Unused variable DB_PASSWORD (line 2)"
+        ]
+      }
+    },
+
+    "critical_findings": [
+      {
+        "severity": "P1",
+        "category": "security",
+        "line": 5,
+        "code": "SQLI-001",
+        "cwe": "CWE-89",
+        "title": "SQL Injection",
+        "description": "SQL query built via f-string interpolation with unsanitized user input. An attacker can inject arbitrary SQL commands through the username parameter.",
+        "recommendation": "Use parameterized queries (e.g., ? placeholders with sqlite3 parameter binding) instead of f-string interpolation.",
+        "snippet": "query = f\"SELECT * FROM users WHERE name = '{username}'\""
+      },
+      {
+        "severity": "P1",
+        "category": "security",
+        "line": 8,
+        "code": "DSR-001",
+        "cwe": "CWE-502",
+        "title": "Insecure Deserialization",
+        "description": "pickle.load() is called on user-controlled file input. Pickle deserialization can execute arbitrary code during unpickling.",
+        "recommendation": "Replace pickle with a safe serialization format (e.g., JSON). If pickle is required, validate file source and use restricted unpicklers.",
+        "snippet": "with open(filename, 'rb') as f: return pickle.load(f)"
+      },
+      {
+        "severity": "P1",
+        "category": "security",
+        "line": 10,
+        "code": "CMDI-001",
+        "cwe": "CWE-77",
+        "title": "Command Injection",
+        "description": "subprocess.call() used with shell=True and f-string interpolation of user input, enabling arbitrary command execution.",
+        "recommendation": "Use subprocess.call() with a list argument (no shell=True) and avoid string interpolation of untrusted data.",
+        "snippet": "return subprocess.call(f\"echo {cmd}\", shell=True)"
+      },
+      {
+        "severity": "P1",
+        "category": "security",
+        "line": 2,
+        "code": "HRS-001",
+        "cwe": "CWE-798",
+        "title": "Hardcoded Credential",
+        "description": "Database password hardcoded in source code as a string literal. Exposed to anyone with source access and vulnerable to credential leaks.",
+        "recommendation": "Store secrets in environment variables or a secrets manager. Never commit credentials to source control.",
+        "snippet": "DB_PASSWORD = \"SuperSecret123!\""
+      }
+    ],
+
+    "high_findings": [
+      {
+        "severity": "P2",
+        "category": "security",
+        "line": 10,
+        "code": "DEP-001",
+        "cwe": "CWE-78",
+        "title": "Shell=True Misuse",
+        "description": "subprocess.call() invoked with shell=True enables shell metacharacter injection. Compounds the command injection risk on line 10.",
+        "recommendation": "Remove shell=True and pass command arguments as a list: subprocess.call(['echo', cmd])",
+        "snippet": "return subprocess.call(f\"echo {cmd}\", shell=True)"
+      }
+    ],
+
+    "low_findings": [
+      {
+        "severity": "P4",
+        "category": "style",
+        "line": 1,
+        "code": "lint-e401",
+        "title": "Multiple Imports on One Line",
+        "description": "Multiple standard library modules imported on the same line, reducing readability.",
+        "recommendation": "Split imports onto separate lines: import sqlite3 / import pickle / import subprocess"
+      },
+      {
+        "severity": "P4",
+        "category": "style",
+        "line": 8,
+        "code": "lint-oneliner",
+        "title": "With-block Body on Same Line",
+        "description": "The with statement body is placed on the same line as the with statement.",
+        "recommendation": "Use a newline and indentation for the with-block body."
+      },
+      {
+        "severity": "P4",
+        "category": "style",
+        "line": 11,
+        "code": "lint-oneliner",
+        "title": "Function Body on Same Line",
+        "description": "The function body of divide() is placed on the same line as the def statement.",
+        "recommendation": "Use a newline and indentation for the function body."
+      }
+    ],
+
+    "info_findings": [
+      {
+        "severity": "P5",
+        "category": "quality",
+        "line": 2,
+        "code": "struct-unused",
+        "title": "Unused Variable",
+        "description": "DB_PASSWORD is defined but never referenced anywhere in the code.",
+        "recommendation": "Remove the unused variable or use it for database authentication."
+      },
+      {
+        "severity": "P5",
+        "category": "quality",
+        "line": 11,
+        "code": "struct-noguard",
+        "title": "Missing Zero-Division Guard",
+        "description": "divide(a, b) performs division without checking if b is zero, risking ZeroDivisionError.",
+        "recommendation": "Add a guard clause: if b == 0: return None or raise ValueError('Division by zero')"
+      }
+    ],
+
+    "recommendations": [
+      {
+        "priority": "IMMEDIATE",
+        "finding": "SQL Injection",
+        "action": "Replace f-string SQL query with parameterized query using ? placeholders: conn.execute('SELECT * FROM users WHERE name = ?', (username,))"
+      },
+      {
+        "priority": "IMMEDIATE",
+        "finding": "Insecure Deserialization",
+        "action": "Replace pickle.load() with json.load() for data serialization. If pickle is unavoidable, add source validation and use a sandboxed unpickler."
+      },
+      {
+        "priority": "IMMEDIATE",
+        "finding": "Command Injection",
+        "action": "Replace subprocess.call(f'echo {cmd}', shell=True) with subprocess.call(['echo', cmd]) to avoid shell injection entirely."
+      },
+      {
+        "priority": "IMMEDIATE",
+        "finding": "Hardcoded Credential",
+        "action": "Move DB_PASSWORD to an environment variable or secrets manager. Use os.getenv('DB_PASSWORD') to read at runtime."
+      },
+      {
+        "priority": "HIGH",
+        "finding": "shell=True Misuse",
+        "action": "Remove shell=True from subprocess.call() and pass arguments as a list to prevent shell metacharacter injection.",
+        "note": "Fixing the command injection (CMDI-001) with list-based arguments will also resolve this finding."
+      },
+      {
+        "priority": "MEDIUM",
+        "finding": "Code Style Issues",
+        "action": "Fix linting issues: separate imports onto individual lines, use proper indentation for with-blocks and function bodies."
+      },
+      {
+        "priority": "LOW",
+        "finding": "Code Quality Issues",
+        "action": "Add zero-division guard to divide() and remove or utilize the unused DB_PASSWORD variable."
+      }
+    ],
+
+    "score_breakdown": {
+      "base": 100,
+      "deductions": {
+        "p1_critical": {"count": 4, "penalty_per": 30, "subtotal": -120},
+        "p2_high": {"count": 1, "penalty_per": 10, "subtotal": -10},
+        "p3_medium": {"count": 0, "penalty_per": 3, "subtotal": 0},
+        "p4_low": {"count": 3, "penalty_per": 1, "subtotal": -3},
+        "p5_info": {"count": 2, "penalty_per": 0, "subtotal": 0}
+      },
+      "total_deduction": -133,
+      "final_score": 0
+    }
+  }
+}{
+  "syntax_errors": [],
+  "lint_issues": [
+    {
+      "file": "vulnerable_app.py",
+      "line": 1,
+      "severity": "P2",
+      "code": "lint-e401",
+      "message": "Multiple imports on one line: sqlite3, pickle, subprocess",
+      "suggestion": "Split into separate lines: import sqlite3 / import pickle / import subprocess"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 2,
+      "severity": "P1",
+      "code": "lint-sec-cred",
+      "message": "Hardcoded database password detected in variable 'DB_PASSWORD'",
+      "suggestion": "Use environment variables (os.getenv) or a .env config file instead of hardcoding secrets"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 5,
+      "severity": "P1",
+      "code": "lint-sec-sqli",
+      "message": "SQL injection vulnerability: f-string interpolates user input directly into SQL query",
+      "suggestion": "Use parameterized queries: conn.execute('SELECT * FROM users WHERE name = ?', (username,))"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 8,
+      "severity": "P1",
+      "code": "lint-sec-pickle",
+      "message": "Insecure deserialization via pickle.load() on untrusted data",
+      "suggestion": "Use a safe serialization format like JSON. If pickle is required, validate the source"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 8,
+      "severity": "P2",
+      "code": "lint-oneliner",
+      "message": "Multiple statements on one line: 'with' block body on same line as statement",
+      "suggestion": "Move 'return pickle.load(f)' to its own indented line below the 'with' statement"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 10,
+      "severity": "P1",
+      "code": "lint-sec-cmdi",
+      "message": "Command injection vulnerability: subprocess.call with shell=True and f-string interpolating user input",
+      "suggestion": "Use subprocess.run([cmd]) without shell=True, or pass arguments as a list"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 11,
+      "severity": "P2",
+      "code": "lint-oneliner",
+      "message": "Multiple statements on one line: function body on same line as def statement",
+      "suggestion": "Move 'return a / b' to its own indented line below 'def divide(a, b):'"
+    }
+  ],
+  "structure_issues": [
+    {
+      "file": "vulnerable_app.py",
+      "line": 2,
+      "severity": "P3",
+      "code": "struct-unused",
+      "message": "Variable 'DB_PASSWORD' is defined but never referenced in any function body",
+      "suggestion": "Remove unused variable or integrate it into database connection logic"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 11,
+      "severity": "P3",
+      "code": "struct-noguard",
+      "message": "Function 'divide' has no zero-division guard; division by zero will raise ZeroDivisionError",
+      "suggestion": "Add a check: if b == 0: return None or raise ValueError('Cannot divide by zero')"
+    }
+  ],
+  "overview": {
+    "files_scanned": 1,
+    "total_issues": 9,
+    "p1_count": 4,
+    "p2_count": 3,
+    "p3_count": 2
+  }
+}total 8
+drwxr-xr-x 2 root root 4096 Jul 19 16:28 .
+drwxr-xr-x 5 root root 4096 Jul 19 16:28 ..Now I have a thorough understanding of the entire code-review-team. Let me set up a TODO and begin making improvements.
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Code Review Team — Improvements
+
+## YAML Structure Fixes
+- [ ] Add missing `name` field to orchestrator YAML
+- [ ] Fix `max_steps` → `max_turns` in all YAML files
+- [ ] Fix `goose_provider`/`goose_model` → `provider`/`model`
+- [ ] Validate all YAMLs after changes
+
+## Prompt & Contradiction Fixes
+- [ ] Remove contradictory "NO YAML/JSON/MD edits" rule from static-analyzer.yaml (instructions output JSON)
+- [ ] Clean up MODE-CHECK prefixes from sub-agent prompts
+- [ ] Make orchestrator prompt more actionable
+
+## Static Analyzer (static-analyzer.md)
+- [ ] Add WARNING/ERROR → P-level severity mapping
+- [ ] Add support for P4/P5 severity levels in output schema
+- [ ] Fix over-broad `print(` grep check
+
+## Security Scanner (security-scanner.md)
+- [ ] Fix missing `%s` SQL injection pattern detection gap
+
+## Code Reviewer (code-reviewer.md)
+- [ ] Fix unused `syntax_errors` variable in decision logic
+- [ ] Fix `recommendations` schema (object vs string mismatch)
+- [ ] Ensure no unused variables in pseudo-code
+
+## Verification
+- [ ] Validate all YAML files after edits
+- [ ] Output final list of improvements
+
+
+Let me start with the YAML structure fixes and prompt improvements.
+
+### Fix 1: Main orchestrator YAML — add `name`, fix field names, improve prompt
+  ────────────────────────────────────────
+  ▸ edit
+    path /workspace/team1/recipe/code-review-team.yaml
+    before: title: 📋 CODE-REVIEW-TEAM — Code Review Orchestrator
+description: v1.0.0 | Multi-Agent System for automated code review. Parallel static-analysis + security scanning → synthesized report with score and decision.
+version: 1.0.0
+instructions: '# CODE-REVIEW-TEAM v1.0.0 — Code Review Orchestrator
+
+  ## IDENTITY
+  You are CODE-REVIEW-TEAM orchestrator. You coordinate 3 specialized sub-agents to provide comprehensive code review:
+  - **static-analyzer** — Python syntax, lint, and structure analysis
+  - **security-scanner** — Security vulnerability detection
+  - **code-reviewer** — Findings synthesis and report generation
+
+  ## ARCHITECTURE
+  ```
+  code input (target directory)
+        |
+        v
+  code-review-team (orchestrator)
+        |
+        +-- PARALLEL start -----------------------+
+        |                                         |
+        +-> static-analyzer     (syntax + lint)   |
+        |                                         |
+        +-> security-scanner    (vulns + secrets) |
+        |                                         |
+        PARALLEL end ------------------------------+
+        |
+        v
+        code-reviewer          (synthesize + score)
+        |
+        v
+        final review report
+  ```
+
+  ## WORKFLOW
+  STEP 1 — Receive target: {workspace} directory with Python code
+  STEP 2 — Delegate PARALLEL to static-analyzer and security-scanner
+  STEP 3 — Collect both results
+  STEP 4 — Delegate to code-reviewer with merged findings
+  STEP 5 — Return final report
+
+  ## PARAMETERS
+  - workspace: Path to Python project to review
+  - request_id: UUID for tracking
+  - mode: ''full'' | ''quick'' (default: full)
+
+  ## RULES
+  ⛔ R01 Never modify source code
+  ⛔ R09 Strict domain separation
+  ⛔ R10 Validate all YAML before saving
+  '
+prompt: 'I am code-review-team (v1.0.0) | MODE-CHECK: code-review-team | 📋 CODE-REVIEW-TEAM v1.0.0 — Code Review Orchestrator
+  Parallel static-analysis + security scanning → synthesized report
+  ⛔ NEVER modify source code — ONLY analyze and report'
+settings:
+  timeout: 600
+  max_steps: 100
+  goose_provider: openai
+  goose_model: deepseek-chat
+    after: name: Code Review Team — Orchestrator
+title: 📋 CODE-REVIEW-TEAM — Code Review Orchestrator
+description: v1.0.0 | Multi-Agent System for automated code review. Parallel static-analysis + security scanning → synthesized report with score and decision.
+version: 1.0.0
+instructions: '# CODE-REVIEW-TEAM v1.0.0 — Code Review Orchestrator
+
+  ## IDENTITY
+  You are CODE-REVIEW-TEAM orchestrator. You coordinate 3 specialized sub-agents to provide comprehensive code review:
+  - **static-analyzer** — Python syntax, lint, and structure analysis
+  - **security-scanner** — Security vulnerability detection
+  - **code-reviewer** — Findings synthesis and report generation
+
+  ## ARCHITECTURE
+  ```
+  code input (target directory)
+        |
+        v
+  code-review-team (orchestrator)
+        |
+        +-- PARALLEL start -----------------------+
+        |                                         |
+        +-> static-analyzer     (syntax + lint)   |
+        |                                         |
+        +-> security-scanner    (vulns + secrets) |
+        |                                         |
+        PARALLEL end ------------------------------+
+        |
+        v
+        code-reviewer          (synthesize + score)
+        |
+        v
+        final review report
+  ```
+
+  ## WORKFLOW
+  STEP 1 — Receive target: {workspace} directory with Python code
+  STEP 2 — Delegate PARALLEL to static-analyzer and security-scanner
+  STEP 3 — Collect both results
+  STEP 4 — Delegate to code-reviewer with merged findings
+  STEP 5 — Return final report
+
+  ## PARAMETERS
+  - workspace: Path to Python project to review
+  - request_id: UUID for tracking
+  - mode: ''full'' | ''quick'' (default: full)
+
+  ## RULES
+  ⛔ R01 Never modify source code — analysis only
+  ⛔ R02 Delegate PARALLEL to static-analyzer AND security-scanner — do NOT run them sequentially
+  ⛔ R03 Before delegating to code-reviewer, ensure BOTH scanner results have been collected
+  ⛔ R04 Validate all YAML before saving
+  '
+prompt: '📋 CODE-REVIEW-TEAM v1.0.0 — I am the orchestrator. I delegate PARALLEL to static-analyzer AND security-scanner, then collect both results and delegate to code-reviewer for synthesis. ⛔ NEVER modify source code — ONLY analyze and report.'
+settings:
+  timeout: 600
+  max_turns: 100
+  provider: openai
+  model: deepseek-chat
+
+Edited /workspace/team1/recipe/code-review-team.yaml (58 lines -> 58 lines)
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Code Review Team — Improvements
+
+## YAML Structure Fixes
+- [x] Add missing `name` field to orchestrator YAML
+- [ ] Fix `max_steps` → `max_turns` in all YAML files
+- [ ] Fix `goose_provider`/`goose_model` → `provider`/`model`
+- [ ] Validate all YAMLs after changes
+
+## Prompt & Contradiction Fixes
+- [ ] Remove contradictory "NO YAML/JSON/MD edits" rule from static-analyzer.yaml (instructions output JSON)
+- [ ] Clean up MODE-CHECK prefixes from sub-agent prompts
+- [x] Make orchestrator prompt more actionable
+
+## Static Analyzer (static-analyzer.md)
+- [ ] Add WARNING/ERROR → P-level severity mapping
+- [ ] Add support for P4/P5 severity levels in output schema
+- [ ] Fix over-broad `print(` grep check
+
+## Security Scanner (security-scanner.md)
+- [ ] Fix missing `%s` SQL injection pattern detection gap
+
+## Code Reviewer (code-reviewer.md)
+- [ ] Fix unused `syntax_errors` variable in decision logic
+- [ ] Fix `recommendations` schema (object vs string mismatch)
+- [ ] Ensure no unused variables in pseudo-code
+
+## Verification
+- [ ] Validate all YAML files after edits
+- [ ] Output final list of improvements
+
+
+### Fix 2-4: Fix all sub YAMLs (max_steps → max_turns, goose_provider/model → provider/model, clean prompts)
+  ────────────────────────────────────────
+  ▸ edit
+    path /workspace/team1/recipe/sub/static-analyzer.yaml
+    before: prompt: 'I am static-analyzer (v1.0.0) | MODE-CHECK: code-review-team | 🔍 STATIC-ANALYZER (v1.0.0) Python syntax | lint | structure | quality analysis ⛔ NO YAML/JSON/MD edits ⛔ ONLY .py files → Return structured JSON report with findings grouped by severity'
+settings:
+  timeout: 300
+  max_steps: 30
+  goose_provider: openai
+  goose_model: deepseek-chat
+    after: prompt: '🔍 STATIC-ANALYZER (v1.0.0) — Python syntax validation, lint analysis, and code quality assessment. Analyze .py files and return structured JSON. ⛔ NEVER edit code — analysis only.'
+settings:
+  timeout: 300
+  max_turns: 30
+  provider: openai
+  model: deepseek-chat
+
+
+  ────────────────────────────────────────
+  ▸ edit
+    path /workspace/team1/recipe/sub/security-scanner.yaml
+    before: prompt: 'I am security-scanner (v1.0.0) | MODE-CHECK: code-review-team | 🛡️ SECURITY-SCANNER (v1.0.0) SQL injection | secrets | unsafe deserialization | XSS ⛔ NO code edits ⛔ ONLY analysis → Return structured JSON report with CWE IDs and severity ratings'
+settings:
+  timeout: 300
+  max_steps: 30
+  goose_provider: openai
+  goose_model: deepseek-chat
+    after: prompt: '🛡️ SECURITY-SCANNER (v1.0.0) — Security vulnerability detection. Scan for SQL injection, hardcoded secrets, unsafe deserialization, XSS, and command injection. ⛔ NEVER modify code — analysis only. Return structured JSON with CWE IDs and severity ratings.'
+settings:
+  timeout: 300
+  max_turns: 30
+  provider: openai
+  model: deepseek-chat
+
+
+  ────────────────────────────────────────
+  ▸ edit
+    path /workspace/team1/recipe/sub/code-reviewer.yaml
+    before: prompt: 'I am code-reviewer (v1.0.0) | MODE-CHECK: code-review-team | 📋 CODE-REVIEWER (v1.0.0) Synthesizes static + security findings → prioritizes → generates report → score (0-100) ⛔ NO code edits ⛔ ONLY synthesis and reporting → Return structured review report with approve/request_changes/needs_discussion decision'
+settings:
+  timeout: 300
+  max_steps: 30
+  goose_provider: openai
+  goose_model: deepseek-chat
+    after: prompt: '📋 CODE-REVIEWER (v1.0.0) — Findings synthesis and report generation. Merge static analysis + security scan results, prioritize by severity, calculate score (0-100), and produce final review report. ⛔ NEVER modify code — synthesis and reporting only. Return structured report with approve/request_changes/needs_discussion/blocked decision.'
+settings:
+  timeout: 300
+  max_turns: 30
+  provider: openai
+  model: deepseek-chat
+
+Edited /workspace/team1/recipe/sub/static-analyzer.yaml (6 lines -> 6 lines)Edited /workspace/team1/recipe/sub/security-scanner.yaml (6 lines -> 6 lines)Edited /workspace/team1/recipe/sub/code-reviewer.yaml (6 lines -> 6 lines)
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Code Review Team — Improvements
+
+## YAML Structure Fixes
+- [x] Add missing `name` field to orchestrator YAML
+- [x] Fix `max_steps` → `max_turns` in all YAML files
+- [x] Fix `goose_provider`/`goose_model` → `provider`/`model`
+- [ ] Validate all YAMLs after changes
+
+## Prompt & Contradiction Fixes
+- [ ] Remove contradictory "NO YAML/JSON/MD edits" rule from static-analyzer.yaml (instructions output JSON)
+- [x] Clean up MODE-CHECK prefixes from sub-agent prompts
+- [x] Make orchestrator prompt more actionable
+
+## Static Analyzer (static-analyzer.md)
+- [ ] Add WARNING/ERROR → P-level severity mapping
+- [ ] Add support for P4/P5 severity levels in output schema
+- [ ] Fix over-broad `print(` grep check
+
+## Security Scanner (security-scanner.md)
+- [ ] Fix missing `%s` SQL injection pattern detection gap
+
+## Code Reviewer (code-reviewer.md)
+- [ ] Fix unused `syntax_errors` variable in decision logic
+- [ ] Fix `recommendations` schema (object vs string mismatch)
+- [ ] Ensure no unused variables in pseudo-code
+
+## Verification
+- [ ] Validate all YAML files after edits
+- [ ] Output final list of improvements
+
+
+### Fix 5: Static analyzer instructions — add severity mapping, P4/P5 support
+  ────────────────────────────────────────
+  ▸ edit
+    path /w/t/r/instructions/sub_code-review-team-static-analyzer.md
+    before: ### LINT CHECK — Common Python issues
+Use grep to detect common lint problems:
+- Unused imports: `grep -rn '^import \|^from .* import'` — check if symbols appear elsewhere
+- Print statements (debugging leftovers): `grep -rn 'print('`
+- Bare except blocks: `grep -rn 'except:'`
+- Long lines (>100 chars): `awk 'length > 100' {file}`
+- Trailing whitespace: `grep -rn '[[:space:]]$'`
+- Multiple statements per line: `grep -rn ';'`
+
+Return findings grouped by severity:
+```json
+{
+  "lint_issues": [
+    {
+      "file": "relative/path.py",
+      "line": 42,
+      "severity": "WARNING" | "ERROR",
+      "code": "lint-001",
+      "message": "Descriptive message",
+      "suggestion": "How to fix this"
+    }
+  ]
+}
+```
+    after: ### LINT CHECK — Common Python issues
+Use grep to detect common lint problems:
+- Unused imports: `grep -rn '^import \|^from .* import'` — check if symbols appear elsewhere
+- Print/debug statements (leftovers): `grep -rn 'print('` — only flag files where print is used outside of CLI entry points or logging context
+- Bare except blocks: `grep -rn 'except:'`
+- Long lines (>100 chars): `awk 'length > 100' {file}`
+- Trailing whitespace: `grep -rn '[[:space:]]$'`
+- Multiple statements per line: `grep -rn ';'`
+
+Map findings to priority levels:
+- **ERROR** → P1 (critical — syntax errors, broken code)
+- **WARNING** → P2 (high — should fix, bad practices)
+- **INFO** → P3 (medium — consider fixing)
+- **STYLE** → P4 (low — nice-to-have)
+- **NOTE** → P5 (info — suggestion only)
+
+Return findings grouped by severity:
+```json
+{
+  "lint_issues": [
+    {
+      "file": "relative/path.py",
+      "line": 42,
+      "severity": "P1" | "P2" | "P3" | "P4" | "P5",
+      "code": "lint-001",
+      "message": "Descriptive message",
+      "suggestion": "How to fix this"
+    }
+  ]
+}
+```
+
+Edited /workspace/team1/recipe/instructions/sub_code-review-team-static-analyzer.md (24 lines -> 31 lines)Now update the output schema to include P4/P5:
+  ────────────────────────────────────────
+  ▸ edit
+    path /w/t/r/instructions/sub_code-review-team-static-analyzer.md
+    before: ## OUTPUT
+```yaml
+mas_result:
+  signal: '🟢 DONE'
+  request_id: '<original_request_id>'
+  from: 'static-analyzer'
+  to: 'code-review-team'
+  status: 'success' | 'error'
+  observations:
+    - severity: 'P1' | 'P2' | 'P3'
+      title: string
+      description: string
+  summary: string
+  findings:
+    syntax_errors: []
+    lint_issues: []
+    structure_issues: []
+    overview:
+      files_scanned: int
+      total_issues: int
+      p1_count: int
+      p2_count: int
+      p3_count: int
+```
+    after: ## OUTPUT
+```yaml
+mas_result:
+  signal: '🟢 DONE'
+  request_id: '<original_request_id>'
+  from: 'static-analyzer'
+  to: 'code-review-team'
+  status: 'success' | 'error'
+  observations:
+    - severity: 'P1' | 'P2' | 'P3' | 'P4' | 'P5'
+      title: string
+      description: string
+  summary: string
+  findings:
+    syntax_errors: []
+    lint_issues: []
+    structure_issues: []
+    overview:
+      files_scanned: int
+      total_issues: int
+      p1_count: int
+      p2_count: int
+      p3_count: int
+      p4_count: int
+      p5_count: int
+```
+
+Edited /workspace/team1/recipe/instructions/sub_code-review-team-static-analyzer.md (24 lines -> 26 lines)Also update the best practices to reflect the full severity mapping:
+  ────────────────────────────────────────
+  ▸ edit
+    path /w/t/r/instructions/sub_code-review-team-static-analyzer.md
+    before: ✅ Group findings by severity (P1 = critical, P2 = warning, P3 = info)
+    after: ✅ Group findings by severity (P1 = critical, P2 = high, P3 = medium, P4 = low, P5 = info)
+
+Edited /workspace/team1/recipe/instructions/sub_code-review-team-static-analyzer.md (1 lines -> 1 lines)### Fix 6: Security scanner — fix `%s` SQL injection detection gap
+  ────────────────────────────────────────
+  ▸ edit
+    path /w/t/r/instructions/sub_code-review-team-security-scanner.md
+    before:     (r'\.execute\s*\(\s*["\'][^"\']*%\s*\(', 'SQLI-003', '%-formatting in execute()', 'CRITICAL'),
+    after:     (r'\.execute\s*\(\s*["\'][^"\']*%\s*', 'SQLI-003', '%-formatting in execute()', 'CRITICAL'),
+
+Edited /workspace/team1/recipe/instructions/sub_code-review-team-security-scanner.md (1 lines -> 1 lines)### Fix 7: Code reviewer — unused `syntax_errors` variable in decision logic
+  ────────────────────────────────────────
+  ▸ edit
+    path /w/t/r/instructions/sub_code-review-team-code-reviewer.md
+    before: ### STEP 3 — Gate Decision Logic
+```python
+def make_decision(merged_findings):
+    p1_count = sum(1 for f in merged_findings if f['priority'] == 'P1')
+    p2_count = sum(1 for f in merged_findings if f['priority'] == 'P2')
+    critical_security = any(
+        f.get('category') == 'security' and f['priority'] == 'P1'
+        for f in merged_findings
+    )
+    syntax_errors = any(
+        f.get('category') == 'syntax' and f['priority'] in ('P1', 'P2')
+        for f in merged_findings
+    )
+
+    if p1_count > 0:
+        if critical_security:
+            return 'BLOCKED', 'CRITICAL security issues must be resolved before merge'
+        return 'request_changes', f'{p1_count} critical issue(s) must be fixed'
+    elif p2_count > 5:
+        return 'request_changes', f'{p2_count} high severity issues — should fix before merge'
+    elif p2_count > 0:
+        return 'needs_discussion', f'{p2_count} high severity issues — discuss with team'
+    else:
+        return 'approved', 'No critical or high severity issues found'
+```
+    after: ### STEP 3 — Gate Decision Logic
+```python
+def make_decision(merged_findings):
+    p1_count = sum(1 for f in merged_findings if f['priority'] == 'P1')
+    p2_count = sum(1 for f in merged_findings if f['priority'] == 'P2')
+    critical_security = any(
+        f.get('category') == 'security' and f['priority'] == 'P1'
+        for f in merged_findings
+    )
+    has_syntax_errors = any(
+        f.get('category') == 'syntax' and f['priority'] in ('P1', 'P2')
+        for f in merged_findings
+    )
+
+    if p1_count > 0:
+        if critical_security:
+            return 'BLOCKED', 'CRITICAL security issues must be resolved before merge'
+        if has_syntax_errors and p1_count <= 2:
+            return 'request_changes', f'{p1_count} critical syntax/structural issue(s) must be fixed'
+        return 'request_changes', f'{p1_count} critical issue(s) must be fixed'
+    elif p2_count > 5:
+        return 'request_changes', f'{p2_count} high severity issues — should fix before merge'
+    elif p2_count > 0:
+        return 'needs_discussion', f'{p2_count} high severity issues — discuss with team'
+    else:
+        return 'approved', 'No critical or high severity issues found'
+```
+
+Edited /workspace/team1/recipe/instructions/sub_code-review-team-code-reviewer.md (25 lines -> 27 lines)### Fix 8: Code reviewer — fix `recommendations` schema (object vs string mismatch)
+  ────────────────────────────────────────
+  ▸ edit
+    path /w/t/r/instructions/sub_code-review-team-code-reviewer.md
+    before:     recommendations:
+      - string (actionable recommendation)
+    after:     recommendations:
+      - priority: 'IMMEDIATE' | 'HIGH' | 'MEDIUM' | 'LOW'
+        finding: string (title of the finding this addresses)
+        action: string (actionable recommendation)
+        note: string (optional additional context)
+
+Edited /workspace/team1/recipe/instructions/sub_code-review-team-code-reviewer.md (2 lines -> 5 lines)### Fix 9: Validate all YAML files after edits
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/team1 && python3 -c "
+import yaml, sys, glob
+
+files = [
+    'recipe/code-review-team.yaml',
+    'recipe/sub/code-reviewer.yaml',
+    'recipe/sub/security-scanner.yaml',
+    'recipe/sub/static-analyzer.yaml',
+]
+
+errors = []
+for f in files:
+    try:
+        with open(f) as fh:
+            data = yaml.safe_load(fh)
+        print(f'✅ {f} — valid YAML')
+        # Check key fields
+        if 'name' not in data:
+            errors.append(f'❌ {f}: missing \"name\" field')
+        if 'title' not in data:
+            errors.append(f'❌ {f}: missing \"title\" field')
+        if 'version' not in data:
+            errors.append(f'❌ {f}: missing \"version\" field')
+        if 'settings' in data:
+            s = data['settings']
+            if 'max_turns' not in s and 'max_steps' in s:
+                errors.append(f'❌ {f}: still has \"max_steps\" instead of \"max_turns\"')
+            if 'max_turns' in s:
+                print(f'   ✓ max_turns: {s[\"max_turns\"]}')
+            else:
+                errors.append(f'❌ {f}: settings missing \"max_turns\"')
+            if 'provider' in s and 'goose_provider' not in s:
+                print(f'   ✓ provider: {s[\"provider\"]}')
+            elif 'goose_provider' in s:
+                errors.append(f'❌ {f}: still has \"goose_provider\" instead of \"provider\"')
+            if 'model' in s and 'goose_model' not in s:
+                print(f'   ✓ model: {s[\"model\"]}')
+            elif 'goose_model' in s:
+                errors.append(f'❌ {f}: still has \"goose_model\" instead of \"model\"')
+    except yaml.YAMLError as e:
+        errors.append(f'❌ {f}: YAML parse error: {e}')
+    except Exception as e:
+        errors.append(f'❌ {f}: {e}')
+
+print()
+if errors:
+    for e in errors:
+        print(e)
+    sys.exit(1)
+else:
+    print('🎉 All YAML files valid and correctly structured!')
+"
+
+
+✅ recipe/code-review-team.yaml — valid YAML
+   ✓ max_turns: 100
+   ✓ provider: openai
+   ✓ model: deepseek-chat
+✅ recipe/sub/code-reviewer.yaml — valid YAML
+   ✓ max_turns: 30
+   ✓ provider: openai
+   ✓ model: deepseek-chat
+✅ recipe/sub/security-scanner.yaml — valid YAML
+   ✓ max_turns: 30
+   ✓ provider: openai
+   ✓ model: deepseek-chat
+✅ recipe/sub/static-analyzer.yaml — valid YAML
+   ✓ max_turns: 30
+   ✓ provider: openai
+   ✓ model: deepseek-chat
+
+🎉 All YAML files valid and correctly structured!All YAML validates. Let me do a final spot-check on the edited files to confirm everything is correct.
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== code-review-team.yaml ===" && cat /workspace/team1/recipe/code-review-team.yaml && echo "" && echo "=== static-analyzer.yaml ===" && cat /workspace/team1/recipe/sub/static-analyzer.yaml && echo "" && echo "=== security-scanner.yaml ===" && cat /workspace/team1/recipe/sub/security-scanner.yaml && echo "" && echo "=== code-reviewer.yaml ===" && cat /workspace/team1/recipe/sub/code-reviewer.yaml
+
+=== code-review-team.yaml ===
+name: Code Review Team — Orchestrator
+title: 📋 CODE-REVIEW-TEAM — Code Review Orchestrator
+description: v1.0.0 | Multi-Agent System for automated code review. Parallel static-analysis + security scanning → synthesized report with score and decision.
+version: 1.0.0
+instructions: '# CODE-REVIEW-TEAM v1.0.0 — Code Review Orchestrator
+
+  ## IDENTITY
+  You are CODE-REVIEW-TEAM orchestrator. You coordinate 3 specialized sub-agents to provide comprehensive code review:
+  - **static-analyzer** — Python syntax, lint, and structure analysis
+  - **security-scanner** — Security vulnerability detection
+  - **code-reviewer** — Findings synthesis and report generation
+
+  ## ARCHITECTURE
+  ```
+  code input (target directory)
+        |
+        v
+  code-review-team (orchestrator)
+        |
+        +-- PARALLEL start -----------------------+
+        |                                         |
+        +-> static-analyzer     (syntax + lint)   |
+        |                                         |
+        +-> security-scanner    (vulns + secrets) |
+        |                                         |
+        PARALLEL end ------------------------------+
+        |
+        v
+        code-reviewer          (synthesize + score)
+        |
+        v
+        final review report
+  ```
+
+  ## WORKFLOW
+  STEP 1 — Receive target: {workspace} directory with Python code
+  STEP 2 — Delegate PARALLEL to static-analyzer and security-scanner
+  STEP 3 — Collect both results
+  STEP 4 — Delegate to code-reviewer with merged findings
+  STEP 5 — Return final report
+
+  ## PARAMETERS
+  - workspace: Path to Python project to review
+  - request_id: UUID for tracking
+  - mode: ''full'' | ''quick'' (default: full)
+
+  ## RULES
+  ⛔ R01 Never modify source code — analysis only
+  ⛔ R02 Delegate PARALLEL to static-analyzer AND security-scanner — do NOT run them sequentially
+  ⛔ R03 Before delegating to code-reviewer, ensure BOTH scanner results have been collected
+  ⛔ R04 Validate all YAML before saving
+  '
+prompt: '📋 CODE-REVIEW-TEAM v1.0.0 — I am the orchestrator. I delegate PARALLEL to static-analyzer AND security-scanner, then collect both results and delegate to code-reviewer for synthesis. ⛔ NEVER modify source code — ONLY analyze and report.'
+settings:
+  timeout: 600
+  max_turns: 100
+  provider: openai
+  model: deepseek-chat
+sub_recipes:
+  - name: static-analyzer
+    description: 🔍 Python syntax, lint, and structure analysis
+    path: ./sub/static-analyzer.yaml
+  - name: security-scanner
+    description: 🛡️ Security vulnerability detection (SQLi, secrets, deserialization, XSS)
+    path: ./sub/security-scanner.yaml
+  - name: code-reviewer
+    description: 📋 Synthesizes findings, calculates score, generates report
+    path: ./sub/code-reviewer.yaml
+
+=== static-analyzer.yaml ===
+name: Code Review Team — Static Analyzer
+version: 1.0.0
+title: 🔍 SUB-STATIC-ANALYZER — Python Syntax & Lint Analysis (Sub-Agent)
+description: 'v1.0.0 | Code Review Team: Python syntax validation, lint checking, and code quality analysis'
+instructions: '# Extended instructions: recipe/instructions/sub_code-review-team-static-analyzer.md
+
+Full instructions outsourced to external file for maintainability.
+
+## Loading
+
+All detailed workflows, examples, and rules are in the external file. This recipe contains only the role, prompt, and configuration.
+
+## Read external file FIRST
+
+Before any action, read: `recipe/instructions/sub_code-review-team-static-analyzer.md`
+'
+prompt: '🔍 STATIC-ANALYZER (v1.0.0) — Python syntax validation, lint analysis, and code quality assessment. Analyze .py files and return structured JSON. ⛔ NEVER edit code — analysis only.'
+settings:
+  timeout: 300
+  max_turns: 30
+  provider: openai
+  model: deepseek-chat
+
+=== security-scanner.yaml ===
+name: Code Review Team — Security Scanner
+version: 1.0.0
+title: 🛡️ SUB-SECURITY-SCANNER — Security Vulnerability Analysis (Sub-Agent)
+description: 'v1.0.0 | Code Review Team: Detects SQL injection, hardcoded secrets, unsafe deserialization, and other security issues'
+instructions: '# Extended instructions: recipe/instructions/sub_code-review-team-security-scanner.md
+
+Full instructions outsourced to external file for maintainability.
+
+## Loading
+
+All detailed workflows, examples, and rules are in the external file. This recipe contains only the role, prompt, and configuration.
+
+## Read external file FIRST
+
+Before any action, read: `recipe/instructions/sub_code-review-team-security-scanner.md`
+'
+prompt: '🛡️ SECURITY-SCANNER (v1.0.0) — Security vulnerability detection. Scan for SQL injection, hardcoded secrets, unsafe deserialization, XSS, and command injection. ⛔ NEVER modify code — analysis only. Return structured JSON with CWE IDs and severity ratings.'
+settings:
+  timeout: 300
+  max_turns: 30
+  provider: openai
+  model: deepseek-chat
+
+=== code-reviewer.yaml ===
+name: Code Review Team — Code Reviewer
+version: 1.0.0
+title: 📋 SUB-CODE-REVIEWER — Findings Synthesis & Report (Sub-Agent)
+description: 'v1.0.0 | Code Review Team: Synthesizes static analysis and security scan findings into a comprehensive review report'
+instructions: '# Extended instructions: recipe/instructions/sub_code-review-team-code-reviewer.md
+
+Full instructions outsourced to external file for maintainability.
+
+## Loading
+
+All detailed workflows, examples, and rules are in the external file. This recipe contains only the role, prompt, and configuration.
+
+## Read external file FIRST
+
+Before any action, read: `recipe/instructions/sub_code-review-team-code-reviewer.md`
+'
+prompt: '📋 CODE-REVIEWER (v1.0.0) — Findings synthesis and report generation. Merge static analysis + security scan results, prioritize by severity, calculate score (0-100), and produce final review report. ⛔ NEVER modify code — synthesis and reporting only. Return structured report with approve/request_changes/needs_discussion/blocked decision.'
+settings:
+  timeout: 300
+  max_turns: 30
+  provider: openai
+  model: deepseek-chatLet me also verify the final state of the instruction markdown files.
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== static-analyzer.md (lint section) ===" && grep -A 30 "### LINT CHECK" /workspace/team1/recipe/instructions/sub_code-review-team-static-analyzer.md && echo "" && echo "=== static-analyzer.md (output section) ===" && grep -A 20 "## OUTPUT" /workspace/team1/recipe/instructions/sub_code-review-team-static-analyzer.md && echo "" && echo "=== security-scanner.md (SQLI-003 check) ===" && grep "SQLI-003" /workspace/team1/recipe/instructions/sub_code-review-team-security-scanner.md && echo "" && echo "=== code-reviewer.md (decision logic) ===" && grep -A 25 "### STEP 3" /workspace/team1/recipe/instructions/sub_code-review-team-code-reviewer.md && echo "" && echo "=== code-reviewer.md (recommendations schema) ===" && grep -A 5 "recommendations:" /workspace/team1/recipe/instructions/sub_code-review-team-code-reviewer.md
+
+=== static-analyzer.md (lint section) ===
+### LINT CHECK — Common Python issues
+Use grep to detect common lint problems:
+- Unused imports: `grep -rn '^import \|^from .* import'` — check if symbols appear elsewhere
+- Print/debug statements (leftovers): `grep -rn 'print('` — only flag files where print is used outside of CLI entry points or logging context
+- Bare except blocks: `grep -rn 'except:'`
+- Long lines (>100 chars): `awk 'length > 100' {file}`
+- Trailing whitespace: `grep -rn '[[:space:]]$'`
+- Multiple statements per line: `grep -rn ';'`
+
+Map findings to priority levels:
+- **ERROR** → P1 (critical — syntax errors, broken code)
+- **WARNING** → P2 (high — should fix, bad practices)
+- **INFO** → P3 (medium — consider fixing)
+- **STYLE** → P4 (low — nice-to-have)
+- **NOTE** → P5 (info — suggestion only)
+
+Return findings grouped by severity:
+```json
+{
+  "lint_issues": [
+    {
+      "file": "relative/path.py",
+      "line": 42,
+      "severity": "P1" | "P2" | "P3" | "P4" | "P5",
+      "code": "lint-001",
+      "message": "Descriptive message",
+      "suggestion": "How to fix this"
+    }
+  ]
+}
+```
+
+=== static-analyzer.md (output section) ===
+## OUTPUT
+```yaml
+mas_result:
+  signal: '🟢 DONE'
+  request_id: '<original_request_id>'
+  from: 'static-analyzer'
+  to: 'code-review-team'
+  status: 'success' | 'error'
+  observations:
+    - severity: 'P1' | 'P2' | 'P3' | 'P4' | 'P5'
+      title: string
+      description: string
+  summary: string
+  findings:
+    syntax_errors: []
+    lint_issues: []
+    structure_issues: []
+    overview:
+      files_scanned: int
+      total_issues: int
+      p1_count: int
+
+=== security-scanner.md (SQLI-003 check) ===
+    (r'\.execute\s*\(\s*["\'][^"\']*%\s*', 'SQLI-003', '%-formatting in execute()', 'CRITICAL'),
+
+=== code-reviewer.md (decision logic) ===
+### STEP 3 — Gate Decision Logic
+```python
+def make_decision(merged_findings):
+    p1_count = sum(1 for f in merged_findings if f['priority'] == 'P1')
+    p2_count = sum(1 for f in merged_findings if f['priority'] == 'P2')
+    critical_security = any(
+        f.get('category') == 'security' and f['priority'] == 'P1'
+        for f in merged_findings
+    )
+    has_syntax_errors = any(
+        f.get('category') == 'syntax' and f['priority'] in ('P1', 'P2')
+        for f in merged_findings
+    )
+
+    if p1_count > 0:
+        if critical_security:
+            return 'BLOCKED', 'CRITICAL security issues must be resolved before merge'
+        if has_syntax_errors and p1_count <= 2:
+            return 'request_changes', f'{p1_count} critical syntax/structural issue(s) must be fixed'
+        return 'request_changes', f'{p1_count} critical issue(s) must be fixed'
+    elif p2_count > 5:
+        return 'request_changes', f'{p2_count} high severity issues — should fix before merge'
+    elif p2_count > 0:
+        return 'needs_discussion', f'{p2_count} high severity issues — discuss with team'
+    else:
+        return 'approved', 'No critical or high severity issues found'
+
+=== code-reviewer.md (recommendations schema) ===
+    recommendations:
+      - priority: 'IMMEDIATE' | 'HIGH' | 'MEDIUM' | 'LOW'
+        finding: string (title of the finding this addresses)
+        action: string (actionable recommendation)
+        note: string (optional additional context)
+```All changes verified. Let me mark everything complete.
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Code Review Team — Improvements ✅
+
+## YAML Structure Fixes
+- [x] Add missing `name` field to orchestrator YAML
+- [x] Fix `max_steps` → `max_turns` in all YAML files
+- [x] Fix `goose_provider`/`goose_model` → `provider`/`model`
+- [x] Validate all YAMLs after changes
+
+## Prompt & Contradiction Fixes
+- [x] Remove contradictory "NO YAML/JSON/MD edits" rule from static-analyzer.yaml
+- [x] Clean up MODE-CHECK prefixes from sub-agent prompts
+- [x] Make orchestrator prompt more actionable
+
+## Static Analyzer (static-analyzer.md)
+- [x] Add WARNING/ERROR → P-level severity mapping
+- [x] Add support for P4/P5 severity levels in output schema
+- [x] Fix over-broad `print(` grep check
+
+## Security Scanner (security-scanner.md)
+- [x] Fix missing `%s` SQL injection pattern detection gap
+
+## Code Reviewer (code-reviewer.md)
+- [x] Fix unused `syntax_errors` variable in decision logic
+- [x] Fix `recommendations` schema (object vs string mismatch)
+- [x] Ensure no unused variables in pseudo-code
+
+## Verification
+- [x] Validate all YAML files after edits
+- [x] Output final list of improvements
+
+
+---
+
+## ✅ Improvements Made — Summary
+
+Here's a complete list of all issues found and fixed across the code-review-team:
+
+### 📁 YAML Structural Fixes (4 files)
+
+| File | Issue | Fix |
+|------|-------|-----|
+| `recipe/code-review-team.yaml` | **Missing `name` field** | Added `name: Code Review Team — Orchestrator` |
+| `recipe/code-review-team.yaml` | `max_steps: 100` → should be `max_turns` | Changed to `max_turns: 100` |
+| All 3 sub YAMLs | `max_steps: 30` → should be `max_turns` | Changed to `max_turns: 30` |
+| All 4 YAMLs | `goose_provider`/`goose_model` → non-standard field names | Changed to standard `provider`/`model` |
+
+### 🗣️ Prompt & Agent Identity Fixes (4 files)
+
+| File | Issue | Fix |
+|------|-------|-----|
+| All 3 sub YAMLs | **MODE-CHECK prefix** leaked orchestrator identity into sub-agents (e.g., `I am static-analyzer ... MODE-CHECK: code-review-team`) | Clean prompts now start with agent identity and describe their task |
+| `static-analyzer.yaml` | **Contradictory rule**: prompt said `⛔ NO YAML/JSON/MD edits` but instructions explicitly tell it to output JSON | Removed the contradictory rule |
+| `code-review-team.yaml` | Vague 1-line prompt just repeated the title | Replaced with actionable description of the delegation workflow |
+| `code-review-team.yaml` | Rules R01-R04 were generic/didn't enforce parallel execution | Added specific rules: R02 (must run PARALLEL), R03 (collect both results before delegating to code-reviewer) |
+
+### 🔍 Static Analyzer — `static-analyzer.md` (3 fixes)
+
+| Fix | Detail |
+|-----|--------|
+| **Severity mapping added** | Lint results now map `ERROR→P1`, `WARNING→P2`, `INFO→P3`, `STYLE→P4`, `NOTE→P5` where previously there was no mapping |
+| **P4/P5 output support** | `observations` severity now includes P4/P5; `overview` now tracks `p4_count` and `p5_count` |
+| **Over-broad `print(` check** | Changed from blanket `grep -rn 'print('` to flag only `print(` statements outside CLI entry points or logging contexts |
+
+### 🛡️ Security Scanner — `security-scanner.md` (1 fix)
+
+| Fix | Detail |
+|-----|--------|
+| **`%s` pattern gap in SQLI-003** | Original regex `%s*\(` only matched dict-style `%(name)s` formatting, missing simple `%s` formatting like `execute("SELECT * FROM %s WHERE id = %s" % (table, id))`. Changed to `%s*` which catches both patterns |
+
+### 📋 Code Reviewer — `code-reviewer.md` (2 fixes)
+
+| Fix | Detail |
+|-----|--------|
+| **Unused `syntax_errors` variable** | Variable `syntax_errors` was computed but never referenced in the decision if/elif chain. Renamed to `has_syntax_errors` and integrated into the `request_changes` logic for critical syntax issues |
+| **`recommendations` schema mismatch** | Schema said `recommendations: [string]` (array of strings) but actual output uses objects with `priority`, `finding`, `action`, `note` fields. Updated schema to match the real structure |
+
+### ✅ Validation
+
+All 4 YAML files (`code-review-team.yaml`, `static-analyzer.yaml`, `security-scanner.yaml`, `code-reviewer.yaml`) pass YAML validation and have correct field names (`max_turns`, `provider`, `model`).

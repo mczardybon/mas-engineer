@@ -1,0 +1,86 @@
+{
+  "syntax_errors": [],
+  "lint_issues": [
+    {
+      "file": "vulnerable_app.py",
+      "line": 1,
+      "severity": "P2",
+      "code": "lint-e401",
+      "message": "Multiple imports on one line: sqlite3, pickle, subprocess",
+      "suggestion": "Split into separate lines: import sqlite3 / import pickle / import subprocess"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 2,
+      "severity": "P1",
+      "code": "lint-sec-cred",
+      "message": "Hardcoded database password detected in variable 'DB_PASSWORD'",
+      "suggestion": "Use environment variables (os.getenv) or a .env config file instead of hardcoding secrets"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 5,
+      "severity": "P1",
+      "code": "lint-sec-sqli",
+      "message": "SQL injection vulnerability: f-string interpolates user input directly into SQL query",
+      "suggestion": "Use parameterized queries: conn.execute('SELECT * FROM users WHERE name = ?', (username,))"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 8,
+      "severity": "P1",
+      "code": "lint-sec-pickle",
+      "message": "Insecure deserialization via pickle.load() on untrusted data",
+      "suggestion": "Use a safe serialization format like JSON. If pickle is required, validate the source"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 8,
+      "severity": "P2",
+      "code": "lint-oneliner",
+      "message": "Multiple statements on one line: 'with' block body on same line as statement",
+      "suggestion": "Move 'return pickle.load(f)' to its own indented line below the 'with' statement"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 10,
+      "severity": "P1",
+      "code": "lint-sec-cmdi",
+      "message": "Command injection vulnerability: subprocess.call with shell=True and f-string interpolating user input",
+      "suggestion": "Use subprocess.run([cmd]) without shell=True, or pass arguments as a list"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 11,
+      "severity": "P2",
+      "code": "lint-oneliner",
+      "message": "Multiple statements on one line: function body on same line as def statement",
+      "suggestion": "Move 'return a / b' to its own indented line below 'def divide(a, b):'"
+    }
+  ],
+  "structure_issues": [
+    {
+      "file": "vulnerable_app.py",
+      "line": 2,
+      "severity": "P3",
+      "code": "struct-unused",
+      "message": "Variable 'DB_PASSWORD' is defined but never referenced in any function body",
+      "suggestion": "Remove unused variable or integrate it into database connection logic"
+    },
+    {
+      "file": "vulnerable_app.py",
+      "line": 11,
+      "severity": "P3",
+      "code": "struct-noguard",
+      "message": "Function 'divide' has no zero-division guard; division by zero will raise ZeroDivisionError",
+      "suggestion": "Add a check: if b == 0: return None or raise ValueError('Cannot divide by zero')"
+    }
+  ],
+  "overview": {
+    "files_scanned": 1,
+    "total_issues": 9,
+    "p1_count": 4,
+    "p2_count": 3,
+    "p3_count": 2
+  }
+}
