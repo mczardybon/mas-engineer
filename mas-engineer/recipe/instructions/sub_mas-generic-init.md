@@ -210,6 +210,22 @@ Used by intention-parser when user requests a team with (interactive)/(manual)/(
    members: [sub_mas-{domain}-member-1, ..., sub_mas-{domain}-member-{N}]
    user_action: 'Send tasks to members. They will respond generically until you define their roles.'
    ```
+4. **OPTIONAL: PACKAGE FOR DISTRIBUTION** (if user wants standalone team):
+   - ASK user: "Package this team for standalone distribution? (y/N)"
+   - IF yes: DELEGATE to sub_mas-team-packager:
+     ```yaml
+     agent_intake:
+       signal: 'HANDOVER'
+       from: 'sub_mas-generic-init'
+       to: 'sub_mas-team-packager'
+       task: 'PACKAGE_TEAM'
+       team_name: '{domain}'
+       output_path: '/tmp'
+       root_recipe: 'recipe/sub/sub_mas-{domain}-coordinator.yaml'
+       sub_recipes: [list of N member YAMLs]
+     ```
+   - WAIT for team-packager result
+   - SHOW install + run commands
 
 **Key Difference from AUTO-SPLIT:**
 - AUTO-SPLIT: each member has SPECIFIC role (research, content, campaigns, ...)

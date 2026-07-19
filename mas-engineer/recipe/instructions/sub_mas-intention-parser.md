@@ -143,7 +143,24 @@ When a team request is detected without a keyword, display this hint in the R01 
 5. SHOW result:
    - Before: 1 agent (monolith)
    - After: 1 orchestrator + N sub-agents
-6. User experience: feels like 1 command → 1 team
+6. **OFFER TO PACKAGE FOR DISTRIBUTION** (R01 - ask user):
+   - ASK: "Would you like to package this team for standalone distribution?"
+   - Options: "Yes - package to /tmp", "No - keep in MAS-Engineer only"
+   - IF Yes: DELEGATE to sub_mas-team-packager (task=PACKAGE_TEAM):
+     ```yaml
+     agent_intake:
+       signal: 'HANDOVER'
+       from: 'sub_mas-intention-parser'
+       to: 'sub_mas-team-packager'
+       task: 'PACKAGE_TEAM'
+       team_name: '{domain}'           # e.g. "sales"
+       output_path: '/tmp'
+       root_recipe: 'recipe/sub/sub_mas-{domain}-director.yaml'
+       sub_recipes: [list of all created sub-agents]
+     ```
+   - WAIT for team-packager result
+   - SHOW install + run commands
+7. User experience: feels like 1 command -> 1 team -> 1 package
 
 ## Output
 Structured plan:

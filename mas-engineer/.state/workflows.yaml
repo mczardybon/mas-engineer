@@ -740,6 +740,12 @@ agents:
     task_workflows:
       INIT: wf_generic_init_run
       PUSH_IMPROVEMENTS: wf_generic_push
+  team-packager:
+    tier: balanced
+    token_budget: 20000
+    task_workflows:
+      PACKAGE_TEAM: wf_team_package
+      VALIDATE_PACKAGE: wf_team_validate
   master-constitution:
     tier: balanced
     token_budget: 10000
@@ -841,6 +847,7 @@ agents:
     type: sub
     task: 'v1.0.0 | MAS-intern: Test agent for validation'
     desc: Automatic generates aus Template-Generator
+    task_workflows: {}
 task_workflows:
   wf_fw_discover:
     desc: Dynamically discover framework structure
@@ -2779,6 +2786,97 @@ task_workflows:
       action: shell
       cmd: echo 'Recherche completed — resultse follow'
       timeout: 5
+  wf_team_package:
+    desc: Package a team as standalone goose-installable directory
+    tier: balanced
+    on_error: abort
+    steps:
+    - id: validate_inputs
+      action: shell
+      cmd: test -f "{inputs.root_recipe}" && echo "Root recipe exists" || echo "Root recipe missing"
+      timeout: 5
+    - id: create_package_structure
+      action: shell
+      cmd: mkdir -p "{inputs.output_path}/{inputs.team_name}/recipe/sub" "{inputs.output_path}/{inputs.team_name}/.state/knowledge"
+        && echo "Package structure created"
+      timeout: 5
+    - id: copy_agents
+      action: shell
+      cmd: cp "{inputs.root_recipe}" "{inputs.output_path}/{inputs.team_name}/recipe/" && for f in {inputs.sub_recipes_csv}; do
+        cp "$f" "{inputs.output_path}/{inputs.team_name}/recipe/sub/"; done && echo "Agents copied"
+      timeout: 10
+    - id: generate_root_recipe
+      action: delegate
+      agent: sub_mas-team-packager
+      task: GENERATE_ROOT_RECIPE
+      params:
+        team_name: "{inputs.team_name}"
+        output_path: "{inputs.output_path}"
+      depends_on:
+      - create_package_structure
+    - id: generate_sot
+      action: delegate
+      agent: sub_mas-team-packager
+      task: GENERATE_SOT
+      params:
+        team_name: "{inputs.team_name}"
+        sub_recipes: "{inputs.sub_recipes}"
+        output_path: "{inputs.output_path}"
+      depends_on:
+      - copy_agents
+    - id: generate_knowledge
+      action: delegate
+      agent: sub_mas-team-packager
+      task: GENERATE_KNOWLEDGE
+      params:
+        team_name: "{inputs.team_name}"
+        output_path: "{inputs.output_path}"
+      depends_on:
+      - create_package_structure
+    - id: generate_install_scripts
+      action: delegate
+      agent: sub_mas-team-packager
+      task: GENERATE_INSTALL
+      params:
+        team_name: "{inputs.team_name}"
+        output_path: "{inputs.output_path}"
+      depends_on:
+      - create_package_structure
+    - id: validate_package
+      action: shell
+      cmd: test -f "{inputs.output_path}/{inputs.team_name}/install.sh" && test -f "{inputs.output_path}/{inputs.team_name}/recipe/{inputs.team_name}-root.yaml"
+        && echo "Package valid" || echo "Package incomplete"
+      timeout: 5
+      depends_on:
+      - generate_root_recipe
+      - generate_sot
+      - generate_knowledge
+      - generate_install_scripts
+  wf_team_validate:
+    desc: Validate an existing team package
+    tier: balanced
+    on_error: abort
+    steps:
+    - id: check_structure
+      action: shell
+      cmd: test -d "{inputs.package_path}" && test -f "{inputs.package_path}/install.sh"
+        && test -f "{inputs.package_path}/README.md" && echo "Structure valid"
+        || echo "Structure invalid"
+      timeout: 5
+    - id: check_yaml
+      action: shell
+      cmd: python3 -c "import yaml; import glob; [yaml.safe_load(open(f)) for f in glob.glob('{inputs.package_path}/recipe/**/*.yaml', recursive=True)]"
+        && echo "YAML valid" || echo "YAML invalid"
+      timeout: 10
+      depends_on:
+      - check_structure
+    - id: check_no_mas_deps
+      action: shell
+      cmd: '! grep -rE "sub_mas-master-constitution|general-improver|\.state/knowledge/(01|02|03|04|05|06|07|08|09)" "{inputs.package_path}/recipe/"
+        2>/dev/null && echo "No MAS-Engineer deps" || echo "Has MAS-Engineer deps"'
+      timeout: 5
+      depends_on:
+      - check_yaml
 workflows:
   build-test:
     desc: Build + extract ZIP + check contents
