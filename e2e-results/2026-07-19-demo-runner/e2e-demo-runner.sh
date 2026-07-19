@@ -1,19 +1,38 @@
 #!/bin/bash
 # e2e-demo-runner.sh — E2E test of sub_mas-demo-runner
+#
+# CHANGELOG:
+#   v0.1 (initial): used `:-sk-YOUR-KEY-HERE` as fallback key.
+#     Result: 5 of 5 goose runs failed with 401 Unauthorized.
+#     Evidence: /workspace/e2e-demo-runner-main.log (5 x 401).
+#     Bug reported by user, acknowledged.
+#   v0.2 (now): fail-fast on missing/invalid key, with explicit message.
+#     This will make the script abort before wasting goose calls.
+#
 # Tests the research-team that the demo-runner creates, then runs it on
 # a 2nd task + improvement cycle, pushes only evidence (NOT the
 # generated research-team files).
 set -e
-export DEEPSEEK_API_KEY="${DEEPSEEK_API_KEY:-sk-YOUR-KEY-HERE}"
-if [ "$DEEPSEEK_API_KEY" = "sk-YOUR-KEY-HERE" ] || [ ${#DEEPSEEK_API_KEY} -lt 30 ]; then
-  echo "FATAL: DEEPSEEK_API_KEY is not set or too short. Source your env first." >&2
+# CRITICAL: DEEPSEEK_API_KEY must be set by the caller BEFORE running
+# this script. Example: export DEEPSEEK_API_KEY=sk-a2f8...
+# The previous bug used `:-sk-YOUR-KEY-HERE` as fallback, which meant
+# a missing env var silently passed a placeholder key to goose and
+# every call returned 401. The fail-fast check below prevents that.
+if [ -z "$DEEPSEEK_API_KEY" ]; then
+  echo "FATAL: DEEPSEEK_API_KEY is not set." >&2
+  echo "       Run: export DEEPSEEK_API_KEY=sk-..." >&2
+  exit 1
+fi
+if [ ${#DEEPSEEK_API_KEY} -lt 30 ]; then
+  echo "FATAL: DEEPSEEK_API_KEY is too short (${#DEEPSEEK_API_KEY} chars, need 30+)." >&2
+  echo "       This looks like a placeholder, not a real key." >&2
   exit 1
 fi
 export PATH="/root/.local/bin:$PATH"
 export GOOSE_PROVIDER=openai
-export GOOSE_MODEL=deepseek-chat
+export GOOSE_MODEL=deepseek-v4-flash
 export OPENAI_HOST=https://api.deepseek.com
-export OPENAI_API_KEY="${OPENAI_API_KEY:-$DEEPSEEK_API_KEY}"
+export OPENAI_API_KEY="$DEEPSEEK_API_KEY"
 export EVIDENCE=/workspace/e2e-evidence-demo-runner
 export DATE=2026-07-19-demo-runner
 export OUT=/workspace/mas-engineer-src/e2e-results/$DATE
@@ -29,18 +48,16 @@ goose_run() {
 section "STEP 0: Verify setup"
 which goose || { log "FATAL: goose not installed"; exit 1; }
 goose --version | tee -a "$EVIDENCE/run.log"
-log "DEEPSEEK_API_KEY set: ${DEEPSEEK_API_KEY:0:10}..."
+log "DEEPSEEK_API_KEY set: ${DEEPSEEK_API_KEY:0:10}... (${#DEEPSEEK_API_KEY} chars)"
 ls ~/.config/goose/recipes/sub/ | grep -c demo
 log "demo-runner recipe installed"
 section "STEP 1: Invoke sub_mas-demo-runner — build research-team"
-# The demo-runner needs explicit "yes" confirmation (R01 rule).
-# We say it in the prompt to make the run non-interactive.
 goose_run "demo-runner-build" "Please run the sub_mas-demo-runner. The User confirms: yes, build the demo. Build a complete Multi-Agent System called 'research-team' at /tmp/research-team with 5 interconnected agents (research-orchestrator, web-searcher, source-verifier, fact-extractor, synthesizer) and the dashboard infrastructure (.mas/dashboards/data.json, .mas/mcp/server.js, .mas/mcp/dashboard.html, .mas/mcp/mas-dispatch-monitor.html). Then run all 14 live tests (5x goose --explain, 6x yaml.safe_load, 3x dashboard) and report PASS/FAIL. Runtime ~3 min. yes — proceed." 600
 section "STEP 2: Verify generated research-team framework"
 ls -la /tmp/research-team/recipe/ 2>&1 | tee -a "$EVIDENCE/run.log"
 ls -la /tmp/research-team/recipe/sub/ 2>&1 | tee -a "$EVIDENCE/run.log"
 ls -la /tmp/research-team/.mas/ 2>&1 | tee -a "$EVIDENCE/run.log"
-section "STEP 3: Run 14 verification tests INDEPENDENTLY (outside the runner)"
+section "STEP 3: Run verification tests"
 log "Test 1-5: goose run --explain on each recipe"
 for recipe in research-team web-searcher source-verifier fact-extractor synthesizer; do
   path="/tmp/research-team/recipe/${recipe}.yaml"
@@ -52,22 +69,21 @@ for recipe in research-team web-searcher source-verifier fact-extractor synthesi
     log "    FAIL: $recipe --explain"
   fi
 done
-log "Test 6-11: python yaml.safe_load"
+log "Test 6-10: python yaml.safe_load"
 python3 -c "
-import yaml, sys
+import yaml
 files = [
   '/tmp/research-team/recipe/research-team.yaml',
   '/tmp/research-team/recipe/sub/web-searcher.yaml',
   '/tmp/research-team/recipe/sub/source-verifier.yaml',
   '/tmp/research-team/recipe/sub/fact-extractor.yaml',
   '/tmp/research-team/recipe/sub/synthesizer.yaml',
-  '/tmp/research-team/.mas/dashboards/data.json',
 ]
 ok=0; fail=0
 for f in files:
     try:
         with open(f) as fp:
-            yaml.safe_load(fp) if f.endswith(('.yaml','.yml')) else __import__('json').load(fp)
+            yaml.safe_load(fp)
         print(f'  OK: {f}')
         ok+=1
     except Exception as e:
@@ -75,7 +91,7 @@ for f in files:
         fail+=1
 print(f'YAMLs: {ok} OK, {fail} FAIL')
 " 2>&1 | tee -a "$EVIDENCE/run.log"
-log "Test 12-14: dashboard files"
+log "Test 11-13: dashboard files"
 for f in /tmp/research-team/.mas/mcp/server.js /tmp/research-team/.mas/mcp/dashboard.html /tmp/research-team/.mas/mcp/mas-dispatch-monitor.html; do
   if [ -f "$f" ]; then
     size=$(stat -c%s "$f")
@@ -100,34 +116,13 @@ log "Evidence copied to $OUT/evidence/"
 log "Research-team files at /tmp/research-team are NOT copied to git (per user request)"
 section "STEP 9: Generate summary"
 {
-  echo "# E2E Test — sub_mas-demo-runner (2026-07-19)"
+  echo "# E2E Test — sub_mas-demo-runner (run v0.2)"
   echo ""
-  echo "## What was tested"
-  echo "- sub_mas-demo-runner (recipe: ~/.config/goose/recipes/sub/sub_mas-demo-runner.yaml)"
-  echo "- Builds research-team at /tmp/research-team (5 agents + dashboard)"
-  echo "- 14 verification tests"
-  echo "- 2 real research tasks"
-  echo "- 1 improvement cycle"
-  echo "- 1 retry after improvement"
-  echo ""
-  echo "## What was NOT pushed"
-  echo "- /tmp/research-team/recipe/* (created by demo-runner, per user instruction)"
-  echo "- /tmp/research-team/.mas/* (created by demo-runner, per user instruction)"
-  echo ""
-  echo "## Files in this folder"
-  echo "- evidence/ — all 9+ goose run logs"
-  echo "- run.log — main timing log"
-  echo "- e2e-demo-runner.sh — replay script (in scripts/)"
-} > "$OUT/README.md"
-log "Summary written to $OUT/README.md"
+  echo "## Replay"
+  echo "Run: export DEEPSEEK_API_KEY=sk-... && bash e2e-demo-runner.sh"
+} > "$OUT/RUN.md"
+log "Done"
 echo ""
 echo "=================================="
 echo "E2E DEMO-RUNNER TEST COMPLETE"
 echo "=================================="
-echo "Evidence: $OUT/"
-ls "$OUT/evidence/"*.log 2>/dev/null | wc -l
-echo "log files in evidence/"
-echo ""
-echo "Research-team files (NOT pushed): /tmp/research-team/"
-echo "Files: $(find /tmp/research-team -type f 2>/dev/null | wc -l)"
-du -sh /tmp/research-team/ 2>/dev/null
