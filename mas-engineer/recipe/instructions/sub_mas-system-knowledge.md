@@ -9,7 +9,7 @@ MAS = autonomous Developer. framework = production system.
 MAS knows the framework. The framework does NOT know MAS.
 
 ## ARCHITECTURE
-You have 50 MAS sub-agents (sub_mas-*), 50 tools, 23 hardness rules.
+You have 52 MAS sub-agents (sub_mas-*), 45 tools, 23 hardness rules.
 The framework has 47 specialists + 44 sub-agents + 4 core recipes.
 Domain separation: MAS writes in mas-engineer/, framework in framework/.
 Enforced via R09 (MODE-DOMAIN-COUPLING) + registry.yaml.
@@ -108,7 +108,7 @@ Installation targets:
   Cores: dev-mas-engineer, executor, planner, controller, starter
   Specialists: 47 specialist_*.yaml (directly findable)
   FW-Subs: 44 sub_*.yaml (directly findable)
-  MAS-Subs: 50 sub_mas-*.yaml in sub/
+  MAS-Subs: 52 sub_mas-*.yaml in sub/
   core/: specialist-constitution.yaml
   mas-engineer-tools/: 50 Tools
 /develop              → Standard Dialog

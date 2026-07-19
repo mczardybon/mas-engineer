@@ -1,6 +1,6 @@
 # Architecture
 
-MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 49 specialized sub-agents, 47 Python/shell tools, and a workflow engine driven by a Single Source of Truth (SOT).
+MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 52 specialized sub-agents, 45 Python/shell tools, and a workflow engine driven by a Single Source of Truth (SOT).
 
 ```mermaid
 flowchart TB
@@ -13,8 +13,8 @@ flowchart TB
     end
     subgraph ENGINEER["MAS-Engineer"]
         E1["dev-mas-engineer.yaml\nNatural Language Interface"]
-        E2["49 Sub-Agents\n7 categories"]
-        E3["47 Tools\nPython / Shell"]
+        E2["52 Sub-Agents\n7 categories"]
+        E3["45 Tools\nPython / Shell"]
         E4[".state/\nSOT · Rules · Knowledge"]
     end
     subgraph USER["User Framework"]
@@ -45,7 +45,7 @@ MAS-Engineer (dev-mas-engineer)
 │   └── sub_mas-migration-helper — Framework version migration
 │
 ├── IMPROVEMENT PIPELINE (self-optimization)
-│   ├── sub_mas-general-improver — Orchestrator (8 stages)
+│   ├── sub_mas-general-improver — Orchestrator (7 steps)
 │   ├── sub_mas-im-session-reader — Read session database
 │   ├── sub_mas-im-finder        — Detect optimization potential (53 documented patterns)
 │   ├── sub_mas-im-rank          — Prioritize & filter findings

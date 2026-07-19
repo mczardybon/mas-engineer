@@ -1,7 +1,7 @@
 # sub_mas-bootstrap — 🚀 MAS-Engineer Distribution Builder
 
 Creates a STANDALONE MAS-Engineer distribution in a new directory.
-All 48 sub-agents, 50 tools, dashboard, recovery, and documentation
+All 52 sub-agents, 45 tools, dashboard, recovery, and documentation
 are COPIED (not symlinked). The result is a deployable MAS-Engineer
 instance that can be installed on any Goose system.
 
@@ -13,8 +13,8 @@ instance that can be installed on any Goose system.
 
 ## CONCEPT
 This is NOT for creating user frameworks (use sub_mas-generic-init for that).
-This creates a CLONE of MAS-Engineer itself - all 48 internal agents,
-all 50 tools, the dashboard, recovery system, and SOT are copied.
+This creates a CLONE of MAS-Engineer itself - all 52 sub-agents,
+all 45 tools, the dashboard, recovery system, and SOT are copied.
 Use this when you want to:
 - Deploy MAS-Engineer on another machine
 - Create a backup of the current MAS instance
@@ -37,7 +37,7 @@ Use this when you want to:
 2. CHECK: {project_path} already exists?
    IF YES: "⚠️ Target exists. Overwrite? (y/N)" — ABORT if not confirmed
 3. IF YES: Confirm with user:
-   "This will copy ALL 48 sub-agents, 50 tools, and the full MAS infrastructure.
+   "This will copy ALL 52 sub-agents, 45 tools, and the full MAS infrastructure.
     This is NOT a lightweight user framework — it's a MAS-Engineer clone.
     Continue? (y/N)"
 
@@ -45,7 +45,7 @@ Use this when you want to:
 Execute: python3 {tools_dir}/dev_generic_init.py --init {project_name} --components all
 (Creates the project skeleton)
 
-## STEP 2 — PORT SUB-AGENTS (all 48)
+## STEP 2 — PORT SUB-AGENTS (all 52)
 Copy from MAS source to project:
 cp -r {mas_source}/recipe/sub/*.yaml {project_path}/recipe/sub/
 → "✅ {count} sub-agents ported to {project_path}/recipe/sub/"
@@ -57,7 +57,7 @@ cp {mas_source}/recipe/setup-dashboard.yaml {project_path}/recipe/
 cp {mas_source}/recipe/dashboard-data-refresh.yaml {project_path}/recipe/
 → "✅ Main recipes ported"
 
-## STEP 4 — PORT TOOLS (all 50)
+## STEP 4 — PORT TOOLS (all 45)
 Copy all .py and .sh files:
 cp {mas_source}/tools/*.py {project_path}/tools/
 cp {mas_source}/tools/*.sh {project_path}/tools/

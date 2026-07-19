@@ -43,7 +43,7 @@ Before every step:
 3. `"mas"` → MAS mode: self-improvement
 4. Other → Generic mode: new project initialization
 
-## Improvement Pipeline (8 stages, via sub_mas-general-improver)
+## Improvement Pipeline (7 steps, via sub_mas-general-improver)
 
 1. **Prerequisites** — mode detection, rule hardening, timing check
 2. **Session data read** — im-session-reader (3-level project filter)

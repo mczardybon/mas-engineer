@@ -36,7 +36,7 @@ Tools are symlinks: project/tools → MAS tools installation.
        ASK: "👁️  Monitoring (health report)? [Y/n]"
        SET components = selected components (e.g. "rules,state,knowledge")
    NOTE: For deploying MAS-Engineer as a standalone distribution
-         (all 48 agents + 50 tools copied), use
+         (all 52 sub-agents + 45 tools copied), use
          delegate(sub_mas-bootstrap, task=DEPLOY) instead.
    OPTIONAL:
    "Should I search for current techniques via sub_mas-web-researcher

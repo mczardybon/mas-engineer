@@ -3,17 +3,18 @@
 A Multi-Agent System for **developing, improving, monitoring, and operating
 Multi-Agent Systems (MAS)** for the User.
 
-MAS-Engineer itself is a MAS: 50+ agents and 50+ tools that work together
+MAS-Engineer itself is a MAS: 52 sub-agents and 45 tools that work together
 to build other MAS frameworks.
 
 ## What you get
 
-- 50+ specialized sub-agents (designer, finder, rank, validator, health-reporter, ...)
-- 50+ tools (generic-init, framework-scanner, dashboard-data, ...)
-- A complete dashboard (MCP server + 2 HTML webapps)
+- 52 specialized sub-agents (designer, finder, rank, validator, health-reporter, ...)
+- 45 tools (43 dev_* Python tools + 2 MCP dashboard files)
+- A complete dashboard (MCP server + 2 HTML webapps — note: requires `npm install` to start; not run during e2e tests)
 - Full audit trail in `.state/`
 - Single-source-of-truth workflows in `.state/workflows.yaml`
-- 7-stage IM-pipeline (FIND -> RANK -> DESIGN -> IMPLEMENT -> VALIDATE)
+- 7-stage IM-pipeline (FIND → RANK → DESIGN → IMPLEMENT → VALIDATE → SUMMARIZE → PUSH)
+- 6 Phoenix Recovery files (5 internal + 1 monitor) — but only 5 are listed in `docs/`; the 6th is `monitor-recovery`
 
 ## Quick start: run the demo
 
@@ -41,8 +42,9 @@ prompts/
 The [prompts/research-team.txt](prompts/research-team.txt) file is the
 exact prompt that built the 5-agent research team at `/tmp/research-team`.
 Copy it, modify the agents, change the output path, and run it. It
-follows the 6-step pattern: initialize → create agents → wire them →
-dashboard → live test → report.
+follows the build pattern: initialize → create agents → wire them →
+dashboard → live test → report (the "6-step pattern" mentioned in some
+docs; this is the runtime observation, not a fixed framework rule).
 
 More prompts: [prompts/README.md](prompts/README.md)
 
@@ -107,7 +109,7 @@ dev-mas-engineer  (root orchestrator)
   +-- delegate(generic-init)   create new framework skeleton
   +-- delegate(demo-runner)    run the research-team demo
   +-- delegate(pre-push-validator)  block bad pushes
-  +-- ... 50+ sub-agents
+  +-- ... 52 sub-agents
 ```
 
 ## Documentation
@@ -131,11 +133,11 @@ dev-mas-engineer  (root orchestrator)
 mas-engineer/
   recipe/
     dev-mas-engineer.yaml       # root orchestrator
-    sub/                        # 50+ sub-agent recipes
+    sub/                        # 52 sub-agent recipes
     instructions/               # detailed instructions per agent
     setup-dashboard.yaml        # dashboard setup
     dashboard-data-refresh.yaml # data.json refresher
-  tools/                        # Python tools (50+)
+  tools/                        # 45 Python tools (43 dev_* + 2 MCP)
   .mas/mcp/                     # MCP dashboard server
   .state/                       # SOT, audit trail, findings
   docs/                         # documentation

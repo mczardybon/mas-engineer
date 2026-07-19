@@ -1,7 +1,7 @@
 # MAS-Engineer
 
 **Version:** v1.0.0  
-**Sub-Agents:** 49  
+**Sub-Agents:** 52  
 **Tools:** 47
 
 ---
@@ -10,7 +10,7 @@
 
 MAS-Engineer is a **Goose-based Multi-Agent System generator** and **self-improving framework builder**. It helps you create, maintain, improve, monitor, and distribute multi-agent systems — all through natural language conversation.
 
-You talk to the Engineer. The Engineer delegates to its 49 specialized sub-agents. This is a **proof of concept** demonstrating the architecture.
+You talk to the Engineer. The Engineer delegates to its 52 specialized sub-agents. This is a **proof of concept** demonstrating the architecture.
 
 ## Three Operating Modes
 
@@ -39,11 +39,11 @@ goose run --recipe recipe/dev-mas-engineer.yaml
 |---------|----------------------|--------|
 | "Create a new multi-agent system" | `sub_mas-generic-init` | Lightweight project with symlinks + base agent |
 | "Scan my system for issues" | `sub_mas-framework-scanner` | Framework analysis report |
-| "Improve my agent's performance" | `sub_mas-general-improver` | 8-stage optimization pipeline |
+| "Improve my agent's performance" | `sub_mas-general-improver` | 7-stage optimization pipeline |
 | "Fix this agent's prompt" | `sub_mas-prompt-engineer` | Optimized prompt |
 | "Show me the health status" | `sub_mas-monitor-*` | Health report |
 | "Set up a dashboard" | Setup dashboard recipe | MCP dashboard app |
-| "Deploy MAS-Engineer standalone" | `sub_mas-bootstrap` | Complete distribution with all 49 agents |
+| "Deploy MAS-Engineer standalone" | `sub_mas-bootstrap` | Complete distribution with all 52 sub-agents |
 
 ## Architecture
 
@@ -91,7 +91,7 @@ flowchart TD
 | [installation.md](installation.md) | Install, update, uninstall |
 | [architecture.md](architecture.md) | Complete system architecture |
 | [usage.md](usage.md) | How to create, improve, monitor |
-| [agents.md](agents.md) | Catalog of all 49 sub-agents |
-| [improvement-pipeline.md](improvement-pipeline.md) | 8-stage self-improvement |
+| [agents.md](agents.md) | Catalog of all 52 sub-agents |
+| [improvement-pipeline.md](improvement-pipeline.md) | 7-stage self-improvement |
 | [recovery-system.md](recovery-system.md) | 5-stage Phoenix recovery |
 | [dashboard.md](dashboard.md) | Framework dashboard setup |
