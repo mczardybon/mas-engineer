@@ -65,6 +65,33 @@ Try:
 - "Improve the documentation of my Python package"
 - "Run the IM-pipeline on my idea: <your idea>"
 
+## Team Creation Workflows
+
+MAS-Engineer supports **two workflows** for building multi-agent teams. Choose with a keyword:
+
+| Workflow | Keyword | Result | Best for |
+|----------|---------|--------|----------|
+| **AUTO-SPLIT** (default) | none or `(auto)` | 1 monolith → 1 orchestrator + N specialized sub-agents | Clear requirements, want ready-to-use team |
+| **INTERACTIVE** | `(interactive)`, `(manual)`, `(shell)`, `(no-split)`, `(let me define)` | 1 coordinator + N generic sub-agents | Exploration, learning, want full control |
+
+### Examples
+
+```text
+"Build a customer-support team"
+  → AUTO-SPLIT: 1 director + 3-5 specialists (ready to use)
+
+"Build a customer-support team (interactive)"
+  → INTERACTIVE: 1 coordinator + 3 generic members (you define roles)
+
+"Build a data-analysis team (manual)"
+  → INTERACTIVE: 1 coordinator + N generics
+```
+
+If no keyword is found and the description mentions a team, MAS-Engineer
+shows a hint in the plan offering both options before R01 confirmation.
+
+See: [docs/WORKFLOWS.md](docs/WORKFLOWS.md) for the full workflow selection guide.
+
 ## Architecture
 
 ```
@@ -85,12 +112,16 @@ dev-mas-engineer  (root orchestrator)
 
 ## Documentation
 
-- [docs/DEMO-RESEARCH-TEAM.md](docs/DEMO-RESEARCH-TEAM.md) — Run the research-team demo
-- [docs/governance.md](docs/governance.md) — R-rules and decision-making
-- [docs/manifest.md](docs/manifest.md) — What MAS-Engineer is
-- [docs/procedures.md](docs/procedures.md) — Standard operating procedures
-- [docs/lessons-learned.md](docs/lessons-learned.md) — Hard-won knowledge
-- [recipe/instructions/](recipe/instructions/) — All sub-agent instructions
+- [docs/WORKFLOWS.md](docs/WORKFLOWS.md) - Team creation workflows (AUTO-SPLIT vs INTERACTIVE)
+- [docs/HOWTO-CREATE-AGENT.md](docs/HOWTO-CREATE-AGENT.md) - Create a single agent with intention-parser
+- [docs/HOWTO-IM-PIPELINE.md](docs/HOWTO-IM-PIPELINE.md) - Run the 7-stage improvement pipeline
+- [docs/DEMO-RESEARCH-TEAM.md](docs/DEMO-RESEARCH-TEAM.md) - Run the research-team demo
+- [docs/governance.md](docs/governance.md) - R-rules and decision-making
+- [docs/manifest.md](docs/manifest.md) - What MAS-Engineer is
+- [docs/procedures.md](docs/procedures.md) - Standard operating procedures
+- [docs/lessons-learned.md](docs/lessons-learned.md) - Hard-won knowledge
+- [prompts/](prompts/) - Copy-paste prompts to use as templates
+- [recipe/instructions/](recipe/instructions/) - All sub-agent instructions
 
 ## Project structure
 
