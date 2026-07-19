@@ -284,6 +284,44 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
 - MM8: prompt: > 30 chars but no I_AM identity
 - MM9: prompt: contains I_AM but no MODE-CHECK
 
+**NN — Agent Architecture (Split-Detection) (4 types)**
+- NN1: **multi_role_agent** — agent prompt lists 3+ distinct roles/tasks with different tools
+  - Detection: parse prompt for verbs + tool references, count distinct role clusters
+  - Severity: high (impacts maintainability, testability, single-responsibility)
+  - Fix: split into orchestrator + N sub-agents, generate pipeline config
+  - Source: `flagged_by: intention-parser` in `.state/pipeline/findings.yaml`
+- NN2: **tool_overload** — agent declares 5+ tools/MCPs in extensions
+  - Detection: count tools in extensions list
+  - Severity: medium
+  - Fix: distribute tools across specialized sub-agents
+- NN3: **scope_bloat** — agent description > 200 chars AND mentions 3+ domains
+  - Detection: split description by periods, count domain keywords
+  - Severity: medium
+  - Fix: split into domain-specific sub-agents
+- NN4: **flagged_for_split** — agent was created by intention-parser with multi-role flag
+  - Detection: read `.state/pipeline/findings.yaml` for `flagged_by: intention-parser`
+  - Severity: critical (user intent was team, not monolith)
+  - Fix: trigger split_into_orchestrator_and_subs pattern
+
+**Split-Detection Procedure (NEW)**
+1. After standard 53-type scan, RUN NN-type scan:
+   ```bash
+   # Read intention-parser flags
+   python3 -c "
+   import yaml, os
+   flags_file = '.state/pipeline/findings.yaml'
+   if os.path.exists(flags_file):
+       data = yaml.safe_load(open(flags_file))
+       for f in data.get('findings', []):
+           if f.get('flagged_by') == 'intention-parser':
+               yield f
+   "
+   ```
+2. For each flagged agent: ANALYZE the agent YAML
+3. IDENTIFY distinct roles (NN1), tool clusters (NN2), domain boundaries (NN3)
+4. EMIT finding with type=NN1/NN2/NN3/NN4, severity, recommended_split
+5. WRITE to `.state/pipeline/findings.yaml` (append, not overwrite)
+
 ## Procedure (FIND)
 
 1. RECEIVE data parameter from orchestrator (sessions[], messages, totals)

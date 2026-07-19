@@ -173,8 +173,62 @@ Any conflict = the patch is REWRITTEN to use the native Goose mechanism
 - MM2: file → prompt → "🔧 {NAME} (v1.0.0)\n⛔ ONLY {scope} — NO Changes\n→ Give Result as Report back" (Add Prompt)
 - MM3: file → prompt → insert ⛔ in prompt-String (before the first sentence)
 - MM4: file → title → title: "{EMOJI} {DESCRIPTION}" (Add Emoji)
-- MM5: file → settings.timeout → set to 600 (or nearest valid value)
-- MM6: file → settings.max_steps → set to 100 (or nearest valid value)
+- MM5: settings.timeout → set to 600 (or nearest valid value)
+- MM6: settings.max_steps → set to 100 (or nearest valid value)
+
+**NN — Agent Architecture Split-Patches (NEW)**
+- NN1: multi_role_agent → DESIGN split_into_orchestrator_and_subs pattern
+  - Input: agent YAML with 3+ distinct roles in prompt/instructions
+  - Output:
+    1. New orchestrator recipe: `sub_mas-{domain}-director.yaml`
+       - Has `summon` extension
+       - Prompt: "I am {domain}-director. I delegate to specialized sub-agents."
+       - Lists all sub-agents in its delegation map
+    2. N new sub-agent recipes: `sub_mas-{domain}-{role}.yaml`
+       - Each has 1 specific role (extracted from original prompt)
+       - Each inherits relevant tools from original
+       - Each has its own prompt focused on the single role
+    3. Pipeline-config entry: maps task → sub-agent
+    4. SOT entries: orchestrator + N subs registered
+    5. Original agent: archived to `recipe/sub/legacy/sub_mas-{name}-ORIGINAL.yaml`
+- NN2: tool_overload → DESIGN distribute_tools_to_subs pattern
+  - Identify tool clusters
+  - Create N sub-agents, each with subset of tools
+  - Orchestrator delegates based on tool-need
+- NN3: scope_bloat → DESIGN split_by_domain pattern
+  - Identify domain boundaries
+  - Create N domain-specific sub-agents
+- NN4: flagged_for_split → TRIGGER NN1/NN2/NN3 based on flag metadata
+
+**Split-Design Procedure (NN-pattern)**
+1. For each NN-type finding, EXTRACT from agent YAML:
+   - Agent name + description
+   - All roles (parse prompt for verbs + domains)
+   - All tools (parse extensions + instructions tool references)
+   - All domains (parse description + instructions)
+2. DESIGN orchestrator with delegation map:
+   ```yaml
+   delegation_map:
+     role1: sub_mas-{agent}-{role1}
+     role2: sub_mas-{agent}-{role2}
+   ```
+3. GENERATE N sub-agent YAMLs (use dev_template_generator.py pattern)
+4. WRITE to `.state/pipeline/patches.yaml`:
+   ```yaml
+   patches:
+     - type: create_orchestrator
+       file: recipe/sub/sub_mas-{domain}-director.yaml
+       content: <generated yaml>
+     - type: create_sub_agent
+       file: recipe/sub/sub_mas-{domain}-{role}.yaml
+       content: <generated yaml>
+     - type: archive_original
+       file: recipe/sub/legacy/sub_mas-{agent}-ORIGINAL.yaml
+       from: recipe/sub/sub_mas-{agent}.yaml
+     - type: update_sot
+       file: .state/workflows.yaml
+       operation: register N+1 new agents
+   ```
 
 ## STEP 2 — LIMITS CHECK (static numerical fallback)
 

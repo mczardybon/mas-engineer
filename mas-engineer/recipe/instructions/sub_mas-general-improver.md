@@ -297,6 +297,62 @@ IF task in (FULL_IMPROVEMENT, REVIEW) AND pipeline completed:
     → SHOW: "✅ Improvements in {DETECTED_MODE}-project available"
   IF DETECTED_MODE == "mas":
     → ""
+
+## STEP 8.5 — SPLIT_AGENT TASK (NEW — triggered by intention-parser)
+
+**Trigger:** `task == SPLIT_AGENT` (called by intention-parser after agent creation)
+
+**Purpose:** Split a multi-role agent into orchestrator + N sub-agents WITHOUT user re-confirmation
+(intention-parser has already gotten R01 confirmation for the original creation).
+
+**Procedure:**
+1. RECEIVE params: `agent_name`, `findings_file` (from intention-parser)
+2. LOAD findings from `.state/pipeline/findings.yaml` (filtered: flagged_by=intention-parser)
+3. RUN abridged pipeline (only relevant stages):
+   - **im-finder** (task=FIND, mode=split):
+     - Read findings already written by intention-parser
+     - ADD NN-type analysis (multi_role_agent, tool_overload, scope_bloat)
+   - **im-rank** (task=RANK, mode=split):
+     - Auto-prioritize NN-type findings as critical
+   - **im-designer** (task=DESIGN, mode=split):
+     - Apply NN1 pattern: split_into_orchestrator_and_subs
+     - Generate N+1 YAML files (1 orchestrator + N sub-agents)
+   - **im-validator** (task=VALIDATE, mode=split):
+     - Validate all new YAMLs (R10 coronashield)
+     - Validate SOT entries
+4. APPLY patches (NO additional R01 confirmation — covered by intention-parser):
+   - CREATE orchestrator: `sub_mas-{domain}-director.yaml`
+   - CREATE N sub-agents: `sub_mas-{domain}-{role}.yaml`
+   - ARCHIVE original: `recipe/sub/legacy/sub_mas-{name}-ORIGINAL.yaml`
+   - UPDATE `.state/workflows.yaml` (register orchestrator + N subs)
+   - UPDATE `recipe/dev-mas-engineer.yaml` (add to sub_recipes)
+5. RETURN result:
+   ```yaml
+   signal: SPLIT_DONE
+   request_id: <uuid>
+   from: sub_mas-general-improver
+   to: sub_mas-intention-parser
+   status: success | error
+   data:
+     original_agent: <name>
+     orchestrator: sub_mas-{domain}-director
+     sub_agents: [<list>]
+     archived_to: recipe/sub/legacy/...
+   ```
+
+**Why NO R01 confirmation here:**
+- intention-parser already got user confirmation for the original agent creation
+- The split is the CONSEQUENCE of the user's request (they asked for a "team")
+- If the split produces wrong results, user can revert (original is archived)
+
+**Why AUTO-trigger instead of manual:**
+- User experience: 1 command ("build marketing team") → 1 team
+- Avoids: user has to manually run improvement-pipeline after every multi-role creation
+- Pattern: intention-parser detects intent → improver executes the technical decomposition
+
+## TASK TYPES EXTENDED
+- FULL_IMPROVEMENT | REVIEW | COST_ANALYSIS | ERROR_PATTERN | CORRECTION_LOG | USAGE_PATTERN
+- **SPLIT_AGENT** (NEW — triggered by intention-parser for multi-role agents)
   📦 Improvements in MAS saved —
   available via install.sh"
     → LOG: changes.json + PUSH_IMPROVEMENTS
