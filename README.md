@@ -437,6 +437,9 @@ A: CrewAI is a Python SDK. You write code. MAS-Engineer is a conversational assi
 **Q: Is this production-ready?**  
 A: This is a **proof of concept (POC)**. It demonstrates the architecture of a self-improving multi-agent system. While it installs and runs, it has not been hardened for production use. Notable gaps as of 2026-07-19: the MCP dashboard server requires `npm install` to start (npm is not installed in many sandbox environments); some recipes (e.g. the 6 stages claimed in the general-improver title) disagree with their own description ("6 specialized agents in 7 steps"). Contributions welcome.
 
+**Q: Where can I see evidence of how this project handles test failures?**  
+A: See [`e2e-results/2026-07-19-demo-runner-ARCHIVED-script-failure/`](e2e-results/2026-07-19-demo-runner-ARCHIVED-script-failure/). That folder preserves a 2026-07-19 e2e test that was originally reported as "15/15 PASS" but had actually produced 5 consecutive `401 Unauthorized` responses because the wrapper script passed a REDACTED API key placeholder to goose. The same folder contains `TRUTHFUL_REPORT.md` which documents the failure and explains the script-vs-manual distinction. The successful follow-up test is at `e2e-results/2026-07-19-demo-runner-v2/`.
+
 **Q: Can I use my own LLM?**  
 A: Yes. MAS-Engineer runs on Goose, which supports OpenAI, Anthropic Claude, Ollama (local), Groq, and any OpenAI-compatible provider.
 

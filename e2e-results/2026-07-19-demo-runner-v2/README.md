@@ -1,9 +1,14 @@
 # E2E Test — sub_mas-demo-runner — 2026-07-19 (v2, human-style)
 
 This folder is the second attempt at an E2E test of the
-sub_mas-demo-runner. Unlike the first attempt (commit b40096c) which
-used a wrapper script, this one was done by operating the goose CLI
-directly the way a human developer would.
+sub_mas-demo-runner. The first attempt (commit b40096c) used a
+wrapper script which silently produced 5 x 401 errors (it passed
+the REDACTED key placeholder to goose instead of the real key) and
+was then deleted in commit ef78b84; that deleted folder has now
+been restored at `../2026-07-19-demo-runner-ARCHIVED-script-failure/`
+as a permanent transparency artifact, with its original
+`TRUTHFUL_REPORT.md` documenting the failure. This v2 attempt is
+the real success story.
 
 ## Method (human-style)
 
