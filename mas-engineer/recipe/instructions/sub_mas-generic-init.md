@@ -171,6 +171,52 @@ Return via stdout as YAML struct:
 - INIT mode only — analysis is done by sub_mas-general-improver
 - For full MAS-Engineer distribution: delegate(sub_mas-bootstrap, task=DEPLOY)
 
+## ⛔ TASK: CREATE_TEAM_SHELL (NEW — for intention-parser)
+
+**Purpose:** Create a team shell with 1 coordinator + N generic sub-agents.
+Used by intention-parser when user requests a team with (interactive)/(manual)/(shell) keyword.
+
+**Input (from intention-parser):**
+- domain: target domain (e.g., "marketing", "sales", "research")
+- agent_count: number of sub-agents to create (default 3)
+- description: original user description
+
+**Output:**
+- 1 coordinator recipe: `sub_mas-{domain}-coordinator.yaml`
+  - Has `summon` extension
+  - Prompt: "I am the {domain}-coordinator. I delegate to my team members. Ask me to do something."
+  - Lists all N team members in delegation map
+- N generic sub-agents: `sub_mas-{domain}-member-{i}.yaml`
+  - Each has identical generic prompt: "I am {domain} team member #{i}. I can help with {domain} tasks. What should I do?"
+  - Each has `summon` extension
+  - Each is registered in SOT as `agents.{domain}-member-{i}`
+- 1 workflow per member: `wf_{domain}_member_{i}_respond`
+- SOT entry: coordinator + N members
+- sub_recipes entry: coordinator + N members
+
+**Procedure:**
+1. R01 confirmation: show plan (coordinator + N members) + wait for ✅
+2. After confirmation:
+   a. Create coordinator YAML (use dev_template_generator.py)
+   b. Create N member YAMLs (use dev_template_generator.py with generic task)
+   c. Update SOT (.state/workflows.yaml)
+   d. Update sub_recipes (recipe/dev-mas-engineer.yaml)
+   e. NO split-pattern (this is the interactive alternative to auto-split)
+3. Return result:
+   ```yaml
+   signal: TEAM_SHELL_CREATED
+   status: success
+   coordinator: sub_mas-{domain}-coordinator
+   members: [sub_mas-{domain}-member-1, ..., sub_mas-{domain}-member-{N}]
+   user_action: 'Send tasks to members. They will respond generically until you define their roles.'
+   ```
+
+**Key Difference from AUTO-SPLIT:**
+- AUTO-SPLIT: each member has SPECIFIC role (research, content, campaigns, ...)
+- INTERACTIVE: each member has GENERIC role (asks "what should I do?")
+- INTERACTIVE members learn from user interaction what their specific task should be
+- User can later upgrade a generic member to specific by updating its task field
+
 ⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions.
 dev_rule_checker.py enforces.
 ⛔ R01 CONFIRMATION — Before each write/edit/shell PLAN+WAIT on ✅.

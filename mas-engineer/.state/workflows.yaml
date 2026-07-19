@@ -880,8 +880,64 @@ agents:
   marketing-email:
     name: sub_mas-marketing-email
     type: sub
-    task: Manage email campaigns, customer engagement, newsletters and subscriber communications
+    task: Manage email campaigns, customer engagement, newsletters and subscriber
+      communications
     desc: Email campaign manager sub-agent
+  sales-director:
+    tier: balanced
+    token_budget: 20000
+    task_workflows:
+      ORCHESTRATE: wf_sales_orchestrate
+      PROSPECT: wf_sales_prospect
+      PROPOSAL: wf_sales_proposal
+      PIPELINE: wf_sales_pipeline
+      ANALYZE: wf_sales_analyze
+      CRM: wf_sales_crm
+  sales-prospector:
+    name: sub_mas-sales-prospector
+    type: sub
+    task: Research prospects, qualify leads, identify target accounts and opportunities
+    desc: Prospect research & lead qualification sub-agent
+  sales-proposal:
+    name: sub_mas-sales-proposal
+    type: sub
+    task: Create proposals, contracts, quotes and pricing documents
+    desc: Proposal & contract creation sub-agent
+  sales-pipeline:
+    name: sub_mas-sales-pipeline
+    type: sub
+    task: Track deals, manage pipeline stages, forecasting and opportunity management
+    desc: Deal pipeline tracking sub-agent
+  sales-analyst:
+    name: sub_mas-sales-analyst
+    type: sub
+    task: Analyze conversion rates, sales metrics, KPIs and performance reporting
+    desc: Conversion rate analysis sub-agent
+  sales-crm:
+    name: sub_mas-sales-crm
+    type: sub
+    task: Manage customer relationships, account management, communications and engagement
+    desc: Customer relationship management sub-agent
+  sales-coordinator:
+    tier: balanced
+    token_budget: 20000
+    task_workflows:
+      ORCHESTRATE: wf_sales_coord_orchestrate
+  sales-member-1:
+    name: sub_mas-sales-member-1
+    type: sub
+    task: Sales team member #1 — generic, learns role through conversation
+    desc: Interactive sales team shell — generic member #1
+  sales-member-2:
+    name: sub_mas-sales-member-2
+    type: sub
+    task: Sales team member #2 — generic, learns role through conversation
+    desc: Interactive sales team shell — generic member #2
+  sales-member-3:
+    name: sub_mas-sales-member-3
+    type: sub
+    task: Sales team member #3 — generic, learns role through conversation
+    desc: Interactive sales team shell — generic member #3
 task_workflows:
   wf_fw_discover:
     desc: Dynamically discover framework structure
@@ -2828,7 +2884,7 @@ task_workflows:
       cmd: 'echo ''ANALYZE: matching task to sub-agents'''
     - id: delegate
       action: delegate
-      cmd: 'Delegate to matched sub-agents per delegation map'
+      cmd: Delegate to matched sub-agents per delegation map
       depends_on:
       - analyze
     - id: synthesize
@@ -2866,7 +2922,59 @@ task_workflows:
     - id: manage
       action: shell
       cmd: 'echo ''EMAIL: managing email campaigns'''
-
+  wf_sales_orchestrate:
+    desc: Sales orchestrator — delegates to specialized sub-agents
+    steps:
+    - id: analyze
+      action: shell
+      cmd: 'echo ''ANALYZE: matching task to sub-agents'''
+    - id: delegate
+      action: delegate
+      cmd: Delegate to matched sub-agents per delegation map
+      depends_on:
+      - analyze
+    - id: synthesize
+      action: shell
+      cmd: 'echo ''SYNTHESIZE: combining sub-agent results'''
+      depends_on:
+      - delegate
+  wf_sales_prospect:
+    desc: Sales prospecting — research prospects, qualify leads
+    steps:
+    - id: research
+      action: shell
+      cmd: 'echo ''PROSPECT: researching targets and qualifying leads'''
+  wf_sales_proposal:
+    desc: Proposal creation — proposals, contracts, quotes
+    steps:
+    - id: create
+      action: shell
+      cmd: 'echo ''PROPOSAL: creating proposals and contracts'''
+  wf_sales_pipeline:
+    desc: Pipeline tracking — deal stages, forecasting
+    steps:
+    - id: track
+      action: shell
+      cmd: 'echo ''PIPELINE: tracking deals and forecasting'''
+  wf_sales_analyze:
+    desc: Sales analytics — conversion rates, metrics, KPIs
+    steps:
+    - id: analyze
+      action: shell
+      cmd: 'echo ''ANALYZE: calculating conversion rates and metrics'''
+  wf_sales_crm:
+    desc: CRM management — customer relationships, accounts
+    steps:
+    - id: manage
+      action: shell
+      cmd: 'echo ''CRM: managing customer relationships and accounts'''
+  wf_sales_coord_orchestrate:
+    desc: Sales coordinator — orchestrate the interactive sales team
+    steps:
+    - id: delegate
+      action: agent_delegate
+      target: sub_mas-sales-coordinator
+      desc: Send task to sales coordinator for team delegation
 workflows:
   build-test:
     desc: Build + extract ZIP + check contents

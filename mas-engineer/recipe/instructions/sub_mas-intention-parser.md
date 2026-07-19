@@ -11,6 +11,41 @@ Analyzes user descriptions and creates from them:
 ║     .task_workflows.CREATE                 ║
 ╚══════════════════════════════════════════════╝
 
+## Workflow Selection (CRITICAL — read first)
+
+Two workflows are available for team/multi-role requests. Check the description for keywords:
+
+**AUTO-SPLIT (default)** — Recommended for users who want a ready-to-use team
+- Keyword: `(auto)` or NO keyword
+- Behavior: creates 1 monolithic agent, then auto-splits into orchestrator + specialized sub-agents
+- Best for: clear requirements, user trusts the AI, wants instant productivity
+- Example: "I need a marketing team" or "build a sales team (auto)"
+
+**INTERACTIVE (manual/shell)** — For users who want to define roles themselves
+- Keywords: `(interactive)`, `(manual)`, `(let me define)`, `(no-split)`, `(shell)`
+- Behavior: delegates to sub_mas-generic-init, creates 1 coordinator + N generic agents
+- Best for: exploration, learning, unclear requirements, full control
+- Example: "I need a marketing team (interactive)" or "build a sales team (manual)"
+
+**Default behavior:** If NO keyword is detected, AUTO-SPLIT is used.
+**Auto-hint:** If no keyword is detected AND description mentions team/multi-role/multi-agent,
+              show the workflow hint (see "Auto-Hint" section below) BEFORE R01 confirmation.
+
+## Auto-Hint (when no keyword + team-like description)
+
+When a team request is detected without a keyword, display this hint in the R01 plan:
+
+```
+💡 Available workflows for team creation:
+   • AUTO-SPLIT (default) — ready-to-use team, auto-split into orchestrator + N specialists
+   • INTERACTIVE — team shell, N generic agents, you define roles through conversation
+
+   Add keyword to description to switch:
+   "build a marketing team (interactive)"   → interactive shell
+   "build a marketing team (auto)"          → explicit auto-split
+   "build a marketing team"                 → auto-split (default)
+```
+
 ## Agent Types
 - sub: Sub-agent (sub_mas-{name}), delegate-capable, ~40 lines
 - full: Full agent ({name}.yaml), own prompt_1, autonomous
@@ -52,6 +87,13 @@ Analyzes user descriptions and creates from them:
 
 **Trigger:** Description contains team/multi-agent language OR 3+ distinct roles/tasks.
 
+**Step 0: Detect workflow keyword (BEFORE multi-role check)**
+- Scan description for keywords: (auto), (interactive), (manual), (let me define), (no-split), (shell)
+- If `(auto)` found: route = auto-split
+- If any of (interactive)/(manual)/(let me define)/(no-split)/(shell) found: route = interactive (generic-init)
+- If NO keyword found: route = auto-split (default)
+- If route = interactive: SKIP all NN-finding/split steps, delegate to sub_mas-generic-init instead
+
 **Detection Heuristic:**
 1. Count role-indicators in description:
    - "and", "also", "additionally", "plus", "as well as"
@@ -63,6 +105,12 @@ Analyzes user descriptions and creates from them:
    - **Flag as multi-role candidate**
 
 **Action when flagged:**
+0. **CHECK ROUTE** (from Step 0):
+   - If route = interactive: SKIP all NN/split steps, DELEGATE to sub_mas-generic-init instead
+     - Task: `create_team_shell, domain={domain}, agent_count={role_count}, description={description}`
+     - Wait for generic-init result
+     - Report final team to user
+   - If route = auto-split: continue with steps 1-6 below
 1. ADD finding to `.state/pipeline/findings.yaml`:
    ```yaml
    findings:
