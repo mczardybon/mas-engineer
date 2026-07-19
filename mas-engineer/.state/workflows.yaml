@@ -847,6 +847,41 @@ agents:
     task: 'v1.0.0 | MAS-intern: Translate between German and English user messages.
       May NOT modify any files....'
     desc: Automatic generates aus Template-Generator
+  marketing-director:
+    tier: balanced
+    token_budget: 20000
+    task_workflows:
+      ORCHESTRATE: wf_marketing_orchestrate
+      RESEARCH: wf_marketing_research
+      CONTENT: wf_marketing_content
+      CAMPAIGNS: wf_marketing_campaigns
+      ROI: wf_marketing_roi
+      EMAIL: wf_marketing_email
+  marketing-researcher:
+    name: sub_mas-marketing-researcher
+    type: sub
+    task: Research market trends, analyze competitors, gather industry insights
+    desc: Market research & competitor analysis sub-agent
+  marketing-content:
+    name: sub_mas-marketing-content
+    type: sub
+    task: Create social media content, blog posts, copywriting and brand messaging
+    desc: Content creation sub-agent
+  marketing-campaigns:
+    name: sub_mas-marketing-campaigns
+    type: sub
+    task: Track campaign performance across channels and measure KPIs
+    desc: Campaign performance tracker sub-agent
+  marketing-roi:
+    name: sub_mas-marketing-roi
+    type: sub
+    task: Analyze ROI, generate reports and marketing analytics dashboards
+    desc: ROI analyst & reporting sub-agent
+  marketing-email:
+    name: sub_mas-marketing-email
+    type: sub
+    task: Manage email campaigns, customer engagement, newsletters and subscriber communications
+    desc: Email campaign manager sub-agent
 task_workflows:
   wf_fw_discover:
     desc: Dynamically discover framework structure
@@ -2785,6 +2820,53 @@ task_workflows:
       action: shell
       cmd: echo 'Recherche completed — resultse follow'
       timeout: 5
+  wf_marketing_orchestrate:
+    desc: Marketing orchestrator — delegates to specialized sub-agents
+    steps:
+    - id: analyze
+      action: shell
+      cmd: 'echo ''ANALYZE: matching task to sub-agents'''
+    - id: delegate
+      action: delegate
+      cmd: 'Delegate to matched sub-agents per delegation map'
+      depends_on:
+      - analyze
+    - id: synthesize
+      action: shell
+      cmd: 'echo ''SYNTHESIZE: combining sub-agent results'''
+      depends_on:
+      - delegate
+  wf_marketing_research:
+    desc: Market research — trends, competitors, insights
+    steps:
+    - id: research
+      action: shell
+      cmd: 'echo ''RESEARCH: gathering market intelligence'''
+  wf_marketing_content:
+    desc: Content creation — social media, blog, copywriting
+    steps:
+    - id: create
+      action: shell
+      cmd: 'echo ''CONTENT: creating content assets'''
+  wf_marketing_campaigns:
+    desc: Campaign tracking — performance metrics across channels
+    steps:
+    - id: track
+      action: shell
+      cmd: 'echo ''CAMPAIGNS: tracking performance metrics'''
+  wf_marketing_roi:
+    desc: ROI analysis — reporting and analytics
+    steps:
+    - id: analyze
+      action: shell
+      cmd: 'echo ''ROI: analyzing returns and generating reports'''
+  wf_marketing_email:
+    desc: Email campaigns — customer engagement and newsletters
+    steps:
+    - id: manage
+      action: shell
+      cmd: 'echo ''EMAIL: managing email campaigns'''
+
 workflows:
   build-test:
     desc: Build + extract ZIP + check contents
