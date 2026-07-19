@@ -16,15 +16,54 @@ echo "📦 Step 1/7: Check dependencies..."
 command -v node >/dev/null 2>&1 || { echo "❌ node missing"; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "❌ python3 missing"; exit 1; }
 command -v npm >/dev/null 2>&1 || { echo "❌ npm missing"; exit 1; }
-cd "$MAS_WORKSPACE/.mas/mcp"
-[ -d node_modules ] || npm install --silent 2>/dev/null
-echo "   ✅ Dependencies OK"
+echo "   ✅ CLI tools OK (node=$(node --version), python3=$(python3 --version | awk '{print $2}'), npm=$(npm --version))"
 
 # ─── 2. State directories ───
 echo "📁 Step 2/7: Create state directories..."
 mkdir -p "$MAS_WORKSPACE/.state/dispatch"
 mkdir -p "$MAS_WORKSPACE/.state/checkpoints"
 echo "   ✅ Directories OK"
+
+# ─── 2.5. Install Goose recipes (CRITICAL: without this, no recipe can be invoked) ───
+echo "📜 Step 2.5/7: Install Goose recipes..."
+GOOSE_RECIPES_DIR="${HOME}/.config/goose/recipes"
+mkdir -p "$GOOSE_RECIPES_DIR/sub"
+cp "$MAS_WORKSPACE"/recipe/*.yaml "$GOOSE_RECIPES_DIR/" 2>/dev/null || true
+cp "$MAS_WORKSPACE"/recipe/sub/*.yaml "$GOOSE_RECIPES_DIR/sub/" 2>/dev/null || true
+ROOT_COUNT=$(ls "$GOOSE_RECIPES_DIR"/*.yaml 2>/dev/null | wc -l)
+SUB_COUNT=$(ls "$GOOSE_RECIPES_DIR/sub/"*.yaml 2>/dev/null | wc -l)
+echo "   ✅ Recipes installed: $ROOT_COUNT root + $SUB_COUNT sub-recipes → $GOOSE_RECIPES_DIR"
+
+# Also install .goosehints and .mas-mode to goose config dir
+[ -f "$MAS_WORKSPACE/.goosehints" ] && cp "$MAS_WORKSPACE/.goosehints" "${HOME}/.config/goose/.goosehints" 2>/dev/null && echo "   ✅ .goosehints installed"
+[ -f "$MAS_WORKSPACE/.mas-mode" ] && cp "$MAS_WORKSPACE/.mas-mode" "${HOME}/.config/goose/.mas-mode" 2>/dev/null && echo "   ✅ .mas-mode installed"
+
+# ─── 2.6. Configure Goose provider (if API key is in env) ───
+echo "⚙️  Step 2.6/7: Configure Goose provider..."
+GOOSE_CONFIG="${HOME}/.config/goose/config.yaml"
+mkdir -p "$(dirname "$GOOSE_CONFIG")"
+if [ -n "$DEEPSEEK_API_KEY" ] || [ -n "$OPENAI_API_KEY" ]; then
+    EFFECTIVE_KEY="${DEEPSEEK_API_KEY:-$OPENAI_API_KEY}"
+    PROVIDER="${GOOSE_PROVIDER:-openai}"
+    MODEL="${GOOSE_MODEL:-deepseek-chat}"
+    HOST="${OPENAI_HOST:-https://api.deepseek.com}"
+    cat > "$GOOSE_CONFIG" <<EOF
+GOOSE_PROVIDER: $PROVIDER
+GOOSE_MODEL: $MODEL
+OPENAI_HOST: $HOST
+OPENAI_API_KEY: $EFFECTIVE_KEY
+extensions:
+  developer:
+    enabled: true
+    name: developer
+    type: builtin
+EOF
+    echo "   ✅ Goose config: $PROVIDER / $MODEL"
+    echo "   📡 Host: $HOST"
+else
+    echo "   ⚠️  No API key in env (DEEPSEEK_API_KEY / OPENAI_API_KEY)"
+    echo "   💡 Set one before running recipes: export DEEPSEEK_API_KEY=sk-..."
+fi
 
 # ─── 3. Start dashboard MCP server (stdio-based) ───
 echo "🖥️  Step 3/7: Start dashboard MCP server (stdio)..."
