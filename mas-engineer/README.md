@@ -115,6 +115,7 @@ dev-mas-engineer  (root orchestrator)
 - [docs/WORKFLOWS.md](docs/WORKFLOWS.md) - Team creation workflows (AUTO-SPLIT vs INTERACTIVE)
 - [docs/HOWTO-CREATE-AGENT.md](docs/HOWTO-CREATE-AGENT.md) - Create a single agent with intention-parser
 - [docs/HOWTO-IM-PIPELINE.md](docs/HOWTO-IM-PIPELINE.md) - Run the 7-stage improvement pipeline
+- [docs/HOWTO-TEAM-STANDALONE.md](docs/HOWTO-TEAM-STANDALONE.md) - Are created teams standalone-runnable?
 - [docs/DEMO-RESEARCH-TEAM.md](docs/DEMO-RESEARCH-TEAM.md) - Run the research-team demo
 - [docs/governance.md](docs/governance.md) - R-rules and decision-making
 - [docs/manifest.md](docs/manifest.md) - What MAS-Engineer is
