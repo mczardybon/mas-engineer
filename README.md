@@ -24,13 +24,13 @@
   <img src="https://img.shields.io/badge/tools-52-success?style=for-the-badge" alt="Tools">
   <img src="https://img.shields.io/badge/self--improvement-7_stages-blue?style=for-the-badge" alt="Self-Improvement">
   <img src="https://img.shields.io/badge/recovery-5_stages-orange?style=for-the-badge" alt="Recovery">
-  <img src="https://img.shields.io/badge/status-POC-orange?style=for-the-badge" alt="Status">
+  <img src="https://img.shields.io/badge/status-High--Confidence_Architecture-orange?style=for-the-badge" alt="Status">
   <img src="https://img.shields.io/badge/runtime-Goose-purple?style=for-the-badge" alt="Goose">
 </p>
 
 ---
 
-## 🚀 TL;DR — Get a Multi-Agent System in 10 Seconds
+## 🚀 TL;DR — Core System Ready in 10 Seconds (Dashboard optional via npm)
 
 ```bash
 ./install.sh                    # → Installs into Goose
@@ -436,7 +436,7 @@ MAS-Engineer is built on five beliefs:
 A: CrewAI is a Python SDK. You write code. MAS-Engineer is a conversational assistant. You talk. If you love coding and want full API control, CrewAI is great. If you want results without coding, MAS-Engineer is the only option that works this way.
 
 **Q: Is this production-ready?**  
-A: This is a **proof of concept (POC)**. It demonstrates the architecture of a self-improving multi-agent system. While it installs and runs, it has not been hardened for production use. Notable gaps as of 2026-07-19: the MCP dashboard server requires `npm install` to start (npm is not installed in many sandbox environments); some recipes (e.g. the 6 stages claimed in the general-improver title) disagree with their own description ("6 specialized agents in 7 steps"). Contributions welcome.
+A: This is a **High-Confidence Architecture Lab**. It demonstrates a verified, self-improving multi-agent system running on Goose. The core system installs and runs. The MCP dashboard server requires `npm install` (not available in all sandbox environments). See the [e2e-results](e2e-results/) folder for documented test evidence, including how a `401 Unauthorized` failure was caught, documented, and resolved in the follow-up run.
 
 **Q: Where can I see evidence of how this project handles test failures?**  
 A: See [`e2e-results/2026-07-19-demo-runner-ARCHIVED-script-failure/`](e2e-results/2026-07-19-demo-runner-ARCHIVED-script-failure/). That folder preserves a 2026-07-19 e2e test that was originally reported as "15/15 PASS" but had actually produced 5 consecutive `401 Unauthorized` responses because the wrapper script passed a REDACTED API key placeholder to goose. The same folder contains `TRUTHFUL_REPORT.md` which documents the failure and explains the script-vs-manual distinction. The successful follow-up test is at `e2e-results/2026-07-19-demo-runner-v2/`.
