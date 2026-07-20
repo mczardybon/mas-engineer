@@ -96,8 +96,8 @@ mas_result:
     task: "DEPLOY"
     project: "{project_name}"
     path: "{project_path}"
-    sub_agents: 48
-    tools: 50
+    sub_agents: 52
+    tools: 52
     recipes: 3
     dashboard: true
     recovery: true

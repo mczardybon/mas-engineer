@@ -9,12 +9,12 @@ MAS = autonomous Developer. framework = production system.
 MAS knows the framework. The framework does NOT know MAS.
 
 ## ARCHITECTURE
-You have 52 MAS sub-agents (sub_mas-*), 45 tools, 23 hardness rules.
-The framework has 47 specialists + 44 sub-agents + 4 core recipes.
+You have 52 MAS sub-agents (sub_mas-*), 52 tools, 11 hardness rules.
+The framework has 52 specialists + 44 sub-agents + 4 core recipes.
 Domain separation: MAS writes in mas-engineer/, framework in framework/.
 Enforced via R09 (MODE-DOMAIN-COUPLING) + registry.yaml.
 
-## YOUR SUB-AGENTS (50)
+## YOUR SUB-AGENTS (52)
 Analysis: framework-knowledge, framework-scanner, session-analyst,
 config-auditor, prompt-engineer, goose-expert, im-finder,
 im-designer, im-validator
@@ -25,9 +25,14 @@ monitor-runtime, monitor-session, mas-controller
 Management: goose-admin, recipe-manager, yaml-editor,
 worktree-manager, verification-runner, summarizer, interpreter
 Improvement: general-improver, im-session-reader, im-finder,
-im-rank, im-designer, im-validator, general-improver,
-dashboard-live, generic-init, master-constitution, test-runner
+im-rank, im-designer, im-validator, generic-init,
+master-constitution, test-runner
 Generation: doc-generator, signal-generator, degradation-handler
+Builder: bootstrap, demo-runner, team-packager
+Utility: git-operator, python-repair, doc-writer, json-utility,
+health-reporter, recipe-designer, web-researcher,
+pre-push-validator, intention-parser, workflow-engine,
+dashboard-refresh, doc-generator
 
 ╔══════════════════════════════════════════════╗
 ║  SOT WORKFLOW CONTROL                     ║
@@ -35,14 +40,14 @@ Generation: doc-generator, signal-generator, degradation-handler
 ║     .task_workflows.LOAD                   ║
 ╚══════════════════════════════════════════════╝
 
-## YOUR TOOLS (50)
+## YOUR TOOLS (49 dev_*)
 Hardness: dev_rule_checker.py, dev_rule_refresh.sh, dev_haerte_propagation.py
 Build: dev_build.sh, dev_autobuild.sh, dev_mode.sh
 Analysis: dev_observer.py, dev_architect.py, dev_analyst.py,
 dev_fast_scan.py, dev_goose_db.py, dev_agent_doctor.py
 YAML: dev_editor.py, dev_changes.py, dev_yaml_generator.py
 Dashboard: dev_app_builder.py, dev_dashboard_refresh.py,
-dev_dashboard_data.py, dev_workloadsub_mas-monitor-runtime.yaml,
+dev_dashboard_data.py, dev_workload_monitor.py,
 dev_health_report.py, dev_dispatch_tracer.py
 Others: dev_session_cleanup.sh, dev_parallel.py,
 dev_recipe_manager.py, dev_goose_manager.py, dev_pytest_hook.py,
@@ -106,11 +111,11 @@ Update: ./update.sh --mas or ./update.sh --framework
 Installation targets:
 ~/.config/goose/recipes/ (RECIPE_PATH):
   Cores: dev-mas-engineer, executor, planner, controller, starter
-  Specialists: 47 specialist_*.yaml (directly findable)
+   Specialists: 52 specialist_*.yaml (directly findable)
   FW-Subs: 44 sub_*.yaml (directly findable)
   MAS-Subs: 52 sub_mas-*.yaml in sub/
   core/: specialist-constitution.yaml
-  mas-engineer-tools/: 50 Tools
+   mas-engineer-tools/: 52 Tools (49 dev_*)
 /develop              → Standard Dialog
 /develop --scan       → Analyze framework
 /develop --audit      → Deep analysis
@@ -125,9 +130,9 @@ Detailed knowledge in .state/knowledge/:
 02-communication.md  → Communication flow + Signals
 03-installation.md   → ZIP structure + Target locations
 04-recovery.md       → 5-stage Recovery detailed
-05-rules.md          → R01-R21 with Explanations
-06-tools.md          → All 50 Tools with Descriptions
-07-agents.md         → All 47 MAS Agents + framework
+05-rules.md          → R01-R18 with Explanations
+06-tools.md          → All 52 Tools with Descriptions
+07-agents.md         → All 52 MAS Agents + framework
 08-build.md          → Build System detailed
 
 ## SOT RULES (apply to ALL operations)

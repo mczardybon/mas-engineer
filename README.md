@@ -278,9 +278,9 @@ flowchart TB
     end
     subgraph ENGINEER["MAS-Engineer"]
         E1["🧠 Natural Language Interface"]
-        E2["52 Sub-Agents · 45 tools (43 Python, 2 MCP)"]
+        E2["52 Sub-Agents · 52 tools (43 Python, 6 Shell, 3 other)"]
         E3["7-Stage Self-Improvement · 5-Stage Recovery"]
-        E4["23 Active Rules · SOT Registry"]
+        E4["11 Hard Rules · SOT Registry"]
     end
     subgraph SYSTEM["Your Multi-Agent System"]
         S1["Your agents · Your rules · Your workflows"]
@@ -471,7 +471,7 @@ mindmap
       Analysis
       Utility
       Management
-    45 total (43 Python, 2 MCP)
+     52 total (43 Python, 6 Shell, 3 other)
       Rule Enforcement
       YAML Operations
       Build & Deploy
@@ -490,7 +490,7 @@ mindmap
       Timeline Search
       Defib Emergency
     Governance
-      23 Active Rules
+      11 Hard Rules (R01-R18)
       11-Article Constitution
       Mode System
       Domain Separation
