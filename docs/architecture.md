@@ -1,6 +1,6 @@
 # Architecture
 
-MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 52 specialized sub-agents, 52 tools (43 Python, 6 Shell, 3 other), and a workflow engine driven by a Single Source of Truth (SOT).
+MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 52 specialized sub-agents, 52 tools (45 Python, 6 Shell, 1 YAML), and a workflow engine driven by a Single Source of Truth (SOT).
 
 ```mermaid
 flowchart TB
@@ -14,7 +14,7 @@ flowchart TB
     subgraph ENGINEER["MAS-Engineer"]
         E1["dev-mas-engineer.yaml\nNatural Language Interface"]
         E2["52 Sub-Agents\n7 categories"]
-        E3["52 Tools\n43 Python + 6 Shell + 3 other"]
+        E3["52 Tools\n45 Python + 6 Shell + 1 YAML"]
         E4[".state/\nSOT · Rules · Knowledge"]
     end
     subgraph USER["User Framework"]
@@ -199,7 +199,7 @@ framework  → Framework mode: work on user's system
 
 ## Rules System (R01-R23)
 
-All agents follow the **Constitution** (11 articles in `sub_mas-master-constitution.yaml`). **10 hard rules** are enforced by `dev_rule_checker.py` at runtime:
+All agents follow the **Constitution** (11 articles in `sub_mas-master-constitution.yaml`). **11 hard rules** are enforced by `dev_rule_checker.py` at runtime:
 
 ```mermaid
 flowchart TD

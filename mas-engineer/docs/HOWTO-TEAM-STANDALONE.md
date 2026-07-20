@@ -119,7 +119,7 @@ The cleanup commit (`b9ceac4`) removed test-team artifacts: the
 entries and `sub_recipes` entries. These files were test outputs from
 the E2E test runs. They were not framework components.
 
-The MAS-Engineer framework (root orchestrator, all 30 framework
+The MAS-Engineer framework (root orchestrator, all 52 framework
 sub-agents, intention-parser, generic-init, improver) was kept. The
 team-creation workflow itself (intention-parser detects
 `(interactive)` vs `(auto)`, generic-init handles

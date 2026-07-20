@@ -138,7 +138,7 @@ The packaged team has everything it needs to run. Specifically:
   on MAS-Engineer.
 - The SOT is team-local. The team does NOT need MAS-Engineer's SOT.
 - The knowledge base has R01, R09, R10 (the minimum rules). The
-  team does NOT need MAS-Engineer's 23 rules.
+  team does NOT need MAS-Engineer's 11 hard rules.
 - The constitution is team-local. The team does NOT need the full
   MAS-Engineer constitution.
 
@@ -167,10 +167,10 @@ result is a lightweight team package.
 
 | Aspect | bootstrap (DEPLOY) | team-packager (PACKAGE_TEAM) |
 |--------|--------------------|------------------------------|
-| Agents copied | 48 | N (team only) |
-| Tools copied | 50 | 0 (or symlink) |
+| Agents copied | 52 | N (team only) |
+| Tools copied | 52 | 0 (or symlink) |
 | Knowledge files | 9 | 3 (minimum) |
-| Rules | R01-R23 | R01, R09, R10 |
+| Rules | R01-R18 | R01, R09, R10 |
 | Dashboard | yes | no |
 | Use case | deploy MAS-Engineer | distribute team |
 | Install | full | single team |

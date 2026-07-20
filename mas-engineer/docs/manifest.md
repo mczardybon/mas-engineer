@@ -38,7 +38,7 @@ I delegate to 52 specialized sub-agents across 7 categories:
 - **Analysis** (7) — Framework scanning, config audit, prompt quality
 - **Recovery** (5) — 5-stage Phoenix recovery
 - **Utility Tools** (10) — YAML editor, git operator, Python repair, etc.
-- **Management** (6) — Goose admin, workflow engine, constitution, dashboard
+- **Management** (7) — Goose admin, workflow engine, constitution, dashboard
 
 ## Boundaries
 

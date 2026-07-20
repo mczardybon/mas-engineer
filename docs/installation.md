@@ -39,7 +39,7 @@ The `install.sh` script:
 3. **Copies** files to `~/.config/goose/`:
    - Main recipe → `~/.config/goose/recipes/dev-mas-engineer.yaml`
    - 52 sub-agents → `~/.config/goose/recipes/sub/`
-   - 52 tools (43 Python, 6 Shell, 3 other) → `~/.config/goose/recipes/mas-engineer-tools/`
+   - 52 tools (45 Python, 6 Shell, 1 YAML) → `~/.config/goose/recipes/mas-engineer-tools/`
    - Docs → `~/.config/goose/docs/mas-engineer/`
    - Knowledge + SOT → `~/.config/goose/.state/`
 4. **Sets** `.mas-mode = framework`
@@ -52,7 +52,7 @@ flowchart LR
     subgraph SOURCE["Distribution (mas-engineer/)"]
         S1["recipe/\ndev-mas-engineer.yaml"]
         S2["recipe/sub/\nsub_mas-*.yaml (52)"]
-        S3["tools/\ndev_*.py/.sh (49: 43 .py + 6 .sh)"]
+        S3["tools/\ndev_*.py/.sh (52: 45 .py + 6 .sh + 1 YAML)"]
         S4[".state/workflows.yaml\nknowledge/\n rules/"]
         S5["docs/\n*.md"]
     end

@@ -2,7 +2,7 @@
 
 **Version:** v1.0.0  
 **Sub-Agents:** 52  
-**Tools:** 52 total (43 Python, 6 Shell, 3 other)
+**Tools:** 52 total (45 Python, 6 Shell, 1 YAML)
 
 ---
 

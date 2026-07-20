@@ -203,7 +203,7 @@ The same result. **Done through conversation.**
   <table>
     <tr>
       <td align="center"><h2>🛡️</h2><b>52</b><br>Ready-to-Use<br>Sub-Agents</td>
-      <td align="center"><h2>🔧</h2><b>52</b><br>Tools (43 Python,<br>6 Shell, 3 other)<br><sub>(npm install needed)</sub></td>
+      <td align="center"><h2>🔧</h2><b>52</b><br>Tools (45 Python,<br>6 Shell, 1 YAML)<br><sub>(npm install needed)</sub></td>
       <td align="center"><h2>🔄</h2><b>7</b><br>Stage Self-<br>Improvement<br><sub>(E2E-tested)</sub></td>
       <td align="center"><h2>🏥</h2><b>5</b><br>Stage<br>Recovery<br><sub>(designed)</sub></td>
       <td align="center"><h2>📊</h2><b>Free</b><br>Dashboard<br>Per Project</td>
@@ -260,7 +260,7 @@ flowchart TD
     ENGINEER --> AN["Analysis\n7 agents"]
     ENGINEER --> MG["Management\n7 agents"]
     ENGINEER --> POC["Internal POC Tools\n3 agents"]
-    FB & IP & MON & REC & UT & AN & MG & POC --> TOOLS["52 total (43 Python, 6 Shell, 3 other)"]
+    FB & IP & MON & REC & UT & AN & MG & POC --> TOOLS["52 total (45 Python, 6 Shell, 1 YAML)"]
 ```
 
 ---
@@ -278,7 +278,7 @@ flowchart TB
     end
     subgraph ENGINEER["MAS-Engineer"]
         E1["🧠 Natural Language Interface"]
-        E2["52 Sub-Agents · 52 tools (43 Python, 6 Shell, 3 other)"]
+        E2["52 Sub-Agents · 52 tools (45 Python, 6 Shell, 1 YAML)"]
         E3["7-Stage Self-Improvement · 5-Stage Recovery"]
         E4["11 Hard Rules · SOT Registry"]
     end
@@ -313,7 +313,7 @@ stateDiagram-v2
     state MAS {
         M1 : Analyzes own sessions
         M2 : Optimizes own agents
-        M3 : 23 rules enforced
+        M3 : 11 rules enforced
     }
     state FW {
         F1 : Scans user framework
@@ -378,7 +378,7 @@ flowchart LR
 | 🔄 | **7-Stage Self-Improvement** | IM pipeline: Read sessions → Detect issues (53 documented patterns) → Rank → Design patches → Apply → Validate → Push improvements |
 | 🏥 | **5-Stage Phoenix Recovery** | Immune (prevention) → Checkpoint (snapshots) → Safezone (isolated fork) → Timeline (best-point search) → Defib (emergency minimal config) |
 | 📊 | **Per-Project Dashboard** | MCP app with health status, agent list, change history, performance metrics. Refreshable via Goose scheduler. Free. |
-| 📜 | **Constitution + Rules** | 11 articles governing ALL agents + 23 enforced rules with hardness levels (R01-R23) |
+| 📜 | **Constitution + Rules** | 11 articles governing ALL agents + 11 hard rules (R01-R18) |
 | 🚀 | **Bootstrap Deployment** | `sub_mas-bootstrap` (DEPLOY) and `sub_mas-team-packager` (PACKAGE_TEAM) recipes exist to bundle MAS-Engineer or a single team for distribution. **Recipe-defined, E2E test still pending** — see [HOWTO-PACKAGE-TEAM.md](mas-engineer/docs/HOWTO-PACKAGE-TEAM.md) for the design. |
 | 🔍 | **Web Research** | Before creating or improving, searches goose-docs.ai, GitHub, and PyPI for current best practices |
 | 🤝 | **R18 Delegation** | If a sub-agent can handle the task, the Engineer MUST delegate. No re-inventing wheels. |
@@ -471,7 +471,7 @@ mindmap
       Analysis
       Utility
       Management
-     52 total (43 Python, 6 Shell, 3 other)
+     52 total (45 Python, 6 Shell, 1 YAML)
       Rule Enforcement
       YAML Operations
       Build & Deploy
