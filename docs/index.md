@@ -57,6 +57,7 @@ flowchart TD
     ENGINEER --> UT["Utility\n10 agents"]
     ENGINEER --> AN["Analysis\n7 agents"]
     ENGINEER --> MG["Management\n7 agents"]
+    ENGINEER --> POC["Internal POC Tools\n3 agents"]
     FB & IP & MON & REC & UT & AN & MG & POC --> TOOLS["52 Tools"]
 ```
 

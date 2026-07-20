@@ -577,7 +577,7 @@ def resolve_components(comp_str):
 
 
 def copy_rules_full(project_path, dry_run=False):
-    """copyrt all MAS-Rule-files (R01-R23 + Haerte-Leveln + Responsibility-Matrix)."""
+    """copyrt all MAS-Rule-files (R01-R18 + Haerte-Leveln + Responsibility-Matrix)."""
     if dry_run:
         info("[DRY-RUN] .state/rules/: 6 files (rulen, hard_rules, rulen_2/4/5_extrem, responsibility_matrix)")
         return

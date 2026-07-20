@@ -1,8 +1,8 @@
 # MAS-Engineer Test Report — 100% Live LLM Execution
 
 **Date**: 2026-07-18
-**Test method**: Real LLM runs of all 50 sub-agent recipes via DeepSeek through the openai-provider
-**Final result**: **50/50 OK, 0 FAIL, 0 TIMEOUT**
+**Test method**: Real LLM runs of all 52 sub-agent recipes (50 tested, 2 excluded as test-only) via DeepSeek through the openai-provider
+**Final result**: **50/52 tested (96.2% coverage)**
 
 ---
 
@@ -25,7 +25,7 @@ Environment variables:
 
 ---
 
-## Test Run 1: 50/50 with 90s cap
+## Test Run 1: 50/52 tested with 90s cap
 
 **Result**: 41 OK + 3 WARN + 6 TIMEOUT, 0 FAIL
 
@@ -53,7 +53,7 @@ Recipe settings have `timeout: 600`. With a 90s external cap they were artificia
 ## FINAL Statistics
 
 ```
-Run 1: 50 recipes @ 90s cap
+Run 1: 50 tested recipes @ 90s cap
   OK:      41 (82%)
   WARN:     3 (6%)  - rc=0, no success-marker
   TIMEOUT:  6 (12%) - 90s cap too small
@@ -64,10 +64,10 @@ Run 2: 6 TIMEOUT recipes @ 600s cap (no external timeout)
   FAIL:     0
   TIMEOUT:  0
 
-TOTAL: 50/50 OK (100%) - 0 FAIL
+TOTAL: 50/52 tested (96.2% coverage) - 0 FAIL
 ```
 
-**Combined pass rate: 50/50 = 100%**
+**Combined pass rate: 50/52 tested = 96.2% coverage**
 
 ---
 
@@ -163,7 +163,7 @@ Run 2: 6 recipes × ~20 turns × ~3K tokens ≈ 0.36M tokens ≈ $0.13
 ## What works RIGHT NOW (genuinely validated)
 
 - Goose CLI with DeepSeek via openai-provider
-- 50/50 sub-agent recipes (100% pass)
+- 50/52 sub-agent recipes (96.2% coverage)
 - Real LLM execution with tool calls
 - Pipeline outputs in .state/
 - Knowledge base generation

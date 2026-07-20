@@ -1,5 +1,8 @@
 # Hardening Rules R01-R18
 
+> **Note:** 11 hard rules are active (R01, R02, R04, R05, R06, R07, R08, R09, R10, R11, R18).
+> R03 and R12–R17 are **reserved** (not in active use).
+
 ## EXTREME STRONG (⛔⛔⛔⛔⛔) — BLOCKING
 
 ### R01 CONFIRMATION-REQUIREMENT

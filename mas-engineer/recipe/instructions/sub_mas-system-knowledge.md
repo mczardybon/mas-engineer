@@ -54,7 +54,7 @@ dev_recipe_manager.py, dev_goose_manager.py, dev_pytest_hook.py,
 dev_audit_deps.py, dev_registry_merge.py, dev_update_schedule.py,
 dev_workspace.py, dev_pattern_apply.py, dev_auto_project.py
 
-## HARD RULES (R01-R21)
+## HARD RULES (R01-R18)
 EXTREME-STRONG (blocking):
 R01: Confirmation before write/edit — Show plan + WAIT for OK
 R02: Inventory before new build — exists already? Ask user
@@ -76,7 +76,7 @@ Framework Mode (work_on == "framework") — DEFAULT:
   Scanning, analysis, improvement, patching.
   → cat .mas-mode → "framework"
 MAS Mode (work_on == "mas"): Self-improvement.
-  All R01-R21 active.
+  All R01-R18 active.
   → cat .mas-mode → "mas"
 Generic Mode (work_on == "<project>"): New multi-agent system.
   → generic-init creates scaffold + 1 base agent.

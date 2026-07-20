@@ -115,7 +115,7 @@ Finds the best checkpoint automatically:
 ## Stage 5: Defib — Emergency Revival
 
 **Agent:** `sub_mas-recovery-defib`  
-**Timeout:** 120s (minimal config)  
+**Timeout:** 600s (YAML setting)  
 **Action:** When NOTHING works
 
 ```mermaid
@@ -150,7 +150,7 @@ sub_recipes:
   - name: sub_mas-recovery-immune
   - name: sub_mas-recovery-timeline
 settings:
-  timeout: 30
+  timeout: 600
   max_steps: 10
 ```
 

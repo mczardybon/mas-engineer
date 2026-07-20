@@ -197,35 +197,28 @@ framework  → Framework mode: work on user's system
 
 ---
 
-## Rules System (R01-R23)
+## Rules System (R01-R18)
 
 All agents follow the **Constitution** (11 articles in `sub_mas-master-constitution.yaml`). **11 hard rules** are enforced by `dev_rule_checker.py` at runtime:
 
 ```mermaid
 flowchart TD
-    ACTION["Agent attempts\nwrite/edit/shell action"] --> CHECKER["dev_rule_checker.py\nintercepts"]
-    CHECKER --> R09{"R09\nDomain\nSeparation?"}
-    R09 -->|violation| BLOCKED["⛔ BLOCKED\nDomain conflict"]
+    ACTION["Agent attempts\nwrite/edit/shell action"] --> CHECKER["dev_rule_checker.py\nintercepts 11 rules"]
+    CHECKER --> R01["🔴 R01: Confirmation"]
+    CHECKER --> R02["🔴 R02: Inventory"]
+    CHECKER --> R04["🔴 R04: Gen-Improver protect"]
+    CHECKER --> R05["🔴 R05: Auto-Commit"]
+    CHECKER --> R06["🟠 R06: Analysis Only"]
+    CHECKER --> R07["🟡 R07: CP_DONE signal"]
+    CHECKER --> R08["🟡 R08: Token ≤50K"]
+    CHECKER --> R09["🟠 R09: Domain Separation"]
+    CHECKER --> R10["🔴 R10: Coronashield"]
+    CHECKER --> R11["🔴 R11: Rate Limit"]
+    CHECKER --> R18["🟠 R18: Delegation Duty"]
 
-    CHECKER --> R01{"R01\nConfirmation\nwithin 5 min?"}
-    R01 -->|no| BLOCKED1["⛔ BLOCKED\nNo confirmation"]
-
-    CHECKER --> R10{"R10\nCoronashield\nYAML valid?"}
-    R10 -->|invalid| BLOCKED2["⛔ BLOCKED\nInvalid YAML"]
-
-    CHECKER --> R18{"R18\nSub-agent\nexists?"}
-    R18 -->|yes| BLOCKED3["⛔ BLOCKED\nMust delegate"]
-
-    CHECKER --> R05{"R05\nCheckpoint\nbefore change?"}
-    R05 -->|no| BLOCKED4["⛔ BLOCKED\nNo checkpoint"]
-
-    CHECKER -->|all pass| APPROVED["✅ Action approved"]
-
+    R01 & R02 & R04 & R05 & R06 & R07 & R08 & R09 & R10 & R11 & R18 -->|all pass| APPROVED["✅ Action approved"]
+    R01 & R02 & R04 & R05 & R06 & R07 & R08 & R09 & R10 & R11 & R18 -->|any fail| BLOCKED["⛔ BLOCKED"]
     BLOCKED --> USER[("User notified")]
-    BLOCKED1 --> USER
-    BLOCKED2 --> USER
-    BLOCKED3 --> USER
-    BLOCKED4 --> USER
 ```
 
 | Rule | Name | Hardness | Description |
@@ -235,6 +228,8 @@ flowchart TD
 | R04 | General-Improver | 🔴 Blocking | NEVER edit general-improver.yaml |
 | R05 | Auto-Commit | 🔴 Blocking | After change: git+checkpoint+changes.json |
 | R06 | Sub-Agent Analysis | 🟠 Strong | Sub-agent = only analyze, shell executes itself |
+| R07 | CP_DONE Signal | 🟡 Normal | CP_DONE sent after each checkpoint (via signal-generator) |
+| R08 | Token Budget | 🟡 Normal | General-Improver max 50K tokens; else ask user |
 | R09 | Domain Separation | 🟠 Strong | ONLY work in target_workspace |
 | R10 | Coronashield | 🔴 Blocking | Every YAML validated before storage |
 | R11 | SI Rate Limit | 🔴 Blocking | Max 1 general-improver per 6h |

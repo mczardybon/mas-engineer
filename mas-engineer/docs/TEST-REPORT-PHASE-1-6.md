@@ -13,8 +13,8 @@
 | `which goose` | OK | `/root/.local/bin/goose` |
 | `goose --version` | OK | v1.43.0 |
 | `goose --help` | OK | shows all commands |
-| `goose recipe list` (in sub/) | OK | 50 sub-agent recipes |
-| `goose run --recipe X --explain` | OK 50/50 | all recipes display metadata |
+| `goose recipe list` (in sub/) | OK | 52 sub-agent recipes (50 tested, 2 excluded) |
+| `goose run --recipe X --explain` | OK 50/52 | all recipes display metadata |
 | `goose run --recipe X --no-session` | WARN | starts session, calls DeepSeek API, gets 401 (dummy-key, expected) |
 | Provider config (manually created) | OK | `/root/.config/goose/config.yaml` + `custom_providers/deepseek.json` |
 | `goose doctor` | WARN | starts interactively (needs TTY) |
@@ -42,12 +42,12 @@
 
 ---
 
-## PHASE 3: 50 sub-agent recipes (YAML structurally validated)
+## PHASE 3: 50 sub-agent recipes (YAML structurally validated, 2 test-only excluded)
 
 | Metric | Value |
 |--------|-------|
-| Total recipes | 50 |
-| Structurally valid | 50/50 |
+| Total recipes | 52 (50 tested + 2 test-only) |
+| Structurally valid | 50/52 |
 | Version field | all v1.0.0 |
 | Provider | all deepseek |
 | Model | all deepseek-chat |
@@ -140,7 +140,7 @@
 **What works (genuinely tested)**:
 - goose CLI v1.43.0 + provider stack
 - MCP server.js (100% JSON-RPC spec)
-- 50 sub-agent recipes (structurally)
+- 50 sub-agent recipes (plus 2 test-only = 52 total)
 - 9 dashboard recipes
 - 6 template recipes
 - 42/43 dev_*.py tools

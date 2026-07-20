@@ -28,7 +28,7 @@ Tools are symlinks: project/tools → MAS tools installation.
      Option 2: "🧩 Component-wise — Choose yourself"
      IF Option 1 (Auto): SET components = "all"
      IF Option 2 (Component-wise):
-       ASK: "📋 Rules + Hardness levels (R01-R23)? [Y/n]"
+       ASK: "📋 Rules + Hardness levels (R01-R18)? [Y/n]"
        ASK: "📊 State tracking (changes/guardian/schedule/audit)? [Y/n]"
        ASK: "📚 Knowledge base (9 files)? [Y/n]"
        ASK: "📜 Constitution (11 articles)? [Y/n]"
@@ -75,7 +75,7 @@ Expected output:
   - ✅ .mas-mode (mode file with project name)
   - ✅ .mas/dashboards/ (dashboard data + MCP app)
   - ✅ Extended components per selection:
-    • rules:    Rules R01-R23 + hardness levels + responsibility matrix
+    • rules:    Rules R01-R18 + hardness levels + responsibility matrix
     • state:    changes.json + guardian.yaml + schedule.yaml + audit.log
     • knowledge: 9 knowledge files (architecture, tools, rules, ...)
     • constitution: 11 articles (sub_mas-master-constitution.yaml)
@@ -129,7 +129,7 @@ SHOW:
                 No agent copy needed — im-* read remotely
 
   ✅ Rules:    .state/rules/regeln.yaml (adapt to your project)
-                3 default rules (R01, R04, R09) — in auto mode: R01-R23 + hardness levels
+                3 default rules (R01, R04, R09) — in auto mode: R01-R18 + hardness levels
 
   📊 Checklist: BP-CHECKLIST.md (37 feature types)
                 Check each type when building

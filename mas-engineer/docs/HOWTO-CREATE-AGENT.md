@@ -23,7 +23,7 @@ Open a Goose session in the MAS-Engineer project and describe the agent in
 plain language.
 
 ```bash
-cd /tmp/mas-engineer/mas-engineer
+cd ~/mas-engineer/mas-engineer
 goose session
 ```
 

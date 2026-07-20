@@ -52,7 +52,7 @@
 |--------|-------|
 | **Rule Checker Script** | `tools/dev_rule_checker.py` |
 | **Status** | ✅ Available |
-| **Rules Supported** | R01–R19 (19 rules defined in checker) |
+| **Rules Supported** | R01–R18 (11 rules defined in checker) |
 | **Mode Check** | ✅ Framework mode compatible |
 | **Blocking Rules** | 0 (checked) |
 
@@ -168,7 +168,7 @@ All 51 sub-recipes pass YAML validation. No issues detected.
 - **Prompts folder added** with 5 ready-to-use MAS example prompts
 - **Research-team demo runner** with full dashboard support
 - **File count reduced** from 3,771 to 186 — cleaned out node_modules, build artifacts, and duplicates
-- **Rule checker confirmed working** — supports all 19 rules (R01–R19)
+- **Rule checker confirmed working** — supports all 11 rules (R01–R18)
 
 ---
 
@@ -182,7 +182,7 @@ All 51 sub-recipes pass YAML validation. No issues detected.
 - ✅ **10+ new commits** since last report — cleanup focused (node_modules removal, translation, SOT compliance)
 - ✅ **Uncommitted files reduced** from 6 → 4
 - ✅ **Dashboard shows 15 scored agents**, avg score 94.0 — no degradation
-- ✅ **Rule checker confirmed working** with 19 rules defined (R01–R19)
+- ✅ **Rule checker confirmed working** with 11 rules defined (R01–R18)
 - ⚠️ **changes.json not updated** with latest commits — consider logging new changes
 - ⚠️ **36 agents unscored** — limited dashboard data coverage
 - ⚠️ **Guardian inactive** since 2026-06-14 (35 days)

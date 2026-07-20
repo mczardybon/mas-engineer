@@ -152,7 +152,7 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
 - G3: mode-specific patches not gated
 
 **H — Constitution Reference** (2 types)
-- H1: missing R01-R24 reference
+- H1: missing R01-R18 reference
 - H2: wrong rule cited
 
 **I — Dispatch Optimizations** (3 types)

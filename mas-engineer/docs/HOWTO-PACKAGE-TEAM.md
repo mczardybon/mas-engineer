@@ -146,7 +146,7 @@ The packaged team has everything it needs to run. Specifically:
 
 The packaged team does NOT have:
 
-- All 23 MAS-Engineer rules. Only R01, R09, R10 are included.
+- All 11 MAS-Engineer hard rules. Only R01, R09, R10 are included.
 - The full 9-file knowledge base. Only 3 files are included.
 - The MAS-Engineer tools (health-reporter, pre-push-validator, etc.).
 - The MCP dashboard server.

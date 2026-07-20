@@ -32,7 +32,7 @@
 
 | Metric | Value |
 |--------|-------|
-| **Total Rules** | 9 |
+| **Total Rules** | 11 |
 | **Blocking Rules** | 6 |
 | **Non-Blocking Rules** | 3 |
 | **Rule Checker Script** | `tools/dev_rule_checker.py` |
@@ -134,7 +134,7 @@ All 50 sub-recipes pass YAML validation. No issues detected.
 - ✅ Git repository active on `master` with recent commits
 - ✅ 50/50 sub-agent YAML files valid (100%)
 - ✅ changes.json shows healthy progress with score of 100
-- ✅ 9 rules active (6 blocking, 3 advisory)
+- ✅ 11 hard rules active (R01-R18 with gaps: R03, R12-R17 reserved)
 - ⚠️ 6 uncommitted changes need attention
 - ⚠️ Health checker reports `checker_health` and `last_si_run` as failing
 

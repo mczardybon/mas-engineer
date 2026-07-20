@@ -23,7 +23,7 @@ demo. It builds a complete 5-agent research framework at `/tmp/research-team`
 with a working dashboard.
 
 ```bash
-cd /tmp/mas-engineer/mas-engineer
+cd ~/mas-engineer/mas-engineer
 goose run --recipe recipe/sub/sub_mas-demo-runner.yaml --no-session
 ```
 
@@ -57,7 +57,7 @@ More prompts: [prompts/README.md](prompts/README.md)
 ## Use MAS-Engineer for your own work
 
 ```bash
-cd /tmp/mas-engineer/mas-engineer
+cd ~/mas-engineer/mas-engineer
 goose session
 ```
 
@@ -148,9 +148,7 @@ mas-engineer/
 ## Rules (always active)
 
 - **R01**: No changes without User confirmation
-- **R18**: Delegate to specialized sub-agents
-- **R20**: No direct write access — via Gatekeeper
-- **R21**: Every action is logged
+- **R18**: Delegate to specialized sub-agents (implies Gatekeeper for writes, full audit logging)
 - **R09**: Strict domain separation (MAS != Framework)
 
 All rules: `.state/workflows.yaml` -> `configs.mas-self`

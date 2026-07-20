@@ -1,6 +1,6 @@
 # Improvement Pipeline
 
-MAS-Engineer's self-improvement system is an **7-stage pipeline** orchestrated by `sub_mas-general-improver`. It analyzes the system's own sessions, detects optimization potential, designs patches, applies them, and validates the result.
+MAS-Engineer's self-improvement system is an **8-stage pipeline (S1-S8, with S0 Prerequisites)** orchestrated by `sub_mas-general-improver`. It analyzes the system's own sessions, detects optimization potential, designs patches, applies them, and validates the result.
 
 ---
 

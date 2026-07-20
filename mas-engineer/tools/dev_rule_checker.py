@@ -457,7 +457,7 @@ def format_output(resultse, action_type=""):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Rule check before actions")
-    parser.add_argument("--check", help="Rule-ID (R01-R19)")
+    parser.add_argument("--check", help="Rule-ID (R01-R18)")
     parser.add_argument("--file", default=None, help="Betroffene file (for R09)")
     parser.add_argument("--action", default="", help="Geplante action (z.B. 'edit file.yaml')")
     parser.add_argument("--mode", default="mas", help="Current mode")

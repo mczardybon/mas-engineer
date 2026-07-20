@@ -1,8 +1,8 @@
 # MAS-Engineer Test Report — Live LLM Execution (PHASE L1-L3)
 
 **Date**: 2026-07-18
-**Test method**: Real LLM runs of all 50 sub-agent recipes via DeepSeek through openai-provider
-**Duration**: ~30 minutes for 50 recipes
+**Test method**: Real LLM runs of all 52 sub-agent recipes (50 tested, 2 excluded as test-only) via DeepSeek through openai-provider
+**Duration**: ~30 minutes for 50 tested recipes
 **DeepSeek model**: deepseek-chat
 **GOOSE_PROVIDER**: openai (with `openai_host: https://api.deepseek.com`)
 
@@ -52,16 +52,16 @@ Environment variables:
 
 ---
 
-## L3: All 50 Sub-Agent Recipes OK
+## L3: All 50 Sub-Agent Recipes OK (2 test-only excluded)
 
-**Result**: 50/50 tested, 0 failures, 41 OK + 3 WARN + 6 TIMEOUT
+**Result**: 50/52 tested (96.2% coverage), 0 failures, 41 OK + 3 WARN + 6 TIMEOUT
 
 ```
 OK:       41 (82%)
 WARN:      3 (6%)  - rc=0 but no success-marker in log
 TIMEOUT:   6 (12%) - 90s timeout reached, agent was active
 FAIL:      0 (0%)
-TOTAL:    50
+TOTAL:    52 (50 tested + 2 test-only excluded)
 ```
 
 ### TIMEOUTS (all in 90s, agent was productive):
@@ -101,10 +101,10 @@ rc=0 but no explicit success-marker in the log. Probably normal flow without "Do
 
 ## Real LLM Token Costs
 
-50 recipes × ~14 turns × ~2K tokens/turn (input + output):
+50 tested recipes × ~14 turns × ~2K tokens/turn (input + output):
 - Estimated: ~1.4M tokens total
 - DeepSeek pricing: ~$0.14/M input, ~$0.28/M output
-- **Estimated cost: ~$0.50** for all 50 recipes
+- **Estimated cost: ~$0.50** for all 50 tested recipes
 
 ---
 

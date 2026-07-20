@@ -5,6 +5,8 @@ finding, ranking, designing, validating, and applying improvements to a
 codebase. This guide shows when to use it, how to trigger it, and what to
 expect at each stage.
 
+> **Note:** The pipeline has 7 core stages (FIND→RANK→DESIGN→IMPLEMENT→VALIDATE→SUMMARIZE→PUSH), plus STEP 0 (Prerequisites) and STEP 8 (Push).
+
 ## When to use
 
 Use the IM-Pipeline when you want to:
@@ -27,7 +29,7 @@ Open a Goose session and describe the improvement you want. The
 improvement-pipeline coordinator picks up the request.
 
 ```bash
-cd /tmp/mas-engineer/mas-engineer
+cd ~/mas-engineer/mas-engineer
 goose session
 ```
 

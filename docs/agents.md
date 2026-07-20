@@ -192,12 +192,12 @@ graph TD
 |--------|-------|
 | **Total sub-agents** | 52 |
 | **Agents that delegate (R18)** | ~15 |
-| **Agents that work themselves** | ~33 |
+| **Agents that work via direct execution** | ~37 |
 | **Mode-aware agents** | 11 (all others are internal-only) |
 | **MAS-internal only** | ~38 |
 
 | **Max observed delegation depth** | 4 levels |
-| **Timeouts range** | 30s (defib) to 600s (most agents) |
+| **Timeouts range** | 600s (defib) to 600s (most agents) |
 | **max_steps range** | 10 (defib) to 200 (workflow-engine) |
 
 ```mermaid

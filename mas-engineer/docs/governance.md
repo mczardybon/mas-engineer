@@ -82,7 +82,7 @@ All agents follow the Master Constitution (`sub_mas-master-constitution.yaml`):
 - Art.10: Evidence duty — document steps, results, quality
 - Art.11: Readability mandate — code follows conventions
 
-## Hard Rules (R01-R23)
+## Hard Rules (R01-R18)
 
 | Rule | Name | Hardness |
 |:----:|------|:--------:|
@@ -91,6 +91,8 @@ All agents follow the Master Constitution (`sub_mas-master-constitution.yaml`):
 | R04 | General-Improver protection | 🔴 Blocking |
 | R05 | Auto-commit | 🔴 Blocking |
 | R06 | Sub-agent analysis only | 🟠 Strong |
+| R07 | CP_DONE signal | 🟡 Normal |
+| R08 | Token budget (50K max) | 🟡 Normal |
 | R09 | Domain coupling | 🟠 Strong |
 | R10 | Coronashield (YAML validation) | 🔴 Blocking |
 | R11 | SI rate limit (1 per 6h) | 🔴 Blocking |

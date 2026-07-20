@@ -119,7 +119,7 @@ Every push to github.com/mczardybon/mas-engineer MUST be preceded by:
 ```bash
 export PATH="/root/.local/bin:$PATH"
 # DEEPSEEK_API_KEY must be set in environment (NEVER hardcode here)
-cd /tmp/mas-engineer/mas-engineer
+cd ~/mas-engineer/mas-engineer
 goose run --recipe recipe/sub/sub_mas-pre-push-validator.yaml --no-session
 ```
 
@@ -182,7 +182,7 @@ that matches the umlaut characters ae, oe, ue, ss (and their uppercase forms).
 
 ### Correct pattern
 ```bash
-cd /tmp/mas-engineer
+cd ~/mas-engineer
 git remote set-url origin https://<PAT>@github.com/mczardybon/mas-engineer.git
 git push origin master
 git remote set-url origin https://github.com/mczardybon/mas-engineer.git
