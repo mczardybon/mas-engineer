@@ -1,6 +1,6 @@
 # Architecture
 
-MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 52 specialized sub-agents, 45 Python/shell tools, and a workflow engine driven by a Single Source of Truth (SOT).
+MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 52 specialized sub-agents, 52 tools (43 Python, 6 Shell, 3 other), and a workflow engine driven by a Single Source of Truth (SOT).
 
 ```mermaid
 flowchart TB
@@ -14,7 +14,7 @@ flowchart TB
     subgraph ENGINEER["MAS-Engineer"]
         E1["dev-mas-engineer.yaml\nNatural Language Interface"]
         E2["52 Sub-Agents\n7 categories"]
-        E3["45 Tools\nPython / Shell"]
+        E3["52 Tools\n43 Python + 6 Shell + 3 other"]
         E4[".state/\nSOT · Rules · Knowledge"]
     end
     subgraph USER["User Framework"]
@@ -171,7 +171,7 @@ graph TD
 ```
 
 - **116+ workflow bodies** defining all possible operations
-- **10 rules** (R01-R23) with hardness levels
+- **11 hard rules** (R01-R18) with hardness levels
 - **10 signal types** for event handling
 - **20+ detect_mode workflows** for mode awareness
 - **Agent definitions** with tiers, token budgets, and task bindings
@@ -242,7 +242,7 @@ flowchart TD
 
 ---
 
-## The 47 Tools
+## The 52 Tools
 
 All Python and shell tools live in `tools/` and are managed by `dev_workspace.py`. Key categories:
 
@@ -253,7 +253,7 @@ flowchart LR
         A2["general-improver\ndoc-writer\ndashboard-refresh"]
         A3["session-analyst\ngoose-admin\nworkflow-engine"]
     end
-    subgraph TOOLS["47 Tools by Category"]
+    subgraph TOOLS["52 Tools by Category"]
         T1["⚙️ Hardening\ndev_rule_checker\ndev_rule_refresh\ndev_haerte_propagation"]
         T2["🔨 Build\ndev_build.sh\ndev_autobuild.sh\ndev_mode.sh"]
         T3["🔍 Analysis\ndev_observer\ndev_architect\ndev_analyst"]

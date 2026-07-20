@@ -8,7 +8,7 @@ import sys
 import time
 import os
 
-WS = '/tmp/mas-engineer/mas-engineer'
+WS = os.getcwd()
 MCP = f'{WS}/.mas/mcp'
 
 def send(proc, msg):

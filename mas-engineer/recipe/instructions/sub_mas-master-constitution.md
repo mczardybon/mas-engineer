@@ -1,5 +1,5 @@
-# ============================================================ # MASTER-CONSTITUTION for ALL 47 Specialists (v1.0.0) # ============================================================ # This template is used by ALL Specialists by reference. # Changes here apply to all 47 Specialists simultaneously. # ============================================================ # # Integration in Specialist-Recipe: #   # === MASTER-CONSTITUTION === #   # See: recipes/core/specialist-constitution.yaml #   # Specific deviations are documented below. # # ============================================================
-# === CONSTITUTION (identical for ALL 47 Specialists) ===
+# ============================================================ # MASTER-CONSTITUTION for ALL 52 Specialists (v1.0.0) # ============================================================ # This template is used by ALL Specialists by reference. # Changes here apply to all 52 Specialists simultaneously. # ============================================================ # # Integration in Specialist-Recipe: #   # === MASTER-CONSTITUTION === #   # See: recipes/core/specialist-constitution.yaml #   # Specific deviations are documented below. # # ============================================================
+# === CONSTITUTION (identical for ALL 52 Specialists) ===
 
 ╔══════════════════════════════════════════════╗
 ║  SOT WORKFLOW CONTROL                     ║

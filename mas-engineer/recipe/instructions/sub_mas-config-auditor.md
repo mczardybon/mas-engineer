@@ -49,14 +49,14 @@ AGAINST: config.yaml `canonical_modes.*.max_parallel_agents`
 CHECK: NO mode has max_parallel_agents > 8
 
 ### CHECK 5 — MAS sub-agent list: config vs disk
-config.yaml `conflict_resolver.MAS-Sub-Agent_priority_order:` (47 names)
-AGAINST: find {workspace} -name "MAS-Sub-Agent_*.yaml"
-CHECK: 1:1 match between both lists
+config.yaml `conflict_resolver.MAS-Sub-Agent_priority_order:` (52 names)
+    AGAINST: find {workspace} -name "MAS-Sub-Agent_*.yaml"
+    CHECK: 1:1 match between both lists
 
-### CHECK 6 — Lane assignment: each MAS sub-agent in exactly 1 lane
-config.yaml `routing_segmentation.lanes.*.MAS-Sub-agents`
-AGAINST: config.yaml `conflict_resolver.MAS-Sub-Agent_priority_order`
-CHECK: Sum of lane MAS sub-agents == 47, no MAS sub-agent duplicated
+  ### CHECK 6 — Lane assignment: each MAS sub-agent in exactly 1 lane
+    config.yaml `routing_segmentation.lanes.*.MAS-Sub-agents`
+    AGAINST: config.yaml `conflict_resolver.MAS-Sub-Agent_priority_order`
+    CHECK: Sum of lane MAS sub-agents == 52, no MAS sub-agent duplicated
 
 ### CHECK 7 — Token budgets ≤ model max tokens
 config.yaml `token_budgets.per_tier.<tier>.max_output`
@@ -88,13 +88,13 @@ config.yaml comments reference core docs
 AGAINST: find {workspace} -name "<file>.md"
 CHECK: Each referenced file exists
 
-### CHECK 13 — Recipe timeout/max_steps consistency
-All 47 MAS sub-agents + 43 sub-agents + 4 main agents
-CHECK: Document outliers (Min=300, Max=6000, Recovery=50)
+  ### CHECK 13 — Recipe timeout/max_steps consistency
+    All 52 MAS sub-agents + 43 sub-agents + 4 main agents
+    CHECK: Document outliers (Min=300, Max=6000, Recovery=50)
 
-### CHECK 14 — Slash commands: only main agents have them
-CHECK: Only /analyze, /plan, /execute, /fw-monitor have slash_command
-CHECK: 47 MAS sub-agents and 43 sub-agents have NO slash_command
+  ### CHECK 14 — Slash commands: only main agents have them
+    CHECK: Only /analyze, /plan, /execute, /fw-monitor have slash_command
+    CHECK: 52 MAS sub-agents and 43 sub-agents have NO slash_command
 
 ### CHECK 15 — Version consistency
 config.yaml header: "v1.0.0"

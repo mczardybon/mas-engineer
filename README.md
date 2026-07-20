@@ -21,7 +21,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/agents-52-blue?style=for-the-badge" alt="Agents">
-  <img src="https://img.shields.io/badge/tools-45-success?style=for-the-badge" alt="Tools">
+  <img src="https://img.shields.io/badge/tools-52-success?style=for-the-badge" alt="Tools">
   <img src="https://img.shields.io/badge/self--improvement-7_stages-blue?style=for-the-badge" alt="Self-Improvement">
   <img src="https://img.shields.io/badge/recovery-5_stages-orange?style=for-the-badge" alt="Recovery">
   <img src="https://img.shields.io/badge/status-POC-orange?style=for-the-badge" alt="Status">
@@ -203,11 +203,11 @@ The same result. **Done through conversation.**
   <table>
     <tr>
       <td align="center"><h2>🛡️</h2><b>52</b><br>Ready-to-Use<br>Sub-Agents</td>
-      <td align="center"><h2>🔧</h2><b>45</b><br>Tools (43 Python,<br>2 MCP dashboard)<br><sub>(npm install needed)</sub></td>
+      <td align="center"><h2>🔧</h2><b>52</b><br>Tools (43 Python,<br>6 Shell, 3 other)<br><sub>(npm install needed)</sub></td>
       <td align="center"><h2>🔄</h2><b>7</b><br>Stage Self-<br>Improvement<br><sub>(E2E-tested)</sub></td>
       <td align="center"><h2>🏥</h2><b>5</b><br>Stage<br>Recovery<br><sub>(designed)</sub></td>
       <td align="center"><h2>📊</h2><b>Free</b><br>Dashboard<br>Per Project</td>
-      <td align="center"><h2>📜</h2><b>23</b><br>Active<br>Rules</td>
+      <td align="center"><h2>📜</h2><b>11</b><br>Hard<br>Rules</td>
     </tr>
   </table>
 </p>
@@ -260,7 +260,7 @@ flowchart TD
     ENGINEER --> AN["Analysis\n7 agents"]
     ENGINEER --> MG["Management\n7 agents"]
     ENGINEER --> POC["Internal POC Tools\n3 agents"]
-    FB & IP & MON & REC & UT & AN & MG & POC --> TOOLS["45 total (43 Python, 2 MCP)"]
+    FB & IP & MON & REC & UT & AN & MG & POC --> TOOLS["52 total (43 Python, 6 Shell, 3 other)"]
 ```
 
 ---
@@ -479,7 +479,7 @@ mindmap
       Dashboard
       Utilities
     Self-Improvement
-      8-Stage Pipeline
+      7-Stage Pipeline
       53 Feature Types
       Rate Limited R11
     Recovery

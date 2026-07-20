@@ -2,7 +2,7 @@
 
 **Version:** v1.0.0  
 **Sub-Agents:** 52  
-**Tools:** 47
+**Tools:** 52 total (43 Python, 6 Shell, 3 other)
 
 ---
 
@@ -56,8 +56,8 @@ flowchart TD
     ENGINEER --> REC["Recovery\n5 agents"]
     ENGINEER --> UT["Utility\n10 agents"]
     ENGINEER --> AN["Analysis\n7 agents"]
-    ENGINEER --> MG["Management\n6 agents"]
-    FB & IP & MON & REC & UT & AN & MG --> TOOLS["47 Python/Shell Tools"]
+    ENGINEER --> MG["Management\n7 agents"]
+    FB & IP & MON & REC & UT & AN & MG & POC --> TOOLS["52 Tools"]
 ```
 
 ## Key Concepts

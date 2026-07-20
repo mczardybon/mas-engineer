@@ -6,7 +6,7 @@ import time
 import os
 import sys
 
-WS = '/tmp/mas-engineer/mas-engineer'
+WS = os.getcwd()
 MCP = f'{WS}/.mas/mcp'
 
 # Test 1: Does the server even start cleanly with manual JSON-RPC?

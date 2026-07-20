@@ -190,7 +190,7 @@ flowchart TD
     ENGINEER --> BOOTSTRAP["sub_mas-bootstrap"]
     BOOTSTRAP --> GEN["1. dev_generic_init.py\n--init --components all"]
     GEN --> AGENTS["2. Copy 52 sub-agents\n→ recipe/sub/"]
-    AGENTS --> TOOLS["3. Copy 45 tools\n→ tools/"]
+    AGENTS --> TOOLS["3. Copy 52 tools\n→ tools/"]
     TOOLS --> MCP["4. Copy MCP dashboard\n.mas/mcp/"]
     MCP --> NPM["5. npm install\n.mas/mcp/"]
     NPM --> RECOVERY["6. Copy recovery\nagents + templates"]
@@ -201,7 +201,7 @@ flowchart TD
 
 MAS delegates to `sub_mas-bootstrap`, which:
 1. Runs `dev_generic_init.py --init --components all`
-2. Copies all 52 sub-agents, main recipe, 45 tools
+2. Copies all 52 sub-agents, main recipe, 52 tools
 3. Copies dashboard MCP server (runs npm install)
 4. Copies recovery templates and recovery agents
 5. Sets `.mas-mode`
