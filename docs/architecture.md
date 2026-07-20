@@ -159,7 +159,7 @@ The `workflows.yaml` file in `.state/` is the central registry:
 
 ```mermaid
 graph TD
-    SOT["workflows.yaml\n.state/workflows.yaml"] --> RULES["10 Rules\nR01-R23"]
+    SOT["workflows.yaml\n.state/workflows.yaml"] --> RULES["11 Rules\nR01-R18"]
     SOT --> SIGNALS["10 Signal Types\nDONE · ERROR · HANDOVER · DRIFT · RESURRECTED"]
     SOT --> WORKFLOWS["116+ Workflow Bodies\nAll possible operations"]
     SOT --> MODES["20+ detect_mode Workflows\nMode awareness"]

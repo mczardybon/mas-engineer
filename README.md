@@ -225,7 +225,7 @@ The same result. **Done through conversation.**
 | **Self-improvement** | ❌ Your system stays the same forever | ✅ Analyzes itself, improves its agents |
 | **Recovery from failure** | `max_retry_limit=2` | ✅ 5 stages: Immune→Checkpoint→Safezone→Timeline→Defib |
 | **Per-project dashboard** | Enterprise plan 💰 | ✅ Free, refreshable, every project |
-| **Enforced governance** | Manual coding of guardrails | ✅ 11-article Constitution + 23 active Rules |
+| **Enforced governance** | Manual coding of guardrails | ✅ 11-article Constitution + 11 hard Rules |
 | **Framework generator** | ❌ | ✅ `--bootstrap` recipe (DEPLOY) + `--package-team` recipe (PACKAGE_TEAM) — *recipe-only, E2E test pending* |
 | **Who it's for** | Python developers who love APIs | **Anyone who needs an agent system** |
 
@@ -241,7 +241,7 @@ The same result. **Done through conversation.**
 | **Recovery System** | ✅ 5 stages (designed) | ❌ | ❌ | ❌ | ❌ |
 | **Framework Bootstrap** | Recipe-defined, E2E test pending | ❌ | ❌ | ❌ | ❌ |
 | **Dashboard per System** | ✅ Free MCP app (needs `npm install`) | 💰 AMP | ❌ | Built-in | LangSmith |
-| **Constitution + Rules** | ✅ 11 art. + 23 active rules | Guardrails (limited) | ❌ | ❌ | ❌ |
+| **Constitution + Rules** | ✅ 11 art. + 11 hard rules | Guardrails (limited) | ❌ | ❌ | ❌ |
 | **Install** | `./install.sh` | `pip install` | `pip install` | Docker | `pip install` |
 | **GitHub Stars** | New project, zero so far | 54k | 69k | 185k | 36k |
 
@@ -442,7 +442,7 @@ A: This is a **proof of concept (POC)**. It demonstrates the architecture of a s
 A: See [`e2e-results/2026-07-19-demo-runner-ARCHIVED-script-failure/`](e2e-results/2026-07-19-demo-runner-ARCHIVED-script-failure/). That folder preserves a 2026-07-19 e2e test that was originally reported as "15/15 PASS" but had actually produced 5 consecutive `401 Unauthorized` responses because the wrapper script passed a REDACTED API key placeholder to goose. The same folder contains `TRUTHFUL_REPORT.md` which documents the failure and explains the script-vs-manual distinction. The successful follow-up test is at `e2e-results/2026-07-19-demo-runner-v2/`.
 
 **Q: Can I use my own LLM?**  
-A: Yes. MAS-Engineer runs on Goose, which supports OpenAI, Anthropic Claude, Ollama (local), Groq, and any OpenAI-compatible provider.
+A: Yes. MAS-Engineer runs on Goose, which supports OpenAI, Ollama (local), Groq, DeepSeek, and any OpenAI-compatible provider.
 
 **Q: How is this different from AutoGPT?**  
 A: AutoGPT is a single autonomous agent. MAS-Engineer is 52 sub-agents working together. AutoGPT executes tasks. MAS-Engineer **builds and maintains complete multi-agent systems**.

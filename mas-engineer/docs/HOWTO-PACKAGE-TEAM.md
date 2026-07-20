@@ -158,7 +158,7 @@ added to the team before packaging.
 ## Differences from sub_mas-bootstrap
 
 `sub_mas-bootstrap` (DEPLOY) is for distributing MAS-Engineer itself.
-It copies all 52 sub-agents + 45 tools + dashboard + recovery. The result
+It copies all 52 sub-agents + 52 tools + dashboard + recovery. The result
 is a full MAS-Engineer instance on the target system.
 
 `sub_mas-team-packager` (PACKAGE_TEAM) is for distributing a single
