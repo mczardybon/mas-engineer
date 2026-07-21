@@ -16,9 +16,9 @@ let WORKSPACE = process.env.MAS_WORKSPACE;
 if (!WORKSPACE) {
   // Try to detect from common locations
   const candidates = [
-    '/home/marius/agent_new_start/mas-agent',
+    process.env.HOME ? `${process.env.HOME}/agent_new_start/mas-agent` : null,
     process.cwd(),
-  ];
+  ].filter(Boolean);
   for (const c of candidates) {
     if (fs.existsSync(path.join(c, '.mas', 'dashboards'))) {
       WORKSPACE = c;
