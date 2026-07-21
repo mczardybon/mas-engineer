@@ -84,19 +84,16 @@ for yp in sorted(ALL_YAMLS):
         add_finding('MM7', 'low', yp, 'description: empty or placeholder',
                     'Agent purpose unclear', 'Add meaningful description')
 
-    # --- MM8/MM9: I_AM identity / MODE-CHECK (MAS convention) ---
-    # P-F012-5: SKIP templates and recovery (they get I_AM/MODE-CHECK at deploy time)
     prompt = data.get('prompt', '')
-    is_template = '/template/' in str(yp) or '/recovery/' in str(yp)
-    if prompt and not is_template:
-        if len(prompt) > 30 and 'I_AM' not in prompt and 'I am' not in prompt:
-            add_finding('MM8', 'low', yp,
-                        'prompt: > 30 chars but no I_AM identity',
-                        'Agent lacks clear role identity', 'Add I_AM identity to prompt')
-        if ('I_AM' in prompt or 'I am' in prompt) and 'MODE-CHECK' not in prompt:
-            add_finding('MM9', 'low', yp,
-                        'prompt: contains I_AM but no MODE-CHECK',
-                        'Agent may not detect operating mode', 'Add MODE-CHECK to prompt')
+    if prompt and len(prompt) > 30 and 'I_AM' not in prompt and 'I am' not in prompt:
+        add_finding('MM8', 'low', yp,
+                    'prompt: > 30 chars but no I_AM identity',
+                    'Agent lacks clear role identity', 'Add I_AM identity to prompt')
+
+    if prompt and ('I_AM' in prompt or 'I am' in prompt) and 'MODE-CHECK' not in prompt:
+        add_finding('MM9', 'low', yp,
+                    'prompt: contains I_AM but no MODE-CHECK',
+                    'Agent may not detect operating mode', 'Add MODE-CHECK to prompt')
 
     # --- F: Prompt Block ---
     if prompt and 'MODE-CHECK' not in prompt:
