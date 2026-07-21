@@ -27,7 +27,9 @@ timestamp: <ISO-8601>
 # findings[] with {id, type, severity, file, issue, impact, fix, goose_verdict?}
 ```
 
-## ⛔ STEP 0.5 — GOOSE-EXPERT CONSULTATION (MANDATORY)
+## ⛔ STEP 0.5 — GOOSE-EXPERT CONSULTATION (MANDATORY — EXECUTE THIS!)
+
+**🚨 THIS IS NOT OPTIONAL. If you skip this step, your output will be REJECTED by im-validator. 🚨**
 
 **For EACH finding whose `type` starts with one of these prefixes,
 you MUST summon `sub_mas-goose-expert` BEFORE writing the finding to disk:**
@@ -41,35 +43,43 @@ you MUST summon `sub_mas-goose-expert` BEFORE writing the finding to disk:**
 | `JJ1-3` (extensions)    | extensions | Goose has extension inheritance + summon requirements |
 | `LL1-3` (User UX)       | cli_commands | Goose CLI has its own conventions |
 
-**Procedure:**
-1. Draft the finding locally (type, severity, file, issue, impact, fix).
-2. **SUMMON** sub_mas-goose-expert via the `summon` tool with intake:
-   ```yaml
-   goose_expert_intake:
-     signal: "🟣 HANDOVER"
-     request_id: "<uuid>"
-     from: "im-finder"
-     to: "sub_mas-goose-expert"
-     task: "CHECK RULE COMPLIANCE"
-     context:
-       what: "Validate this finding against Goose architecture"
-       scope: "<one of: config|recipes|extensions|skills|scheduler|subagents|recipe_advanced|hooks|security|cli_commands|templates|sandbox>"
-       current: "<current state in file>"
-       planned: "<the fix proposed in the finding>"
-       question: "Is this finding a real Goose issue, or a workaround that Goose already provides natively?"
-   ```
-3. WAIT for the verdict (CONFORM / RESTRICTED / NOT POSSIBLE).
-4. Attach the verdict to the finding:
-   ```yaml
-   finding.goose_verdict:
-     verdict: CONFORM | RESTRICTED | NOT_POSSIBLE
-     confidence: HIGH | MEDIUM | LOW
-     explanation: "<one-line from goose-expert>"
-     alternatives: ["<list>"]  # only at NOT_POSSIBLE
-   ```
-5. If verdict is `NOT POSSIBLE`: mark finding severity one level LOWER (the "fix" is not really a fix, it's a known Goose limitation).
-6. If verdict is `RESTRICTED`: include the caveat in the finding.issue text.
-7. If verdict is `CONFORM`: proceed normally.
+**⚠️ EXECUTE THIS PATTERN IN A LOOP — ONE SUMMON PER FINDING ⚠️**
+
+```python
+# FOR EACH finding with prefix in (MM, A, B, D, JJ, LL, S, HH, BB):
+1. Draft the finding locally
+2. INVOKE the `delegate` tool (NOT just describe it!):
+   delegate(
+     sub_recipe="recipe/sub/sub_mas-goose-expert.yaml",
+     parameters={
+       "task": "CHECK RULE COMPLIANCE",
+       "context": {
+         "scope": "config|recipes|extensions|...",
+         "current": "<current state in file>",
+         "planned": "<the fix proposed in the finding>",
+         "question": "Is this finding a real Goose issue, or a workaround that Goose already provides natively?"
+       }
+     }
+   )
+3. WAIT for the verdict to come back (CONFORM / RESTRICTED / NOT_POSSIBLE)
+4. Attach the verdict to the finding.goose_verdict field
+5. THEN write the finding to disk
+```
+
+**If you do NOT call `delegate`, you have FAILED. The step is a TOOL CALL, not a description.**
+
+**After the loop, verify:**
+- All findings with prefixes in the table above have `goose_verdict` attached
+- findings.yaml should NOT be written until all verdicts are attached
+- If a delegate call fails, mark the finding `goose_verdict: {verdict: NOT_POSSIBLE, confidence: LOW, explanation: "summon failed"}`
+
+## ⛔ STEP 0.5b — IM-DESIGNER LIAISON (if not at FIND stage)
+
+**ALSO for findings where `fix` involves architectural changes (e.g. adding sub_recipes to
+coordinators), summon `sub_mas-im-designer` AFTER getting the goose-expert verdict to
+validate the design approach.**
+
+
 
 ## Why this is mandatory:
 - Without goose-expert, im-finder reports architectural issues as "missing mechanisms" when
