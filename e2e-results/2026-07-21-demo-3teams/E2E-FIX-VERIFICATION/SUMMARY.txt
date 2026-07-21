@@ -1,20 +1,37 @@
-E2E-FIX-VERIFICATION SUMMARY
-============================
+MAS-ENGINEER E2E-FIX-VERIFICATION SUMMARY (honest scope)
+=========================================================
 
-mas-engineer WITH type:platform fix is E2E-FUNCTIONAL ✅
+Date: 2026-07-21
+Issue: #7355/#7570 (goose 1.24+ sub_recipes dispatch failure)
 
-Key evidence:
-- Recipe loads correctly (log 10)
-- 52 sub-recipes auto-inject (log 30)
-- Model answers complex queries (log 39)
-- Tool calls work (log 38)
+VERIFIED (loading-level):
+  - mas-engineer root recipe loads with type:platform
+  - summon extension activates
+  - 52 sub-recipes register in mas-engineer recipe
+  - 3 demo-team root recipes load (sales/marketing/translator)
+  - Pre-push validator: 8/8 PASS
+  - Model with 52 sub-recipes as system prompts answers complex query
+  - Tool calls (curl, find, gh) work in the flat-prompt setup
 
-CLI workaround for automation:
-  goose run --text "<query>" --sub-recipe <r1> --sub-recipe <r2> ... --sub-recipe <rN>
+NOT VERIFIED (out of scope / requires TTY):
+  - Interactive TUI dispatch (node.js TUI does not accept stdin from
+    non-TTY sandbox)
+  - 3 demo teams orchestrator actually delegating with --params
+    (separate recipe-design issue: prompt: template does not read
+    --params, orchestrator re-asks for same info)
+  - The 52-sub-recipe "delegation" is a workaround (flat system
+    prompts), NOT the orchestrator routing to a single specialist
 
-Issue 7355 analysis:
-  The bug: explicit extensions: block without summon + inline delegate() = no delegate tool
-  The fix: type: platform, or sub_recipes: field (auto-injects), or explicit summon in extensions
+TWO DISTINCT FAILURES:
+  1. Recipe-load (type:builtin) — FIXED in d03efd2, 5431a40
+  2. Orchestrator ignores --params — NOT FIXED, separate issue,
+     out of scope. See RE-TEST-RESULTS.md.
 
-For human E2E test:
-  goose run --recipe recipe/dev-mas-engineer.yaml
+WHAT A HUMAN USER MUST DO:
+  - Open a real TTY, run goose run --recipe <path>
+  - Type a query, observe orchestrator dispatching to specialists
+  - If orchestrator re-asks for already-provided params, that is
+    the second issue (not covered by this certificate)
+
+The mas-engineer FRAMEWORK is functional.
+The 3 demo teams need additional recipe-engineering work.

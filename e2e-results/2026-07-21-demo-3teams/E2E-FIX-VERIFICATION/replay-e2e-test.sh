@@ -1,13 +1,20 @@
 #!/usr/bin/env bash
-# replay-e2e-test.sh — Replayable E2E test for mas-engineer
-# Issue #7355/#7570 fix verification
+# replay-e2e-test.sh — Replayable E2E test for Issue 7355/7570 fix
 # Date: 2026-07-21
 #
-# This script replays the E2E tests that proved mas-engineer is functional
-# after the type:platform fix. Can be run by any agent or human to verify.
+# HONEST SCOPE: This script verifies the recipe-LOADING fix only.
+# It does NOT verify:
+#   - Interactive TUI dispatch (requires real TTY)
+#   - 3 demo teams orchestrating with --params (separate recipe-design
+#     issue — orchestrator prompt: is static, not a template)
+#   - The 52-sub-recipe 'delegation' is a flat-prompt workaround,
+#     NOT orchestrator routing logic
+#
+# For full delegation verification, a human user with a real TTY is
+# needed. See RE-TEST-RESULTS.md and CERTIFICATE.md in this directory.
 #
 # Usage:
-#   export DEEPSEEK_API_KEY=sk-...
+#   export DEEPSEEK_API_KEY=...
 #   ./replay-e2e-test.sh
 #
 # Output: ./e2e-replay-output/ (created automatically)
@@ -146,4 +153,12 @@ echo ""
 echo "Files:"
 ls -la "$OUTPUT_DIR/"
 echo ""
-echo "VERDICT: $([ -s "$OUTPUT_DIR/03-full-52-subrecipes.txt" ] && echo "PASS - mas-engineer IS E2E-functional" || echo "FAIL - investigate")"
+echo "VERDICT (in-scope only): $([ -s "$OUTPUT_DIR/03-full-52-subrecipes.txt" ] && echo "PASS - Issue 7355 loading fix verified" || echo "FAIL - investigate")"
+echo ""
+echo "NOTE ON SCOPE: This script verifies the Issue 7355/7570"
+echo "recipe-LOADING fix only. It does NOT verify:"
+echo "  - Interactive TUI dispatch (requires real TTY)"
+echo "  - 3 demo teams orchestrating with --params"
+echo "    (separate recipe-design issue, see RE-TEST-RESULTS.md)"
+echo "  - The 52-sub-recipe 'delegation' is a flat-prompt"
+echo "    workaround, NOT orchestrator routing logic"

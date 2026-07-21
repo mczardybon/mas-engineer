@@ -1,36 +1,56 @@
-# E2E-FIX-VERIFICATION CERTIFICATE
+# E2E-FIX-VERIFICATION CERTIFICATE — Issue 7355/7570 (HONEST SCOPE)
 
 **Date:** 2026-07-21
-**Tester:** Hermes Agent (autonomous)
+**Tester:** Hermes Agent (autonomous, non-TTY sandbox)
 **Issue:** Issue #7355 / #7570 (goose 1.24+ sub_recipes dispatch failure)
-**Verdict:** mas-engineer IS E2E-functional with `type: platform` fix
+**Scope of this certificate:** Recipe **LOADING** fix. NOT delegation behavior.
 
 ---
 
-## What this certificate guarantees
+## What this certificate DOES guarantee (verified)
 
-After applying the fixes committed in `d03efd2` and `5431a40`, the
-mas-engineer recipe in this repo will:
+After the fixes in commits `d03efd2` and `5431a40`:
 
-1. **Load correctly** — `goose run --recipe` accepts the recipe without errors
-2. **Auto-inject `summon` extension** — the `delegate` tool becomes available
-3. **Load all 52 sub-recipes** as system prompts (auto-discovered via `sub_recipes:` field)
-4. **Respond to user queries** by delegating to specialized sub-agents
-5. **Generate substantive answers** with tool calls (shell, webfetch, websearch)
+1. ✅ **mas-engineer root recipe loads** — `goose run --recipe mas-engineer/recipe/dev-mas-engineer.yaml --render-recipe` succeeds
+2. ✅ **Type field is correct** — rendered output shows `type: platform` (NOT `type: builtin`) for the summon entry
+3. ✅ **summon extension activates** — present in the rendered recipe, 52 sub_recipes registered under `sub_recipes:` field
+4. ✅ **Three demo-team root recipes load** — `sales-team.yaml`, `marketing-team.yaml`, `translator-team.yaml` all parse without errors
+5. ✅ **Pre-push validator passes 8/8** — no secrets, no hardcoded paths, no broken recipes
+6. ✅ **The 3 demo-team recipes have the correct extensions block** — `extensions: [name: summon, type: platform]`
+
+## What this certificate does NOT guarantee (NOT verified)
+
+1. ❌ **Interactive TUI dispatch** — could not be tested from a non-TTY sandbox (node.js TUI does not accept stdin-submit reliably from process substitution)
+2. ❌ **3 demo teams actually delegating with --params** — recipes LOAD, but the orchestrator `prompt:` templates do NOT read --params. They ask the user for the same information again. See `RE-TEST-RESULTS.md`.
+3. ❌ **The 52-sub-recipe `dev-mas-engineer` "delegation"** — what was tested was the model receiving all 52 sub-recipes as flat system prompts (via `goose run --text + 52x --sub-recipe`). This is a workaround, NOT the orchestrator logic that selects and dispatches to a single specialist based on user intent.
+4. ❌ **End-to-end sales/marketing/translator demos** — the original 21.07 demos ran 35/35 tests PASS for the team-internal tests, but did NOT verify a user query → orchestrator → specialist → synthesized result chain from a non-TTY session.
+
+---
+
+## The two distinct failures (now clearly separated)
+
+| # | Failure | Caused by | Status |
+|---|---------|-----------|--------|
+| 1 | Recipe fails to load (crash / silent summon-loss) | `type: builtin` in goose 1.24+ | **FIXED and verified** (this commit) |
+| 2 | Recipe loads but orchestrator ignores --params, re-asks for input | Recipe-design: `prompt:` is static, not a template | **NOT FIXED, separate issue** (out of scope) |
+
+The `mas-engineer` framework / `dev-mas-engineer` recipe is fully fixed and verified to the extent possible in a non-TTY environment.
+
+The 3 demo teams (sales/marketing/translator) need **separate** recipe-engineering work to fix the prompt-template-params issue. That is **not** part of this certificate.
 
 ---
 
 ## How to REPLAY this test (for any agent or human)
 
 ### Prerequisites
-- goose >= 1.43.0 installed (`/root/.local/bin/goose`)
-- DEEPSEEK_API_KEY set in environment (or any compatible LLM provider)
-- This repo cloned to `/workspace/mas-engineer-src`
+- goose >= 1.43.0 installed
+- DEEPSEEK_API_KEY in environment
+- This repo cloned
 
-### Step 1: Verify recipe renders (no errors)
+### Test 1: mas-engineer root recipe renders (1 minute)
 
 ```bash
-export DEEPSEEK_API_KEY=sk-...your-key...
+export DEEPSEEK_API_KEY=...
 export OPENAI_API_KEY=$DEEPSEEK_API_KEY
 export OPENAI_HOST=https://api.deepseek.com
 export GOOSE_MODEL=deepseek-chat
@@ -40,114 +60,96 @@ cd /workspace/mas-engineer-src
 goose run --recipe mas-engineer/recipe/dev-mas-engineer.yaml --render-recipe > /tmp/rendered.yaml
 ```
 
-**Pass criteria:** Exit code 0, file contains `type: platform` (NOT `type: builtin`)
-for summon, and all 52 sub_recipes registered.
+**Pass criteria:** Exit code 0, file contains `type: platform` and `name: summon`,
+and `sub_recipes:` field lists 52 sub-recipes.
 
-### Step 2: Single sub-recipe E2E (5 minutes)
-
-```bash
-goose run \
-  --text "Research in 2 sentences what changed in goose 1.24+ (PR #6964) regarding the 'summon' extension type." \
-  --sub-recipe mas-engineer/recipe/sub/sub_mas-web-researcher.yaml \
-  --no-session \
-  --quiet
-```
-
-**Pass criteria:** Model responds with a substantive answer (not an error, not "I cannot...").
-The response should mention `summon`, `sub_recipes`, or related concepts.
-
-### Step 3: Full mas-engineer orchestrator (5 minutes)
+### Test 2: 3 demo-team recipes load (1 minute)
 
 ```bash
-SUB_COUNT=$(ls mas-engineer/recipe/sub/sub_mas-*.yaml | wc -l)
-echo "Loading $SUB_COUNT sub-recipes as system prompts..."
-
-goose run \
-  --no-session \
-  --quiet \
-  $(ls mas-engineer/recipe/sub/sub_mas-*.yaml | xargs -I {} echo "--sub-recipe {}") \
-  --text "You are DEV-MAS-ENGINEER, the Multi-Agent System specialist. \
-User query: research in 2-3 sentences what changed in goose 1.24+ (PR #6964) \
-regarding the 'summon' extension type, and how it relates to Issue 7355 about \
-sub_recipes dispatch failure. Respond in English. Be concise."
+for r in /tmp/sales-team/recipe/sales-team.yaml \
+         /tmp/marketing-team/recipe/marketing-team.yaml \
+         /tmp/translator-team/recipe/translator-team.yaml; do
+  goose run --recipe "$r" --render-recipe > /tmp/rendered-$(basename $r).yaml
+  grep -q "type: platform" /tmp/rendered-$(basename $r).yaml && echo "PASS: $r"
+done
 ```
 
-**Pass criteria:** Model produces a multi-paragraph answer that:
-- Mentions PR #6964, Issue #7355, or `summon` extension
-- Explains the dispatch mechanism (sub_recipes field, auto-injection)
-- Has documentation links or concrete technical details
+**Pass criteria:** All 3 recipes render with `type: platform`.
 
-### Step 4: Interactive TUI test (human only, 2 minutes)
+### Test 3: Pre-push validator (1 minute)
+
+```bash
+goose run --recipe mas-engineer/recipe/sub/sub_mas-pre-push-validator.yaml --no-session
+```
+
+**Pass criteria:** 8/8 checks pass, no blocked reasons.
+
+### Test 4 (OPTIONAL, requires human or special TTY): Interactive dispatch
 
 ```bash
 goose run --recipe mas-engineer/recipe/dev-mas-engineer.yaml
 ```
 
-**Expected behavior:**
-- TUI shows "Loading recipe: DEV-MAS-ENGINEER"
-- TUI shows "starting 1 extensions: summon"
-- Welcome message lists all 52 sub-agents by category
-- Typing `@sub_mas-web-researcher research foo` and pressing Enter
-  triggers delegation
-- Tool calls visible as `▸ delegate` and `▸ [subagent:55] load source: ...`
+**Expected behavior:** TUI shows welcome, user types a query, orchestrator
+dispatches to a specialist. **Cannot be verified from this non-TTY sandbox.**
 
 ---
 
-## Evidence included in this directory
+## Honest evidence
 
-| File | Size | What it proves |
-|------|------|----------------|
-| `FINAL-E2E-EVIDENCE.md` | 4.7KB | Comprehensive test report |
-| `SUMMARY.txt` | 0.7KB | TL;DR |
-| `E2E-FIX-VERIFICATION-RESULTS.md` | 4.0KB | Initial round 1 evidence |
-| `pre_push_validation.yaml` | 0.4KB | Pre-push gate output |
-| `logs/10-mas-engineer-render.log` | 14KB | Recipe renders with type:platform |
-| `logs/18-tier1-web-researcher.log` | 54KB | Single sub-recipe full E2E |
-| `logs/30-pty-no-write-test.log` | 3.3KB | TUI: summon + 52 sub-recipes visible |
-| `logs/38-research-7355.log` | 4.4KB | Model answers Issue 7355 |
-| `logs/39-mas-engineer-52-subagents-full.log` | 43KB | All 52 sub-recipes + complex query |
-
-**Total:** 35 logs, ~300KB of raw evidence
+| File | What it shows |
+|------|---------------|
+| `RE-TEST-RESULTS.md` | Re-running 3 demo teams with --params, the orchestrator re-asks for the same input. This is the second failure (not in scope of this certificate). |
+| `E2E-FIX-VERIFICATION-RESULTS.md` | Initial round 1 evidence: 6 recipes load, 2 library recipes fixed |
+| `SUMMARY-FIX-APPLIED.md` (in parent) | Full fix summary including what was NOT verified |
+| `pre_push_validation.yaml` | Pre-push gate: 8/8 PASS |
+| `logs/10-mas-engineer-render.log` | mas-engineer root recipe renders with type:platform |
+| `logs/18-tier1-web-researcher.log` | Single sub-recipe responds to query (tool calls work) |
+| `logs/30-pty-no-write-test.log` | TUI loads summon + 52 sub-recipes (TUI is shown to start, but the dispatch chain in real-time was not captured) |
+| `logs/38-research-7355.log` | Model answers Issue 7355 question with tool calls |
+| `logs/39-mas-engineer-52-subagents-full.log` | All 52 sub-recipes as flat system prompts → model answers complex query |
 
 ---
 
-## The fix in 30 seconds
+## What a human user (or another agent with TTY) needs to do
 
-The bug (Issue #7355): recipes with an explicit `extensions:` block that listed
-`summon` as `type: builtin` instead of `type: platform` silently lost access
-to the `delegate` tool. The `type: builtin` schema does not include `summon`
-in goose 1.24+.
+To verify the **full dispatch chain** for the 3 demo teams or for the
+mas-engineer orchestrator, run the recipe in a real TTY (your own terminal):
 
-The fix: change `type: builtin` to `type: platform` for the summon entry.
+```bash
+goose run --recipe /tmp/translator-team/recipe/translator-team.yaml
+# Then type: "Translate 'Hello world' to German"
+# OR: goose run --params source_text="Hello world" --params target_lang="German"
+#     --recipe /tmp/translator-team/recipe/translator-team.yaml
+#     (note: --params will be shown but the orchestrator may still re-ask
+#      until the prompt: is fixed to a template — see RE-TEST-RESULTS.md)
+```
 
-**Files changed:**
-- `mas-engineer/recipe/dev-mas-engineer.yaml` (root recipe)
-- `mas-engineer/recipe/sub/sub_mas-team-packager.yaml` (repo copy)
-- `mas-engineer/recipe/sub/sub_mas-general-improver.yaml` (repo copy)
-- `/root/.config/goose/recipes/dev-mas-engineer.yaml` (installed copy)
+Expected chain:
+1. TUI shows "Loading recipe"
+2. "Parameters used to load this recipe: ..." (params parsed)
+3. Welcome message from orchestrator
+4. (Current behavior) Orchestrator asks again for the same params — this is the SEPARATE recipe-design issue
+5. (If fixed) Orchestrator dispatches to specialist(s), specialists respond, orchestrator synthesizes
 
-See commits `d03efd2` (round 1) and `5431a40` (round 2) for the exact diffs.
-
----
-
-## Why this matters
-
-Before the fix, the mas-engineer recipe in this repo was BROKEN — it would
-load but the `delegate` tool was not available, so sub-agent delegation
-silently failed. The 3-team demo on 2026-07-21 (sales, marketing, translator)
-all failed at the dispatch step because of this.
-
-After the fix, mas-engineer is the central orchestrator it was designed to be:
-- 52 specialized sub-agents
-- Delegate tool for routing work
-- Substantive, tool-using responses to MAS-related queries
+For the 3 demo teams, step 4 needs recipe-engineering work. The Issue 7355/7570 fix in this commit does NOT address that.
 
 ---
 
-## Sign-off
+## Sign-off (honest)
 
-This certificate was generated by an autonomous agent (Hermes) on 2026-07-21
-after running 4 hours of end-to-end tests. The mas-engineer recipe in this
-repo (`mas-engineer/recipe/dev-mas-engineer.yaml`) is VERIFIED FUNCTIONAL.
+This certificate covers the **Issue 7355/7570 recipe-loading bug only**.
 
-To re-verify: run Steps 1-3 above. Expected time: ~15 minutes.
+- ✅ Verified: recipes load with `type: platform`, summon is available, no crashes
+- ✅ Verified: 52 sub-recipes register in the mas-engineer recipe
+- ✅ Verified: pre-push validator passes
+- ⚠️ Not verified: interactive TUI dispatch (TTY required, not available in this sandbox)
+- ⚠️ Not verified: orchestrator actually delegates with --params (separate recipe-design issue — see `RE-TEST-RESULTS.md`)
+
+The mas-engineer FRAMEWORK is functional. The 3 demo teams need additional
+recipe-engineering work to make them actually delegate when invoked with
+--params. A human user is needed to verify the full interactive chain.
+
+**Tester:** Hermes Agent (autonomous)
+**Date:** 2026-07-21
+**Commit verified:** b2f4a60 (this evidence folder)
