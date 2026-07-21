@@ -1,0 +1,68 @@
+Build a complete Multi-Agent System called "sales-team" at
+/tmp/sales-team. Do NOT just plan it — actually create the files,
+run live tests, and report results.
+
+STEP 1 — Initialize the project skeleton
+Run: python3 ~/.config/goose/recipes/tools/dev_generic_init.py
+     --init /tmp/sales-team --components all
+
+STEP 2 — Create 5+ interconnected agents in
+         /tmp/sales-team/recipe/sub/:
+
+1. sales-orchestrator.yaml (root: /tmp/sales-team/recipe/
+   sales-team.yaml)
+   - Main entry point. Receives sales query (lead qualification,
+     outreach strategy, deal close assistance, pipeline review).
+   - Decomposes into sub-tasks.
+   - Dispatches to specialists.
+   - Collects results.
+   - Returns synthesized sales recommendation WITH SOURCES.
+
+2. lead-scraper.yaml
+   - Uses web_search to find B2B leads matching ICP.
+   - Returns: list of {company, url, snippet, source_domain}.
+
+3. lead-verifier.yaml (MANDATORY — quality gate)
+   - Receives raw leads from lead-scraper.
+   - Filters spam, irrelevant companies, outdated info.
+   - Cross-checks company size, industry, funding against multiple sources.
+   - Returns ONLY verified leads with confidence score (0-1) and URLs.
+
+4. outreach-drafter.yaml
+   - Receives verified leads from lead-verifier.
+   - Drafts personalized outreach email/LinkedIn message per lead.
+   - Returns {lead_company, subject_line, body, source_url}.
+
+5. deal-closer.yaml
+   - Receives outreach drafts from outreach-drafter.
+   - Suggests follow-up cadence + objection handling.
+   - Returns next-step playbook per lead.
+
+STEP 3 — Create the orchestrator root recipe sales-team.yaml
+that references all 4 sub-recipes via sub_recipes field.
+
+STEP 4 — LIVE TEST (mandatory):
+a) goose run --recipe /tmp/sales-team/recipe/sales-team.yaml
+   --no-session --explain
+b) goose run --recipe /tmp/sales-team/recipe/sub/lead-scraper.yaml
+   --no-session --explain
+c) goose run --recipe /tmp/sales-team/recipe/sub/lead-verifier.yaml
+   --no-session --explain
+d) goose run --recipe /tmp/sales-team/recipe/sub/outreach-drafter.yaml
+   --no-session --explain
+e) goose run --recipe /tmp/sales-team/recipe/sub/deal-closer.yaml
+   --no-session --explain
+f) python3 -c "import yaml; [yaml.safe_load(open(f))
+   for f in ['/tmp/sales-team/recipe/sales-team.yaml',
+            '/tmp/sales-team/recipe/sub/lead-scraper.yaml',
+            '/tmp/sales-team/recipe/sub/lead-verifier.yaml',
+            '/tmp/sales-team/recipe/sub/outreach-drafter.yaml',
+            '/tmp/sales-team/recipe/sub/deal-closer.yaml']]"
+
+STEP 5 — Report:
+- List all 6 files created with line counts.
+- Show PASS/FAIL for each of the 5 + 6 = 11 checks.
+- Show any YAML errors with line numbers.
+
+Critical: every lead MUST pass through lead-verifier before reaching
+outreach-drafter. No unverified leads in the final outreach.
