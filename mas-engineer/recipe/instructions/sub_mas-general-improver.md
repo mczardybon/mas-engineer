@@ -217,6 +217,38 @@ IF task in (FULL_IMPROVEMENT, REVIEW) AND patches applied:
   → IF DEGRADED: Ask User "Keep anyway? (y/N)"
   → IF ALL_GREEN: ✅ All Changes valid
 
+## STEP 6.5 — SELF-AUDIT (NEW — verification theater guard) 🪞
+**Triggered:** IF DETECTED_MODE == "mas" AND patches touched any of:
+  - `e2e-results/**/*.md`
+  - `docs/**/*.md`
+  - top-level `*.md` (certificates, summaries)
+  - `recipe/sub/sub_mas-*-auditor.yaml` (meta-doc changes)
+  - Anything matching CERTIFICATE.md, FINAL-EVIDENCE.md, SUMMARY.txt, EVIDENCE-*.md
+
+**Why this step exists:**
+On 2026-07-21 the project pushed a CERTIFICATE.md claiming "VERIFIED FUNCTIONAL"
+and "ALL HYPOTHESES VERIFIED" — but on close reading, the underlying test was
+a workaround and the original failure scenario was never re-run. The user
+(mczardybon) correctly flagged this as "verification theater". This step
+prevents recurrence: any time the pipeline touches EVIDENCE/cert docs, the
+self-auditor re-checks that the claims are backed by actual test logs.
+
+**Action:**
+1. RUN: `python3 tools/dev_self_auditor.py --workspace {workspace} --scope e2e-results --output .state/pipeline/self_audit.yaml`
+2. READ: `.state/pipeline/self_audit.yaml` → `audit_run.result`
+3. **IF result == FAIL** (≥1 overclaim without evidence):
+   - SHOW the SC-XXX findings to User
+   - ASK: "Self-audit found {N} overclaim(s) in changed docs. Apply anyway? (y/N/fix)"
+   - IF "fix" → DELEGATE to sub_mas-self-auditor (task=CLAIM_EVIDENCE_AUDIT) to rewrite the docs with honest scope
+   - IF "y" → Log as "user-accepted-overclaim" and CONTINUE
+   - IF "N" → ROLLBACK the offending doc changes
+4. **IF result == WARN** (strong claim but file has honest-scope markers): ✅ Log and continue, no User prompt
+5. **IF result == PASS**: ✅ Log and continue
+
+**This is the missing piece that makes mas-engineer "improve itself"**
+in the sense the user asked for: not just "find code smells and patch them",
+but "audit your own claims and tell me when you're overpromising."
+
 ## STEP 7 — SUMMARY + INSTALL
 SHOW:
 "━━━ PIPELINE COMPLETED ━━━

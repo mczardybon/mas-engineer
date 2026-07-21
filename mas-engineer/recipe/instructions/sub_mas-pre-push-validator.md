@@ -119,6 +119,52 @@ python3 tools/dev_goose_expert_check.py --check-mechanism "$(git diff HEAD~1 -- 
 **Block if:** any "missing Goose mechanism" pattern found in uncommitted
 or recently-pushed code/docs. See `docs/lessons-learned.md` L01.
 
+### Check 9: Self-audit — no "verification theater" (no claim without evidence)
+Catches the class of bug where certificate / EVIDENCE docs contain strong
+claims ("VERIFIED FUNCTIONAL", "ALL HYPOTHESES VERIFIED", "100% PASS",
+"guarantees") without a matching test log that actually demonstrates
+the claim. This is the "verification theater" pattern that the user
+flagged on 2026-07-21.
+
+This check delegates to `sub_mas-self-auditor` (sub-agent). The
+self-auditor reads e2e-results/, docs/, and top-level `*.md`, then
+emits a report to `.state/pipeline/self_audit.yaml`.
+
+```bash
+cd $WORKSPACE
+# Only run if e2e-results or cert-style files are staged
+STAGED_CERTS=$(git diff --cached --name-only | grep -E "^(e2e-results/|docs/.*CERTAIN|certificates/|\w*\.md$)" | head -5)
+if [ -n "$STAGED_CERTS" ]; then
+  # Run the self-auditor
+  python3 tools/dev_self_auditor.py --scope e2e-results --check-patterns
+  # Read its report
+  cat .state/pipeline/self_audit.yaml
+fi
+```
+
+**Patterns blocked (CHECK 1 in self-auditor):**
+- `\bVERIFIED\s+FUNCTIONAL\b` without matching test log in same folder
+- `\bALL\s+HYPOTHESES\s+VERIFIED\b` without matching log
+- `\b100%\s+(PASS|pass|test|coverage)\b` without matching pass-count log
+- `\bguarantee[sd]?\b` in a cert-style file (CERTIFICATE.md, etc.)
+- `\bE2E[-\s]verified\b` not scoped to "loading fix"
+
+**Block if:** ≥1 strong claim without matching test log, OR
+strong claim + "workaround" / "out of scope" / "not yet tested"
+within 5 lines (claim-vs-scope contradiction).
+
+**Pass condition (CHECK 8 in self-auditor):** file contains
+"honest scope" / "NOT verified" markers AND same folder has a
+`RE-TEST-RESULTS.md` or similar honest-scope companion doc.
+This rewards properly-scoped documents.
+
+**Why this check matters:** On 2026-07-21 the project pushed a
+CERTIFICATE.md that said "VERIFIED FUNCTIONAL" and "ALL HYPOTHESES
+VERIFIED". On close reading, the underlying test was a workaround
+and the original failure scenario was never re-run. The user
+flagged this as overclaim. This check prevents recurrence by
+making the pre-push gate reject unbacked strong claims.
+
 ## Output Format
 
 Write a YAML report to `.state/pipeline/pre_push_validation.yaml`:
@@ -134,7 +180,7 @@ data:
     ok: <bool>
     blocked_reasons: [<string>, ...]
     warnings: [<string>, ...]
-  checks_run: 8
+  checks_run: 9
   checks_passed: <int>
   checks_failed: <int>
   timestamp: <ISO-8601>
