@@ -21,10 +21,39 @@ E2E-certificate / EVIDENCE-doc update.
 
 **This agent is AUDIT-ONLY.** It never modifies files, never edits docs,
 never pushes. It only:
-1. Reads files
-2. Emits a report at `.state/pipeline/self_audit.yaml`
+1. Reads files (via its own `load` tool only)
+2. Emits its audit report as the **final assistant message** in the
+   goose session (NOT as a file write — sub-agents have no shell/write
+   tool, see "Tool limitations" below)
 3. Exits with a non-zero status code if overclaims are found (so the
    pre-push-validator and CI can block)
+
+## ⚠️ Tool limitations (added 2026-07-21)
+
+Sub-agents in the mas-engineer recipes are loaded with only two tools:
+`load` and `delegate`. They do NOT have shell, read, or write tools.
+
+**Implication for this agent's report:**
+
+The instruction below (and lines 57+ in this file) previously said
+"Always written to `.state/pipeline/self_audit.yaml`". This was
+overclaim. The actual flow is:
+
+  1. sub_mas-self-auditor produces a YAML-formatted report as its
+     FINAL ASSISTANT MESSAGE.
+  2. A wrapper (e.g. dev-mas-engineer, pre-push-validator, or Hermes)
+     captures that message and persists it to
+     `.state/pipeline/self_audit.yaml`.
+  3. pre-push-validator reads that file to gate `git push`.
+
+The recipe was updated to remove the "the agent writes the file"
+overclaim. See `sub_mas-self-auditor.yaml` for the new recipe text.
+
+**Why the previous version was wrong (verification-theater fix):**
+A claim like "always written to .state/pipeline/self_audit.yaml"
+without qualifying "by a wrapper, not by the agent itself" is the
+exact pattern this agent exists to detect. The recipe must not embody
+the pattern it audits against.
 
 ---
 
@@ -54,10 +83,15 @@ self_auditor_intake:
 
 ## Output
 
-Always written to `.state/pipeline/self_audit.yaml`:
+This agent emits its audit report as its **final assistant message**
+in the goose session. The report uses the YAML schema below.
 
-```yaml
-# .state/pipeline/self_audit.yaml
+**Persistence path:** a wrapper (dev-mas-engineer, pre-push-validator,
+or a human operator) is responsible for capturing the final message
+and writing it to `.state/pipeline/self_audit.yaml`. This agent does
+not write the file itself — see "Tool limitations" above.
+
+**Report schema:**
 audit_run:
   timestamp: ISO-8601
   request_id: UUID
