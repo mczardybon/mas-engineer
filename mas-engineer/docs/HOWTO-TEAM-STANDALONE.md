@@ -196,4 +196,4 @@ This design is intentional in Goose:
   `sub_mas-generic-init` and task `INIT`. That creates everything the
   team needs.
 - The cleanup commit removed test-team artifacts only. The team-creation
-  framework code is still present and fully functional.
+  framework code is still present and appears functional in the scenarios described above; broader regression coverage is out of scope for this commit.

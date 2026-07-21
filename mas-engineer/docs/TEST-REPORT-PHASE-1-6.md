@@ -115,7 +115,7 @@
 3. OK live daemon cache refreshed
 4. OK dashboard data.json written (3585 bytes)
 
-**Finding**: Daemon and scheduler fully functional. Cron is active in production environment (see install.sh step 6).
+**Finding**: Daemon and scheduler appear functional in the scenarios tested in this report (cache refresh, dashboard write). Cron activation was verified per install.sh step 6. NOT verified: long-running stability, error recovery under load.
 
 ---
 
