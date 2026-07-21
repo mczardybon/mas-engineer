@@ -182,6 +182,7 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
 **N — Delegation Logic** (3 types)
 - N1: delegation target wrong agent
 - N2: missing delegation
+  - GUARD: only fire if recipe is an active sub-agent (not template/recovery/dashboard)
 - N3: over-delegation (loop risk)
 
 **O — Output Schema** (3 types)
@@ -264,6 +265,8 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
 
 **JJ — Extensions** (1 type)
 - JJ1: extensions: list missing `summon` (sub-agents can't be summoned)
+  - GUARD: only fire if `extensions:` block is present AND missing `summon`
+  - SKIP: templates, one-off recipes, recovery recipes (no extensions: block = no summon needed)
 
 **KK — Knowledge Refresh** (1 type)
 - KK1: cached knowledge out of date (e.g. goose-docs version)
@@ -279,6 +282,9 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
 - MM3: missing instructions: field
 - MM4: settings: missing required keys
 - MM5: constitution: missing
+  - NOTE: constitution: is a MAS-engineer convention, NOT a Goose-native field
+  - SKIP: for sub-agents (use master-constitution as default)
+  - APPLY: only for top-level orchestrators (dev-mas-engineer, im-*)
 - MM6: extensions: missing when sub-delegation is needed
 - MM7: description: empty or placeholder
 - MM8: prompt: > 30 chars but no I_AM identity
