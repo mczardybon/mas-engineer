@@ -175,6 +175,44 @@ result is a lightweight team package.
 | Use case | deploy MAS-Engineer | distribute team |
 | Install | full | single team |
 
+## ⚠️ Important: sub_recipes behavior in packaged teams
+
+When a team is packaged, the `sub_recipes` entries in the root recipe
+and orchestrator recipes are preserved. However, it is critical to
+understand how Goose handles `sub_recipes`:
+
+**sub_recipes loads sub-recipes as separate runnable sessions, NOT as
+in-session callable tools.** Each sub-recipe entry is accessible via
+the `load`/`delegate` mechanism (summon extension), which spawns a
+new sub-agent session for each invocation.
+
+### Requirements for packaged orchestrator recipes
+
+All orchestrator recipes in the packaged team MUST:
+
+1. **Include the `summon` extension** in their `extensions:` field:
+   ```yaml
+   extensions:
+     - name: summon
+       type: platform
+   ```
+   Without this, the `load`/`delegate` tool is unavailable to the
+   orchestrator sub-agent.
+
+2. **Use `load`** (not `delegate`) to invoke specialist agents, since
+   `sub_recipes` entries are accessible via the `load` mechanism.
+
+3. **Document the session-based invocation model** so users understand
+   that each specialist runs in its own goose session.
+
+### Verification checklist
+
+Before distributing a packaged team, verify:
+- [ ] All orchestrator recipes have `extensions: [{name: summon, type: platform}]`
+- [ ] Prompts use `load` (not `delegate`) for sub-agent invocation
+- [ ] Instructions explain the session-based invocation model
+- [ ] Root recipe has no extensions field (inherits summon automatically)
+
 ## Workflow integration
 
 The team-packager is automatically called by:

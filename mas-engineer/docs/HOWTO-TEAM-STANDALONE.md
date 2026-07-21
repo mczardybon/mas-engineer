@@ -125,6 +125,67 @@ team-creation workflow itself (intention-parser detects
 `(interactive)` vs `(auto)`, generic-init handles
 `CREATE_TEAM_SHELL`) is framework code and is still in the repo.
 
+## ⚠️ Critical: sub_recipes loads sub-recipes as separate sessions, NOT in-session tools
+
+A common misconception is that `sub_recipes` entries are available as
+in-session callable tools (like MCP tools). **This is incorrect.**
+
+### How sub_recipes actually works
+
+Goose's `sub_recipes` field loads each entry as a **separate runnable
+recipe** accessible via the `load`/`delegate` mechanism (via the `summon`
+extension). When an orchestrator calls `load(source: "specialist")`, Goose
+spawns a **new sub-agent session** for that specialist. The specialist
+runs in its own session context, with its own prompt, instructions, and
+settings.
+
+This means:
+- Sub-recipes are **NOT** available as in-session tool calls (like MCP tools).
+- Each sub-agent invocation creates a **separate goose session**.
+- The orchestrator communicates with specialists via the `load`/`delegate`
+  interface, not via direct function calls.
+- Sub-recipes listed in `sub_recipes` appear in the `load`/`delegate`
+  source list automatically.
+
+### What this means for orchestrator recipes
+
+Orchestrator recipes (e.g., `sales-orchestrator.yaml`) MUST:
+
+1. **Have the `summon` extension listed** in their `extensions:` field:
+   ```yaml
+   extensions:
+     - name: summon
+       type: platform
+   ```
+   Without this, the `load`/`delegate` tool is unavailable. Goose
+   documentation states: *"If Recipe extensions: defined, must summon
+   explicitly be listed, else no delegate/load tool available."*
+
+2. **Use `load` (not `delegate`)** in their prompts and instructions
+   to invoke specialist agents. The `load` function spawns a sub-agent
+   session for the named sub-recipe.
+
+3. **Understand that each specialist runs in its own session** — there
+   is no shared state between the orchestrator and specialists beyond
+   what is passed via the `load` call parameters.
+
+### Why this design
+
+This design is intentional in Goose:
+- Each sub-agent gets its own isolated execution context.
+- Sub-agents can have different models, providers, and settings.
+- Parallel execution is supported via `async: true` in load calls.
+- The orchestrator remains lightweight — it coordinates, not executes.
+
+### Common pitfalls
+
+| Pitfall | Consequence | Fix |
+|---------|-------------|-----|
+| Missing `summon` extension | `load`/`delegate` tool unavailable | Add `extensions: [{name: summon, type: platform}]` |
+| Using `delegate` instead of `load` | Confusion about mechanism | Use `load` for sub_recipes entries |
+| Expecting in-session tool calls | Orchestrator cannot call specialists directly | Use `load` to spawn sub-agent sessions |
+| No `async: true` for parallel | Specialists run sequentially | Add `async: true` to parallel load calls |
+
 ## Summary
 
 - MAS-Engineer-created teams are **not standalone** by design. They
