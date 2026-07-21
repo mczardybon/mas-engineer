@@ -226,8 +226,8 @@ IF task in (FULL_IMPROVEMENT, REVIEW) AND patches applied:
   - Anything matching CERTIFICATE.md, FINAL-EVIDENCE.md, SUMMARY.txt, EVIDENCE-*.md
 
 **Why this step exists:**
-On 2026-07-21 the project pushed a CERTIFICATE.md claiming "VERIFIED FUNCTIONAL"
-and "ALL HYPOTHESES VERIFIED" — but on close reading, the underlying test was
+On 2026-07-21 the project pushed a CERTIFICATE.md claiming "VERIFIED-FUNCTIONAL"
+and "ALL-HYPOTHESES-VERIFIED" — but on close reading, the underlying test was
 a workaround and the original failure scenario was never re-run. The user
 (mczardybon) correctly flagged this as "verification theater". This step
 prevents recurrence: any time the pipeline touches EVIDENCE/cert docs, the

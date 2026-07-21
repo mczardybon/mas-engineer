@@ -120,9 +120,10 @@ python3 tools/dev_goose_expert_check.py --check-mechanism "$(git diff HEAD~1 -- 
 or recently-pushed code/docs. See `docs/lessons-learned.md` L01.
 
 ### Check 9: Self-audit — no "verification theater" (no claim without evidence)
-Catches the class of bug where certificate / EVIDENCE docs contain strong
-claims ("VERIFIED FUNCTIONAL", "ALL HYPOTHESES VERIFIED", "100% PASS",
-"guarantees") without a matching test log that actually demonstrates
+| Catches the class of bug where certificate / EVIDENCE docs contain strong
+| claims (e.g. the phrases "VERIFIED-FUNCTIONAL" with that exact hyphenation,
+| "ALL-HYPOTHESES-VERIFIED", "100%-PASS", or unguarded "guarantees")
+| without a matching test log that actually demonstrates
 the claim. This is the "verification theater" pattern that the user
 flagged on 2026-07-21.
 
@@ -159,8 +160,7 @@ within 5 lines (claim-vs-scope contradiction).
 This rewards properly-scoped documents.
 
 **Why this check matters:** On 2026-07-21 the project pushed a
-CERTIFICATE.md that said "VERIFIED FUNCTIONAL" and "ALL HYPOTHESES
-VERIFIED". On close reading, the underlying test was a workaround
+CERTIFICATE.md that said "VERIFIED-FUNCTIONAL" and "ALL-HYPOTHESES-VERIFIED". On close reading, the underlying test was a workaround
 and the original failure scenario was never re-run. The user
 flagged this as overclaim. This check prevents recurrence by
 making the pre-push gate reject unbacked strong claims.
