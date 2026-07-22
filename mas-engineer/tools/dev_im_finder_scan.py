@@ -1,16 +1,52 @@
 #!/usr/bin/env python3
-"""Comprehensive IM-Finder scan — detects all 53+ feature types A-MM + NN."""
-import yaml, os, glob, re, json, sys
+"""Comprehensive IM-Finder scan — detects all 53+ feature types A-MM + NN.
+
+IM-005 SCOPE-FIX (2026-07-22): The scan was previously hardcoded to
+RECIPE_DIR='recipe' which meant user-installed demo teams in
+/root/.config/goose/recipes/*/ were never analyzed. Now we accept
+--scope (CLI arg) or the SCAN_SCOPE env var to extend coverage.
+Default behavior is unchanged (backward-compatible).
+"""
+import yaml, os, glob, re, json, sys, argparse
 from collections import Counter
 
-RECIPE_DIR = 'recipe'
+# SCAN_SCOPE may be a single directory, a comma-separated list, or multiple
+# --scope args.  Default = 'recipe' (backward compatible).
+def _collect_scope_dirs():
+    raw = []
+    # 1. CLI arg
+    for arg in sys.argv[1:]:
+        if arg.startswith('--scope='):
+            raw.append(arg.split('=', 1)[1])
+    # 2. Env var
+    env = os.environ.get('SCAN_SCOPE')
+    if env:
+        raw.append(env)
+    # 3. Fallback
+    if not raw:
+        raw = ['recipe']
+    # Split on comma for env, allow duplicates; de-dup
+    dirs = []
+    for r in raw:
+        for d in r.split(','):
+            d = d.strip()
+            if d and d not in dirs:
+                dirs.append(d)
+    return dirs
+
+SCAN_DIRS = _collect_scope_dirs()
 ALL_YAMLS = []
-for root, dirs, files in os.walk(RECIPE_DIR):
-    for f in files:
-        if f.endswith('.yaml') or f.endswith('.yml'):
-            ALL_YAMLS.append(os.path.join(root, f))
+for SCAN_DIR in SCAN_DIRS:
+    if not os.path.isdir(SCAN_DIR):
+        continue
+    for root, dirs, files in os.walk(SCAN_DIR):
+        # skip sub/ of a top-level scan to avoid re-walking
+        for f in files:
+            if f.endswith('.yaml') or f.endswith('.yml'):
+                ALL_YAMLS.append(os.path.join(root, f))
+# Also pick up top-level yamls in cwd (legacy)
 for f in glob.glob('*.yaml') + glob.glob('*.yml'):
-    if os.path.isfile(f):
+    if os.path.isfile(f) and f not in ALL_YAMLS:
         ALL_YAMLS.append(f)
 
 findings = []

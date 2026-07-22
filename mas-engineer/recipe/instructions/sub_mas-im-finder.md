@@ -28,14 +28,15 @@ timestamp: <ISO-8601>
 ```
 
 ## ⛔ STEP 0 — RUN SCANNER (MANDATORY FIRST STEP)
-
 **🚨 THIS IS NOT OPTIONAL. I MUST run the scanner before any analysis or delegation. 🚨**
 
-```python
 # I am the IM-FINDER. My FIRST action is ALWAYS to run the scanner.
 # I do NOT wait for orchestrator input — the scanner IS my data source.
-1. EXECUTE this shell command FIRST (before any other action):
-   shell(cmd="cd /workspace/mas-engineer-src/mas-engineer && python3 tools/dev_im_finder_scan.py > /tmp/scan_output.txt 2>&1")
+
+1. EXECUTE: shell(cmd="cd {workspace} && python3 tools/dev_im_finder_scan.py --scope=recipe,/root/.config/goose/recipes/sales,/root/.config/goose/recipes/marketing,/root/.config/goose/recipes/translator > /tmp/scan_output.txt 2>&1")
+   # IM-005 SCOPE-FIX (2026-07-22): include user-installed demo teams so the
+   # im-finder can catch sub_recipes/extensions/prompt issues in those recipes
+   # (e.g. marketing-orchestrator was missing sub_recipes block for 2 days).
 2. EXECUTE: shell(cmd="cat /tmp/scan_output.txt")
 3. PARSE the JSON output (look for ---JSON_START--- block)
 4. Use the parsed findings as the input for STEP 0.5 delegation

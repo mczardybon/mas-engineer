@@ -1,0 +1,58 @@
+id: IM-005
+title: im-finder scope extension - include user-installed demo teams
+created: '2026-07-22T08:06:00+00:00'
+created_by: Hermes Agent (operator override, subagent of mczardybon)
+status: in_progress
+priority: high
+round: 2026-07-22-IM-005
+context: |
+  User (mczardybon) reported that 3 demo MAS teams in /root/.config/goose/recipes/
+  (sales, marketing, translator) had issues. mas-engineer im-finder pipeline
+  ran but only produced patches for mas-engineer/recipe/ files. The demo teams
+  in /root/.config/goose/recipes/{sales,marketing,translator}/ were NEVER
+  scanned because tools/dev_im_finder_scan.py had RECIPE_DIR hardcoded to recipe.
+problem_statement: |
+  dev_im_finder_scan.py was scoped to {workspace}/recipe/ only. Any YAML outside
+  that tree was never analyzed. Two-day-old bug: marketing-orchestrator.yaml
+  had no sub_recipes block (all 5 specialists returned "not available", falls
+  back to self-execution) but the im-finder never caught it.
+affected_components:
+  - path: tools/dev_im_finder_scan.py
+    change: RECIPE_DIR hardcoded, replaced with SCAN_SCOPE
+  - path: recipe/instructions/sub_mas-im-finder.md
+    change: STEP 0 shell cmd now passes --scope
+  - path: /root/.config/goose/recipes/marketing-orchestrator.yaml
+    change: added sub_recipes block with 5 specialists
+solution_applied:
+  - dev_im_finder_scan.py now accepts --scope=DIR (CLI) and SCAN_SCOPE env var.
+    Falls back to recipe if neither is provided (backward-compatible).
+  - im-finder instruction file updated to call scanner with --scope covering
+    recipe, sales, marketing, and translator under /root/.config/goose/recipes/.
+  - marketing-orchestrator.yaml now has sub_recipes block with seo-researcher,
+    content-writer, social-media-manager, analytics-reporter, email-campaign-manager.
+    Paths use ./marketing/sub/ relative to /root/.config/goose/recipes/.
+verification:
+  default_scan_findings: 985
+  extended_scan_findings: 1101
+  delta_findings: 116
+  note: extended scan covers recipe plus /root/.config/goose/recipes/marketing
+next_steps:
+  - mas-engineer commits the dev_im_finder_scan.py and im-finder.md changes
+  - the marketing-orchestrator.yaml change lives in /root/.config/goose/recipes/
+    (outside the mas-engineer workspace). User commits it separately.
+  - future im-runs (IM-006 and later) will automatically include user-recipe scope.
+related:
+  - prior: IM-001 through IM-004 (all in mas-engineer workspace)
+  - signals_log: CP_TRIGGER improvement-pipeline SPLIT_AGENT sales-team
+  - applied_in_this_round: 5 CONFORM patches from validation.yaml (2026-07-22T07:55)
+applied_patches_this_round:
+  - file: recipe/dashboard-data-refresh.yaml
+    change: added name field
+  - file: recipe/dev-mas-engineer.yaml
+    change: added name field
+  - file: recipe/setup-dashboard.yaml
+    change: added name field
+  - file: recipe/sub/code-reviewer.yaml
+    change: added summon extension
+  - file: recipe/sub/security-scanner.yaml
+    change: added summon extension
