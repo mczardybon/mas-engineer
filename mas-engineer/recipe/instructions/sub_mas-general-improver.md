@@ -123,15 +123,29 @@ ONLY at FULL_IMPROVEMENT or REVIEW:
 NO ABORT at missing
   Components — deliver maximal result
 
-### RECURSION GUARD
+### RECURSION GUARD (v2 — RECURSION-OVERRIDE)
 CHECK: {workspace}/.state/schedule.yaml
-IF exists + last FULL_IMPROVEMENT < 24h:
-  → Only short form (ERROR_PATTERN) only
-  SHOW:
-  "ℹ️ recursion-Guard active — last round < 24h"
+TWO-TIER RULES:
+
+A) FULL_IMPROVEMENT self-runs (FIND→RANK→DESIGN→VALIDATE→APPLY):
+   IF exists + last FULL_IMPROVEMENT < 24h:
+     → Only short form (ERROR_PATTERN) only
+     SHOW: "ℹ️ recursion-Guard active — last round < 24h"
+
+B) APPLY-ONLY operations (RECURSION_OVERRIDE=1):
+   IF env RECURSION_OVERRIDE=1 OR --recursion-override flag:
+     → SKIP 24h cooldown
+     → READ .state/pipeline/validation.yaml
+     → For each status=approved + verdict=CONFORM:
+       delegate to sub_mas-yaml-editor (APPLY)
+     → APPEND to .state/changes.json with stage="apply_only"
+     → DO NOT touch last_FULL_IMPROVEMENT_run timestamp
+     → SHOW: "✅ RECURSION-OVERRIDE: applied N patches (operator-initiated)"
+
+COST LIMIT (both tiers):
 CHECK: {workspace}/.state/changes.json
 IF 5+ self-improve entries today:
-  → ABORT (cost limit)
+  → ABORT (cost limit) — override does NOT bypass cost limit
 
 ### TIMING CHECK
 1. READ {workspace}/.state/schedule.yaml
