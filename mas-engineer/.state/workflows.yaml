@@ -1650,6 +1650,11 @@ task_workflows:
       action: shell
       cmd: 'LATEST=$(ls -1t .state/checkpoints/ 2>/dev/null | head -1) && [ -d ".state/checkpoints/$LATEST/recipe" ] && echo "recipe/ OK" || echo "recipe/ MISSING (C-01)"'
       timeout: 15
+    - id: auto_repair
+      action: shell
+      cmd: 'LATEST=$(ls -1t .state/checkpoints/ 2>/dev/null | head -1) && if [ -d ".state/checkpoints/$LATEST/recipe" ] && [ ! -d recipe ]; then echo "[AUTO_REPAIR DRY-RUN] would: cp -r .state/checkpoints/$LATEST/recipe recipe/"; elif [ -d recipe ]; then echo "[AUTO_REPAIR] recipe/ already exists — no action"; else echo "[AUTO_REPAIR] no checkpoint to restore from"; fi'
+      timeout: 15
+      on_error: skip
   wf_recovery_safezone:
     desc: Recovery templates in template/recovery/
     steps:
@@ -1665,6 +1670,11 @@ task_workflows:
       action: shell
       cmd: 'test -L mas-engineer_active 2>/dev/null && echo "Fork ACTIVE" || echo "No active fork"'
       timeout: 10
+    - id: auto_repair
+      action: shell
+      cmd: 'if [ ! -L mas-engineer_active ]; then TS=$(date +%Y%m%d_%H%M%S); echo "[AUTO_REPAIR DRY-RUN] would: ln -s mas-engineer_fork_$TS mas-engineer_active"; else echo "[AUTO_REPAIR] fork already active"; fi'
+      timeout: 15
+      on_error: skip
   wf_recovery_timeline:
     desc: Find best recovery point
     steps:
@@ -1680,6 +1690,11 @@ task_workflows:
       action: shell
       cmd: 'LATEST=$(ls -1t .state/checkpoints/ 2>/dev/null | head -1) && [ -n "$LATEST" ] && echo "Best checkpoint: $LATEST" || echo "No checkpoints found"'
       timeout: 15
+    - id: auto_repair
+      action: shell
+      cmd: 'LATEST=$(ls -1t .state/checkpoints/ 2>/dev/null | head -1) && if [ -n "$LATEST" ]; then echo "[AUTO_REPAIR DRY-RUN] would: cp -rn .state/checkpoints/$LATEST/recipe/* recipe/ (if current state corrupted)"; else echo "[AUTO_REPAIR] no checkpoint available"; fi'
+      timeout: 15
+      on_error: skip
   wf_recovery_defib:
     desc: 'Defibrillator: reanimate agent on death/drift/loop'
     steps:
@@ -1695,6 +1710,11 @@ task_workflows:
       action: shell
       cmd: 'python3 -c "import yaml; d=yaml.safe_load(open(''.state/workflows.yaml'')); print(d[''task_workflows''][''wf_recovery_immune''][''desc'']); print(d[''task_workflows''][''wf_recovery_timeline''][''desc''])"'
       timeout: 15
+    - id: auto_repair
+      action: shell
+      cmd: 'if [ ! -f recipe/dev-mas-engineer.yaml ]; then echo "[AUTO_REPAIR DRY-RUN] would: write emergency dev-mas-engineer.yaml with only recovery-mode sub-recipes"; else echo "[AUTO_REPAIR] config present — no action needed"; fi'
+      timeout: 15
+      on_error: skip
   wf_immune_check_yaml:
     desc: YAML-Syntax ar individualen file checkn
     steps:
