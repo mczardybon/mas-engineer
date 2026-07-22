@@ -102,8 +102,13 @@ IF DETECTED_MODE != "mas":
 
 ### WEB-RESEARCH (OPTIONAL — R18 via sub_mas-web-researcher)
 ONLY at FULL_IMPROVEMENT or REVIEW:
-  ASK User:
-  "Should I before the Improvement via sub_mas-web-researcher
+  AUTO-DETECT (IM-007 fix 2026-07-22):
+    IF env MAS_WEB_RESEARCH=yes  → Yes (skip prompt)
+    IF env MAS_WEB_RESEARCH=no   → No  (skip prompt)
+    IF --params web_research=yes → Yes (skip prompt)
+    IF --params web_research=no  → No  (skip prompt)
+    ELSE → ASK User:
+    "Should I before the Improvement via sub_mas-web-researcher
      research current techniques? (ca. 30s)"
   IF Yes:
     → DELEGATE to sub_mas-web-researcher (task=SEARCH,
@@ -122,6 +127,74 @@ ONLY at FULL_IMPROVEMENT or REVIEW:
 - MAS: CHECK: {workspace}/recipe/dev-mas-engineer.yaml — Missing? → Only Generic-mode
 NO ABORT at missing
   Components — deliver maximal result
+
+### TASK DETECTION (STEP 0.5 — IM-007 fix by Hermes 2026-07-22)
+The orchestrator needs to know the task before STEP 1. It accepts
+task from FOUR sources, in priority order:
+1. `--params task=...` (CLI arg, highest priority)
+2. env `MAS_TASK=...`
+3. env `RECURSION_OVERRIDE=1` → maps to APPLY_ONLY (operator-initiated)
+4. Initial user message (first line matching one of: FULL_IMPROVEMENT,
+   REVIEW, COST_ANALYSIS, ERROR_PATTERN, CORRECTION_LOG, USAGE_PATTERN,
+   APPLY_ONLY)
+5. Fallback: ASK user (default behavior, only if no source above)
+
+VALID TASKS: FULL_IMPROVEMENT | REVIEW | COST_ANALYSIS | ERROR_PATTERN
+            | CORRECTION_LOG | USAGE_PATTERN | APPLY_ONLY
+
+```
+TASK=$(echo "$GOOSE_PARAMS" | grep -oP 'task=\K[^,]+' | head -1)
+[ -z "$TASK" ] && TASK="$MAS_TASK"
+[ -z "$TASK" ] && [ "$RECURSION_OVERRIDE" = "1" ] && TASK=APPLY_ONLY
+# (Initial-message extraction handled in the LLM prompt itself)
+```
+
+If task is detected from sources 1-4, SKIP the "What task would you like
+me to run?" prompt and go directly to STEP 1.
+
+If task remains unknown after sources 1-4, ASK the user.
+
+### CONFIRMATION BYPASS (STEP 0.6 — IM-007 fix by Hermes 2026-07-22)
+The R01 rule-checker asks for user confirmation before each change.
+For non-interactive runs (operator-driven scripts, CI, cron), we
+bypass this when ANY of:
+1. env `MAS_CONFIRM=yes` (operator has pre-confirmed)
+2. `--params confirm=yes` (CLI arg)
+3. env `RECURSION_OVERRIDE=1` (operator-initiated apply_only)
+4. Initial user message contains "yes" / "proceed" / "go" / "ok"
+   / "confirm" / "continue" / "y\n"
+
+If any of these is set, SKIP the "Proceed with FULL_IMPROVEMENT? (y/N)"
+prompt and treat as confirmed. Otherwise ASK user (R01 default).
+
+### APPROVAL BYPASS (STEP 4.5 — IM-007 fix by Hermes 2026-07-22)
+After STEP 4 (DESIGN), the improver asks "Apply these changes? (y/N)".
+Bypass with:
+1. env `MAS_APPROVE=y` (operator has pre-approved)
+2. `--params approve=y` (CLI arg)
+3. env `RECURSION_OVERRIDE=1` (operator-initiated)
+4. Initial user message contains "apply" / "go ahead" / "ship it"
+
+### WEB-RESEARCH (OPTIONAL — R18 via sub_mas-web-researcher)
+ONLY at FULL_IMPROVEMENT or REVIEW:
+  AUTO-DETECT (IM-007 fix 2026-07-22):
+    IF env MAS_WEB_RESEARCH=yes  → Yes (skip prompt)
+    IF env MAS_WEB_RESEARCH=no   → No  (skip prompt)
+    IF --params web_research=yes → Yes (skip prompt)
+    IF --params web_research=no  → No  (skip prompt)
+    ELSE → ASK User:
+    "Should I before the Improvement via sub_mas-web-researcher
+     research current techniques? (ca. 30s)"
+  IF Yes:
+    → DELEGATE to sub_mas-web-researcher (task=SEARCH,
+  focus="all", max_results=5)
+    → WAIT on Findings (max 60s)
+    → SHOW: "🔍 Current techniques:"
+    → For EACH finding: Relevance (high/medium/info)
+    → ASK: "Which findings to include in the Improvement
+  flow?"
+  IF No:
+    → "ℹ️ Skip Web-Research — work with known knowledge"
 
 ### RECURSION GUARD (v2 — RECURSION-OVERRIDE)
 CHECK: {workspace}/.state/schedule.yaml
