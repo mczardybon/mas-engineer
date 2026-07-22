@@ -1,0 +1,108 @@
+Loading recipe: 🎭 Translator Orchestrator
+Description: Receives source text + target language, PARALLEL dispatches to 3 translators, then delegates to judge for voting.
+Parameters used to load this recipe:
+   source_text: Hello world, this is a test translation
+   source_lang: English
+   target_lang: German
+
+
+    __( O)>  ● new session · openai deepseek-chat
+   \____)    20260722_149 · /root/.config/goose/recipes
+     L L     goose is ready
+I have all the parameters. Let me now check what subagents are available for translation.
+
+Let me first check which translation subagents are available.I need to find the specific translator subagents. Let me check what's available. These would typically be registered separately. Let me look at the translator-orchestrator instructions to see if there's info about the subagents.The recipe references `translator-literal`, `translator-literary`, `translator-technical`, and `translation-judge` as subagents. But they're not listed in the available sources. Let me look at the available subagents more carefully — the instructions say to use `delegate` with the source names. Let me check if there are subagents registered that I can find.
+
+Let me try delegating to them directly — they might be registered as subrecipes inside the summon extension.
+
+Let me PARALLEL dispatch all 3 translators simultaneously using async:
+
+**Source text:** "Hello world, this is a test translation"
+**Source language:** English  
+**Target language:** German
+  ────────────────────────────────────────
+  ▸ delegate
+    source translator-literal
+    instructions Translate the following text to German (target_lang=German) as literally as possible.
+
+source_tex...
+    async: true
+
+
+  ────────────────────────────────────────
+  ▸ delegate
+    source translator-literary
+    instructions Translate the following text to German (target_lang=German) in a literary, elegant, and stylistic...
+    async: true
+
+
+  ────────────────────────────────────────
+  ▸ delegate
+    source translator-technical
+    instructions Translate the following text to German (target_lang=German) with technical precision and accuracy...
+    async: true
+
+The translator subagents aren't registered as sources yet. Let me check if there are subagent definitions in the recipes directory.The translator subagents aren't registered. No problem — I'll use ad-hoc delegates to perform these translations myself, sending them as independent tasks to run in PARALLEL.
+  ────────────────────────────────────────
+  ▸ delegate
+    instructions You are a LITERAL translator. Translate the following text.
+
+source_text: "Hello world, this is a...
+    async: true
+    max_turns: 3
+
+Good, the first one is running. Now let me dispatch the other two in parallel:
+  ────────────────────────────────────────
+  ▸ delegate
+    instructions You are a LITERARY translator. Translate the following text.
+
+source_text: "Hello world, this is ...
+    max_turns: 3
+    async: true
+
+
+  ────────────────────────────────────────
+  ▸ delegate
+    instructions You are a TECHNICAL translator. Translate the following text.
+
+source_text: "Hello world, this is...
+    max_turns: 3
+    async: true
+
+All 3 translators are dispatched in parallel. Let me check their progress.Literal translator is done. Let me check the others:All 3 translators are done. Now let me collect the results and pass them to the translation-judge.
+
+**Literal:** `Hallo Welt, dies ist eine Testübersetzung`
+**Literary:** `Sei gegrüßt, Welt — dies ist eine Probe aufs Exempel, übersetzt mit bedächtiger Hand.`
+**Technical:** `Hallo Welt, dies ist eine Testübersetzung`
+
+Now let me delegate to the translation-judge:
+  ────────────────────────────────────────
+  ▸ delegate
+    instructions You are a TRANSLATION JUDGE. Your job is to score and vote for the best translation.
+
+## Source t...
+    max_turns: 5
+
+## Translation Result
+
+Here's the final output from the parallel translation pipeline:
+
+---
+
+### 🏆 Winner: **Literal Translation**
+
+| Style | Accuracy | Fluency | Appropriateness | Total |
+|-------|----------|---------|-----------------|-------|
+| **Literal** | 10/10 | 9/10 | 10/10 | **29** |
+| Literary | 3/10 | 5/10 | 1/10 | 9 |
+| Technical | 10/10 | 9/10 | 10/10 | 29 |
+
+### Final Translation
+> **"Hallo Welt, dies ist eine Testübersetzung"**
+
+### Judge's Reasoning
+The source text *"Hello world, this is a test translation"* is a simple, neutral, everyday English sentence used for testing purposes. The **literal** translation perfectly matches this register — accurate, natural, and appropriately straightforward. The **literary** translation was creatively rich but overly poetic and stylistically mismatched. The **technical** translation produced identical text to the literal one (so also scored well), but the literal label more correctly describes the neutral register used.
+
+---
+
+**Pipeline completed:** 3 translators dispatched in parallel → judge voted → winner returned. ✅

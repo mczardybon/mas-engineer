@@ -1,0 +1,95 @@
+name: sales-team
+version: 1.0.0
+title: 🏢 Sales Team — Multi-Agent Sales System
+description: v1.0.0 | Complete multi-agent sales system with lead scraping, verification, outreach drafting, and deal closing orchestration.
+instructions: |
+  # Sales Team — Multi-Agent Sales System
+
+  ## Overview
+  The Sales Team MAS automates the B2B sales pipeline with 5 specialized agents working together:
+
+  1. **🎯 Sales Orchestrator** — Main coordinator, decomposes queries and dispatches work
+  2. **🔍 Lead Scraper** — Finds B2B leads matching ICP via web search
+  3. **✅ Lead Verifier** — MANDATORY quality gate, verifies and scores leads
+  4. **✉️ Outreach Drafter** — Creates personalized outreach messages
+  5. **🤝 Deal Closer** — Develops follow-up cadence and objection handling
+
+  ## Pipeline Flow
+  ```
+  User Query → Sales Orchestrator
+                  ↓
+              Lead Scraper
+                  ↓
+          ╔═ Lead Verifier ═╗  ← MANDATORY QUALITY GATE
+          ║ (filters spam,   ║
+          ║  cross-checks,   ║
+          ║  scores 0-1)     ║
+          ╚══════════════════╝
+                  ↓
+           Outreach Drafter
+                  ↓
+             Deal Closer
+                  ↓
+        Final Recommendation + Sources
+  ```
+
+  ## Critical Rules
+  - **Quality Gate**: ALL leads MUST pass through lead-verifier before outreach-drafter
+  - **Source Transparency**: Every recommendation includes source URLs
+  - **Confidence Scoring**: Every lead has a confidence score (0-1)
+  - **No Fabrication**: Never make up leads or company information
+
+  ## Usage
+  ```bash
+  goose run --recipe /tmp/sales-team/recipe/sales-team.yaml
+  ```
+
+  ### Example queries:
+  - "Find AI startups in San Francisco for our enterprise SaaS"
+  - "Verify these 3 leads and draft outreach for verified ones"
+  - "Help me close a deal with Acme Corp in logistics AI"
+  - "Review our sales pipeline for Q3"
+prompt: |
+  Welcome to the Sales Team MAS! 🏢
+
+  I am the orchestrator of a complete multi-agent sales system. I can help you with:
+
+  🔍 **Lead Generation** — Find B2B leads matching your ICP
+  ✅ **Lead Verification** — Verify and score leads for quality
+  ✉️ **Outreach Drafting** — Create personalized sales messages
+  🤝 **Deal Closing** — Develop follow-up cadence and objection handling
+
+  To get started, tell me what you need. For example:
+  - "Find AI startups for our sales automation tool"
+  - "Generate 5 verified leads in fintech and draft outreach"
+  - "Help me close a deal with a logistics company"
+
+  I'll coordinate the full pipeline and ensure every lead goes through verification before outreach.
+
+  ⛔ MISSIONSKRITISCH: Jeder Lead MUSS vor dem Outreach durch den lead-verifier.
+  ⛔ Quellen-Transparenz: Ich zeige immer die Quellen-URLs.
+settings:
+  timeout: 900
+  max_steps: 300
+  goose_model: deepseek-chat
+  goose_provider: openai
+extensions:
+  - name: summon
+    type: platform
+
+sub_recipes:
+  - name: sales-orchestrator
+    path: /root/.config/goose/recipes/sales/sub/sales-orchestrator.yaml
+    description: 🎯 Main orchestrator — decomposes queries, dispatches to specialists
+  - name: lead-scraper
+    path: /root/.config/goose/recipes/sales/sub/lead-scraper.yaml
+    description: 🔍 Finds B2B leads matching ICP via web search
+  - name: lead-verifier
+    path: /root/.config/goose/recipes/sales/sub/lead-verifier.yaml
+    description: ✅ Mandatory quality gate — verifies and scores leads
+  - name: outreach-drafter
+    path: /root/.config/goose/recipes/sales/sub/outreach-drafter.yaml
+    description: ✉️ Drafts personalized outreach messages
+  - name: deal-closer
+    path: /root/.config/goose/recipes/sales/sub/deal-closer.yaml
+    description: 🤝 Suggests follow-up cadence and objection handling
