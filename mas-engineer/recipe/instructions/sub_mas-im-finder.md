@@ -47,9 +47,77 @@ timestamp: <ISO-8601>
 - I do NOT skip this step even if "data already exists" — the scanner may have been updated
 - If the scanner produces 0 findings, I report that and STOP (do NOT invent findings)
 
-**If the orchestrator says "data is already there":**
+**If the orchestrator says "data already exists":**
 - The orchestrator is wrong. I run the scanner anyway.
 - Old findings.yaml may be stale (scanner has been updated since last run)
+
+## ⛔ STEP 0.3 — VERIFY SCANNER OUTPUT (NEW IN IM-009)
+
+After STEP 0, BEFORE STEP 0.5 delegation, I MUST verify the scanner actually
+ran (not stale data from old run). I do this by:
+
+1. Counting MM8 and MM9 in the parser output:
+   ```python
+   mm8 = sum(1 for f in findings if f.get('type') == 'MM8')
+   mm9 = sum(1 for f in findings if f.get('type') == 'MM9')
+   total = len(findings)
+   print(f"VERIFY: total={total} mm8={mm8} mm9={mm9}")
+   ```
+2. If total == 0, STOP. The scanner failed.
+3. If total < 100, STOP. The scanner is broken.
+4. If mm8 + mm9 > 50, that's a lot of templates — verify detection logic
+   is working (should be 0 with P-F012-5 fix). Warn if not.
+
+**Why this matters:**
+- P-F012-5 detection logic (template-skip for MM8/MM9) was added in IM-006.
+- The only way to verify it works is to check the scanner output directly.
+- If mm8=0 and mm9=0 → detection logic works → proceed to STEP 0.5.
+- If mm8>0 or mm9>0 → templates are leaking → STOP and report to user.
+
+## ⛔ STEP 0.7 — WRITE FINDINGS.YAML (NO R01 GATE)
+
+**🚨 NEW IN IM-009: I write findings.yaml AUTOMATICALLY without R01 gate. 🚨**
+
+After STEP 0.5 verdicts are attached, I write findings.yaml IMMEDIATELY:
+
+```python
+import yaml
+# Build findings dict
+findings_dict = {
+    "stage": 1,
+    "agent": "im-finder",
+    "timestamp": "<ISO-8601 now>",
+    "data": {"findings": <list of findings with verdicts>}
+}
+# Write the file
+with open('.state/pipeline/findings.yaml', 'w') as f:
+    yaml.safe_dump(findings_dict, f, default_flow_style=False, sort_keys=False)
+print(f"WRITTEN: .state/pipeline/findings.yaml with {len(findings)} findings")
+```
+
+**R01 BYPASS FOR findings.yaml:**
+- findings.yaml is the agent's OWN output, not an external file.
+- R01 (user confirmation) is for CHANGES TO RECIPES, not for writing the
+  agent's own output file.
+- The output file is the CONTRACT — the agent MUST write it, period.
+- If the agent does NOT write findings.yaml, downstream agents (im-rank,
+  im-designer, im-validator) will FAIL because they have no data to read.
+
+**After writing, VERIFY the file:**
+```bash
+python3 -c "
+import yaml
+d = yaml.safe_load(open('.state/pipeline/findings.yaml'))
+f = d.get('data', {}).get('findings', [])
+mm8 = sum(1 for x in f if x.get('type') == 'MM8')
+mm9 = sum(1 for x in f if x.get('type') == 'MM9')
+verdicts = sum(1 for x in f if 'goose_verdict' in x)
+print(f'PERSISTED: total={len(f)} mm8={mm8} mm9={mm9} verdicts={verdicts}')
+"
+```
+
+If this VERIFY shows mm8=0 AND mm9=0, the e2e proof is complete.
+If mm8>0 OR mm9>0, the detection logic is NOT working — STOP and report.
 
 ## ⛔ STEP 0.5 — GOOSE-EXPERT CONSULTATION (MANDATORY — EXECUTE THIS!)
 
