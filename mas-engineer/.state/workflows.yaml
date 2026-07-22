@@ -1638,31 +1638,63 @@ task_workflows:
   wf_recovery_checkpoint:
     desc: Checkpoint content validation + C-01/C-02 fix
     steps:
-    - id: check
+    - id: list_checkpoints
       action: shell
       cmd: test -d .state/checkpoints/ && ls -1 .state/checkpoints/ | head -5
       timeout: 30
+    - id: validate_latest
+      action: shell
+      cmd: 'LATEST=$(ls -1t .state/checkpoints/ 2>/dev/null | head -1) && if [ -n "$LATEST" ] && [ -d ".state/checkpoints/$LATEST/recipe" ]; then find ".state/checkpoints/$LATEST/recipe" -name "*.yaml" -exec python3 -c "import yaml; yaml.safe_load(open(\"{}\")); print(\"{}\", \"OK\")" \; 2>&1 | tail -3; else echo "no checkpoint to validate"; fi'
+      timeout: 60
+    - id: ensure_recipe
+      action: shell
+      cmd: 'LATEST=$(ls -1t .state/checkpoints/ 2>/dev/null | head -1) && [ -d ".state/checkpoints/$LATEST/recipe" ] && echo "recipe/ OK" || echo "recipe/ MISSING (C-01)"'
+      timeout: 15
   wf_recovery_safezone:
     desc: Recovery templates in template/recovery/
     steps:
-    - id: check
+    - id: list_templates
       action: shell
       cmd: ls -1 template/recovery/ 2>&1 | head -5
-      timeout: 30
+      timeout: 15
+    - id: validate_templates
+      action: shell
+      cmd: python3 -c "import glob; files = glob.glob('template/recovery/*.md'); print(f'{len(files)} templates found')"
+      timeout: 15
+    - id: check_fork
+      action: shell
+      cmd: 'test -L mas-engineer_active 2>/dev/null && echo "Fork ACTIVE" || echo "No active fork"'
+      timeout: 10
   wf_recovery_timeline:
     desc: Find best recovery point
     steps:
-    - id: check
+    - id: find_latest
       action: shell
       cmd: ls -1t .state/checkpoints/ 2>/dev/null | head -1
-      timeout: 30
+      timeout: 15
+    - id: count_checkpoints
+      action: shell
+      cmd: 'ls -1 .state/checkpoints/ 2>/dev/null | wc -l'
+      timeout: 10
+    - id: score_latest
+      action: shell
+      cmd: 'LATEST=$(ls -1t .state/checkpoints/ 2>/dev/null | head -1) && [ -n "$LATEST" ] && echo "Best checkpoint: $LATEST" || echo "No checkpoints found"'
+      timeout: 15
   wf_recovery_defib:
     desc: 'Defibrillator: reanimate agent on death/drift/loop'
     steps:
-    - id: check
+    - id: list_defib
       action: shell
       cmd: ls -1 .state/defib/ 2>/dev/null | head -3
-      timeout: 30
+      timeout: 15
+    - id: check_emergency_config
+      action: shell
+      cmd: 'test -f recipe/dev-mas-engineer.yaml && echo "Config present" || echo "MISSING — write emergency config"'
+      timeout: 10
+    - id: verify_immune_timeline
+      action: shell
+      cmd: 'python3 -c "import yaml; d=yaml.safe_load(open(''.state/workflows.yaml'')); print(d[''task_workflows''][''wf_recovery_immune''][''desc'']); print(d[''task_workflows''][''wf_recovery_timeline''][''desc''])"'
+      timeout: 15
   wf_immune_check_yaml:
     desc: YAML-Syntax ar individualen file checkn
     steps:
