@@ -114,14 +114,60 @@ goose run --with-builtin developer --recipe mas-engineer/recipe/sub/code-reviewe
   They are designed for "scan everything" not "scan this specific file".
 - Killed the process manually.
 
-### Next Step (queued for next session)
-- The recipes need a `target_file` parameter added. Per the MAS-TEST-RULE,
-  this code change MUST go through mas-engineer itself (general-improver
-  IM-pipeline), not be hand-written.
-- Once the parameter exists, re-run IM-007 with:
-  `goose run --recipe static-analyzer.yaml --params target_file=/path/to/file`
-- The 5-bug test fixture is ALREADY in place and will be reused.
-- If general-improver's recursion-guard blocks, use RECURSION_OVERRIDE=1.
+### Second Attempt (2026-07-22, mas-engineer self)
+- Started mas-engineer general-improver twice (RECURSION_OVERRIDE=1, then unset)
+- RESULT: idempotent re-apply of IM-006 patches (5 CONFORM, 0 new).
+  mas-engineer correctly recognized that IM-006 patches are already applied.
+- Then ran again without RECURSION_OVERRIDE to attempt FULL_IMPROVEMENT.
+  general-improver started a fresh FIND scan (206 findings: 87 CONFORM,
+  16 RESTRICTED), but then ERRORED: "no validation.yaml exists" — FALSE.
+  validation.yaml DOES exist (12KB, 5/5 CONFORM from IM-006 2026-07-22
+  08:52). The sub-agent was confused or looked at the wrong path.
+- Session ended without producing a target_file patch.
+
+### Third Attempt (2026-07-22, 11:25)
+- Did NOT run mas-engineer again — the recursion-guard is correct, the
+  24h protection is working, the previous run was clean and idempotent.
+- Decided to ESCALATE: the target_file parameter is a non-trivial design
+  change that requires careful consideration of:
+  - single file vs directory vs glob
+  - which recipes need it (static-analyzer, security-scanner, code-reviewer)
+  - how to wire it through the YAML schema and runtime parsing
+- Stopped here to give the user a clean status report.
+
+### Verifiable Status (2026-07-22 11:25)
+- 7afcb60: committed LOCAL, not pushed (IM-007 first attempt FAIL)
+- 3938f24: pushed (IM-007 spec ticket)
+- 212298b: pushed (Code-Review-Team recipes, unvalidated)
+- mas-engineer state:
+  - schedule.yaml: 2 history entries, status=ready
+  - validation.yaml: 5/5 CONFORM (IM-006, all applied)
+  - patches.yaml: 5 patches (IM-006, all applied)
+  - findings.yaml: 235KB, ~206 findings from latest FIND scan
+- target_file parameter: NOT YET in any recipe (verified by grep)
+- Test fixture: e2e-results/IM-007-test-target/buggy_code.py +
+  clean_code.py — IN PLACE, ready for re-run after target_file exists
+
+### Next Step (DEFINITIVELY queued)
+- mas-engineer (in next session) must design + implement a target_file
+  parameter for the 3 Code-Review-Team recipes
+- The 5-bug test fixture is already in place
+- The pass/fail criteria from the spec still hold
+- Once target_file is wired, e2e re-runs in this exact order:
+  1. static-analyzer on buggy_code.py → expect ≥2 findings
+     (syntax error + lint violation)
+  2. static-analyzer on clean_code.py → expect 0 findings
+  3. security-scanner on buggy_code.py → expect ≥3 findings
+     (hardcoded secret + SQL injection + command injection)
+  4. security-scanner on clean_code.py → expect 0 findings
+  5. code-reviewer synthesis → expect 5 bug categories in final report
+  6. ONLY push after all 6 PASS
+
+### Operator Note
+- mas-engineer is now correctly self-regulating (RECURSION-GUARD v2
+  working as designed). The IM-007 work is non-trivial and deserves
+  a fresh full session, not rushed appending to this one.
+- DO NOT push 7afcb60 to remote — IM-007 is FAILED, not CLOSED.
 
 ### Honest self-critique
 - I tried to run the recipe with -t flag, but goose rejected --recipe + -t
