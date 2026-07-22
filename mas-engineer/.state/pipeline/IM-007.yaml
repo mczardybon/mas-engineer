@@ -1,0 +1,103 @@
+# IM-007 — Code-Review-Team validation (e2e)
+
+## Problem
+3 mas-engineer sub-agent recipes were added in commit 212298b:
+- recipe/sub/static-analyzer.yaml (Python syntax, lint, type-checker)
+- recipe/sub/security-scanner.yaml (SQL injection, secrets, unsafe deserialization, command injection)
+- recipe/sub/code-reviewer.yaml (synthesizes findings into final report)
+
+These recipes were COMMITTED without e2e validation. The user explicitly
+forbids theater: no push without 100% e2e verification of real behavior.
+
+## Goal
+Prove that all 3 sub-agents work end-to-end on a real test fixture:
+- Live execute via `goose run --recipe ...`
+- Find REAL bugs in test fixture
+- Synthesize correct final report
+- 100% pass required before IM-007 is closed
+
+## Test Fixture Requirements
+A Python file with AT MINIMUM these bug categories (one each):
+
+1. **Syntax error** (static-analyzer must catch):
+   ```python
+   def foo(x:
+       return x + 1
+   ```
+
+2. **Hardcoded secret** (security-scanner must catch):
+   ```python
+   API_KEY = "<REDACTED-PLACEHOLDER-FOR-TEST-FIXTURE>"  # 40-char random secret string
+   ```
+
+3. **SQL injection** (security-scanner must catch):
+   ```python
+   cursor.execute(f"SELECT * FROM users WHERE id = {user_id}")
+   ```
+
+4. **Command injection** (security-scanner must catch):
+   ```python
+   os.system(f"convert {user_filename} output.png")
+   ```
+
+5. **Lint violation** (static-analyzer must catch):
+   ```python
+   import os,sys,json
+   x=1
+   def unused():
+       pass
+   ```
+
+## Validation Phases (use existing mas-engineer sub-agents)
+
+### Phase 1: STATIC-ANALYZER live run
+```bash
+goose run --with-builtin developer --recipe mas-engineer/recipe/sub/static-analyzer.yaml --no-session
+# Target: e2e-results/IM-007-test-target/buggy_code.py
+# Expected: findings for syntax + lint, NO findings for security issues
+```
+
+### Phase 2: SECURITY-SCANNER live run
+```bash
+goose run --with-builtin developer --recipe mas-engineer/recipe/sub/security-scanner.yaml --no-session
+# Same target
+# Expected: findings for hardcoded secret + SQL injection + command injection
+```
+
+### Phase 3: CODE-REVIEWER live run
+```bash
+goose run --with-builtin developer --recipe mas-engineer/recipe/sub/code-reviewer.yaml --no-session
+# Reads outputs from phase 1+2, synthesizes final report
+# Expected: comprehensive report with all 5 bug categories
+```
+
+## Pass Criteria (ALL must be true)
+- [ ] Phase 1 returns ≥2 findings (syntax + lint) for buggy_code.py
+- [ ] Phase 2 returns ≥3 findings (secret + SQLi + cmd injection)
+- [ ] Phase 3 report includes all 5 bug categories
+- [ ] Zero false negatives: each planted bug appears in findings
+- [ ] No false positives on control file (clean_code.py with no bugs → 0 findings)
+- [ ] All 3 phases ran via `goose run` (NOT simulated, NOT mocked)
+- [ ] Raw PTY logs captured for each phase
+
+## Fail Criteria (any one fails the ticket)
+- Missed any planted bug (false negative)
+- Fabricated finding that doesn't exist in code (false positive)
+- Recipe crashed without output
+- Output not parseable as valid YAML/JSON
+- Theater: skipped live run, claimed "looks good" from static inspection
+
+## IM-008+ Future (after IM-007 PASS)
+- IM-008: Demo-Team "sales" — mas-engineer designs, user runs locally, output verified
+- IM-009: Demo-Team "translator" — same pattern
+- IM-010: Demo-Team cross-validation (run all 3+ in sequence, check coherence)
+
+## Operator Notes
+- 2026-07-22: recipes added in commit 212298b without validation. User caught
+  this as verification-theater. IM-007 is the fix.
+- Recursion-Guard v2: RECURSION_OVERRIDE=1 may be needed if last FULL_IMPROVEMENT
+  was < 24h ago. Apply patches via tools/dev_recursion_override.py.
+- Do NOT modify recipes based on "they look right" — only based on live test FAIL.
+- If a recipe fails: redesign it, re-run, only close ticket after PASS.
+
+## Status: QUEUED (not started)
