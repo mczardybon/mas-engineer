@@ -3,13 +3,13 @@
 A Multi-Agent System for **developing, improving, monitoring, and operating
 Multi-Agent Systems (MAS)** for the User.
 
-MAS-Engineer itself is a MAS: 56 sub-agents and 56 tools that work together
+MAS-Engineer itself is a MAS: 56 sub-agents and 55 tools that work together
 to build other MAS frameworks.
 
 ## What you get
 
 - 56 specialized sub-agents (designer, finder, rank, validator, health-reporter, ...)
-- 52 tools (45 Python, 6 Shell, 1 YAML)
+- 55 tools (48 Python, 6 Shell, 1 YAML)
 - A complete dashboard (MCP server + 2 HTML webapps — note: requires `npm install` to start; not run during e2e tests)
 - Full audit trail in `.state/`
 - Single-source-of-truth workflows in `.state/workflows.yaml`
@@ -137,7 +137,7 @@ mas-engineer/
     instructions/               # detailed instructions per agent
     setup-dashboard.yaml        # dashboard setup
     dashboard-data-refresh.yaml # data.json refresher
-  tools/                        # 52 tools (45 Python, 6 Shell, 1 YAML)
+    tools/                        # 55 tools (48 Python, 6 Shell, 1 YAML)
   .mas/mcp/                     # MCP dashboard server
   .state/                       # SOT, audit trail, findings
   docs/                         # documentation
