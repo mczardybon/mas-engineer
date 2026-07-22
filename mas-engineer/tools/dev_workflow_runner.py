@@ -16,8 +16,19 @@ RUNS_DIR = os.path.join(BASE, ".state", "workflow_runs")
 os.makedirs(RUNS_DIR, exist_ok=True)
 
 def load():
+    """Load workflows from workflows.yaml.
+
+    Returns a merged dict containing BOTH:
+    - workflows: (build-test, si-analyse, knowledge-refresh, ...)
+    - task_workflows: (wf_recovery_*, ...)
+    """
     with open(WF_FILE) as f:
-        return yaml.safe_load(f)["workflows"]
+        data = yaml.safe_load(f)
+    wfs = data.get("workflows", {}) or {}
+    # Also expose task_workflows (recovery, monitoring, etc.) under same namespace
+    # so the CLI can invoke any registered workflow by name.
+    wfs.update(data.get("task_workflows", {}) or {})
+    return wfs
 
 def list_workflows(wfs):
     for name, wf in sorted(wfs.items()):
