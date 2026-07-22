@@ -1,360 +1,106 @@
 stage: 3
 agent: im-designer
-timestamp: '2026-07-22T12:22:00+00:00'
+timestamp: '2026-07-22T12:42:00+00:00'
 input_file: .state/pipeline/ranked_findings.yaml
 signal: DONE
-request_id: im-designer-20260722-233
+request_id: im-designer-20260722-244
 from: sub_mas-im-designer
 to: sub_mas-general-improver
 status: success
-note: |
-  Framework-mode design round (mode=framework). Top 5 findings from ranked list:
-  F-005 (B3), F-021 (B3), F-039 (Q3), F-055 (Q3), F-075 (K3).
-  skip_mas_patches=True (mode != "mas") — no D/E/MM patches affected.
-  Goose-expert consulted for B-type findings (F-005, F-021) per STEP 0.5.
-  Q3 findings are FALSE POSITIVES — `title` is a valid Goose recipe metadata field.
+note: 'MAS-mode design round (mode=mas). Top 5 MM4 findings: settings missing temperature in marketing-team.yaml, analytics-reporter.yaml,
+  content-writer.yaml, email-campaign-manager.yaml, marketing-orchestrator.yaml. Goose-expert consulted via dev_goose_expert_check.py
+  (no conflicts found). skip_mas_patches=False (mode==mas) — MM patches included.'
 data:
   patches:
-    # ============================================================
-    # PATCH 1: F-005 (B3) — marketing-team.yaml prompt missing context-info
-    # ============================================================
-    - file: /root/.config/goose/recipes/marketing/marketing-team.yaml
-      field: prompt
-      from: |
-        Welcome to the MARKETING TEAM 🎯
-
-        I am a multi-agent marketing system using a HUB-AND-SPOKE architecture.
-        The orchestrator dynamically dispatches queries to specialist agents
-        based on what the query needs — no fixed pipeline, no mandatory order.
-
-        Available specialists:
-        - 🔍 SEO Researcher — keywords, competitors, search volume
-        - ✍️ Content Writer — blog posts, landing pages, ad copy
-        - 📱 Social Media Manager — Twitter/X, LinkedIn, Instagram, TikTok
-        - 📊 Analytics Reporter — benchmarks, case studies, stats
-        - 📧 Email Campaign Manager — email sequences & campaigns
-
-        How can I help with your marketing today? Describe what you need
-        and the team will collaborate on a unified plan.
-      to: |
-        I am marketing-team (v1.0.0) | MODE-CHECK: mas-engineer | 🎯 MARKETING-TEAM — Multi-Agent Marketing System (Hub-and-Spoke)
-
-        I am a multi-agent marketing system using a HUB-AND-SPOKE architecture.
-        The orchestrator dynamically dispatches queries to specialist agents
-        based on what the query needs — no fixed pipeline, no mandatory order.
-
-        Available specialists:
-        - 🔍 SEO Researcher — keywords, competitors, search volume
-        - ✍️ Content Writer — blog posts, landing pages, ad copy
-        - 📱 Social Media Manager — Twitter/X, LinkedIn, Instagram, TikTok
-        - 📊 Analytics Reporter — benchmarks, case studies, stats
-        - 📧 Email Campaign Manager — email sequences & campaigns
-
-        ## Operational Context
-        - Workspace: /workspace/mas-engineer-src
-        - Mode: framework (MAS-engineer internal)
-        - Role: External marketing team — responds to marketing queries
-        - Boundary: Marketing domain only — no system-level changes
-
-        How can I help with your marketing today? Describe what you need
-        and the team will collaborate on a unified plan.
-      reason: |
-        Why: Prompt missing context-info (B3). Added operational context block
-        specifying workspace, mode, role, and domain boundary. Also added
-        standard "I am {name} (v1.0.0) | MODE-CHECK: mas-engineer" prefix for
-        identity and mode awareness.
-        Goose-expert verdict: CONFORM — Goose prompt field supports I_AM identity
-        and MODE-CHECK patterns. Adding context-info is backward-compatible.
-        Ref: https://goose-docs.ai/docs/recipes
-      type: B3
-      priority: 0.48
-      current_chars: 679
-      target_chars: 830
-      goose_verdict:
-        verdict: CONFORM
-        confidence: HIGH
-        explanation: |
-          Goose prompt field supports I_AM identity and MODE-CHECK patterns.
-          B3 (missing context-info) is valid — Goose prompt should include
-          context. Adding operational context block is backward-compatible.
-        sources:
-          - https://goose-docs.ai/docs/recipes
-
-    # ============================================================
-    # PATCH 2: F-021 (B3) — analytics-reporter.yaml prompt missing context-info
-    # ============================================================
-    - file: /root/.config/goose/recipes/marketing/sub/analytics-reporter.yaml
-      field: prompt
-      from: |
-        I am analytics-reporter (v1.0.0) | 📊 ANALYTICS-REPORTER — Marketing Analytics (Sub-Agent)
-
-        I gather marketing benchmarks, case studies, and industry stats.
-        I return structured metrics with confidence levels and source URLs.
-
-        ⛔ Do NOT fabricate data — cite real sources.
-        ✅ Return {metric, value, source_url, confidence}.
-      to: |
-        I am analytics-reporter (v1.0.0) | MODE-CHECK: mas-engineer | 📊 ANALYTICS-REPORTER — Marketing Analytics (Sub-Agent)
-
-        I gather marketing benchmarks, case studies, and industry stats.
-        I return structured metrics with confidence levels and source URLs.
-
-        ## Operational Context
-        - Role: Spoke in marketing hub-and-spoke architecture
-        - Parent: marketing-orchestrator dispatches queries to me
-        - Output: Structured JSON with {metric, value, source_url, confidence}
-        - Boundary: Marketing analytics only — no system-level changes
-
-        ⛔ Do NOT fabricate data — cite real sources.
-        ✅ Return {metric, value, source_url, confidence}.
-      reason: |
-        Why: Prompt missing context-info (B3). Added MODE-CHECK and operational
-        context block specifying role as spoke in hub-and-spoke architecture,
-        parent orchestrator, expected output format, and domain boundary.
-        Goose-expert verdict: CONFORM — Goose prompt field supports I_AM identity
-        and MODE-CHECK patterns. Adding context-info is backward-compatible.
-        Ref: https://goose-docs.ai/docs/recipes
-      type: B3
-      priority: 0.48
-      current_chars: 320
-      target_chars: 530
-      goose_verdict:
-        verdict: CONFORM
-        confidence: HIGH
-        explanation: |
-          Goose prompt field supports I_AM identity and MODE-CHECK patterns.
-          B3 (missing context-info) is valid — Goose prompt should include
-          context. Adding operational context is backward-compatible.
-        sources:
-          - https://goose-docs.ai/docs/recipes
-
-    # ============================================================
-    # PATCH 3: F-039 (Q3) — content-writer.yaml extra/unknown fields: title
-    # NOTE: FALSE POSITIVE — `title` is a valid Goose recipe metadata field
-    # ============================================================
-    - file: /root/.config/goose/recipes/marketing/sub/content-writer.yaml
-      field: title
-      from: "✍️ CONTENT-WRITER — Content Creation (Sub-Agent)"
-      to: "✍️ CONTENT-WRITER — Content Creation (Sub-Agent)"
-      reason: |
-        Why: Q3 flags `title` as "extra/unknown field" but this is a VALID
-        Goose recipe metadata field. Per goose-expert documentation, `title`
-        is a standard recipe metadata field used in Goose UI for display
-        purposes. This finding is a FALSE POSITIVE. No patch needed — the
-        field is valid and should remain. The scanner's schema needs updating
-        to recognize `title` as a valid field.
-        Goose-expert verdict: CONFORM — `title` is a valid Goose recipe field.
-        No change required.
-        Ref: https://goose-docs.ai/docs/guides/recipes/#recipe-structure
-      type: Q3
-      priority: 0.10
-      current_chars: 49
-      target_chars: 49
-      goose_verdict:
-        verdict: CONFORM
-        confidence: HIGH
-        explanation: |
-          `title` is a native Goose recipe metadata field used for UI display.
-          The Q3 scanner is incorrectly flagging it as unknown. No patch needed.
-          Recommendation: Update the scanner's schema to recognize `title`
-          as a valid field.
-        sources:
-          - https://goose-docs.ai/docs/guides/recipes/#recipe-structure
-
-    # ============================================================
-    # PATCH 4: F-055 (Q3) — email-campaign-manager.yaml extra/unknown fields: title
-    # NOTE: FALSE POSITIVE — same as F-039
-    # ============================================================
-    - file: /root/.config/goose/recipes/marketing/sub/email-campaign-manager.yaml
-      field: title
-      from: "📧 EMAIL-CAMPAIGN-MANAGER — Email Marketing (Sub-Agent)"
-      to: "📧 EMAIL-CAMPAIGN-MANAGER — Email Marketing (Sub-Agent)"
-      reason: |
-        Why: Q3 flags `title` as "extra/unknown field" but this is a VALID
-        Goose recipe metadata field. Same FALSE POSITIVE as F-039. The `title`
-        field is a standard Goose recipe metadata field used for UI display.
-        No patch needed — the field is valid and should remain.
-        Goose-expert verdict: CONFORM — `title` is a valid Goose recipe field.
-        No change required.
-        Ref: https://goose-docs.ai/docs/guides/recipes/#recipe-structure
-      type: Q3
-      priority: 0.10
-      current_chars: 56
-      target_chars: 56
-      goose_verdict:
-        verdict: CONFORM
-        confidence: HIGH
-        explanation: |
-          `title` is a native Goose recipe metadata field used for UI display.
-          The Q3 scanner is incorrectly flagging it as unknown. No patch needed.
-          Same finding as F-039.
-        sources:
-          - https://goose-docs.ai/docs/guides/recipes/#recipe-structure
-
-    # ============================================================
-    # PATCH 5: F-075 (K3) — marketing-orchestrator.yaml no retry on transient errors
-    # ============================================================
-    - file: /root/.config/goose/recipes/marketing/sub/marketing-orchestrator.yaml
-      field: instructions
-      from: |
-        # Marketing Orchestrator — HUB (Hub-and-Spoke Architecture)
-
-        ## Identity
-        You are the MARKETING ORCHESTRATOR, the central HUB of the marketing team.
-        You receive any marketing query from the user and DYNAMICALLY decide which
-        specialist agent(s) to invoke. The orchestrator DYNAMICALLY decides which
-        specialists to invoke based on the query content. There is NO fixed pipeline
-        and NO mandatory order.
-
-        ## Parameter Handling (IMPORTANT)
-        1. Check if `query` was provided via parameters
-        2. IF `query` exists → use it directly as the marketing task — do NOT ask the user
-        3. IF `query` is NOT provided → ask the user for their marketing query
-
-        ## Hub-and-Spoke Behaviour (CRITICAL — This is NOT a Pipeline)
-        - You are the HUB. Specialist agents are SPOKES.
-        - You DO NOT call specialists in a predetermined sequence.
-        - You analyze the query FIRST, then decide WHICH specialists to call, in WHAT order,
-          and whether to call them in PARALLEL or SEQUENTIALLY.
-        - You may call 1, 2, 3, or all 5 — it depends entirely on the query.
-        - You may SKIP specialists whose expertise is not needed.
-        - The orchestrator DYNAMICALLY dispatches: can call 1, 2, 3, or all 5 in parallel.
-        - NO fixed order. NO mandatory pipeline. Orchestrator decides.
-
-        ## Available Specialist Spokes
-        1. **seo-researcher** — SEO keywords, competitor analysis, search volume data
-           → load(source: "seo-researcher", instructions: "Query: ...")
-        2. **content-writer** — Blog posts, landing page copy, ad copy
-           → load(source: "content-writer", instructions: "Topic: ...")
-        3. **social-media-manager** — Adapt content to 3-4 platforms (Twitter/X, LinkedIn, Instagram, TikTok)
-           → load(source: "social-media-manager", instructions: "Content/Topic: ...")
-        4. **analytics-reporter** — Marketing benchmarks, case studies, industry stats
-           → load(source: "analytics-reporter", instructions: "Query: ...")
-        5. **email-campaign-manager** — Email sequences (subject + body + send-time)
-           → load(source: "email-campaign-manager", instructions: "Content + audience: ...")
-
-        ## Query Classification Logic
-        When you receive a query, classify it:
-        - **seo** → "keywords", "rank", "search", "SEO", "organic traffic", "competitor analysis"
-        - **content** → "blog", "post", "write", "landing page", "ad copy", "article", "content"
-        - **social** → "social", "Twitter", "LinkedIn", "Instagram", "TikTok", "social media"
-        - **analytics** → "benchmark", "stats", "analytics", "metrics", "KPI", "industry data"
-        - **email** → "email", "campaign", "newsletter", "sequence", "drip"
-
-        ## Dispatch Rules
-        1. Always analyze the full query first
-        2. Map it to 1+ categories
-        3. Invoke ONLY the relevant spokes
-        4. Use load() (via summon extension) for each spoke invocation as a separate sub-agent session
-        5. Collect all results
-        6. Synthesize a unified marketing plan from the results
-        7. Present the plan to the user with clear attribution to each specialist
-
-        ## Key Constraint
-        Do NOT fabricate data. If a specialist cannot produce results, report that clearly.
-        Do NOT chain specialists in a fixed sequence — each is an independent tool.
-      to: |
-        # Marketing Orchestrator — HUB (Hub-and-Spoke Architecture)
-
-        ## Identity
-        You are the MARKETING ORCHESTRATOR, the central HUB of the marketing team.
-        You receive any marketing query from the user and DYNAMICALLY decide which
-        specialist agent(s) to invoke. The orchestrator DYNAMICALLY decides which
-        specialists to invoke based on the query content. There is NO fixed pipeline
-        and NO mandatory order.
-
-        ## Parameter Handling (IMPORTANT)
-        1. Check if `query` was provided via parameters
-        2. IF `query` exists → use it directly as the marketing task — do NOT ask the user
-        3. IF `query` is NOT provided → ask the user for their marketing query
-
-        ## Hub-and-Spoke Behaviour (CRITICAL — This is NOT a Pipeline)
-        - You are the HUB. Specialist agents are SPOKES.
-        - You DO NOT call specialists in a predetermined sequence.
-        - You analyze the query FIRST, then decide WHICH specialists to call, in WHAT order,
-          and whether to call them in PARALLEL or SEQUENTIALLY.
-        - You may call 1, 2, 3, or all 5 — it depends entirely on the query.
-        - You may SKIP specialists whose expertise is not needed.
-        - The orchestrator DYNAMICALLY dispatches: can call 1, 2, 3, or all 5 in parallel.
-        - NO fixed order. NO mandatory pipeline. Orchestrator decides.
-
-        ## Available Specialist Spokes
-        1. **seo-researcher** — SEO keywords, competitor analysis, search volume data
-           → load(source: "seo-researcher", instructions: "Query: ...")
-        2. **content-writer** — Blog posts, landing page copy, ad copy
-           → load(source: "content-writer", instructions: "Topic: ...")
-        3. **social-media-manager** — Adapt content to 3-4 platforms (Twitter/X, LinkedIn, Instagram, TikTok)
-           → load(source: "social-media-manager", instructions: "Content/Topic: ...")
-        4. **analytics-reporter** — Marketing benchmarks, case studies, industry stats
-           → load(source: "analytics-reporter", instructions: "Query: ...")
-        5. **email-campaign-manager** — Email sequences (subject + body + send-time)
-           → load(source: "email-campaign-manager", instructions: "Content + audience: ...")
-
-        ## Query Classification Logic
-        When you receive a query, classify it:
-        - **seo** → "keywords", "rank", "search", "SEO", "organic traffic", "competitor analysis"
-        - **content** → "blog", "post", "write", "landing page", "ad copy", "article", "content"
-        - **social** → "social", "Twitter", "LinkedIn", "Instagram", "TikTok", "social media"
-        - **analytics** → "benchmark", "stats", "analytics", "metrics", "KPI", "industry data"
-        - **email** → "email", "campaign", "newsletter", "sequence", "drip"
-
-        ## Dispatch Rules
-        1. Always analyze the full query first
-        2. Map it to 1+ categories
-        3. Invoke ONLY the relevant spokes
-        4. Use load() (via summon extension) for each spoke invocation as a separate sub-agent session
-        5. Collect all results
-        6. Synthesize a unified marketing plan from the results
-        7. Present the plan to the user with clear attribution to each specialist
-
-        ## Retry Logic (Transient Error Handling)
-        If a load() call to a specialist fails due to a transient error (timeout, network issue,
-        temporary unavailability):
-        1. Wait 2 seconds, then retry the same load() call once
-        2. If the second attempt also fails, log the error and proceed without that specialist's data
-        3. Report in the final output which specialists failed and why
-        4. Do NOT retry for permanent errors (invalid query, missing parameters) — report immediately
-        ⛔ Do NOT retry more than 2 times total per specialist per dispatch cycle
-
-        ## Key Constraint
-        Do NOT fabricate data. If a specialist cannot produce results, report that clearly.
-        Do NOT chain specialists in a fixed sequence — each is an independent tool.
-      reason: |
-        Why: No retry on transient errors (K3). Added Retry Logic section with
-        explicit retry strategy: 1 retry after 2s wait, max 2 attempts per
-        specialist, graceful degradation on failure, clear reporting. This
-        prevents transient failures from aborting the entire dispatch cycle.
-        Goose-expert verdict: CONFORM — Retry logic in instructions is plain
-        text guidance. Goose does not have a native retry mechanism for
-        load() calls, so instruction-level retry is appropriate.
-      type: K3
-      priority: 0.48
-      current_chars: 0
-      target_chars: 0
-      goose_verdict:
-        verdict: CONFORM
-        confidence: MEDIUM
-        explanation: |
-          Retry logic in instructions is plain text guidance for the agent.
-          Goose does not have a native retry mechanism for load() calls
-          (sub-agent delegation). Instruction-level retry is the appropriate
-          approach for transient error handling in sub-agent dispatch.
-        caveats:
-          - This is instruction-level guidance, not a Goose-native retry mechanism
-          - Goose recipe_advanced has `retry.max_retries` for recipe-level retry,
-            but this applies to the recipe itself, not individual load() calls
-          - The retry logic relies on the agent following instructions correctly
-
-  skipped:
-    - finding_id: F-039
-      reason: "FALSE POSITIVE — `title` is a valid Goose recipe metadata field"
-      why_skipped: |
-        Per goose-expert documentation, `title` is a standard Goose recipe
-        metadata field used for UI display. The Q3 scanner is incorrectly
-        flagging it as unknown. No patch needed. See Patch 3 for details.
-
-    - finding_id: F-055
-      reason: "FALSE POSITIVE — `title` is a valid Goose recipe metadata field"
-      why_skipped: |
-        Same FALSE POSITIVE as F-039. `title` is a valid Goose recipe metadata
-        field. No patch needed. See Patch 4 for details.
+  - file: /root/.config/goose/recipes/marketing/marketing-team.yaml
+    field: settings.temperature
+    from: null
+    to: '0.3'
+    reason: 'Why: settings missing required key [temperature] (MM4). MAS convention uses temperature=0.3 for precision in
+      framework agents. Without explicit temperature, Goose uses provider default which may be suboptimal for MAS sub-agent
+      coordination. Goose-expert verdict: CONFORM — Goose recipe settings block accepts temperature as a valid field. Ref:
+      https://goose-docs.ai/docs/recipes/recipe-advanced'
+    type: MM4
+    priority: 0.82
+    current_chars: 0
+    target_chars: 3
+    goose_verdict:
+      verdict: CONFORM
+      confidence: HIGH
+      explanation: Goose recipe validate checks YAML structure including required fields. MM4 (settings missing keys) is a
+        real issue — Goose requires settings block for sub-agent configuration. Adding temperature is backward-compatible.
+      sources:
+      - https://goose-docs.ai/docs/recipes/recipe-advanced
+  - file: /root/.config/goose/recipes/marketing/sub/analytics-reporter.yaml
+    field: settings.temperature
+    from: null
+    to: '0.3'
+    reason: 'Why: settings missing required key [temperature] (MM4). MAS convention uses temperature=0.3 for precision in
+      framework agents. Analytics reporter needs low temperature for factual benchmark reporting. Goose-expert verdict: CONFORM
+      — Goose recipe settings block accepts temperature as a valid field.'
+    type: MM4
+    priority: 0.82
+    current_chars: 0
+    target_chars: 3
+    goose_verdict:
+      verdict: CONFORM
+      confidence: HIGH
+      explanation: Goose recipe validate checks YAML structure including required fields. MM4 (settings missing keys) is a
+        real issue — Goose requires settings block for sub-agent configuration.
+      sources:
+      - https://goose-docs.ai/docs/recipes/recipe-advanced
+  - file: /root/.config/goose/recipes/marketing/sub/content-writer.yaml
+    field: settings.temperature
+    from: null
+    to: '0.3'
+    reason: 'Why: settings missing required key [temperature] (MM4). MAS convention uses temperature=0.3 for precision in
+      framework agents. Content writer benefits from controlled creativity within MAS framework. Goose-expert verdict: CONFORM
+      — Goose recipe settings block accepts temperature as a valid field.'
+    type: MM4
+    priority: 0.82
+    current_chars: 0
+    target_chars: 3
+    goose_verdict:
+      verdict: CONFORM
+      confidence: HIGH
+      explanation: Goose recipe validate checks YAML structure including required fields. MM4 (settings missing keys) is a
+        real issue — Goose requires settings block for sub-agent configuration.
+      sources:
+      - https://goose-docs.ai/docs/recipes/recipe-advanced
+  - file: /root/.config/goose/recipes/marketing/sub/email-campaign-manager.yaml
+    field: settings.temperature
+    from: null
+    to: '0.3'
+    reason: 'Why: settings missing required key [temperature] (MM4). MAS convention uses temperature=0.3 for precision in
+      framework agents. Email campaign manager needs consistent output for structured email sequences. Goose-expert verdict:
+      CONFORM — Goose recipe settings block accepts temperature as a valid field.'
+    type: MM4
+    priority: 0.82
+    current_chars: 0
+    target_chars: 3
+    goose_verdict:
+      verdict: CONFORM
+      confidence: HIGH
+      explanation: Goose recipe validate checks YAML structure including required fields. MM4 (settings missing keys) is a
+        real issue — Goose requires settings block for sub-agent configuration.
+      sources:
+      - https://goose-docs.ai/docs/recipes/recipe-advanced
+  - file: /root/.config/goose/recipes/marketing/sub/marketing-orchestrator.yaml
+    field: settings.temperature
+    from: null
+    to: '0.3'
+    reason: 'Why: settings missing required key [temperature] (MM4). MAS convention uses temperature=0.3 for precision in
+      framework agents. Orchestrator needs low temperature for reliable dispatch decisions. Goose-expert verdict: CONFORM
+      — Goose recipe settings block accepts temperature as a valid field.'
+    type: MM4
+    priority: 0.82
+    current_chars: 0
+    target_chars: 3
+    goose_verdict:
+      verdict: CONFORM
+      confidence: HIGH
+      explanation: Goose recipe validate checks YAML structure including required fields. MM4 (settings missing keys) is a
+        real issue — Goose requires settings block for sub-agent configuration.
+      sources:
+      - https://goose-docs.ai/docs/recipes/recipe-advanced
+  skipped: []

@@ -204,6 +204,14 @@ A) FULL_IMPROVEMENT self-runs (FIND→RANK→DESIGN→VALIDATE→APPLY):
    IF exists + last FULL_IMPROVEMENT < 24h:
      → Only short form (ERROR_PATTERN) only
      SHOW: "ℹ️ recursion-Guard active — last round < 24h"
+   EXCEPTION (IM-008 fix by Hermes 2026-07-22):
+     IF env RECURSION_OVERRIDE=2 OR --params override_mode=full:
+       → SKIP 24h cooldown
+       → Allow FULL_IMPROVEMENT in mas mode (operator-initiated)
+       → APPEND to .state/changes.json with stage="full_improvement_override"
+       → SHOW: "✅ RECURSION-OVERRIDE=2: mas-mode FULL_IMPROVEMENT authorized"
+     IF env RECURSION_OVERRIDE=1 OR --recursion-override flag:
+       → STILL APPLY-ONLY (do not promote to FULL_IMPROVEMENT)
 
 B) APPLY-ONLY operations (RECURSION_OVERRIDE=1):
    IF env RECURSION_OVERRIDE=1 OR --recursion-override flag:
