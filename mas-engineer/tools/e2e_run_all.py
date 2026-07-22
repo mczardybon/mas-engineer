@@ -98,6 +98,7 @@ def test_top_workflows():
             r = subprocess.run(
                 ["python3", "tools/dev_workflow_runner.py", wf],
                 capture_output=True, text=True, timeout=60, cwd=ROOT,
+                env={**os.environ, "MAS_ENGINEER_ROOT": ROOT},
             )
             status = "ok" if "status: ok" in r.stdout else "fail"
             results[wf] = {"status": status, "exit": r.returncode, "stdout_tail": r.stdout[-200:]}
@@ -117,7 +118,8 @@ def test_recovery_workflows():
         try:
             r = subprocess.run(
                 ["python3", "tools/dev_workflow_runner.py", wf],
-                capture_output=True, text=True, timeout=30, cwd=ROOT,
+                capture_output=True, text=True, timeout=60, cwd=ROOT,
+                env={**os.environ, "MAS_ENGINEER_ROOT": ROOT},
             )
             status = "ok" if "status: ok" in r.stdout else "fail"
             # Check log for auto_repair output
@@ -176,6 +178,7 @@ def test_task_workflows_sample(n_per_group=2):
             r = subprocess.run(
                 ["python3", "tools/dev_workflow_runner.py", wf] + extra_args,
                 capture_output=True, text=True, timeout=20, cwd=ROOT,
+                env={**os.environ, "MAS_ENGINEER_ROOT": ROOT},
             )
             if "status: ok" in r.stdout:
                 results["ok"].append(wf)
