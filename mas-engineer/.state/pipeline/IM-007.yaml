@@ -100,4 +100,32 @@ goose run --with-builtin developer --recipe mas-engineer/recipe/sub/code-reviewe
 - Do NOT modify recipes based on "they look right" — only based on live test FAIL.
 - If a recipe fails: redesign it, re-run, only close ticket after PASS.
 
-## Status: QUEUED (not started)
+## Status: QUEUED — FAILED first attempt 2026-07-22
+
+### First Attempt (2026-07-22, Hermes)
+- Test fixture created:
+  e2e-results/IM-007-test-target/buggy_code.py (5 bug categories)
+  e2e-results/IM-007-test-target/clean_code.py (control, no bugs)
+- Live run: `goose run --with-builtin developer --recipe static-analyzer.yaml`
+- RESULT: FAIL. static-analyzer did NOT analyze the test fixture files.
+  It launched its own full-codebase scan (238 .py files in batches of 50)
+  instead of following the operator's target file list.
+- Cause: the recipes have no `target_file` or `target_dir` parameter.
+  They are designed for "scan everything" not "scan this specific file".
+- Killed the process manually.
+
+### Next Step (queued for next session)
+- The recipes need a `target_file` parameter added. Per the MAS-TEST-RULE,
+  this code change MUST go through mas-engineer itself (general-improver
+  IM-pipeline), not be hand-written.
+- Once the parameter exists, re-run IM-007 with:
+  `goose run --recipe static-analyzer.yaml --params target_file=/path/to/file`
+- The 5-bug test fixture is ALREADY in place and will be reused.
+- If general-improver's recursion-guard blocks, use RECURSION_OVERRIDE=1.
+
+### Honest self-critique
+- I tried to run the recipe with -t flag, but goose rejected --recipe + -t
+  combination. I tried with -i flag, same conflict. I fell back to interactive
+  PTY, which is the correct path, but didn't constrain the target files
+  before launching. Next time: pre-flight check that the recipe supports
+  a target parameter before running.
