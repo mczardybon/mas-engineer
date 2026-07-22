@@ -140,6 +140,23 @@ def test_task_workflows_sample(n_per_group=2):
     section(f"TEST 4: Task_workflows sample ({n_per_group} per category)")
     d = yaml.safe_load(open(".state/workflows.yaml"))
     all_wfs = list(d.get("task_workflows", {}).keys())
+    # Default params for workflows that need them (smoke test only)
+    DEFAULT_PARAMS = {
+        "wf_admin_generic": ["--task", "status"],
+        "wf_controller_cycle": [],
+        "wf_dashboard_refresh_run": [],
+        "wf_doc_create": ["--file", "/tmp/test_doc.md", "--content", "test"],
+        "wf_generic_init_run": ["--init", "testproject", "--project_name", "testproject", "--components", "all", "--workspace", "."],
+        "wf_git_commsg": ["--msgsage", "test commit", "--PROJECT_UPPER", "MAS-ENGINEER"],
+        "wf_guardian_check": ["--ok", "1"],
+        "wf_intention_create": [],
+        "wf_py_analyze": ["--file", "tools/e2e_run_all.py"],
+        "wf_py_compile": ["--file", "tools/e2e_run_all.py"],
+        "wf_rd_design": ["--project", "test", "--name", "agent"],
+        "wf_recipe_generic": ["--task", "list"],
+        "wf_team_package": ["--root_recipe", "recipe/root_recipe.yaml", "--output_path", "/tmp/mas-pkg", "--team_name", "testteam", "--sub_recipes_csv", "recipe/sub/sub_a.yaml,recipe/sub/sub_b.yaml"],
+        "wf_yaml_clone": ["--task", "list", "--new_name", "clone", "--emoji", "🧪"],
+    }
     groups = defaultdict(list)
     for wf in all_wfs:
         parts = wf.split("_")
@@ -154,9 +171,10 @@ def test_task_workflows_sample(n_per_group=2):
     for i, wf in enumerate(sampled, 1):
         if i % 10 == 0:
             log(f"  progress: {i}/{len(sampled)}")
+        extra_args = DEFAULT_PARAMS.get(wf, [])
         try:
             r = subprocess.run(
-                ["python3", "tools/dev_workflow_runner.py", wf],
+                ["python3", "tools/dev_workflow_runner.py", wf] + extra_args,
                 capture_output=True, text=True, timeout=20, cwd=ROOT,
             )
             if "status: ok" in r.stdout:
@@ -219,6 +237,22 @@ def main():
 
     start = time.time()
     all_results = {"started": datetime.now().isoformat(), "tests": {}}
+
+    # 0. Cleanup test artifacts from previous runs
+    artifacts = [
+        "recipe/sub/sub_mas-clone.yaml",
+        "recipe/sub/sub_test-agent.yaml",
+        "recipe/sub/sub_p-n.yaml",
+        "recipe/sub/sub_mas-smoketest.yaml",
+        "recipe/sub/sub_mas-smoketest2.yaml",
+        "recipe/sub/sub_mas-smoketest3.yaml",
+    ]
+    for a in artifacts:
+        try:
+            os.remove(a)
+            log(f"cleanup: removed {a}")
+        except FileNotFoundError:
+            pass
 
     # 1. Recipe YAML
     all_results["tests"]["recipe_yaml"] = test_recipe_yaml()

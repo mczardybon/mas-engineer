@@ -71,7 +71,7 @@ show_help() {
 
 build_zip() {
     local timestamp; timestamp=$(date +%Y%m%d_%H%M%S)
-    local zip_name="mas-framework-v${VERSION}_${timestamp}.zip"
+    local zip_name="mas-framework-v${VERSION}_${timestamp}.tar.gz"
     local zip_path="$DIST_DIR/$zip_name"
 
     header "Distribution bauen"
@@ -88,61 +88,67 @@ build_zip() {
     find mas-engineer -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
     rm -f mas-engineer/.state/checkpoints/checkpoint_config.yaml 2>/dev/null || true
     
-    # Build ZIP
-    zip -r "$zip_path" .mas-mode install.sh mas-engineer/ \
-        -x "*/.backups/*" "*/.git/*" "*/__pycache__/*" "*.pyc" "*.bak" \
-        -x "mas-engineer/.state/checkpoints/*" \
-        -x "mas-engineer/.state/workflow_runs/*" \
-        -x "mas-engineer/tools/dev_build.sh.v*" -x "mas-engineer/dist/*" \
-        -x "mas-engineer/recipe/sub/*.bak*" 2>&1 | grep -v "^  adding:" || true
-    
-    local zip_size; zip_size=$(du -h "$zip_path" | cut -f1)
-    local zip_count; zip_count=$(unzip -l "$zip_path" 2>/dev/null | tail -1 | awk '{print $2}')
-    ok "ZIP created: $zip_name ($zip_count files, $zip_size)"
+    # Build TAR.GZ (zip-free — no extra binary dep)
+    tar -czf "$zip_path" \
+        --exclude="*/.backups/*" \
+        --exclude="*/.git/*" \
+        --exclude="*/__pycache__/*" \
+        --exclude="*.pyc" \
+        --exclude="*.bak" \
+        --exclude="mas-engineer/.state/checkpoints/*" \
+        --exclude="mas-engineer/.state/workflow_runs/*" \
+        --exclude="mas-engineer/tools/dev_build.sh.v*" \
+        --exclude="mas-engineer/dist/*" \
+        --exclude="mas-engineer/recipe/sub/*.bak*" \
+        .mas-mode install.sh mas-engineer/ 2>&1 || true
+
+    local tar_size; tar_size=$(du -h "$zip_path" | cut -f1)
+    local tar_count; tar_count=$(tar -tzf "$zip_path" 2>/dev/null | wc -l)
+    ok "TAR.GZ created: $zip_name ($tar_count files, $tar_size)"
 }
 
 validate_zip() {
-    local zip_path; zip_path=$(ls -t "$DIST_DIR"/mas-framework-*.zip 2>/dev/null | head -1)
-    [ -n "$zip_path" ] || { error "No ZIP found"; return 1; }
+    local zip_path; zip_path=$(ls -t "$DIST_DIR"/mas-framework-*.tar.gz 2>/dev/null | head -1)
+    [ -n "$zip_path" ] || { error "No TAR.GZ found"; return 1; }
 
     local errors=0
 
-    header "ZIP validate"
+    header "TAR.GZ validate"
     echo ""
 
     # 1. MAS-Subs (≥36 in sub/)
     echo -n "MAS-Subs:       "
     local mas_subs
-    mas_subs=$(unzip -l "$zip_path" 2>/dev/null | grep -c "mas-engineer/recipe/sub/sub_mas-")
+    mas_subs=$(tar -tzf "$zip_path" 2>/dev/null | grep -c "mas-engineer/recipe/sub/sub_mas-")
     [ "$mas_subs" -ge 36 ] && ok "✅ ($mas_subs)" || { error "❌ ($mas_subs)"; errors=$((errors + 1)); }
 
     # 2. MAS-Tools (≥40)
     echo -n "MAS-Tools:      "
     local mas_tools
-    mas_tools=$(unzip -l "$zip_path" 2>/dev/null | grep -c "mas-engineer/tools/")
+    mas_tools=$(tar -tzf "$zip_path" 2>/dev/null | grep -c "mas-engineer/tools/")
     [ "$mas_tools" -ge 40 ] && ok "✅ ($mas_tools)" || { error "❌ ($mas_tools)"; errors=$((errors + 1)); }
 
     # 6. install.sh
     echo -n "install.sh:     "
-    unzip -l "$zip_path" 2>/dev/null | grep -c "install.sh$" > /dev/null && ok "✅" || { warn "⚠️ (optional)"; }
+    tar -tzf "$zip_path" 2>/dev/null | grep -c "install.sh$" > /dev/null && ok "✅" || { warn "⚠️ (optional)"; }
 
     # 7. No Pycache
     echo -n "No Pycache:   "
     local pycache
-    pycache=$(unzip -l "$zip_path" 2>/dev/null | grep -c "__pycache__\|\.pyc" || true)
+    pycache=$(tar -tzf "$zip_path" 2>/dev/null | grep -c "__pycache__\|\.pyc" || true)
     [ "$pycache" -gt 0 ] && { error "❌ ($pycache)"; errors=$((errors + 1)); } || ok "✅"
 
     # 8. MAS-State (Rulen)
     echo -n "MAS-State:      "
     local state_count
-    state_count=$(unzip -l "$zip_path" 2>/dev/null | grep -c "mas-engineer/.state/rules/")
+    state_count=$(tar -tzf "$zip_path" 2>/dev/null | grep -c "mas-engineer/.state/rules/")
     [ "$state_count" -ge 4 ] && ok "✅ ($state_count rules)" || { warn "❌ ($state_count)"; errors=$((errors + 1)); }
 
     echo ""
     if [ "$errors" -eq 0 ]; then
-        ok "ZIP complete and correct — 0 errors"
+        ok "TAR.GZ complete and correct — 0 errors"
     else
-        error "$errors Errors in ZIP"
+        error "$errors Errors in TAR.GZ"
     fi
     return $errors
 }
@@ -152,7 +158,7 @@ build_project_zip() {
     local project_name="$1"
     local project_path="$WORKSPACE/$project_name"
     timestamp=$(date +%Y%m%d_%H%M%S)
-    local zip_name="${project_name}-v${VERSION}_${timestamp}.zip"
+    local zip_name="${project_name}-v${VERSION}_${timestamp}.tar.gz"
     local zip_path="$DIST_DIR/$zip_name"
 
     header "Build project distribution"
@@ -177,25 +183,30 @@ build_project_zip() {
     find "$project_path" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
     # ZIP create
-    cd "$WORKSPACE"
-    zip -r "$zip_path" "$project_name/" \
-        -x "*/\.backups/*" "*/\.git/*" "*/__pycache__/*" "*.pyc" "*.bak"
-    ok "ZIP created: $zip_name"
+    # Build TAR.GZ (zip-free — no extra binary dep)
+    tar -czf "$zip_path" \
+        --exclude="*/.backups/*" \
+        --exclude="*/.git/*" \
+        --exclude="*/__pycache__/*" \
+        --exclude="*.pyc" \
+        --exclude="*.bak" \
+        "$project_name/"
+    ok "TAR.GZ created: $zip_name"
 
-    # Check: no sub_mas-* im ZIP (ausser generatede)
+    # Check: no sub_mas-* im TAR.GZ (ausser generatede)
     local mas_subs
-    mas_subs=$(unzip -l "$zip_path" 2>/dev/null | grep -c "sub_mas-" || true)
+    mas_subs=$(tar -tzf "$zip_path" 2>/dev/null | grep -c "sub_mas-" || true)
     if [ "$mas_subs" -gt 0 ]; then
-        warn "ZIP contains $mas_subs sub_mas-* files"
+        warn "TAR.GZ contains $mas_subs sub_mas-* files"
         warn "Projekt sollte no MAS-Components contain"
     else
-        ok "No MAS components in ZIP — standalone"
+        ok "No MAS components in TAR.GZ — standalone"
     fi
 
     echo ""
     if [ "$DRY_RUN" = false ]; then
         echo -e "${YELLOW}${BOLD}📦 Projekt-Build completed${NC}"
-        echo -e "${YELLOW}Installation: cd dist/ && unzip ${zip_name} && ${project_name}/installr.sh${NC}"
+        echo -e "${YELLOW}Installation: cd dist/ && tar -xzf ${zip_name} && ${project_name}/installr.sh${NC}"
         echo -e "${YELLOW}No MAS-Dependency — standalone${NC}"
     fi
 }
@@ -230,7 +241,7 @@ main() {
         info "DRY-RUN completed. No changes."
     else
         echo -e "${YELLOW}${BOLD}📦 Build completed${NC}"
-        echo -e "${YELLOW}Installation: cd dist/ && unzip mas-framework-*.zip && ./installr.sh${NC}"
+        echo -e "${YELLOW}Installation: cd dist/ && tar -xzf mas-framework-*.tar.gz && ./installr.sh${NC}"
         echo -e "${YELLOW}MAS-Update:   ./update.sh --mas${NC}"
         echo -e "${YELLOW}FW-Update:    ./update.sh --framework${NC}"
     fi
