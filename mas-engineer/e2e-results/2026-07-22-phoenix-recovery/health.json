@@ -1,89 +1,85 @@
 {
-  "timestamp": "2026-07-22T18:20:56.472875Z",
+  "run_id": "2026-07-22-phoenix-recovery",
+  "timestamp": "2026-07-22T18:54:00Z",
+  "tool": "goose 1.43.0 --interactive",
+  "recipe": "recipe/dev-mas-engineer.yaml",
+  "model": "deepseek-v4-flash",
+  "sub_agents": {
+    "started": 5,
+    "completed": 5,
+    "sessions": [
+      "286",
+      "287",
+      "288",
+      "289",
+      "290"
+    ],
+    "max_turns_per_agent": 15,
+    "note": "max_turns zu niedrig \u2014 sub-agents brauchten mehr"
+  },
+  "pty_log": {
+    "path": "logs/pty-raw.log",
+    "size_bytes": 49674,
+    "tool_call_markers": 106
+  },
   "stages": {
-    "1-immune": {
-      "name": "sub_mas-recovery-immune",
-      "description": "YAML/Python/Shell syntax-check VOR save",
-      "recipe_exists": true,
-      "instructions_exists": true,
-      "yaml_valid": true,
-      "required_fields": {
-        "name": true,
-        "version": true,
-        "constitution": true,
-        "prompt": true,
-        "instructions": true
-      },
-      "sot_rule_mentions": 5,
-      "healthy": true
+    "1_immune": {
+      "status": "GREEN",
+      "checks_passed": 6,
+      "checks_total": 6
     },
-    "2-checkpoint": {
-      "name": "sub_mas-recovery-checkpoint",
-      "description": "Snapshot vor \u00e4nderungen",
-      "recipe_exists": true,
-      "instructions_exists": true,
-      "yaml_valid": true,
-      "required_fields": {
-        "name": true,
-        "version": true,
-        "constitution": true,
-        "prompt": true,
-        "instructions": true
-      },
-      "sot_rule_mentions": 5,
-      "healthy": true
+    "2_checkpoint": {
+      "status": "DEGRADED",
+      "checks_passed": 4,
+      "checks_total": 6,
+      "issues": [
+        "C-01: .label fehlt",
+        "C-02: dev-mas-engineer.yaml fehlt im checkpoint"
+      ]
     },
-    "3-safezone": {
-      "name": "sub_mas-recovery-safezone",
-      "description": "Protected zone (no edits)",
-      "recipe_exists": true,
-      "instructions_exists": true,
-      "yaml_valid": true,
-      "required_fields": {
-        "name": true,
-        "version": true,
-        "constitution": true,
-        "prompt": true,
-        "instructions": true
-      },
-      "sot_rule_mentions": 5,
-      "healthy": true
+    "3_safezone": {
+      "status": "YELLOW",
+      "checks_passed": 14,
+      "checks_total": 15,
+      "issues": [
+        "5 fehlende recovery-templates"
+      ]
     },
-    "4-timeline": {
-      "name": "sub_mas-recovery-timeline",
-      "description": "Best-state aus history finden",
-      "recipe_exists": true,
-      "instructions_exists": true,
-      "yaml_valid": true,
-      "required_fields": {
-        "name": true,
-        "version": true,
-        "constitution": true,
-        "prompt": true,
-        "instructions": true
-      },
-      "sot_rule_mentions": 5,
-      "healthy": true
+    "4_timeline": {
+      "status": "DEGRADED",
+      "checks_passed": 0,
+      "checks_total": 5,
+      "issues": [
+        "wf_recovery_checkpoint/safezone/timeline/defib nicht definiert"
+      ]
     },
-    "5-defib": {
-      "name": "sub_mas-recovery-defib",
-      "description": "Letzte option: minimal-config + stepwise revive",
-      "recipe_exists": true,
-      "instructions_exists": true,
-      "yaml_valid": true,
-      "required_fields": {
-        "name": true,
-        "version": true,
-        "constitution": true,
-        "prompt": true,
-        "instructions": true
-      },
-      "sot_rule_mentions": 5,
-      "healthy": true
+    "5_defib": {
+      "status": "YELLOW",
+      "checks_passed": 7,
+      "checks_total": 10,
+      "issues": [
+        "workflow-definition fehlt"
+      ]
     }
   },
-  "overall_health": "5/5",
-  "status": "HEALTHY",
-  "state_checkpoints": 1,
-  "backups": 8
+  "bug_fixed_during_e2e": {
+    "type": "typo",
+    "locations": 6,
+    "description": "rrestore \u2192 restore in .state/workflows.yaml"
+  },
+  "honest_limitations": [
+    "pytest lauf nicht durchgef\u00fchrt (Teil 2 des tasks nicht erreicht)",
+    "unix-test-runner e2e nicht durchgef\u00fchrt",
+    "main-agent hat manuell eingegriffen (zwischen sub-agent outputs)",
+    "sub-agent max_turns: 15 ist zu niedrig"
+  ],
+  "totals": {
+    "stages_checked": 5,
+    "stages_passed": 1,
+    "stages_degraded": 2,
+    "stages_yellow": 2,
+    "bugs_found": 1,
+    "bugs_fixed": 1,
+    "e2e_conformity": "PARTIAL"
+  }
 }

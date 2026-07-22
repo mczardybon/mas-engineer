@@ -288,7 +288,7 @@ configs:
           sub_agent: sub_mas-recovery-checkpoint
           subbefehle:
           - recovery --list → wf_recovery_checkpoint_list
-          - recovery --rrestore <id> → wf_recovery_checkpoint_rrestore
+          - recovery --restore <id> → wf_checkpoint_restore
           - recovery --diff <a>..<b> → wf_recovery_checkpoint_diff
         safezone:
           befehl: recovery --safezone
@@ -302,7 +302,7 @@ configs:
           workflow: wf_recovery_timeline
           sub_agent: sub_mas-recovery-timeline
           subbefehle:
-          - recovery --rrestore-best → wf_recovery_timeline_rrestore
+          - recovery --restore-best → wf_timeline_restore
           - recovery --analyze → wf_recovery_timeline_analyze
         defib:
           befehl: recovery --defib
@@ -640,7 +640,7 @@ agents:
     task_workflows:
       SNAPSHOT: wf_checkpoint_snapshot
       LIST: wf_checkpoint_list
-      RESTORE: wf_checkpoint_rrestore
+      RESTORE: wf_checkpoint_restore
       DIFF: wf_checkpoint_diff
   recovery-safezone:
     tier: balanced
@@ -655,7 +655,7 @@ agents:
     token_budget: 15000
     task_workflows:
       FIND_BEST: wf_timeline_findbest
-      RESTORE_BEST: wf_timeline_rrestore
+      RESTORE_BEST: wf_timeline_restore
       SHOW_PATH: wf_timeline_showpath
       ANALYZE: wf_timeline_analyze
   recovery-defib:
@@ -1799,7 +1799,7 @@ task_workflows:
       action: shell
       cmd: python3 -c "import yaml; yaml.safe_load(open('{workspace}/.state/checkpoints/{checkpoint_id}/recipe/dev-mas-engineer.yaml'))"
         2>/dev/null || { echo 'No valider Checkpoint'; exit 1; }
-    - id: rrestore
+    - id: restore
       action: shell
       cmd: 'rm -rf {workspace}/recipe {workspace}/tools; cp -r {workspace}/.state/checkpoints/{checkpoint_id}/recipe
         {workspace}/; cp -r {workspace}/.state/checkpoints/{checkpoint_id}/tools {workspace}/;
@@ -1874,7 +1874,7 @@ task_workflows:
       cmd: for d in $(ls -1t {workspace}/.state/checkpoints/ 2>/dev/null); do python3
         -c "import yaml; yaml.safe_load(open('{workspace}/.state/checkpoints/$d/recipe/dev-mas-engineer.yaml'))"
         2>/dev/null && echo "$d" && break; done
-    - id: rrestore
+    - id: restore
       action: shell
       cmd: 'BEST=$(cat /tmp/best_checkpoint 2>/dev/null); [ -n "$BEST" ] && { rm -rf
         {workspace}/recipe {workspace}/tools; cp -r {workspace}/.state/checkpoints/$BEST/recipe
