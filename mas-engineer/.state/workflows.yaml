@@ -1629,35 +1629,40 @@ task_workflows:
       cmd: echo 'Workflow-Usage gezaehlt. Tote Pattern identified.'
       timeout: 30
   wf_recovery_immune:
-    desc: YAML-Praevention vor eachm Edit
+    desc: YAML preflight check before every edit
     steps:
     - id: check
       action: shell
-      cmd: 'echo ''Coronashield-Check: YAML/Python/Sbright-Syntax + Gitamt-State'''
+      cmd: python3 tools/dev_rule_checker.py --all 2>&1 | tail -5
+      timeout: 60
   wf_recovery_checkpoint:
     desc: Checkpoint content validation + C-01/C-02 fix
     steps:
     - id: check
       action: shell
-      cmd: 'echo ''sub_mas-recovery-checkpoint Recovery'''
+      cmd: test -d .state/checkpoints/ && ls -1 .state/checkpoints/ | head -5
+      timeout: 30
   wf_recovery_safezone:
     desc: Recovery templates in template/recovery/
     steps:
     - id: check
       action: shell
-      cmd: 'echo ''sub_mas-recovery-safezone Recovery'''
+      cmd: ls -1 template/recovery/ 2>&1 | head -5
+      timeout: 30
   wf_recovery_timeline:
     desc: Find best recovery point
     steps:
     - id: check
       action: shell
-      cmd: 'echo ''sub_mas-recovery-timeline Recovery'''
+      cmd: ls -1t .state/checkpoints/ 2>/dev/null | head -1
+      timeout: 30
   wf_recovery_defib:
     desc: 'Defibrillator: reanimate agent on death/drift/loop'
     steps:
     - id: check
       action: shell
-      cmd: 'echo ''sub_mas-recovery-defib Recovery'''
+      cmd: ls -1 .state/defib/ 2>/dev/null | head -3
+      timeout: 30
   wf_immune_check_yaml:
     desc: YAML-Syntax ar individualen file checkn
     steps:
@@ -1769,7 +1774,7 @@ task_workflows:
       action: shell
       cmd: 'echo ''Multi-Patch: X/Y files successful'''
   wf_yaml_clone:
-    desc: Newen agents aus Template klonen
+    desc: Clone new agents from template
     steps:
     - id: generate
       action: shell
@@ -1940,7 +1945,7 @@ task_workflows:
       - write_minimal
       on_error: continue
   wf_defib_resurrect:
-    desc: Aus lastm Backup againbelive
+    desc: Restore from last backup
     steps:
     - id: try_timeline
       action: shell
@@ -2070,7 +2075,7 @@ task_workflows:
       action: shell
       cmd: 'echo ''Top 5: Severity DESC, Impact DESC, Aufwand ASC'''
   wf_im_design_patches:
-    desc: Patchit aus Findings entwerfen
+    desc: Design patches from findings
     steps:
     - id: detect_mode
       action: shell
@@ -2100,13 +2105,13 @@ task_workflows:
       action: shell
       cmd: 'echo ''Verdict: ALL_GREEN | DEGRADED | FAILED (at FAILED: SOFORT rollback)'''
   wf_engine_execute:
-    desc: Workflow aus SOT ausexecuten
+    desc: Execute workflow from SOT
     steps:
     - id: load_wf
       action: shell
       cmd: echo 'Workflow {workflow} aus SOT loaded. Steps topological sorted.'
   wf_im_read_sessions_with_messages:
-    desc: Session-DB liten MIT Chat-Extraction
+    desc: Read session DB with chat extraction
     steps:
     - id: detect_mode
       action: shell
@@ -2712,7 +2717,7 @@ task_workflows:
         d = json.load(f); d.append({data}); with open(''{file}'', ''w'') as f: json.dump(d,
         f, indent=2, ensure_ascii=False)"'
   wf_rd_conceive:
-    desc: Aus User-Wunsch Agent-parameterssss extrahereen
+    desc: Extract agent parameters from user request
     steps:
     - id: extract
       action: shell
