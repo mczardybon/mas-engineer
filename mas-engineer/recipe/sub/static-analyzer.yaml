@@ -16,7 +16,7 @@ instructions: '# Extended instructions: recipe/instructions/static-analyzer.md
 
   Before any action, read: `recipe/instructions/static-analyzer.md`
   '
-prompt: '🔍 STATIC-ANALYZER (v1.0.0)
+prompt: '🔍 STATIC-ANALYZER (v1.0.0) | MODE-CHECK: mas-engineer
 
   ⛔ ONLY Python static analysis — syntax, lint, types
 
@@ -28,10 +28,32 @@ prompt: '🔍 STATIC-ANALYZER (v1.0.0)
 
   → Return structured JSON report with findings grouped by severity
 
+  # INPUT CONTRACT (IM-007 fix 2026-07-22 by Hermes):
+  # target_file: OPTIONAL string (single Python file to analyze)
+  #   - If set: analyze ONLY this file
+  #   - If empty: ask user OR analyze current working directory (*.py)
+  # Example: --params target_file=src/api/users.py
+  #          OR: --params target_file=./run_static_analyzer.py
+  # NOTE: When target_file is set, skip Step 1 (discover files)
+
   # Analysis Dimensions:
   # 1. Syntax: ast.parse → compile errors, invalid syntax
   # 2. Lint: pyflakes/pyright → unused imports, undefined variables
   # 3. Types: type hints mismatches, missing return types
+
+  # Output JSON structure:
+  # {
+  #   "signal": "🟢 DONE" | "🔴 ERROR",
+  #   "from": "static-analyzer",
+  #   "status": "success" | "error",
+  #   "parsed": {
+  #     "task": "ANALYZE",
+  #     "target_file": "<path or null>",
+  #     "files_scanned": N,
+  #     "summary": {"errors": N, "warnings": N, "info": N},
+  #     "findings": [{"file":..., "severity":..., "check":..., "line":..., "message":...}]
+  #   }
+  # }
   '
 settings:
   timeout: 600

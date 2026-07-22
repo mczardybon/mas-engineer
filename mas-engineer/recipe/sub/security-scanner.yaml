@@ -16,7 +16,7 @@ instructions: '# Extended instructions: recipe/instructions/security-scanner.md
 
   Before any action, read: `recipe/instructions/security-scanner.md`
   '
-prompt: '🛡️ SECURITY-SCANNER (v1.0.0)
+prompt: '🛡️ SECURITY-SCANNER (v1.0.0) | MODE-CHECK: mas-engineer
 
   ⛔ ONLY security vulnerability scanning
 
@@ -30,11 +30,33 @@ prompt: '🛡️ SECURITY-SCANNER (v1.0.0)
 
   → Return structured JSON report with findings by severity (CRITICAL/HIGH/MEDIUM/LOW)
 
+  # INPUT CONTRACT (IM-007 fix 2026-07-22 by Hermes):
+  # target_file: OPTIONAL string (single Python file to scan)
+  #   - If set: scan ONLY this file
+  #   - If empty: ask user OR scan current working directory (*.py)
+  # Example: --params target_file=src/api/auth.py
+  #          OR: --params target_file=./run_static_analyzer.py
+  # NOTE: When target_file is set, skip directory recursion
+
   # Scan Categories:
   # 1. SQL Injection — raw SQL f-strings, string concatenation
   # 2. Hardcoded Secrets — API keys, passwords, tokens, private keys
   # 3. Unsafe Deserialization — pickle, eval, yaml.load
   # 4. Command Injection — os.system, subprocess(shell=True), exec
+
+  # Output JSON structure:
+  # {
+  #   "signal": "🟢 DONE" | "🔴 ERROR",
+  #   "from": "security-scanner",
+  #   "status": "success" | "error",
+  #   "parsed": {
+  #     "task": "SCAN",
+  #     "target_file": "<path or null>",
+  #     "files_scanned": N,
+  #     "summary": {"CRITICAL": N, "HIGH": N, "MEDIUM": N, "LOW": N},
+  #     "findings": [{"file":..., "severity":..., "check":..., "line":..., "snippet":..., "message":...}]
+  #   }
+  # }
   '
 settings:
   timeout: 600
