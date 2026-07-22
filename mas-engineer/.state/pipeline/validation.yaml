@@ -1,111 +1,61 @@
 stage: 4
 agent: im-validator
-timestamp: '2026-07-22T12:26:00+00:00'
-input_file: .state/pipeline/patches.yaml
-signal: DONE
-request_id: im-validator-20260722-234
-from: sub_mas-im-validator
-to: sub_mas-general-improver
-status: ok
-note: |
-  Validation complete for 3 patches applied to marketing team.
-  All YAML syntax checks pass. All L01 checks pass (no Goose-native conflicts).
-  Goose-expert post-validation: CONFORM for all 3 patches (manual analysis —
-  sub_mas-goose-expert recipe exists but is not registered as a loadable source).
-  Scores unchanged (prompt=5.1, settings=20.0, structure=10) — changes are
-  additive (prompt context enrichment, instructions enhancement) and do not
-  affect scoring metrics.
-data:
-  validation:
-    status: approved
-    details:
-      - file: /root/.config/goose/recipes/marketing/marketing-team.yaml
-        field: prompt
-        score_before: 5.1
-        score_after: 5.1
-        delta: 0.0
-        notes: |
-          Added MODE-CHECK header and Operational Context section.
-          ✅ YAML syntax valid
-          ✅ L01 check: CONFORM — no Goose-native conflict
-          ✅ Goose-expert post-check: CONFORM — standard I_AM identity pattern
-          ✅ Cross-references intact (sub_recipes paths unchanged)
-          Change is additive and backward-compatible.
-
-      - file: /root/.config/goose/recipes/marketing/sub/analytics-reporter.yaml
-        field: prompt
-        score_before: 5.1
-        score_after: 5.1
-        delta: 0.0
-        notes: |
-          Added MODE-CHECK header and Operational Context section.
-          ✅ YAML syntax valid
-          ✅ L01 check: CONFORM — no Goose-native conflict
-          ✅ Goose-expert post-check: CONFORM — standard I_AM identity pattern
-          ✅ settings section preserved (timeout=300, max_steps=50)
-          Change is additive and backward-compatible.
-
-      - file: /root/.config/goose/recipes/marketing/sub/marketing-orchestrator.yaml
-        field: instructions
-        score_before: 5.1
-        score_after: 5.1
-        delta: 0.0
-        notes: |
-          Added Retry Logic section for transient error handling.
-          ✅ YAML syntax valid
-          ✅ L01 check: CONFORM — no Goose-native conflict (Goose has no native
-             retry for load() calls, so instruction-level retry is appropriate)
-          ✅ Goose-expert post-check: CONFORM — plain text guidance, no
-             architectural conflict
-          ✅ Cross-references to specialists unchanged
-          Change is additive and backward-compatible.
-
-    recommendation:
-      - file: /root/.config/goose/recipes/marketing/marketing-team.yaml
-        verdict: APPROVE
-        severity: low
-        rationale: |
-          Standard prompt enrichment. Adds MODE-CHECK and operational context.
-          No risk of regression. All cross-references intact.
-      - file: /root/.config/goose/recipes/marketing/sub/analytics-reporter.yaml
-        verdict: APPROVE
-        severity: low
-        rationale: |
-          Standard prompt enrichment. Adds MODE-CHECK and operational context.
-          No risk of regression. Settings preserved.
-      - file: /root/.config/goose/recipes/marketing/sub/marketing-orchestrator.yaml
-        verdict: APPROVE
-        severity: low
-        rationale: |
-          Adds retry logic for transient errors in sub-agent dispatch.
-          Fills a gap (Goose has no native retry for load() calls).
-          Instruction-level guidance only — no architectural changes.
-
-    approved_count: 3
-    rejected_count: 0
-    goose_post_checks:
-      - patch_id: 1
-        file: marketing-team.yaml
-        verdict: CONFORM
-        explanation: |
-          Standard I_AM identity pattern with MODE-CHECK. The prompt field
-          supports this pattern per Goose docs. Adding operational context
-          is backward-compatible and does not conflict with any Goose native
-          mechanism. Cross-references to sub_recipes remain valid.
-      - patch_id: 2
-        file: analytics-reporter.yaml
-        verdict: CONFORM
-        explanation: |
-          Same pattern as Patch 1 — standard I_AM identity with MODE-CHECK.
-          Operational context clarifies role as spoke in hub-and-spoke.
-          Settings section preserved. No conflicts.
-      - patch_id: 3
-        file: marketing-orchestrator.yaml
-        verdict: CONFORM
-        explanation: |
-          Retry logic is plain text guidance in instructions field. Goose
-          does not have a native retry mechanism for load() sub-agent calls.
-          The recipe_advanced `retry.max_retries` applies to recipe-level
-          retry, not individual load() calls. Instruction-level retry is
-          the appropriate approach. Caveat: relies on agent following
-          instructions correctly.
+timestamp: "2026-07-22T13:08:00+00:00"
+input_file: "[SOT-PATCHES]"
+validation:
+  status: approved
+  details:
+    - file: mas-engineer/recipe/sub/static-analyzer.yaml
+      patch: "added summon extension (type: platform)"
+      score_before: null
+      score_after: null
+      delta: null
+      notes: "LOW risk — additive change. summon extension added as platform type, consistent with 57+ other recipes. YAML syntax valid. L01 mechanism check: CONFORM."
+    - file: mas-engineer/recipe/sub/code-reviewer.yaml
+      patch: "added SINGLE ROLE clarification to prompt"
+      score_before: null
+      score_after: null
+      delta: null
+      notes: "LOW risk — prompt text only. Added '⛔ SINGLE ROLE: Findings Synthesis & Report Generation' before existing constraints. YAML syntax valid. L01 mechanism check: CONFORM."
+    - file: mas-engineer/recipe/sub/sub_mas-python-repair.yaml
+      patch: "added SINGLE ROLE clarification to prompt"
+      score_before: null
+      score_after: null
+      delta: null
+      notes: "LOW risk — prompt text only. Replaced 'COMPILE | ANALYZE | FIX | VALIDATE' with '⛔ SINGLE ROLE: Python code repair pipeline (compile → analyze → fix → validate)'. YAML syntax valid. L01 mechanism check: CONFORM."
+    - file: mas-engineer/recipe/sub/sub_mas-framework-scanner.yaml
+      patch: "added SINGLE ROLE clarification to prompt"
+      score_before: null
+      score_after: null
+      delta: null
+      notes: "LOW risk — prompt text only. Replaced 'Scan & audit & harden' with '⛔ SINGLE ROLE: Framework analysis & hardening (scan → audit → harden)'. YAML syntax valid. L01 mechanism check: CONFORM. Pre-existing issue: CORONASHIELD text as top-level YAML key (not caused by this patch)."
+    - file: mas-engineer/recipe/sub/security-scanner.yaml
+      patch: "added SINGLE ROLE clarification to prompt"
+      score_before: null
+      score_after: null
+      delta: null
+      notes: "LOW risk — prompt text only. Added '⛔ SINGLE ROLE: Security vulnerability scanning' before existing constraints. YAML syntax valid. L01 mechanism check: CONFORM."
+  recommendation:
+    - "APPROVE"
+    - "APPROVE"
+    - "APPROVE"
+    - "APPROVE"
+    - "APPROVE"
+  approved_count: 5
+  rejected_count: 0
+  goose_post_checks:
+    - patch_id: "static-analyzer-summon"
+      verdict: "CONFORM"
+      explanation: "Summon extension (type: platform) is the correct Goose-native mechanism for agent delegation. No conflicts with existing cross-references in workflows.yaml."
+    - patch_id: "code-reviewer-single-role"
+      verdict: "CONFORM"
+      explanation: "Prompt clarification only. No structural changes. No cross-reference impact."
+    - patch_id: "python-repair-single-role"
+      verdict: "CONFORM"
+      explanation: "Prompt clarification only. No structural changes. No cross-reference impact."
+    - patch_id: "framework-scanner-single-role"
+      verdict: "CONFORM"
+      explanation: "Prompt clarification only. No structural changes. No cross-reference impact. Pre-existing CORONASHIELD top-level key noted but not caused by this patch."
+    - patch_id: "security-scanner-single-role"
+      verdict: "CONFORM"
+      explanation: "Prompt clarification only. No structural changes. No cross-reference impact."
