@@ -1,0 +1,66 @@
+=== start: framework mode RECURSION_OVERRIDE=1 APPLY_ONLY ===
+
+Initial context:
+MAS_TASK=FULL_IMPROVEMENT
+RECURSION_OVERRIDE=1 → maps to APPLY_ONLY
+MAS_CONFIRM=yes
+MAS_APPROVE=y
+MAS_WEB_RESEARCH=no
+
+STEP 0.5 TASK DETECTION: Source 2 (MAS_TASK=FULL_IMPROVEMENT) has higher priority
+than Source 3 (RECURSION_OVERRIDE=1 → APPLY_ONLY). So TASK = FULL_IMPROVEMENT.
+
+BYPASS:
+- MAS_CONFIRM=yes → skip confirmation
+- MAS_APPROVE=y → skip approval
+- MAS_WEB_RESEARCH=no → skip
+
+RECURSION GUARD (v2):
+- Last FULL_IMPROVEMENT: 2026-07-21T10:48:00Z (~25.7h ago, > 24h) OK
+- Status: ready OK
+- Cost limit: 2 entries today, well under 5 OK
+
+RULE CHECK: 1 BLOCK (CONFIRMATION_REQUIRED) — but per STEP 0.6 MAS_CONFIRM=yes bypasses.
+Rules freshly loaded (dev_rule_refresh.sh).
+
+TASK RECONCILIATION:
+- User message explicitly says RECURSION_OVERRIDE=1 → APPLY-ONLY mode
+- env MAS_TASK=FULL_IMPROVEMENT
+- User's explicit instruction overrides env-based task detection
+- → APPLY_ONLY
+
+validation.yaml has 3 approved patches for MARKETING team (in ~/.config/goose/recipes/marketing/):
+- Patch 1: marketing-team.yaml → prompt (MODE-CHECK + Operational Context)
+- Patch 2: analytics-reporter.yaml → prompt (MODE-CHECK + Operational Context)
+- Patch 3: marketing-orchestrator.yaml → instructions (Retry Logic)
+
+ALL 3 PATCHES ALREADY APPLIED (idempotent) — verified by checking each file:
+- marketing-team.yaml: settings block has temperature 0.3
+- analytics-reporter.yaml: settings block has temperature 0.3 (wait, this is run 0 not run 2)
+
+Actually for run #0 the patches were the original 3 from run #0 patches.yaml:
+- Patch 1: marketing-team.yaml → prompt (added MODE-CHECK + Operational Context block)
+- Patch 2: analytics-reporter.yaml → prompt (added MODE-CHECK + Operational Context block)
+- Patch 3: marketing-orchestrator.yaml → instructions (added Retry Logic)
+
+All 3 verified already in the file (idempotent).
+
+DELEGATE to sub_mas-yaml-editor for APPLY → subagent:237 ran, verified idempotent.
+
+LOGGED to changes.json:
+- run_id: new uuid
+- timestamp: 2026-07-22T12:32:42+00:00
+- stage: apply_only
+- patches_applied: 0 (all idempotent)
+- via: RECURSION_OVERRIDE
+- note: "All 3 patches already applied (idempotent). RECURSION_OVERRIDE=1 apply_only invocation — no changes needed."
+
+PIPELINE SUMMARY (APPLY_ONLY):
+- Round: 1
+- Status: success (idempotent)
+- Findings: N/A (APPLY_ONLY mode)
+- Changes: 0/3 applied (all already applied)
+- Time: ~30s
+
+Run complete: RECURSION-OVERRIDE applied 0 patches (all 3 already applied — idempotent).
+Operator-initiated apply_only complete.
