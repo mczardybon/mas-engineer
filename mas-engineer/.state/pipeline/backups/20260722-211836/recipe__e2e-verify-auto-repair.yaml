@@ -1,0 +1,180 @@
+name: e2e-verify-auto-repair
+version: 1.0.0
+title: ✓ E2E-VERIFY-AUTO-REPAIR — dry-run verification for 4 recovery workflows
+description: |
+  v1.0.0 | Verify auto_repair step (step 4) added to 4 recovery workflows:
+  - wf_recovery_checkpoint: would restore recipe/ from latest checkpoint
+  - wf_recovery_safezone: would create fork symlink
+  - wf_recovery_timeline: would restore from latest (no-clobber)
+  - wf_recovery_defib: would write emergency dev-mas-engineer.yaml
+
+  wf_recovery_immune is unchanged (its 1 step IS the real action:
+  dev_rule_checker.py --all).
+
+  Critical: All auto_repair steps are DRY-RUN only — they report what
+  they WOULD do, without making any filesystem changes.
+
+instructions: |
+  # E2E Verify Auto-Repair (DRY-RUN)
+
+  You are a verification agent. Run real commands, write final REPORT.md.
+
+  ## SCOPE — what you are testing
+
+  The 4 modified recovery workflows now have a 4th step (id: auto_repair)
+  that runs in DRY-RUN mode. It must:
+  1. Print `[AUTO_REPAIR DRY-RUN] would: <command>` to stdout
+  2. Make ZERO filesystem changes (excluding runner's own log files
+     under `.state/workflow_runs/`)
+
+  ## Test Suite
+
+  ### T1 — 4 of 5 recovery workflows have step id 'auto_repair'
+  ```bash
+  python3 -c "
+  import yaml
+  d = yaml.safe_load(open('.state/workflows.yaml'))
+  targets = ['wf_recovery_checkpoint','wf_recovery_safezone','wf_recovery_timeline','wf_recovery_defib']
+  n = sum(1 for t in targets if any(s.get('id')=='auto_repair' for s in d['task_workflows'][t].get('steps',[])))
+  assert n == 4, f'expected 4, got {n}'
+  print('T1 PASS')
+  "
+  ```
+
+  ### T2 — All 5 recovery workflows run end-to-end: status: ok
+  ```bash
+  for wf in wf_recovery_immune wf_recovery_checkpoint wf_recovery_safezone wf_recovery_timeline wf_recovery_defib; do
+    python3 tools/dev_workflow_runner.py $wf 2>&1 | grep "status:"
+  done
+  ```
+
+  ### T3 — DRY-RUN: 0 source files added/removed/changed
+  ```bash
+  python3 <<'PY'
+  import hashlib, os, subprocess
+  def h():
+      files = {}
+      for d in ['.state', 'recipe', 'template/recovery']:
+          if not os.path.exists(d): continue
+          for r, _, fs in os.walk(d):
+              if '.git' in r or 'workflow_runs' in r: continue
+              for f in fs:
+                  p = os.path.join(r, f)
+                  try: files[os.path.relpath(p, '.')] = hashlib.md5(open(p,'rb').read()).hexdigest()
+                  except: pass
+      files['mas-engineer_active'] = str(os.path.exists('mas-engineer_active'))
+      return files
+  before = h()
+  for wf in ['wf_recovery_checkpoint', 'wf_recovery_safezone', 'wf_recovery_timeline', 'wf_recovery_defib']:
+      subprocess.run(['python3', 'tools/dev_workflow_runner.py', wf], capture_output=True, timeout=120)
+  after = h()
+  added = set(after) - set(before)
+  removed = set(before) - set(after)
+  changed = [k for k in before if k in after and before[k] != after[k]]
+  assert not (added or removed or changed), f'changes: {added=} {removed=} {changed=}'
+  print('T3 PASS')
+  PY
+  ```
+
+  ### T4 — wf_recovery_checkpoint auto_repair output (in JSON log)
+  The runner uses `capture_output=True` so step output goes to
+  `.state/workflow_runs/<workflow>_<timestamp>.json`, not stdout.
+  Read the JSON log to verify auto_repair step output.
+  ```bash
+  LOG=$(ls -t .state/workflow_runs/wf_recovery_checkpoint_*.json 2>/dev/null | head -1)
+  python3 -c "
+  import json
+  d = json.load(open('$LOG'))
+  out = d['results']['auto_repair']['output']
+  assert 'AUTO_REPAIR' in out, f'no AUTO_REPAIR in: {out}'
+  assert d['results']['auto_repair']['status'] == 'ok'
+  print('T4 PASS:', out[:120])
+  "
+  ```
+
+  ### T5 — wf_recovery_safezone auto_repair output (JSON log)
+  ```bash
+  LOG=$(ls -t .state/workflow_runs/wf_recovery_safezone_*.json 2>/dev/null | head -1)
+  python3 -c "
+  import json
+  d = json.load(open('$LOG'))
+  out = d['results']['auto_repair']['output']
+  assert 'AUTO_REPAIR' in out and 'ln -s' in out, f'wrong: {out}'
+  assert d['results']['auto_repair']['status'] == 'ok'
+  print('T5 PASS:', out[:120])
+  "
+  ```
+
+  ### T6 — wf_recovery_timeline auto_repair output (JSON log)
+  ```bash
+  LOG=$(ls -t .state/workflow_runs/wf_recovery_timeline_*.json 2>/dev/null | head -1)
+  python3 -c "
+  import json
+  d = json.load(open('$LOG'))
+  out = d['results']['auto_repair']['output']
+  assert 'AUTO_REPAIR' in out, f'no AUTO_REPAIR: {out}'
+  assert d['results']['auto_repair']['status'] == 'ok'
+  print('T6 PASS:', out[:120])
+  "
+  ```
+
+  ### T7 — wf_recovery_defib auto_repair output (JSON log)
+  ```bash
+  LOG=$(ls -t .state/workflow_runs/wf_recovery_defib_*.json 2>/dev/null | head -1)
+  python3 -c "
+  import json
+  d = json.load(open('$LOG'))
+  out = d['results']['auto_repair']['output']
+  assert 'AUTO_REPAIR' in out, f'no AUTO_REPAIR: {out}'
+  assert d['results']['auto_repair']['status'] == 'ok'
+  print('T7 PASS:', out[:120])
+  "
+
+  ### T8 — YAML parses cleanly
+  ```bash
+  python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); print(f'T8 PASS: {len(d.get(\"workflows\",{}))} + {len(d.get(\"task_workflows\",{}))}')"
+  ```
+
+  ### T9 — --list still shows 125 workflows
+  ```bash
+  python3 tools/dev_workflow_runner.py --list 2>&1 | grep -E "^\s+(wf_|[a-z_-]+ )" | wc -l
+  ```
+  Expected: 125
+
+  ### T10 — no regression: 4 recovery workflows have 4 steps each, immune=1
+  ```bash
+  python3 -c "
+  import yaml
+  d = yaml.safe_load(open('.state/workflows.yaml'))
+  for n, exp in [('wf_recovery_immune',1),('wf_recovery_checkpoint',4),('wf_recovery_safezone',4),('wf_recovery_timeline',4),('wf_recovery_defib',4)]:
+      a = len(d['task_workflows'][n].get('steps',[]))
+      assert a==exp, f'{n}: {a} != {exp}'
+  print('T10 PASS')
+  "
+  ```
+
+  ## Output
+
+  Write `e2e-results/2026-07-22-verify-auto-repair/REPORT.md` with all
+  T1-T10 results in this format:
+
+  | Test | Result | Actual | Notes |
+  |------|--------|--------|-------|
+
+  Final score: PASS_COUNT/10
+
+  Do NOT push, do NOT modify any files except the REPORT.md.
+
+prompt: |
+  Run the 10 tests (T1-T10) from the instructions. Write REPORT.md to
+  e2e-results/2026-07-22-verify-auto-repair/. All English. Do NOT push.
+  DELETE the existing REPORT.md first so you write a fresh one.
+settings:
+  timeout: 600
+  max_steps: 50
+extensions:
+- type: builtin
+  name: developer
+  display_name: Developer
+  timeout: 300
+  bundled: true

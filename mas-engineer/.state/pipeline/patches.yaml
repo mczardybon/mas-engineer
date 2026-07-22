@@ -1,106 +1,131 @@
-stage: 3
 agent: im-designer
-timestamp: '2026-07-22T12:42:00+00:00'
-input_file: .state/pipeline/ranked_findings.yaml
-signal: DONE
-request_id: im-designer-20260722-244
-from: sub_mas-im-designer
-to: sub_mas-general-improver
-status: success
-note: 'MAS-mode design round (mode=mas). Top 5 MM4 findings: settings missing temperature in marketing-team.yaml, analytics-reporter.yaml,
-  content-writer.yaml, email-campaign-manager.yaml, marketing-orchestrator.yaml. Goose-expert consulted via dev_goose_expert_check.py
-  (no conflicts found). skip_mas_patches=False (mode==mas) — MM patches included.'
 data:
   patches:
-  - file: /root/.config/goose/recipes/marketing/marketing-team.yaml
-    field: settings.temperature
-    from: null
-    to: '0.3'
-    reason: 'Why: settings missing required key [temperature] (MM4). MAS convention uses temperature=0.3 for precision in
-      framework agents. Without explicit temperature, Goose uses provider default which may be suboptimal for MAS sub-agent
-      coordination. Goose-expert verdict: CONFORM — Goose recipe settings block accepts temperature as a valid field. Ref:
-      https://goose-docs.ai/docs/recipes/recipe-advanced'
-    type: MM4
-    priority: 0.82
-    current_chars: 0
-    target_chars: 3
+  - current_chars: 181
+    field: instructions
+    file: recipe/dev-mas-engineer.yaml
+    finding_id: F-1311
+    from: '# ════════════════════════════════════════════ # DEV-MAS-ENGINEER v1.0.0 # Behavioral Guidelines # ════════════════════════════════════════════
+
+      ## IDENTITY You are DEV-MAS-ENGINEER.'
     goose_verdict:
-      verdict: CONFORM
       confidence: HIGH
-      explanation: Goose recipe validate checks YAML structure including required fields. MM4 (settings missing keys) is a
-        real issue — Goose requires settings block for sub-agent configuration. Adding temperature is backward-compatible.
-      sources:
-      - https://goose-docs.ai/docs/recipes/recipe-advanced
-  - file: /root/.config/goose/recipes/marketing/sub/analytics-reporter.yaml
-    field: settings.temperature
-    from: null
-    to: '0.3'
-    reason: 'Why: settings missing required key [temperature] (MM4). MAS convention uses temperature=0.3 for precision in
-      framework agents. Analytics reporter needs low temperature for factual benchmark reporting. Goose-expert verdict: CONFORM
-      — Goose recipe settings block accepts temperature as a valid field.'
-    type: MM4
-    priority: 0.82
-    current_chars: 0
-    target_chars: 3
+      explanation: Goose provides no native mode detection mechanism. The .mas-mode file + cat check is a custom MAS-Engineer
+        pattern implemented via standard Goose primitives (shell tool in prompt). Adding a STEP 0 block to formalize this
+        is fully compliant.
+      verdict: CONFORM
+    id: P-F1311
+    priority: 0.66
+    reason: 'Why: missing STEP 0 MODE-CHECK — orchestrator may not detect operating mode. Goose-expert verdict: CONFORM —
+      Goose provides no native mode detection; this is a legitimate MAS convention using standard Goose primitives.'
+    severity: medium
+    target_chars: 506
+    to: "# ════════════════════════════════════════════ # DEV-MAS-ENGINEER v1.0.0 # Behavioral Guidelines # ════════════════════════════════════════════\n\
+      ## STEP 0 — MODE-CHECK\nBefore any action, detect operating mode via:\n  cat {workspace}/mas-engineer/.mas-mode || cat\
+      \ ~/.config/goose/.mas-mode\n  → \"mas\": MAS mode — improve MAS-Engineer itself (R13 active)\n  → \"framework\": Framework\
+      \ mode — work on user's multi-agent system\n  → other: Project mode — new or existing project\n\n## IDENTITY You are\
+      \ DEV-MAS-ENGINEER."
+    type: D1
+  - current_chars: 934
+    field: prompt_1
+    file: recipe/dev-mas-engineer.yaml
+    finding_id: F-1312
+    from: "Welcome to MAS-Engineer \U0001F9E0\n\nSTEP 1: Load system knowledge\n  load(source: \"sub_mas-system-knowledge\"\
+      )\n\nSTEP 2: Detect working mode\n  cat mas-engineer/.mas-mode || cat ~/.config/goose/.mas-mode\n\n  → \"framework\"\
+      : \U0001F7E2 Framework mode — works on YOUR multi-agent system\n                Agent analysis, scanning, hardening,\
+      \ improvement\n  → \"mas\":       \U0001F527 MAS mode — i to improve myself\n                52 sub-agents, 11 rules\
+      \ active, SOT loaded\n                MAS rules NOT loaded (R13)\n  → other:       \U0001F4C1 Project mode — new or\
+      \ existing project\n                MAS rules NOT loaded (R13)\n\nSTEP 3: Project context (non-MAS only, via delegate\
+      \ — R18)\n  DELEGATE to sub_mas-generic-init → detect or initialize project\n    Optional: use sub_mas-web-researcher\
+      \ (SEARCH) for current techniques\n\n\U0001F44B I am your MAS-Engineer. How can I help you?\n\n\U0001F4A1 Tip: Ask \"\
+      What can you do?\" for an overview of all\nfunctions — from project start to dashboard monitoring."
     goose_verdict:
-      verdict: CONFORM
       confidence: HIGH
-      explanation: Goose recipe validate checks YAML structure including required fields. MM4 (settings missing keys) is a
-        real issue — Goose requires settings block for sub-agent configuration.
-      sources:
-      - https://goose-docs.ai/docs/recipes/recipe-advanced
-  - file: /root/.config/goose/recipes/marketing/sub/content-writer.yaml
-    field: settings.temperature
-    from: null
-    to: '0.3'
-    reason: 'Why: settings missing required key [temperature] (MM4). MAS convention uses temperature=0.3 for precision in
-      framework agents. Content writer benefits from controlled creativity within MAS framework. Goose-expert verdict: CONFORM
-      — Goose recipe settings block accepts temperature as a valid field.'
-    type: MM4
+      explanation: Goose provides prompt_N fields as the native mechanism for step-based workflow. The instructions field
+        is designed for behavioral constitution. This patch enhances prompt_1 formatting instead of adding steps to instructions
+        — the recommended alternative.
+      verdict: RESTRICTED
+    id: P-F1312
+    priority: 0.66
+    reason: 'Why: missing numbered STEPs in instructions — agent may skip critical phases. Goose-expert verdict: RESTRICTED
+      — instructions field is for behavioral constitution, not workflow steps. Alternative: enhance prompt_1 with clearer
+      STEP formatting (this patch).'
+    severity: medium
+    target_chars: 1231
+    to: "Welcome to MAS-Engineer \U0001F9E0\n\n## ════════════════════════════════════════════\n## STEP 1 — Load system knowledge\n\
+      ## ════════════════════════════════════════════\n  load(source: \"sub_mas-system-knowledge\")\n\n## ════════════════════════════════════════════\n\
+      ## STEP 2 — Detect working mode\n## ════════════════════════════════════════════\n  cat mas-engineer/.mas-mode || cat\
+      \ ~/.config/goose/.mas-mode\n\n  → \"framework\": \U0001F7E2 Framework mode — works on YOUR multi-agent system\n   \
+      \             Agent analysis, scanning, hardening, improvement\n  → \"mas\":       \U0001F527 MAS mode — improve MAS-Engineer\
+      \ itself\n                52 sub-agents, 11 rules active, SOT loaded\n                MAS rules NOT loaded (R13)\n \
+      \ → other:       \U0001F4C1 Project mode — new or existing project\n                MAS rules NOT loaded (R13)\n\n##\
+      \ ════════════════════════════════════════════\n## STEP 3 — Project context (non-MAS only, via R18)\n## ════════════════════════════════════════════\n\
+      \  DELEGATE to sub_mas-generic-init → detect or initialize project\n    Optional: use sub_mas-web-researcher (SEARCH)\
+      \ for current techniques\n\n\U0001F44B I am your MAS-Engineer. How can I help you?\n\n\U0001F4A1 Tip: Ask \"What can\
+      \ you do?\" for an overview of all\nfunctions — from project start to dashboard monitoring."
+    type: D3
+  - current_chars: 14
+    field: name
+    file: recipe/sub/sub_mas-clone.yaml
+    finding_id: F-499
+    from: 'version: 1.0.0'
+    goose_verdict: null
+    id: P-F499
     priority: 0.82
-    current_chars: 0
-    target_chars: 3
-    goose_verdict:
-      verdict: CONFORM
-      confidence: HIGH
-      explanation: Goose recipe validate checks YAML structure including required fields. MM4 (settings missing keys) is a
-        real issue — Goose requires settings block for sub-agent configuration.
-      sources:
-      - https://goose-docs.ai/docs/recipes/recipe-advanced
-  - file: /root/.config/goose/recipes/marketing/sub/email-campaign-manager.yaml
-    field: settings.temperature
-    from: null
-    to: '0.3'
-    reason: 'Why: settings missing required key [temperature] (MM4). MAS convention uses temperature=0.3 for precision in
-      framework agents. Email campaign manager needs consistent output for structured email sequences. Goose-expert verdict:
-      CONFORM — Goose recipe settings block accepts temperature as a valid field.'
-    type: MM4
+    reason: 'Why: missing required field: name — YAML schema incomplete. Simple field addition.'
+    severity: medium
+    target_chars: 34
+    to: 'name: sub_mas-clone
+
+      version: 1.0.0'
+    type: Q1
+  - current_chars: 14
+    field: name
+    file: recipe/sub/template/agent_template.yaml
+    finding_id: F-1208
+    from: 'version: 1.0.0'
+    goose_verdict: null
+    id: P-F1208
     priority: 0.82
-    current_chars: 0
-    target_chars: 3
-    goose_verdict:
-      verdict: CONFORM
-      confidence: HIGH
-      explanation: Goose recipe validate checks YAML structure including required fields. MM4 (settings missing keys) is a
-        real issue — Goose requires settings block for sub-agent configuration.
-      sources:
-      - https://goose-docs.ai/docs/recipes/recipe-advanced
-  - file: /root/.config/goose/recipes/marketing/sub/marketing-orchestrator.yaml
-    field: settings.temperature
-    from: null
-    to: '0.3'
-    reason: 'Why: settings missing required key [temperature] (MM4). MAS convention uses temperature=0.3 for precision in
-      framework agents. Orchestrator needs low temperature for reliable dispatch decisions. Goose-expert verdict: CONFORM
-      — Goose recipe settings block accepts temperature as a valid field.'
-    type: MM4
+    reason: 'Why: missing required field: name — YAML schema incomplete. Template placeholder added.'
+    severity: medium
+    target_chars: 35
+    to: 'name: sub_mas-{name}
+
+      version: 1.0.0'
+    type: Q1
+  - current_chars: 14
+    field: name
+    file: recipe/template/agent_template.yaml
+    finding_id: F-1220
+    from: 'version: 1.0.0'
+    goose_verdict: null
+    id: P-F1220
     priority: 0.82
-    current_chars: 0
-    target_chars: 3
-    goose_verdict:
-      verdict: CONFORM
-      confidence: HIGH
-      explanation: Goose recipe validate checks YAML structure including required fields. MM4 (settings missing keys) is a
-        real issue — Goose requires settings block for sub-agent configuration.
-      sources:
-      - https://goose-docs.ai/docs/recipes/recipe-advanced
+    reason: 'Why: missing required field: name — YAML schema incomplete. Template placeholder added.'
+    severity: medium
+    target_chars: 35
+    to: 'name: sub_mas-{name}
+
+      version: 1.0.0'
+    type: Q1
   skipped: []
+  summary:
+    designed: 5
+    goose_expert_consulted:
+    - F-1311 (D1)
+    - F-1312 (D3)
+    goose_expert_verdicts:
+      F-1311: CONFORM
+      F-1312: RESTRICTED — enhanced prompt_1 instead of instructions
+    skipped: 0
+    total_top5: 5
+from: sub_mas-im-designer
+input_file: .state/pipeline/ranked_findings.yaml
+request_id: 33b932b8-4b6c-41ce-9dc6-152b5e4adbb9
+signal: DONE
+stage: 3
+status: success
+timestamp: '2026-07-22T21:36:00+00:00'
+to: sub_mas-general-improver
+
