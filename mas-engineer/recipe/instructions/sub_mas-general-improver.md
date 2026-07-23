@@ -223,7 +223,68 @@ B) APPLY-ONLY operations (RECURSION_OVERRIDE=1):
      → DO NOT touch last_FULL_IMPROVEMENT_run timestamp
      → SHOW: "✅ RECURSION-OVERRIDE: applied N patches (operator-initiated)"
 
-COST LIMIT (both tiers):
+C) RECYCLE operations (MM6 fix by Hermes 2026-07-23):
+   **Trigger condition:** .state/pipeline/validation.yaml has
+   `validation.status == "skipped_charge"` (set by im-validator when all
+   patches got verdict=RESTRICTED from goose-expert — see STEP 0.5b
+   in sub_mas-im-validator.md).
+
+   **What this means:** the previous charge was too ambitious for the
+   current Goose-architecture constraints. The validator explicitly
+   requested a recycle with `severity_fallback: "next_lower_band"`.
+
+   **Procedure (no RECURSION_OVERRIDE needed — recycle is cheap):**
+   1. READ .state/pipeline/validation.yaml
+   2. IF validation.status != "skipped_charge": → NOT a recycle, normal flow
+   3. IF validation.skip_reason == "all_restricted":
+      a. Determine new ceiling:
+         - IF validation.severity_fallback == "next_lower_band":
+           current_ceiling = .state/pipeline/ranked_findings.yaml.active_ceiling ?? "high"
+           ceiling_order = ["high", "medium", "low", "info"]  # strictest → loosest
+           idx = ceiling_order.index(current_ceiling)
+           IF idx == len(ceiling_order) - 1:
+             → SHOW "⏭️ Already at lowest ceiling (info) — cannot recycle lower"
+             → APPEND to .state/changes.json with stage="recycle_exhausted"
+             → ABORT recycle (no lower band exists)
+           ELSE:
+             new_ceiling = ceiling_order[idx + 1]  # one band lower
+         - ELSE: → ABORT (unknown fallback strategy)
+      b. CHECK: .state/pipeline/findings.yaml still exists AND has findings
+         - IF empty: → SHOW "⏭️ No findings to recycle, ending pipeline"
+         - ELSE: continue
+      c. DELEGATE to sub_mas-im-rank with severity_ceiling=new_ceiling
+         (input: findings from .state/pipeline/findings.yaml + new ceiling)
+      d. IF rank.status == "warning" (all findings filtered out):
+         → SHOW "⏭️ severity_ceiling={new_ceiling} filtered all findings,
+           ending pipeline for this cycle"
+         → APPEND to .state/changes.json with stage="recycle_exhausted"
+         → DO NOT enter design phase
+      e. ELSE: WRITE .state/pipeline/ranked_findings.yaml with new ceiling
+         → PROCEED to STEP 2 (DESIGN) of this orchestrator
+         → APPEND to .state/changes.json with
+           stage="recycle", previous_ceiling=current_ceiling,
+           new_ceiling=new_ceiling, skip_reason="all_restricted"
+         → SHOW: "♻️ RECYCLE: re-running pipeline with severity_ceiling
+           lowered {current_ceiling} → {new_ceiling}"
+      f. DO NOT touch last_FULL_IMPROVEMENT_run timestamp (recycle is
+         not a fresh full-improvement round, just a re-attempt with
+         lower severity ceiling)
+   4. ELSE (different skip_reason): → ABORT (not yet implemented)
+
+   **Recursion budget for recycle (prevent infinite cycles):**
+   - CHECK .state/changes.json for entries with stage="recycle" today
+   - IF 3+ recycle entries today: → ABORT recycle chain with message
+     "⛔ Recycle budget exhausted (3+ today) — manual intervention needed"
+   - ELSE: continue
+
+   **Why this matters (lesson L04 from 2026-07-23 0/9 e2e):**
+   Without this TIER, the orchestrator sees validation.status=skipped_charge
+   but has no handler for it, so it falls through to the normal end-of-run
+   logic and the run is treated as a no-op. The 0/9 e2e failure was masked
+   by this exact path — message claimed "140/140 PASS" while reality was
+   "0 patches applied because all got RESTRICTED".
+
+COST LIMIT (all tiers):
 CHECK: {workspace}/.state/changes.json
 IF 5+ self-improve entries today:
   → ABORT (cost limit) — override does NOT bypass cost limit
