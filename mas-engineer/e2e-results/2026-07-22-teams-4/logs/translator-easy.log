@@ -1,0 +1,74 @@
+# translator/easy
+# params: {'source_text': 'Hello world', 'target_lang': 'German'}
+# marker: Hallo
+# status: ok
+# elapsed: 27.0s
+# sub_recipe_invoked: True
+# reason: 
+---
+
+m'll delegate to the `translator_team` subrecipe to handle this translation.
+  ────────────────────────────────────────
+  ▸ delegate
+    source translator_team
+    instructions Translate the following text to German (target_lang) and have the judge select the best translati...
+
+
+  ▸ [subagent:411] tree
+    path: /workspace/mas-engineer-src/mas-engineer
+    depth: 3
+
+
+  ▸ [subagent:411] shell
+    command: find /workspace/mas-engineer-src/mas-engineer -name "*translator*" -o -name "*translate*" 2>/dev/null
+
+
+  ▸ [subagent:411] shell
+    command: find ~/.config/goose/recipes -name "*translator*" -o -name "*translate*" 2>/dev/null
+
+
+  ▸ [subagent:411] load
+    source: translator-team
+
+
+  ▸ [subagent:411] load
+
+
+  ▸ [subagent:411] load
+    source: translator-orchestrator
+
+
+  ▸ [subagent:411] shell
+    command: cat ~/.config/goose/recipes/translator/sub/translator-literal.yaml
+
+
+  ▸ [subagent:411] shell
+    command: cat ~/.config/goose/recipes/translator/sub/translator-literary.yaml
+
+
+  ▸ [subagent:411] shell
+    command: cat ~/.config/goose/recipes/translator/sub/translator-technical.yaml
+
+
+  ▸ [subagent:411] shell
+    command: cat ~/.config/goose/recipes/translator/sub/translation-judge.yaml
+
+
+  ▸ [subagent:411] delegate
+    source: translator-literal
+    vars:
+        source_text: Hello world
+        source_lang: English
+        target_lang: German
+
+
+  ▸ [subagent:411] load
+    source: translator-literal
+
+
+  ▸ [subagent:411] load
+
+The translator team completed the task. The **winning translation** (selected by the judge) is:
+
+## **Hallo Welt**
+
