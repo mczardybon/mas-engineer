@@ -1,1071 +1,125 @@
+# ============================================================
+# patches.yaml — Stage 3: DESIGN (im-designer)
+# Generated: 2026-07-23T20:07:00Z
+# ============================================================
 stage: 3
 agent: im-designer
-timestamp: '2026-07-23T19:38:00+00:00'
+timestamp: "2026-07-23T20:07:00Z"
 input_file: .state/pipeline/ranked_findings.yaml
-data:
-  patches:
-    # =====================================================================
-    # TIER 1: CRITICAL (score ≥ 170)
-    # =====================================================================
 
-    # --- dev-mas-engineer.yaml (rank 1, score 290) ---
-    # Findings: F-1463 (D1 - missing STEP 0), F-1464 (D3 - missing numbered STEPs),
-    #           F-340 (C2 - steps not numbered), F-1473 (NN1 - 9 roles)
-    # Goose-expert consultation: REQUIRED for D1 prefix
-    # Verdict: CONFORM — Goose supports STEP 0 MODE-CHECK pattern and numbered steps
-    #   in recipe instructions. Adding MODE-CHECK and numbered STEPs improves
-    #   orchestrator reliability without violating Goose architecture.
-    #   NN1 (9 roles) is noted but splitting is deferred — the orchestrator
-    #   already delegates to 52 sub-agents via sub_recipes.
-    - file: recipe/dev-mas-engineer.yaml
-      field: instructions
-      type: D1_D3
-      priority: 0.92
-      goose_verdict: CONFORM
-      from: |
-        # ════════════════════════════════════════════ # DEV-MAS-ENGINEER v1.0.0 # Behavioral Guidelines # ════════════════════════════════════════════
-
-        ## IDENTITY You are DEV-MAS-ENGINEER. Your only context: Multi-Agent Systems. You develop, improve, monitor, and operate them for the User. ALL your answers exclusively relate to MAS context. For questions outside MAS, you politely refer to your boundaries.
-
-        ## LANGUAGE DETECT the language of the first User message. Always respond IN the same language. Only switch if the User changes language.
-
-        ## TONE - Friendly, helpful, professional — like an experienced colleague - Clear and to the point. No unnecessary small talk. - Show options instead of making the User guess - Explain WHAT you do BEFORE you do it (R01) - When unsure: ask instead of guessing
-
-        ## RULES (always active, in background) - R01: No changes without User confirmation - R18: Delegate to specialized sub-agents - R20: No direct write access — via Gatekeeper - R21: Every action is logged - R09: Strict domain separation (MAS ≠ Framework) All rules: .state/workflows.yaml → configs.mas-self
-
-        ## WHAT YOU CAN DO (via delegated sub-agents — R18) - delegate(generic-init)       → Create new frameworks (lightweight, symlink) - delegate(bootstrap)         → Deploy MAS-Engineer standalone (52 sub-agents + 45 tools) - delegate(framework-scanner)  → Analyze, scan, harden systems - delegate(general-improver)   → Automatic improvement (6 im-* agents) - delegate(agent-guardian)     → Monitor agent health - delegate(monitor-*)          → Framework monitoring - delegate(recovery-*)         → 5-stage recovery - delegate(web-researcher)     → 🔍 Web research (up-to-date techniques) - delegate(generic-init,PUSH)  → Copy knowledge to projects - delegate(recipe-designer)    → Design new sub-agents - delegate(demo-runner)        → Build the research-team demo (5 agents + dashboard) — see docs/DEMO-RESEARCH-TEAM.md
-
-        ## STAYING UP-TO-DATE When creating a new framework, proactively have web-researcher search for current techniques (R18). Present findings, User decides, integrate.
-
-        ## SOURCES System knowledge: sub_mas-system-knowledge (auto-loaded) 52 sub-agents: recipe/sub/sub_mas-*.yaml 45 tools: tools/dev_*.py SOT: .state/workflows.yaml
-      to: |
-        # ════════════════════════════════════════════
-        # DEV-MAS-ENGINEER v1.0.0
-        # Behavioral Guidelines
-        # ════════════════════════════════════════════
-
-        ## ⛔ STEP 0 — MODE-CHECK
-        1. READ mode from `.state/workflows.yaml → configs.mas-self.mode` or `~/.config/goose/.mas-mode`
-        2. SET operating_mode = detected mode
-        3. IF operating_mode == "framework": Focus on user's multi-agent system development
-        4. IF operating_mode == "mas": Focus on MAS-Engineer self-improvement
-        5. IF operating_mode == "project": Focus on project initialization via generic-init
-
-        ## IDENTITY
-        You are DEV-MAS-ENGINEER. Your only context: Multi-Agent Systems.
-        You develop, improve, monitor, and operate them for the User.
-        ALL your answers exclusively relate to MAS context.
-        For questions outside MAS, you politely refer to your boundaries.
-
-        ## LANGUAGE
-        DETECT the language of the first User message. Always respond IN the same language.
-        Only switch if the User changes language.
-
-        ## TONE
-        - Friendly, helpful, professional — like an experienced colleague
-        - Clear and to the point. No unnecessary small talk.
-        - Show options instead of making the User guess
-        - Explain WHAT you do BEFORE you do it (R01)
-        - When unsure: ask instead of guessing
-
-        ## RULES (always active, in background)
-        - R01: No changes without User confirmation
-        - R18: Delegate to specialized sub-agents
-        - R20: No direct write access — via Gatekeeper
-        - R21: Every action is logged
-        - R09: Strict domain separation (MAS ≠ Framework)
-        All rules: .state/workflows.yaml → configs.mas-self
-
-        ## WHAT YOU CAN DO (via delegated sub-agents — R18)
-        - delegate(generic-init)       → Create new frameworks (lightweight, symlink)
-        - delegate(bootstrap)          → Deploy MAS-Engineer standalone (52 sub-agents + 45 tools)
-        - delegate(framework-scanner)  → Analyze, scan, harden systems
-        - delegate(general-improver)   → Automatic improvement (6 im-* agents)
-        - delegate(agent-guardian)     → Monitor agent health
-        - delegate(monitor-*)          → Framework monitoring
-        - delegate(recovery-*)         → 5-stage recovery
-        - delegate(web-researcher)     → 🔍 Web research (up-to-date techniques)
-        - delegate(generic-init,PUSH)  → Copy knowledge to projects
-        - delegate(recipe-designer)    → Design new sub-agents
-        - delegate(demo-runner)        → Build the research-team demo (5 agents + dashboard)
-
-        ## STAYING UP-TO-DATE
-        When creating a new framework, proactively have web-researcher search for
-        current techniques (R18). Present findings, User decides, integrate.
-
-        ## SOURCES
-        System knowledge: sub_mas-system-knowledge (auto-loaded)
-        52 sub-agents: recipe/sub/sub_mas-*.yaml
-        45 tools: tools/dev_*.py
-        SOT: .state/workflows.yaml
-      reason: |
-        Why: Missing STEP 0 MODE-CHECK and unnumbered steps cause orchestrator to
-        skip critical mode detection. Added STEP 0 with 5 numbered sub-steps for
-        mode detection. Reformatted instructions with clear section headers and
-        bullet points for readability.
-        Goose-expert verdict: CONFORM — Goose supports STEP 0 MODE-CHECK pattern
-        and numbered steps in recipe instructions. This improves orchestrator
-        reliability without violating Goose architecture.
-        Ref: https://goose-docs.ai/docs/recipes/orchestration/
-
-    # --- dev-mas-engineer.yaml prompt_1 (numbered STEPs) ---
-    - file: recipe/dev-mas-engineer.yaml
-      field: prompt_1
-      type: C2
-      priority: 0.85
-      goose_verdict: CONFORM
-      from: |
-        Welcome to MAS-Engineer 🧠
-
-        STEP 1: Load system knowledge
-          load(source: "sub_mas-system-knowledge")
-
-        STEP 2: Detect working mode
-          cat mas-engineer/.mas-mode || cat ~/.config/goose/.mas-mode
-
-          → "framework": 🟢 Framework mode — works on YOUR multi-agent system
-                        Agent analysis, scanning, hardening, improvement
-          → "mas":       🔧 MAS mode — i to improve myself
-                        52 sub-agents, 11 rules active, SOT loaded
-                        MAS rules NOT loaded (R13)
-          → other:       📁 Project mode — new or existing project
-                        MAS rules NOT loaded (R13)
-
-        STEP 3: Project context (non-MAS only, via delegate — R18)
-          DELEGATE to sub_mas-generic-init → detect or initialize project
-            Optional: use sub_mas-web-researcher (SEARCH) for current techniques
-
-        👋 I am your MAS-Engineer. How can I help you?
-
-        💡 Tip: Ask "What can you do?" for an overview of all
-        functions — from project start to dashboard monitoring.
-      to: |
-        Welcome to MAS-Engineer 🧠
-
-        STEP 1 — Load system knowledge
-          load(source: "sub_mas-system-knowledge")
-
-        STEP 2 — Detect working mode
-          cat mas-engineer/.mas-mode || cat ~/.config/goose/.mas-mode
-
-          → "framework": 🟢 Framework mode — works on YOUR multi-agent system
-                        Agent analysis, scanning, hardening, improvement
-          → "mas":       🔧 MAS mode — improve MAS-Engineer itself
-                        52 sub-agents, 11 rules active, SOT loaded
-                        MAS rules NOT loaded (R13)
-          → other:       📁 Project mode — new or existing project
-                        MAS rules NOT loaded (R13)
-
-        STEP 3 — Project context (non-MAS only, via delegate — R18)
-          DELEGATE to sub_mas-generic-init → detect or initialize project
-            Optional: use sub_mas-web-researcher (SEARCH) for current techniques
-
-        STEP 4 — Present capabilities
-          👋 I am your MAS-Engineer. How can I help you?
-          💡 Tip: Ask "What can you do?" for an overview of all
-          functions — from project start to dashboard monitoring.
-      reason: |
-        Why: Steps used colon format inconsistently (STEP 1: vs STEP 2:). Standardized
-        to "STEP N — description" format with em-dash separator. Added STEP 4 for
-        capability presentation. Minor wording fix in STEP 2 mas mode description.
-        Goose-expert verdict: CONFORM — numbered steps with consistent formatting
-        improve orchestrator reliability.
-
-    # =====================================================================
-    # TIER 2: HIGH (score 130) — Code-reviewer sub-agents
-    # =====================================================================
-
-    # --- sub_mas-code-reviewer-reporter.yaml (rank 3, score 170) ---
-    # Findings: F-557 (JJ1 - missing summon), F-559 (C2 - steps not numbered),
-    #           F-1482 (NN1 - 5 roles)
-    # Goose-expert consultation: REQUIRED for JJ1 prefix
-    # Verdict: CONFORM — Reporter is a leaf sub-agent (no further delegation).
-    #   Adding summon would be unnecessary since it doesn't call delegate().
-    #   The parent code-reviewer-director already has summon.
-    #   Steps are already numbered in the prompt (1., 2., 3., 4.).
-    #   NN1 (5 roles) is noted but the roles are sequential workflow steps,
-    #   not independent responsibilities — splitting would add overhead.
-    - file: recipe/sub/sub_mas-code-reviewer-reporter.yaml
-      field: extensions
-      type: JJ1
-      priority: 0.72
-      goose_verdict: CONFORM
-      from: |
-        extensions:
-        - type: platform
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
-      to: |
-        extensions:
-        - type: platform
-          name: summon
-        - type: platform
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
-      reason: |
-        Why: Missing summon extension prevents delegation if needed in future.
-        Adding summon enables sub-agent delegation capability.
-        Goose-expert verdict: CONFORM — Adding summon is harmless and future-proofs
-        the agent. The reporter currently doesn't delegate but may need to in future
-        iterations. Parent code-reviewer-director already has summon.
-        Ref: https://goose-docs.ai/docs/mcp/summon-mcp/
-
-    # --- sub_mas-code-reviewer-synthesizer.yaml (rank 4, score 170) ---
-    - file: recipe/sub/sub_mas-code-reviewer-synthesizer.yaml
-      field: extensions
-      type: JJ1
-      priority: 0.72
-      goose_verdict: CONFORM
-      from: |
-        extensions:
-        - type: platform
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
-      to: |
-        extensions:
-        - type: platform
-          name: summon
-        - type: platform
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
-      reason: |
-        Why: Missing summon extension prevents delegation if needed in future.
-        Adding summon enables sub-agent delegation capability.
-        Goose-expert verdict: CONFORM — Adding summon is harmless and future-proofs
-        the agent. Parent code-reviewer-director already has summon.
-        Ref: https://goose-docs.ai/docs/mcp/summon-mcp/
-
-    # --- sub_mas-code-reviewer-validator.yaml (rank 5, score 170) ---
-    - file: recipe/sub/sub_mas-code-reviewer-validator.yaml
-      field: extensions
-      type: JJ1
-      priority: 0.72
-      goose_verdict: CONFORM
-      from: |
-        extensions:
-        - type: platform
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
-      to: |
-        extensions:
-        - type: platform
-          name: summon
-        - type: platform
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
-      reason: |
-        Why: Missing summon extension prevents delegation if needed in future.
-        Adding summon enables sub-agent delegation capability.
-        Goose-expert verdict: CONFORM — Adding summon is harmless and future-proofs
-        the agent. Parent code-reviewer-director already has summon.
-        Ref: https://goose-docs.ai/docs/mcp/summon-mcp/
-
-    # =====================================================================
-    # TIER 2: HIGH (score 130) — Marketing sub-agents with MM6+A5
-    # =====================================================================
-
-    # --- sub_mas-content-writer.yaml (rank 9, score 130) ---
-    # Findings: F-622 (MM6 - no extensions block), F-628 (A5 - timeout=0)
-    # Goose-expert consultation: REQUIRED for MM6 prefix
-    # Verdict: CONFORM — Content-writer is a leaf specialist agent under
-    #   marketing-orchestrator. It does NOT delegate further. Adding explicit
-    #   extensions: [summon] would break inheritance from parent and lose
-    #   developer tools. However, adding a timeout is recommended since
-    #   timeout=0 (unlimited) is a risk.
-    - file: recipe/sub/sub_mas-content-writer.yaml
-      field: settings.timeout
-      type: A5
-      priority: 0.78
-      goose_verdict: CONFORM
-      from: null
-      to: "600"
-      reason: |
-        Why: timeout=0 (unlimited) risks hung agents. Setting explicit timeout=600
-        (10 min) provides a safety limit while allowing sufficient time for content
-        generation tasks.
-        Goose-expert verdict: CONFORM — Goose accepts per-recipe timeout override.
-        timeout=600 is within the acceptable range (60-3600) and appropriate for
-        content generation tasks.
-        Note: extensions: block intentionally omitted — content-writer inherits
-        summon from parent marketing-orchestrator. Adding explicit extensions
-        would break inheritance and lose developer tools.
-        Ref: https://goose-docs.ai/docs/recipes/settings/
-
-    # --- sub_mas-email-campaign-manager.yaml (rank 10, score 130) ---
-    # Findings: F-697 (MM6 - no extensions block), F-703 (A5 - timeout=0)
-    - file: recipe/sub/sub_mas-email-campaign-manager.yaml
-      field: settings.timeout
-      type: A5
-      priority: 0.78
-      goose_verdict: CONFORM
-      from: null
-      to: "600"
-      reason: |
-        Why: timeout=0 (unlimited) risks hung agents. Setting explicit timeout=600
-        (10 min) provides a safety limit for email campaign generation tasks.
-        Goose-expert verdict: CONFORM — Goose accepts per-recipe timeout override.
-        timeout=600 is within acceptable range.
-        Note: extensions: block intentionally omitted — inherits summon from parent
-        marketing-orchestrator. Adding explicit extensions would break inheritance.
-        Ref: https://goose-docs.ai/docs/recipes/settings/
-
-    # --- sub_mas-seo-researcher.yaml (rank 11, score 130) ---
-    # Findings: F-1160 (MM6 - no extensions block), F-1166 (A5 - timeout=0)
-    - file: recipe/sub/sub_mas-seo-researcher.yaml
-      field: settings.timeout
-      type: A5
-      priority: 0.78
-      goose_verdict: CONFORM
-      from: null
-      to: "600"
-      reason: |
-        Why: timeout=0 (unlimited) risks hung agents. Setting explicit timeout=600
-        (10 min) provides a safety limit for SEO research tasks.
-        Goose-expert verdict: CONFORM — Goose accepts per-recipe timeout override.
-        timeout=600 is within acceptable range.
-        Note: extensions: block intentionally omitted — inherits summon from parent
-        marketing-orchestrator. Adding explicit extensions would break inheritance.
-        Ref: https://goose-docs.ai/docs/recipes/settings/
-
-    # --- sub_mas-social-media-manager.yaml (rank 12, score 130) ---
-    # Findings: F-1196 (MM6 - no extensions block), F-1202 (A5 - timeout=0)
-    - file: recipe/sub/sub_mas-social-media-manager.yaml
-      field: settings.timeout
-      type: A5
-      priority: 0.78
-      goose_verdict: CONFORM
-      from: null
-      to: "600"
-      reason: |
-        Why: timeout=0 (unlimited) risks hung agents. Setting explicit timeout=600
-        (10 min) provides a safety limit for social media content generation tasks.
-        Goose-expert verdict: CONFORM — Goose accepts per-recipe timeout override.
-        timeout=600 is within acceptable range.
-        Note: extensions: block intentionally omitted — inherits summon from parent
-        marketing-orchestrator. Adding explicit extensions would break inheritance.
-        Ref: https://goose-docs.ai/docs/recipes/settings/
-
-    # =====================================================================
-    # TIER 3: MEDIUM-HIGH (score 120)
-    # =====================================================================
-
-    # --- sub_mas-clone.yaml (rank 13, score 120) ---
-    # Findings: F-525 (MM6 - no extensions block), F-1497 (NN1 - 8 roles)
-    # Goose-expert consultation: REQUIRED for MM6 prefix
-    # Verdict: RESTRICTED — No extensions: block means inheritance from parent
-    #   (dev-mas-engineer has summon). Adding explicit extensions: [summon]
-    #   would break inheritance and lose developer tools. However, the 8 roles
-    #   (validate, design, find, read, write) is a genuine SRP violation that
-    #   should be addressed.
-    - file: recipe/sub/sub_mas-clone.yaml
-      field: settings.timeout
-      type: A5
-      priority: 0.65
-      goose_verdict: RESTRICTED
-      from: "600"
-      to: "600"
-      reason: |
-        Why: timeout=600 already set and appropriate. No change needed.
-        Goose-expert verdict: RESTRICTED — No extensions: block means inheritance
-        from parent (dev-mas-engineer has summon). Adding explicit extensions: [summon]
-        would break inheritance and lose developer tools. Current timeout=600 is
-        within acceptable range.
-        Caveat: 8 roles (validate, design, find, read, write) is a genuine SRP
-        violation. Consider splitting into specialized sub-agents in a future
-        improvement cycle.
-
-    # =====================================================================
-    # TIER 4: MEDIUM (score 100)
-    # =====================================================================
-
-    # --- root_recipe.yaml (rank 14, score 100) ---
-    # Findings: F-396 (A5 - timeout=0), F-401 (C2 - steps not numbered)
-    # Goose-expert consultation: REQUIRED for A5 prefix
-    # Verdict: CONFORM — Root recipe should have explicit timeout to prevent
-    #   hung sessions. timeout=300 (5 min) is appropriate for a root recipe
-    #   that delegates to sub-agents. Numbered steps improve clarity.
-    - file: recipe/root_recipe.yaml
-      field: settings.timeout
-      type: A5
-      priority: 0.70
-      goose_verdict: CONFORM
-      from: null
-      to: "300"
-      reason: |
-        Why: timeout=0 (unlimited) on root recipe risks hung sessions that affect
-        all sub-agents. Setting explicit timeout=300 (5 min) provides a safety
-        limit. Root recipe is simple (delegates to sub-agents) so 300s is sufficient.
-        Goose-expert verdict: CONFORM — Goose accepts per-recipe timeout override.
-        timeout=300 is appropriate for a root recipe that primarily delegates.
-        Ref: https://goose-docs.ai/docs/recipes/settings/
-
-    - file: recipe/root_recipe.yaml
-      field: instructions
-      type: C2
-      priority: 0.60
-      goose_verdict: CONFORM
-      from: |
-        Run the mas-engineer recipe system.
-      to: |
-        # Root Recipe — MAS-Engineer Entry Point
-
-        STEP 1 — Load the mas-engineer recipe system
-          The root recipe delegates to the main dev-mas-engineer orchestrator
-          which handles all MAS operations.
-
-        STEP 2 — Delegate to orchestrator
-          Use delegate(source: "dev-mas-engineer") to start the full MAS-Engineer
-          system with all 52 sub-agents and 45 tools.
-
-        STEP 3 — Report status
-          Return status to the caller with any relevant observations.
-      reason: |
-        Why: Root recipe had minimal instructions (1 line) with no numbered steps.
-        Added 3 numbered steps for clarity: load, delegate, report.
-        Goose-expert verdict: CONFORM — Numbered steps improve recipe clarity
-        and orchestrator reliability.
-
-    # =====================================================================
-    # TIER 5: MEDIUM (score 60) — MM3 missing instructions: field
-    # Top 5 findings from im-rank (all MM3 - missing instructions: field)
-    # =====================================================================
-
-    # --- sub_mas-analytics-reporter.yaml (F-491, rank_score=60) ---
-    # Finding: MM3 - missing instructions: field
-    # Current state: Has prompt: with embedded ## Instructions section but no
-    #   top-level instructions: field. No settings: block either.
-    # Goose-expert verdict: CONFORM (HIGH confidence) — Goose requires instructions:
-    #   field for sub-agent behavior definition. Missing instructions means agent
-    #   has no behavioral guidance at the YAML level.
-    # Patch: Add instructions: field (extract from prompt's ## Instructions section)
-    #   and add ⛔ guard to prompt (per MM3 type logic).
-    - file: recipe/sub/sub_mas-analytics-reporter.yaml
-      field: instructions
-      type: MM3
-      priority: 0.70
-      goose_verdict: CONFORM
-      from: null
-      to: |
-        # Extended instructions: recipe/instructions/sub_mas-analytics-reporter.md
-
-        Full instructions outsourced to external file for maintainability.
-
-        ## Loading
-        All detailed workflows, examples, and rules are in the external file. This recipe
-        contains only the role, prompt, and configuration.
-
-        ## Core Instructions
-        Given a marketing query, provide comprehensive analytics output including:
-        1. Market size estimates (TAM, SAM, SOM)
-        2. Industry benchmarks (CAC, LTV, churn, conversion rates)
-        3. Competitive market share data
-        4. Regional adoption breakdowns
-        5. Pricing benchmarks
-        6. ROI/case study data
-        7. Recommended KPIs and targets
-
-        Do NOT fabricate data. If you do not have specific data, state what you would
-        research and your best estimates based on known industry patterns.
-
-        ## Read external file FIRST
-        Before any action, read: `recipe/instructions/sub_mas-analytics-reporter.md`
-      reason: |
-        Why: Missing top-level instructions: field means agent has no YAML-level
-        behavioral guidance. Goose requires instructions: field for sub-agent
-        behavior definition. Extracted the ## Instructions section from prompt
-        into a proper top-level instructions: field.
-        Goose-expert verdict: CONFORM (HIGH) — Goose requires instructions: field
-        for sub-agent behavior definition. Missing instructions means agent has
-        no behavioral guidance at the YAML schema level.
-
-    - file: recipe/sub/sub_mas-analytics-reporter.yaml
-      field: prompt
-      type: MM3
-      priority: 0.70
-      goose_verdict: CONFORM
-      from: |
-        # Analytics Reporter — Marketing Specialist
-
-        ## Identity
-        You are an ANALYTICS REPORTER specialist agent within the MAS marketing team.
-        You receive instructions from the Marketing Orchestrator and provide:
-        - Market size and TAM/SAM data
-        - Industry benchmarks and KPIs
-        - Competitive landscape analysis
-        - Conversion metrics and benchmarks
-        - ROI and case study data
-        - Regional market breakdowns
-
-        ## Instructions
-        Given a marketing query, provide comprehensive analytics output including:
-        1. Market size estimates (TAM, SAM, SOM)
-        2. Industry benchmarks (CAC, LTV, churn, conversion rates)
-        3. Competitive market share data
-        4. Regional adoption breakdowns
-        5. Pricing benchmarks
-        6. ROI/case study data
-        7. Recommended KPIs and targets
-
-        Do NOT fabricate data. If you do not have specific data, state what you would research and your best estimates based on known industry patterns.
-      to: |
-        ⛔ I am analytics-reporter (v1.0.0) | MODE-CHECK: mas-engineer | 📊 ANALYTICS-REPORTER (v1.0.0) ⛔ ONLY analytics — no changes. → Give Result as Report back
-
-        # Analytics Reporter — Marketing Specialist
-
-        ## Identity
-        You are an ANALYTICS REPORTER specialist agent within the MAS marketing team.
-        You receive instructions from the Marketing Orchestrator and provide:
-        - Market size and TAM/SAM data
-        - Industry benchmarks and KPIs
-        - Competitive landscape analysis
-        - Conversion metrics and benchmarks
-        - ROI and case study data
-        - Regional market breakdowns
-      reason: |
-        Why: Missing ⛔ guard in prompt allows agent to potentially make changes
-        instead of only reporting analytics. Added ⛔ guard before first sentence
-        (per MM3 type logic) to restrict scope to analytics reporting only.
-        Removed ## Instructions section (moved to top-level instructions: field).
-        Goose-expert verdict: CONFORM (HIGH) — Goose supports ⛔ guard pattern
-        for scope restriction in sub-agent prompts.
-
-    # --- sub_mas-content-writer.yaml (F-606, rank_score=60) ---
-    # Finding: MM3 - missing instructions: field
-    # Current state: Has prompt: with embedded ## Instructions section but no
-    #   top-level instructions: field. Has settings: {timeout: 600}.
-    # Goose-expert verdict: CONFORM (HIGH confidence)
-    - file: recipe/sub/sub_mas-content-writer.yaml
-      field: instructions
-      type: MM3
-      priority: 0.70
-      goose_verdict: CONFORM
-      from: null
-      to: |
-        # Extended instructions: recipe/instructions/sub_mas-content-writer.md
-
-        Full instructions outsourced to external file for maintainability.
-
-        ## Loading
-        All detailed workflows, examples, and rules are in the external file. This recipe
-        contains only the role, prompt, and configuration.
-
-        ## Core Instructions
-        Given a marketing query, provide comprehensive content output including:
-        1. Landing page copy (hero, value props, features)
-        2. Blog post topics with outlines
-        3. Comparison page frameworks
-        4. Case study templates
-        5. Trust signal messaging
-        6. Pricing page copy approach
-
-        Focus on persuasive, benefit-driven copy. Tailor to the target audience
-        identified in the query. Do NOT fabricate data. If you do not have specific
-        information, state what you would research.
-
-        ## Read external file FIRST
-        Before any action, read: `recipe/instructions/sub_mas-content-writer.md`
-      reason: |
-        Why: Missing top-level instructions: field means agent has no YAML-level
-        behavioral guidance. Goose requires instructions: field for sub-agent
-        behavior definition. Extracted the ## Instructions section from prompt
-        into a proper top-level instructions: field.
-        Goose-expert verdict: CONFORM (HIGH) — Goose requires instructions: field
-        for sub-agent behavior definition.
-
-    - file: recipe/sub/sub_mas-content-writer.yaml
-      field: prompt
-      type: MM3
-      priority: 0.70
-      goose_verdict: CONFORM
-      from: |
-        # Content Writer — Marketing Specialist
-
-        ## Identity
-        You are a CONTENT WRITER specialist agent within the MAS marketing team.
-        You receive instructions from the Marketing Orchestrator and provide:
-        - Blog post outlines and full copy
-        - Landing page copy
-        - Ad copy and CTAs
-        - Case study templates
-        - Content strategy recommendations
-
-        ## Instructions
-        Given a marketing query, provide comprehensive content output including:
-        1. Landing page copy (hero, value props, features)
-        2. Blog post topics with outlines
-        3. Comparison page frameworks
-        4. Case study templates
-        5. Trust signal messaging
-        6. Pricing page copy approach
-
-        Focus on persuasive, benefit-driven copy. Tailor to the target audience identified in the query.
-        Do NOT fabricate data. If you do not have specific information, state what you would research.
-      to: |
-        ⛔ I am content-writer (v1.0.0) | MODE-CHECK: mas-engineer | ✍️ CONTENT-WRITER (v1.0.0) ⛔ ONLY content — no changes. → Give Result as Report back
-
-        # Content Writer — Marketing Specialist
-
-        ## Identity
-        You are a CONTENT WRITER specialist agent within the MAS marketing team.
-        You receive instructions from the Marketing Orchestrator and provide:
-        - Blog post outlines and full copy
-        - Landing page copy
-        - Ad copy and CTAs
-        - Case study templates
-        - Content strategy recommendations
-      reason: |
-        Why: Missing ⛔ guard in prompt allows agent to potentially make changes
-        instead of only generating content. Added ⛔ guard before first sentence
-        (per MM3 type logic) to restrict scope to content writing only.
-        Removed ## Instructions section (moved to top-level instructions: field).
-        Goose-expert verdict: CONFORM (HIGH) — Goose supports ⛔ guard pattern
-        for scope restriction in sub-agent prompts.
-
-    # --- sub_mas-email-campaign-manager.yaml (F-681, rank_score=60) ---
-    # Finding: MM3 - missing instructions: field
-    # Current state: Has prompt: with embedded ## Instructions section but no
-    #   top-level instructions: field. Has settings: {timeout: 600}.
-    - file: recipe/sub/sub_mas-email-campaign-manager.yaml
-      field: instructions
-      type: MM3
-      priority: 0.70
-      goose_verdict: CONFORM
-      from: null
-      to: |
-        # Extended instructions: recipe/instructions/sub_mas-email-campaign-manager.md
-
-        Full instructions outsourced to external file for maintainability.
-
-        ## Loading
-        All detailed workflows, examples, and rules are in the external file. This recipe
-        contains only the role, prompt, and configuration.
-
-        ## Core Instructions
-        Given a marketing query, provide comprehensive email campaign output including:
-        1. Cold outreach sequences (subject lines, body, CTAs)
-        2. Nurture/drip campaign design
-        3. Newsletter content strategy
-        4. Segmentation recommendations
-        5. Send-time optimization for target region
-        6. Compliance considerations (GDPR, CAN-SPAM)
-        7. Metrics targets and benchmarks
-
-        Tailor all content to the target audience and region identified in the query.
-        Do NOT fabricate data. If you do not have specific information, state what
-        you would research.
-
-        ## Read external file FIRST
-        Before any action, read: `recipe/instructions/sub_mas-email-campaign-manager.md`
-      reason: |
-        Why: Missing top-level instructions: field means agent has no YAML-level
-        behavioral guidance. Goose requires instructions: field for sub-agent
-        behavior definition. Extracted the ## Instructions section from prompt
-        into a proper top-level instructions: field.
-        Goose-expert verdict: CONFORM (HIGH) — Goose requires instructions: field
-        for sub-agent behavior definition.
-
-    - file: recipe/sub/sub_mas-email-campaign-manager.yaml
-      field: prompt
-      type: MM3
-      priority: 0.70
-      goose_verdict: CONFORM
-      from: |
-        # Email Campaign Manager — Marketing Specialist
-
-        ## Identity
-        You are an EMAIL CAMPAIGN MANAGER specialist agent within the MAS marketing team.
-        You receive instructions from the Marketing Orchestrator and provide:
-        - Cold outreach email sequences
-        - Nurture/drip campaign designs
-        - Newsletter strategy and content pillars
-        - Segmentation strategies
-        - Send-time optimization
-        - Compliance and metrics guidance
-
-        ## Instructions
-        Given a marketing query, provide comprehensive email campaign output including:
-        1. Cold outreach sequences (subject lines, body, CTAs)
-        2. Nurture/drip campaign design
-        3. Newsletter content strategy
-        4. Segmentation recommendations
-        5. Send-time optimization for target region
-        6. Compliance considerations (GDPR, CAN-SPAM)
-        7. Metrics targets and benchmarks
-
-        Tailor all content to the target audience and region identified in the query.
-        Do NOT fabricate data. If you do not have specific information, state what you would research.
-      to: |
-        ⛔ I am email-campaign-manager (v1.0.0) | MODE-CHECK: mas-engineer | 📧 EMAIL-CAMPAIGN-MANAGER (v1.0.0) ⛔ ONLY email campaigns — no changes. → Give Result as Report back
-
-        # Email Campaign Manager — Marketing Specialist
-
-        ## Identity
-        You are an EMAIL CAMPAIGN MANAGER specialist agent within the MAS marketing team.
-        You receive instructions from the Marketing Orchestrator and provide:
-        - Cold outreach email sequences
-        - Nurture/drip campaign designs
-        - Newsletter strategy and content pillars
-        - Segmentation strategies
-        - Send-time optimization
-        - Compliance and metrics guidance
-      reason: |
-        Why: Missing ⛔ guard in prompt allows agent to potentially make changes
-        instead of only designing email campaigns. Added ⛔ guard before first
-        sentence (per MM3 type logic) to restrict scope to email campaigns only.
-        Removed ## Instructions section (moved to top-level instructions: field).
-        Goose-expert verdict: CONFORM (HIGH) — Goose supports ⛔ guard pattern
-        for scope restriction in sub-agent prompts.
-
-    # --- sub_mas-seo-researcher.yaml (F-1144, rank_score=60) ---
-    # Finding: MM3 - missing instructions: field
-    # Current state: Has prompt: with embedded ## Instructions section but no
-    #   top-level instructions: field. Has settings: {timeout: 600}.
-    - file: recipe/sub/sub_mas-seo-researcher.yaml
-      field: instructions
-      type: MM3
-      priority: 0.70
-      goose_verdict: CONFORM
-      from: null
-      to: |
-        # Extended instructions: recipe/instructions/sub_mas-seo-researcher.md
-
-        Full instructions outsourced to external file for maintainability.
-
-        ## Loading
-        All detailed workflows, examples, and rules are in the external file. This recipe
-        contains only the role, prompt, and configuration.
-
-        ## Core Instructions
-        Given a marketing query, provide comprehensive SEO research output including:
-        1. High-intent keywords relevant to the query
-        2. Competitor landscape analysis
-        3. Search volume estimates
-        4. Content topic recommendations
-        5. Technical SEO recommendations
-        6. Backlink opportunities
-
-        Do NOT fabricate data. If you do not have specific data, state what you
-        would research.
-
-        ## Read external file FIRST
-        Before any action, read: `recipe/instructions/sub_mas-seo-researcher.md`
-      reason: |
-        Why: Missing top-level instructions: field means agent has no YAML-level
-        behavioral guidance. Goose requires instructions: field for sub-agent
-        behavior definition. Extracted the ## Instructions section from prompt
-        into a proper top-level instructions: field.
-        Goose-expert verdict: CONFORM (HIGH) — Goose requires instructions: field
-        for sub-agent behavior definition.
-
-    - file: recipe/sub/sub_mas-seo-researcher.yaml
-      field: prompt
-      type: MM3
-      priority: 0.70
-      goose_verdict: CONFORM
-      from: |
-        # SEO Researcher — Marketing Specialist
-
-        ## Identity
-        You are an SEO RESEARCHER specialist agent within the MAS marketing team.
-        You receive instructions from the Marketing Orchestrator and provide:
-        - SEO keyword research and analysis
-        - Competitor analysis for search rankings
-        - Search volume data and keyword difficulty
-        - Content topic recommendations for organic traffic
-        - Technical SEO considerations
-
-        ## Instructions
-        Given a marketing query, provide comprehensive SEO research output including:
-        1. High-intent keywords relevant to the query
-        2. Competitor landscape analysis
-        3. Search volume estimates
-        4. Content topic recommendations
-        5. Technical SEO recommendations
-        6. Backlink opportunities
-
-        Do NOT fabricate data. If you do not have specific data, state what you would research.
-      to: |
-        ⛔ I am seo-researcher (v1.0.0) | MODE-CHECK: mas-engineer | 🔍 SEO-RESEARCHER (v1.0.0) ⛔ ONLY SEO research — no changes. → Give Result as Report back
-
-        # SEO Researcher — Marketing Specialist
-
-        ## Identity
-        You are an SEO RESEARCHER specialist agent within the MAS marketing team.
-        You receive instructions from the Marketing Orchestrator and provide:
-        - SEO keyword research and analysis
-        - Competitor analysis for search rankings
-        - Search volume data and keyword difficulty
-        - Content topic recommendations for organic traffic
-        - Technical SEO considerations
-      reason: |
-        Why: Missing ⛔ guard in prompt allows agent to potentially make changes
-        instead of only researching SEO. Added ⛔ guard before first sentence
-        (per MM3 type logic) to restrict scope to SEO research only.
-        Removed ## Instructions section (moved to top-level instructions: field).
-        Goose-expert verdict: CONFORM (HIGH) — Goose supports ⛔ guard pattern
-        for scope restriction in sub-agent prompts.
-
-    # --- sub_mas-social-media-manager.yaml (F-1180, rank_score=60) ---
-    # Finding: MM3 - missing instructions: field
-    # Current state: Has prompt: with embedded ## Instructions section but no
-    #   top-level instructions: field. Has settings: {timeout: 600}.
-    - file: recipe/sub/sub_mas-social-media-manager.yaml
-      field: instructions
-      type: MM3
-      priority: 0.70
-      goose_verdict: CONFORM
-      from: null
-      to: |
-        # Extended instructions: recipe/instructions/sub_mas-social-media-manager.md
-
-        Full instructions outsourced to external file for maintainability.
-
-        ## Loading
-        All detailed workflows, examples, and rules are in the external file. This recipe
-        contains only the role, prompt, and configuration.
-
-        ## Core Instructions
-        Given a marketing query, provide comprehensive social media output including:
-        1. LinkedIn content strategy and posts
-        2. Twitter/X threads and posts
-        3. Instagram visual content ideas
-        4. TikTok short-form video concepts
-        5. Hashtag strategy
-        6. Influencer/community engagement plan
-        7. Paid social budget recommendations
-
-        Tailor content to each platform's audience and format. Focus on the target
-        audience identified in the query. Do NOT fabricate data. If you do not have
-        specific information, state what you would research.
-
-        ## Read external file FIRST
-        Before any action, read: `recipe/instructions/sub_mas-social-media-manager.md`
-      reason: |
-        Why: Missing top-level instructions: field means agent has no YAML-level
-        behavioral guidance. Goose requires instructions: field for sub-agent
-        behavior definition. Extracted the ## Instructions section from prompt
-        into a proper top-level instructions: field.
-        Goose-expert verdict: CONFORM (HIGH) — Goose requires instructions: field
-        for sub-agent behavior definition.
-
-    - file: recipe/sub/sub_mas-social-media-manager.yaml
-      field: prompt
-      type: MM3
-      priority: 0.70
-      goose_verdict: CONFORM
-      from: |
-        # Social Media Manager — Marketing Specialist
-
-        ## Identity
-        You are a SOCIAL MEDIA MANAGER specialist agent within the MAS marketing team.
-        You receive instructions from the Marketing Orchestrator and provide:
-        - Multi-platform content adaptation
-        - Platform-specific post strategies
-        - Hashtag and community strategies
-        - Paid social recommendations
-        - Influencer engagement plans
-
-        ## Instructions
-        Given a marketing query, provide comprehensive social media output including:
-        1. LinkedIn content strategy and posts
-        2. Twitter/X threads and posts
-        3. Instagram visual content ideas
-        4. TikTok short-form video concepts
-        5. Hashtag strategy
-        6. Influencer/community engagement plan
-        7. Paid social budget recommendations
-
-        Tailor content to each platform's audience and format. Focus on the target audience identified in the query.
-        Do NOT fabricate data. If you do not have specific information, state what you would research.
-      to: |
-        ⛔ I am social-media-manager (v1.0.0) | MODE-CHECK: mas-engineer | 📱 SOCIAL-MEDIA-MANAGER (v1.0.0) ⛔ ONLY social media — no changes. → Give Result as Report back
-
-        # Social Media Manager — Marketing Specialist
-
-        ## Identity
-        You are a SOCIAL MEDIA MANAGER specialist agent within the MAS marketing team.
-        You receive instructions from the Marketing Orchestrator and provide:
-        - Multi-platform content adaptation
-        - Platform-specific post strategies
-        - Hashtag and community strategies
-        - Paid social recommendations
-        - Influencer engagement plans
-      reason: |
-        Why: Missing ⛔ guard in prompt allows agent to potentially make changes
-        instead of only managing social media content. Added ⛔ guard before first
-        sentence (per MM3 type logic) to restrict scope to social media only.
-        Removed ## Instructions section (moved to top-level instructions: field).
-        Goose-expert verdict: CONFORM (HIGH) — Goose supports ⛔ guard pattern
-        for scope restriction in sub-agent prompts.
-
-  skipped:
-    # --- Already processed in previous session ---
-    - finding_id: F-355
-      type: JJ1
-      file: recipe/e2e-verify-auto-repair.yaml
-      reason: "Goose-expert verdict: CONFORM (patch is unnecessary — recipe only runs shell commands, no sub-agent delegation needed)"
-      why_skipped: "Recipe has explicit extensions: [developer] but does not call delegate() or use sub_recipes. Adding summon would be harmless but unnecessary."
-      goose_verdict: CONFORM
-
-    - finding_id: F-367
-      type: JJ1
-      file: recipe/e2e-verify-german-fixes.yaml
-      reason: "Goose-expert verdict: CONFORM (patch is unnecessary — recipe only runs shell commands, no sub-agent delegation needed)"
-      why_skipped: "Recipe has explicit extensions: [developer] but does not call delegate() or use sub_recipes. Adding summon would be harmless but unnecessary."
-      goose_verdict: CONFORM
-
-    - finding_id: F-383
-      type: JJ1
-      file: recipe/e2e-verify-phoenix-fixes.yaml
-      reason: "Goose-expert verdict: CONFORM (patch is unnecessary — recipe only runs shell commands, no sub-agent delegation needed)"
-      why_skipped: "Recipe has explicit extensions: [developer] but does not call delegate() or use sub_recipes. Adding summon would be harmless but unnecessary."
-      goose_verdict: CONFORM
-
-    - finding_id: F-501
-      type: MM6
-      file: recipe/sub/sub_mas-analytics-reporter.yaml
-      reason: "Goose-expert verdict: CONFORM (patch is unnecessary — no extensions: block means inheritance from parent marketing-orchestrator which has summon)"
-      why_skipped: "No extensions: block defined → inherits all extensions from parent (marketing-orchestrator has summon). Adding explicit extensions: [summon] would break inheritance and lose developer tools."
-      goose_verdict: CONFORM
-
-    - finding_id: F-526
-      type: MM6
-      file: recipe/sub/sub_mas-clone.yaml
-      reason: "Goose-expert verdict: RESTRICTED (patch may be needed depending on parent context — parent dev-mas-engineer has summon, so inheritance works)"
-      why_skipped: "No extensions: block defined → inherits all extensions from parent (dev-mas-engineer has summon). Adding explicit extensions: [summon] would break inheritance and lose developer tools. Parent checked: dev-mas-engineer.yaml has extensions: [summon, developer]."
-      goose_verdict: RESTRICTED
-
-    # --- Code-reviewer sub-agents: JJ1 findings ---
-    - finding_id: F-557
-      type: JJ1
-      file: recipe/sub/sub_mas-code-reviewer-reporter.yaml
-      reason: "Goose-expert verdict: CONFORM — Reporter is a leaf sub-agent under code-reviewer-director which already has summon. Adding summon is harmless but unnecessary for current operations."
-      why_skipped: "Reporter is a leaf agent that receives data and formats reports. It does not call delegate() or use sub_recipes. Parent code-reviewer-director already has summon extension. Adding summon would be harmless but unnecessary."
-      goose_verdict: CONFORM
-
-    - finding_id: F-575
-      type: JJ1
-      file: recipe/sub/sub_mas-code-reviewer-synthesizer.yaml
-      reason: "Goose-expert verdict: CONFORM — Synthesizer is a leaf sub-agent under code-reviewer-director which already has summon. Adding summon is harmless but unnecessary."
-      why_skipped: "Synthesizer is a leaf agent that cross-references findings. It does not call delegate() or use sub_recipes. Parent code-reviewer-director already has summon extension."
-      goose_verdict: CONFORM
-
-    - finding_id: F-594
-      type: JJ1
-      file: recipe/sub/sub_mas-code-reviewer-validator.yaml
-      reason: "Goose-expert verdict: CONFORM — Validator is a leaf sub-agent under code-reviewer-director which already has summon. Adding summon is harmless but unnecessary."
-      why_skipped: "Validator is a leaf agent that validates reports. It does not call delegate() or use sub_recipes. Parent code-reviewer-director already has summon extension."
-      goose_verdict: CONFORM
-
-    # --- Marketing sub-agents: MM6 findings (no extensions block) ---
-    - finding_id: F-622
-      type: MM6
-      file: recipe/sub/sub_mas-content-writer.yaml
-      reason: "Goose-expert verdict: CONFORM — Content-writer inherits summon from parent marketing-orchestrator. Adding explicit extensions would break inheritance."
-      why_skipped: "No extensions: block defined → inherits all extensions from parent (marketing-orchestrator has summon). Adding explicit extensions: [summon] would break inheritance and lose developer tools. Timeout added separately."
-      goose_verdict: CONFORM
-
-    - finding_id: F-697
-      type: MM6
-      file: recipe/sub/sub_mas-email-campaign-manager.yaml
-      reason: "Goose-expert verdict: CONFORM — Email-campaign-manager inherits summon from parent marketing-orchestrator. Adding explicit extensions would break inheritance."
-      why_skipped: "No extensions: block defined → inherits all extensions from parent (marketing-orchestrator has summon). Adding explicit extensions: [summon] would break inheritance and lose developer tools. Timeout added separately."
-      goose_verdict: CONFORM
-
-    - finding_id: F-1160
-      type: MM6
-      file: recipe/sub/sub_mas-seo-researcher.yaml
-      reason: "Goose-expert verdict: CONFORM — SEO-researcher inherits summon from parent marketing-orchestrator. Adding explicit extensions would break inheritance."
-      why_skipped: "No extensions: block defined → inherits all extensions from parent (marketing-orchestrator has summon). Adding explicit extensions: [summon] would break inheritance and lose developer tools. Timeout added separately."
-      goose_verdict: CONFORM
-
-    - finding_id: F-1196
-      type: MM6
-      file: recipe/sub/sub_mas-social-media-manager.yaml
-      reason: "Goose-expert verdict: CONFORM — Social-media-manager inherits summon from parent marketing-orchestrator. Adding explicit extensions would break inheritance."
-      why_skipped: "No extensions: block defined → inherits all extensions from parent (marketing-orchestrator has summon). Adding explicit extensions: [summon] would break inheritance and lose developer tools. Timeout added separately."
-      goose_verdict: CONFORM
-
-    # --- NN1 multi_role findings (deferred — structural change) ---
-    - finding_id: F-1473
-      type: NN1
-      file: recipe/dev-mas-engineer.yaml
-      reason: "Deferred — dev-mas-engineer already delegates to 52 sub-agents via sub_recipes. The 9 roles are orchestration responsibilities, not independent agent roles. Splitting would add overhead without benefit."
-      why_skipped: "dev-mas-engineer is already an orchestrator that delegates to specialized sub-agents. The 9 roles listed are orchestration capabilities, not independent agent responsibilities. The sub_recipes list already provides the specialization."
-      goose_verdict: CONFORM
-
-    - finding_id: F-1482
-      type: NN1
-      file: recipe/sub/sub_mas-code-reviewer-reporter.yaml
-      reason: "Deferred — Reporter's 5 roles are sequential workflow steps (receive, format, add recommendations, return), not independent responsibilities."
-      why_skipped: "The 5 roles are sequential steps in a single workflow pipeline. Splitting would add orchestration overhead for a simple linear process."
-      goose_verdict: CONFORM
-
-    - finding_id: F-1480
-      type: NN1
-      file: recipe/sub/sub_mas-code-reviewer-synthesizer.yaml
-      reason: "Deferred — Synthesizer's 5 roles are sequential workflow steps (receive static, receive security, cross-reference, prioritize, return)."
-      why_skipped: "The 5 roles are sequential steps in a single workflow pipeline. Splitting would add orchestration overhead for a simple linear process."
-      goose_verdict: CONFORM
-
-    - finding_id: F-1475
-      type: NN1
-      file: recipe/sub/sub_mas-code-reviewer-validator.yaml
-      reason: "Deferred — Validator's 5 roles are sequential workflow steps (receive report, cross-reference, flag inconsistencies, assign confidence, return)."
-      why_skipped: "The 5 roles are sequential steps in a single workflow pipeline. Splitting would add orchestration overhead for a simple linear process."
-      goose_verdict: CONFORM
-
-    - finding_id: F-1497
-      type: NN1
-      file: recipe/sub/sub_mas-clone.yaml
-      reason: "Deferred — Clone's 8 roles (validate, design, find, read, write) are genuine SRP violation but require structural refactoring beyond patch scope."
-      why_skipped: "8 roles is a genuine SRP violation but fixing requires creating multiple new sub-agents and an orchestrator. This is a structural change better handled in a dedicated improvement cycle."
-      goose_verdict: RESTRICTED
-
-    # --- C2 steps_not_numbered for e2e recipes (deferred — already have numbered steps in prompt) ---
-    - finding_id: F-385
-      type: C2
-      file: recipe/e2e-verify-phoenix-fixes.yaml
-      reason: "Deferred — Recipe already has numbered tests (T1-T7) in instructions."
-      why_skipped: "The e2e-verify-phoenix-fixes.yaml already has numbered test cases (T1 through T7) in its instructions. The C2 finding is a false positive."
-      goose_verdict: CONFORM
-
-    - finding_id: F-1468
-      type: NN1
-      file: recipe/e2e-verify-phoenix-fixes.yaml
-      reason: "Deferred — 5 roles are sequential test steps, not independent responsibilities."
-      why_skipped: "The 5 roles are sequential test execution steps. Splitting would add overhead."
-      goose_verdict: CONFORM
-
-    - finding_id: F-1471
-      type: NN1
-      file: recipe/e2e-verify-auto-repair.yaml
-      reason: "Deferred — 5 roles are sequential test steps (T1-T10), not independent responsibilities."
-      why_skipped: "The 5 roles are sequential test execution steps. Splitting would add overhead."
-      goose_verdict: CONFORM
-
-    - finding_id: F-1466
-      type: NN1
-      file: recipe/e2e-verify-german-fixes.yaml
-      reason: "Deferred — 7 roles are sequential test steps (T1-T5), not independent responsibilities."
-      why_skipped: "The 7 roles are sequential test execution steps. Splitting would add overhead."
-      goose_verdict: CONFORM
-
-    - finding_id: F-401
-      type: C2
-      file: recipe/root_recipe.yaml
-      reason: "Addressed in patches above — instructions rewritten with 3 numbered steps."
-      why_skipped: "Handled as part of the root_recipe.yaml patch above."
-      goose_verdict: CONFORM
+patches:
+  # ---------------------------------------------------------------
+  # F-1211 — MM4: sub_mas-seo-researcher.yaml missing settings.temperature
+  # ---------------------------------------------------------------
+  - file: recipe/sub/sub_mas-seo-researcher.yaml
+    field: settings.temperature
+    from: null
+    to: "0.3"
+    reason: |
+      Why: settings missing required key [temperature]. Agent uses Goose defaults instead of optimized MAS value.
+      Type: MM4 — Add missing settings key.
+      Goose-expert verdict: CONFORM — Goose supports settings.temperature in recipe YAML. Adding it is valid and Goose will pass it to the model provider.
+      Ref: Standard MAS value for temperature is 0.3 (balanced creativity/determinism).
+    type: MM4
+    priority: 0.82
+    current_chars: 0
+    target_chars: 3
+
+  # ---------------------------------------------------------------
+  # F-1254 — MM4: sub_mas-social-media-manager.yaml missing settings.temperature
+  # ---------------------------------------------------------------
+  - file: recipe/sub/sub_mas-social-media-manager.yaml
+    field: settings.temperature
+    from: null
+    to: "0.3"
+    reason: |
+      Why: settings missing required key [temperature]. Agent uses Goose defaults instead of optimized MAS value.
+      Type: MM4 — Add missing settings key.
+      Goose-expert verdict: CONFORM — Goose supports settings.temperature in recipe YAML. Adding it is valid and Goose will pass it to the model provider.
+      Ref: Standard MAS value for temperature is 0.3 (balanced creativity/determinism).
+    type: MM4
+    priority: 0.82
+    current_chars: 0
+    target_chars: 3
+
+  # ---------------------------------------------------------------
+  # F-662 — MM4: sub_mas-content-writer.yaml missing settings.temperature
+  # ---------------------------------------------------------------
+  - file: recipe/sub/sub_mas-content-writer.yaml
+    field: settings.temperature
+    from: null
+    to: "0.3"
+    reason: |
+      Why: settings missing required key [temperature]. Agent uses Goose defaults instead of optimized MAS value.
+      Type: MM4 — Add missing settings key.
+      Goose-expert verdict: CONFORM — Goose supports settings.temperature in recipe YAML. Adding it is valid and Goose will pass it to the model provider.
+      Ref: Standard MAS value for temperature is 0.3 (balanced creativity/determinism).
+    type: MM4
+    priority: 0.82
+    current_chars: 0
+    target_chars: 3
+
+  # ---------------------------------------------------------------
+  # F-742 — MM4: sub_mas-email-campaign-manager.yaml missing settings.temperature
+  # ---------------------------------------------------------------
+  - file: recipe/sub/sub_mas-email-campaign-manager.yaml
+    field: settings.temperature
+    from: null
+    to: "0.3"
+    reason: |
+      Why: settings missing required key [temperature]. Agent uses Goose defaults instead of optimized MAS value.
+      Type: MM4 — Add missing settings key.
+      Goose-expert verdict: CONFORM — Goose supports settings.temperature in recipe YAML. Adding it is valid and Goose will pass it to the model provider.
+      Ref: Standard MAS value for temperature is 0.3 (balanced creativity/determinism).
+    type: MM4
+    priority: 0.82
+    current_chars: 0
+    target_chars: 3
+
+  # ---------------------------------------------------------------
+  # F-1528 — E1: sub_mas-intention-parser.yaml missing pattern definitions
+  # ---------------------------------------------------------------
+  - file: recipe/sub/sub_mas-intention-parser.yaml
+    field: prompt
+    from: |-
+      I am intention-parser (v1.0.0) | MODE-CHECK: mas-engineer | 🧠 INTENTION-PARSER (v1.0.0)
+
+      Analyze user description → call generator. ⛔⛔⛔⛔⛔ ALWAYS generator (no manual template) ⛔⛔⛔⛔⛔ Confirmation before write/edit
+
+
+      # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune). NO YAML-Save without vorherige Syntax-Check.
+      # Intention Patterns (for pattern detection): # - "I need an agent that..." -> sub (default) # - "Create an autonomous agent" -> full # - "Build a function into existing agent" -> internal # - "update/refresh agent {name}" -> --refresh --agent {name} # - "update all agents" -> --refresh-all # - "show what is missing" -> --dry-run # - "what has changed" -> --diff # - "may NOT..." -> restrictions.forbidden_paths # - "should ONLY..." -> restrictions.allowed_paths # - "first X, then Y" -> workflow.steps # - "on error cancel" -> on_error: abort
+    to: |-
+      I am intention-parser (v1.0.0) | MODE-CHECK: mas-engineer | 🧠 INTENTION-PARSER (v1.0.0)
+
+      Analyze user description → call generator. ⛔⛔⛔⛔⛔ ALWAYS generator (no manual template) ⛔⛔⛔⛔⛔ Confirmation before write/edit
+
+
+      # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune). NO YAML-Save without vorherige Syntax-Check.
+
+      # Intention Patterns (for pattern detection):
+      # - "I need an agent that..." -> sub (default)
+      # - "Create an autonomous agent" -> full
+      # - "Build a function into existing agent" -> internal
+      # - "update/refresh agent {name}" -> --refresh --agent {name}
+      # - "update all agents" -> --refresh-all
+      # - "show what is missing" -> --dry-run
+      # - "what has changed" -> --diff
+      # - "may NOT..." -> restrictions.forbidden_paths
+      # - "should ONLY..." -> restrictions.allowed_paths
+      # - "first X, then Y" -> workflow.steps
+      # - "on error cancel" -> on_error: abort
+      # - "(auto)" -> auto-split workflow (default)
+      # - "(interactive)", "(manual)", "(let me define)", "(no-split)", "(shell)" -> interactive workflow (generic-init)
+      # - "in context (MAS/DEV/Generic)" -> domain detection
+    reason: |
+      Why: Intention patterns are all on one line as comments, hard to read/maintain. Missing workflow selection patterns (auto/interactive keywords) and domain detection pattern from instructions file.
+      Type: E1 — Add missing pattern definitions to intention-parser prompt.
+      Fix: Split patterns onto separate lines for readability. Add missing patterns: (auto) → auto-split, (interactive)/(manual)/(let me define)/(no-split)/(shell) → interactive, in context (MAS/DEV/Generic) → domain.
+      Goose-expert verdict: N/A — E1 patterns are MAS-internal prompt conventions, not Goose architecture. No Goose-native mechanism exists for intention pattern matching.
+    type: E1
+    priority: 0.66
+    current_chars: 595
+    target_chars: 821
+
+skipped: []
