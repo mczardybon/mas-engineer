@@ -489,9 +489,11 @@ def main():
 
     env = {**os.environ}
     env.setdefault("PATH", "/root/.local/bin:" + env.get("PATH", ""))
-    # Explicitly pass deepseek config (avoids 401 from cached/silent config)
-    env.setdefault("OPENAI_API_KEY", "sk-e1afc5ddb57d41d7ba8df67a36b11b93")
+    # Use DEEPSEEK_API_KEY from .env if present, else fall back to OPENAI_API_KEY.
+    # The placeholder "sk-e1a...1b93" was a redacted test value that produced 401s.
     env.setdefault("OPENAI_HOST", "https://api.deepseek.com")
+    if env.get("DEEPSEEK_API_KEY") and not env.get("OPENAI_API_KEY"):
+        env["OPENAI_API_KEY"] = env["DEEPSEEK_API_KEY"]
 
     teams = [args.team] if args.team else list(TEST_CASES.keys())
     levels = [args.level] if args.level else ["easy", "medium", "hard"]
