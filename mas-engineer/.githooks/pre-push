@@ -1,0 +1,14 @@
+#!/bin/bash
+# Block secrets at PUSH time too — defense in depth
+# In case pre-commit was bypassed (--no-verify) or files were committed before hook was installed
+SECRETS=$(git diff origin/master..HEAD | grep -nE "^\+.*(sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{30,}|gho_[A-Za-z0-9]{30,})" 2>/dev/null)
+if [ -n "$SECRETS" ]; then
+    echo ""
+    echo "🚨 SECRET DETECTED in commits being pushed:"
+    echo "----------------------------------------"
+    echo "$SECRETS"
+    echo "----------------------------------------"
+    echo "Push blocked. Revert the offending commits first."
+    exit 1
+fi
+exit 0
