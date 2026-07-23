@@ -10,6 +10,19 @@ Default behavior is unchanged (backward-compatible).
 import yaml, os, glob, re, json, sys, argparse
 from collections import Counter
 
+# --- SEVERITY FILTER (R28 fix) ---
+# Default: report all severities. Set SEVERITY_FILTER=medium,high
+# (or pass --severity-filter=medium,high) to suppress low-severity
+# style findings and only show actionable issues.
+SEVERITY_FILTER = {'low', 'medium', 'high'}
+for _a in sys.argv[1:]:
+    if _a.startswith('--severity-filter='):
+        SEVERITY_FILTER = {s.strip() for s in _a.split('=', 1)[1].split(',') if s.strip()}
+        break
+_env_sev = os.environ.get('SEVERITY_FILTER')
+if _env_sev:
+    SEVERITY_FILTER = {s.strip() for s in _env_sev.split(',') if s.strip()}
+
 # SCAN_SCOPE may be a single directory, a comma-separated list, or multiple
 # --scope args.  Default = 'recipe' (backward compatible).
 def _collect_scope_dirs():
@@ -36,14 +49,45 @@ def _collect_scope_dirs():
 
 SCAN_DIRS = _collect_scope_dirs()
 ALL_YAMLS = []
+# Directories to skip during scan (excluded by name match)
+EXCLUDED_DIR_NAMES = {
+    '.backups',          # mas-engineer auto-backups (R27 fix)
+    '.git',              # version control
+    'node_modules',      # dependencies
+    '__pycache__',       # python bytecode
+}
+# Path patterns to skip (substring match on full path)
+EXCLUDED_PATH_PATTERNS = [
+    '/.config/goose/recipes/',  # external marketing recipes (not mas-engineer)
+    '/.config/goose/sessions/', # goose runtime session data
+    '/.config/goose/memory/',   # goose memory
+    '/.config/goose/workspace/',# goose workspace
+    '/.local/share/goose/',     # goose internal storage
+]
+
+def _is_path_excluded(path):
+    """Check if a path matches any exclusion pattern."""
+    for pat in EXCLUDED_PATH_PATTERNS:
+        if pat in path:
+            return True
+    return False
+
 for SCAN_DIR in SCAN_DIRS:
     if not os.path.isdir(SCAN_DIR):
         continue
     for root, dirs, files in os.walk(SCAN_DIR):
-        # skip sub/ of a top-level scan to avoid re-walking
+        # In-place filter: modify dirs list to skip excluded subdirs
+        # (os.walk honors dirs[:] modifications)
+        dirs[:] = [d for d in dirs if d not in EXCLUDED_DIR_NAMES]
+        # Also skip if root path itself matches excluded pattern
+        if _is_path_excluded(root + '/'):
+            continue
         for f in files:
             if f.endswith('.yaml') or f.endswith('.yml'):
-                ALL_YAMLS.append(os.path.join(root, f))
+                full_path = os.path.join(root, f)
+                if _is_path_excluded(full_path):
+                    continue
+                ALL_YAMLS.append(full_path)
 # Also pick up top-level yamls in cwd (legacy)
 for f in glob.glob('*.yaml') + glob.glob('*.yml'):
     if os.path.isfile(f) and f not in ALL_YAMLS:
@@ -54,6 +98,9 @@ fid = 0
 
 def add_finding(ftype, severity, file, issue, impact, fix):
     global fid
+    # R28: respect SEVERITY_FILTER
+    if severity not in SEVERITY_FILTER:
+        return
     fid += 1
     findings.append({
         'id': f'F-{fid:03d}',
