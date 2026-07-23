@@ -88,6 +88,7 @@ def section(title):
 #   - prompt_template: the wrapper's `prompt:` field with {{ }} placeholders
 #   - marker: string that MUST appear in output for test to pass
 #   - expect_in_output: list of strings that must all appear (case-insensitive)
+#   - expect_not_in_output: list of strings that must NOT appear (case-insensitive)
 #   - timeout_s: per-test wall-clock cap
 #   - rationale: human-readable explanation
 # ============================================================================
@@ -147,9 +148,10 @@ TEST_CASES = {
                 "the marker 'Hallo' on its own line."
             ),
             "marker": "Hallo",
-            "expect_in_output": ["delegate", "translator_team", "Milch"],
+            "expect_in_output": ["delegate", "translator_team", "Hallo"],
+            "expect_not_in_output": ["spilt milk", "spilled milk", "verschüttete Milch"],
             "timeout_s": 180,
-            "rationale": "Idiom-heavy. Verifies literary translator recognizes non-literal meaning.",
+            "rationale": "Idiom-heavy. Verifies literary translator recognizes non-literal meaning. We expect 'Hallo' marker (mandatory) and the LITERARY translation must NOT contain literal-translation phrases like 'spilt milk' or 'verschüttete Milch'. The German idiom 'vergossene Milch' is fine and expected — only literal-translation phrases are forbidden.",
         },
     },
     "sales": {
@@ -421,6 +423,7 @@ def run_team_test(team, level, case, env):
     text_stripped = ansi_re.sub("", text)
     sent_marker = case["marker"] in text_stripped
     missing = [k for k in case["expect_in_output"] if k.lower() not in text_stripped.lower()]
+    forbidden = [k for k in case.get("expect_not_in_output", []) if k.lower() in text_stripped.lower()]
 
     # Evidence: was the sub_recipe actually invoked? Look for delegate tool call
     sub_invoked = ("delegate" in text.lower() and
@@ -435,6 +438,9 @@ def run_team_test(team, level, case, env):
     elif missing:
         status = "fail"
         reason = f"expected keywords missing: {missing}"
+    elif forbidden:
+        status = "fail"
+        reason = f"forbidden keywords present (translation too literal): {forbidden}"
     else:
         status = "ok"
         reason = ""
