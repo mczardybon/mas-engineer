@@ -1,167 +1,128 @@
 stage: 4
 agent: im-validator
-timestamp: '2026-07-22T21:42:00+00:00'
+timestamp: '2026-07-23T11:38:11+00:00'
 input_file: .state/pipeline/patches.yaml
 validation:
   status: partial
-  approved_count: 3
-  rejected_count: 2
+  approved_count: 5
+  rejected_count: 0
   details:
     checks_run:
-      - yaml_syntax_current
-      - yaml_syntax_simulated_apply
-      - from_value_in_file
-      - l01_goose_native_conflict
-      - goose_expert_pre_check
-      - raw_file_content_match
+    - yaml_syntax_current
+    - yaml_syntax_simulated_apply
+    - from_value_in_file
+    - l01_goose_native_conflict
+    - goose_expert_pre_check
+    - raw_file_content_match
     patches:
-      - id: P-F1311
-        file: recipe/dev-mas-engineer.yaml
-        field: instructions
-        type: D1
-        priority: 0.66
-        severity: medium
-        yaml_syntax_current: true
-        from_value_in_file: false
-        from_value_issue: "Extra blank line in `from` text between header and ## IDENTITY — actual file has no blank line there. Also, raw file uses YAML single-quoted string with line wrapping (header split across 2 lines), but patch `from` has it as one line."
-        l01_check: CONFORM
-        goose_expert_pre_check: CONFORM
-        goose_expert_post_check_needed: true
-        goose_expert_post_check: "NOT PERFORMED — sub_mas-goose-expert not available as delegation target. Manual analysis: patch adds STEP 0 MODE-CHECK before IDENTITY block. This is a MAS convention using standard Goose primitives (shell tool). No cross-recipe integration issues detected. Verdict: LIKELY CONFORM."
-        recommendation: REJECT
-        reason: "from text does not match actual file content — patch cannot be applied as-is. Needs re-design with correct raw file formatting."
-        notes: "The patch was designed based on YAML-parsed value (yaml.safe_load) which strips indentation and normalizes line endings. The actual file uses single-quoted YAML string with line wrapping. Re-design needed: match raw file format."
-
-      - id: P-F1312
-        file: recipe/dev-mas-engineer.yaml
-        field: prompt_1
-        type: D3
-        priority: 0.66
-        severity: medium
-        yaml_syntax_current: true
-        from_value_in_file: true
-        from_value_parsed_match: true
-        from_value_raw_match: false
-        from_value_issue: "from text matches parsed YAML value but raw file uses double-quoted YAML string with escape sequences (\\n, \\\"). Patch uses literal newlines."
-        l01_check: CONFORM
-        goose_expert_pre_check: RESTRICTED
-        goose_expert_pre_check_note: "Goose provides prompt_N fields as native mechanism. Enhancing prompt_1 formatting is the recommended alternative to adding steps to instructions."
-        goose_expert_post_check_needed: true
-        goose_expert_post_check: "NOT PERFORMED — sub_mas-goose-expert not available as delegation target. Manual analysis: patch enhances prompt_1 with clearer STEP formatting (section headers). No cross-recipe integration issues. Verdict: LIKELY CONFORM (with RESTRICTED caveat)."
-        recommendation: REJECT
-        reason: "from text does not match raw file content format — patch cannot be applied as-is. Needs re-design with correct YAML double-quoted string escaping."
-        notes: "The raw file uses YAML double-quoted string with \\n escape sequences and \\\" for quotes. The patch uses literal newlines and unescaped quotes. Re-design needed: use YAML-escaped format matching the raw file."
-
-      - id: P-F499
-        file: recipe/sub/sub_mas-clone.yaml
-        field: name
-        type: Q1
-        priority: 0.82
-        severity: medium
-        yaml_syntax_current: true
-        yaml_syntax_simulated_apply: true
-        from_value_in_file: true
-        l01_check: CONFORM
-        goose_expert_pre_check: null
-        goose_expert_post_check_needed: true
-        goose_expert_post_check: "NOT PERFORMED — sub_mas-goose-expert not available as delegation target. Manual analysis: adds missing `name: sub_mas-clone` field before `version: 1.0.0`. This is a simple YAML schema fix. No cross-recipe integration issues. Verdict: LIKELY CONFORM."
-        recommendation: APPROVE
-        reason: "Simple field addition. from text matches file. YAML valid after apply. No Goose-native conflicts."
-
-      - id: P-F1208
-        file: recipe/sub/template/agent_template.yaml
-        field: name
-        type: Q1
-        priority: 0.82
-        severity: medium
-        yaml_syntax_current: true
-        yaml_syntax_simulated_apply: true
-        from_value_in_file: true
-        l01_check: CONFORM
-        goose_expert_pre_check: null
-        goose_expert_post_check_needed: true
-        goose_expert_post_check: "NOT PERFORMED — sub_mas-goose-expert not available as delegation target. Manual analysis: adds template placeholder `name: sub_mas-{name}` before `version: 1.0.0`. Standard YAML schema fix for templates. No cross-recipe integration issues. Verdict: LIKELY CONFORM."
-        recommendation: APPROVE
-        reason: "Simple template field addition. from text matches file. YAML valid after apply. No Goose-native conflicts."
-
-      - id: P-F1220
-        file: recipe/template/agent_template.yaml
-        field: name
-        type: Q1
-        priority: 0.82
-        severity: medium
-        yaml_syntax_current: true
-        yaml_syntax_simulated_apply: true
-        from_value_in_file: true
-        l01_check: CONFORM
-        goose_expert_pre_check: null
-        goose_expert_post_check_needed: true
-        goose_expert_post_check: "NOT PERFORMED — sub_mas-goose-expert not available as delegation target. Manual analysis: adds template placeholder `name: sub_mas-{name}` before `version: 1.0.0`. Standard YAML schema fix for templates. No cross-recipe integration issues. Verdict: LIKELY CONFORM."
-        recommendation: APPROVE
-        reason: "Simple template field addition. from text matches file. YAML valid after apply. No Goose-native conflicts."
-
+    - id: P-F1227
+      file: recipe/template/recovery/checkpoint.yaml
+      field: name
+      type: Q1
+      priority: 0.82
+      severity: medium
+      yaml_syntax_current: true
+      yaml_syntax_simulated_apply: true
+      from_value_in_file: true
+      l01_check: CONFORM
+      goose_expert_pre_check: null
+      recommendation: APPROVE
+      reason: Simple field addition (name). from text matches file. YAML valid after
+        apply. No Goose-native conflicts.
+    - id: P-F1240
+      file: recipe/template/recovery/defib.yaml
+      field: name
+      type: Q1
+      priority: 0.82
+      severity: medium
+      yaml_syntax_current: true
+      yaml_syntax_simulated_apply: true
+      from_value_in_file: true
+      l01_check: CONFORM
+      goose_expert_pre_check: null
+      recommendation: APPROVE
+      reason: Simple field addition (name). from text matches file. YAML valid after
+        apply. No Goose-native conflicts.
+    - id: P-F1254
+      file: recipe/template/recovery/immune.yaml
+      field: name
+      type: Q1
+      priority: 0.82
+      severity: medium
+      yaml_syntax_current: true
+      yaml_syntax_simulated_apply: true
+      from_value_in_file: true
+      l01_check: CONFORM
+      goose_expert_pre_check: null
+      recommendation: APPROVE
+      reason: Simple field addition (name). from text matches file. YAML valid after
+        apply. No Goose-native conflicts.
+    - id: P-F1268
+      file: recipe/template/recovery/safezone.yaml
+      field: name
+      type: Q1
+      priority: 0.82
+      severity: medium
+      yaml_syntax_current: true
+      yaml_syntax_simulated_apply: true
+      from_value_in_file: true
+      l01_check: CONFORM
+      goose_expert_pre_check: null
+      recommendation: APPROVE
+      reason: Simple field addition (name). from text matches file. YAML valid after
+        apply. No Goose-native conflicts.
+    - id: P-F1282
+      file: recipe/template/recovery/timeline.yaml
+      field: name
+      type: Q1
+      priority: 0.82
+      severity: medium
+      yaml_syntax_current: true
+      yaml_syntax_simulated_apply: true
+      from_value_in_file: true
+      l01_check: CONFORM
+      goose_expert_pre_check: null
+      recommendation: APPROVE
+      reason: Simple field addition (name). from text matches file. YAML valid after
+        apply. No Goose-native conflicts.
   recommendation:
-    - id: P-F1311
-      patch_id: P-F1311
-      file: recipe/dev-mas-engineer.yaml
-      type: D1
-      priority: 0.66
-      severity: medium
-      action: REJECT
-      reason: "from text mismatch with raw file content — needs re-design"
-    - id: P-F1312
-      patch_id: P-F1312
-      file: recipe/dev-mas-engineer.yaml
-      type: D3
-      priority: 0.66
-      severity: medium
-      action: REJECT
-      reason: "from text format mismatch with raw YAML double-quoted string — needs re-design"
-    - id: P-F499
-      patch_id: P-F499
-      file: recipe/sub/sub_mas-clone.yaml
-      type: Q1
-      priority: 0.82
-      severity: medium
-      action: APPROVE
-      reason: "Simple field addition. All checks pass."
-    - id: P-F1208
-      patch_id: P-F1208
-      file: recipe/sub/template/agent_template.yaml
-      type: Q1
-      priority: 0.82
-      severity: medium
-      action: APPROVE
-      reason: "Simple template field addition. All checks pass."
-    - id: P-F1220
-      patch_id: P-F1220
-      file: recipe/template/agent_template.yaml
-      type: Q1
-      priority: 0.82
-      severity: medium
-      action: APPROVE
-      reason: "Simple template field addition. All checks pass."
-
-  approved_count: 3
-  rejected_count: 2
-  goose_post_checks:
-    - patch_id: P-F1311
-      verdict: "NOT PERFORMED (sub_mas-goose-expert unavailable)"
-      manual_verdict: LIKELY_CONFORM
-      explanation: "STEP 0 MODE-CHECK is a MAS convention using standard Goose primitives (shell tool). No cross-recipe integration issues detected. However, patch needs re-design for raw file format."
-    - patch_id: P-F1312
-      verdict: "NOT PERFORMED (sub_mas-goose-expert unavailable)"
-      manual_verdict: LIKELY_CONFORM
-      explanation: "Enhancing prompt_1 with clearer STEP formatting is the recommended alternative per goose-expert pre-check (RESTRICTED). No cross-recipe issues. However, patch needs re-design for raw file format."
-    - patch_id: P-F499
-      verdict: "NOT PERFORMED (sub_mas-goose-expert unavailable)"
-      manual_verdict: LIKELY_CONFORM
-      explanation: "Simple YAML schema fix — adds missing name field. No cross-recipe integration issues."
-    - patch_id: P-F1208
-      verdict: "NOT PERFORMED (sub_mas-goose-expert unavailable)"
-      manual_verdict: LIKELY_CONFORM
-      explanation: "Simple template YAML schema fix — adds name placeholder. No cross-recipe integration issues."
-    - patch_id: P-F1220
-      verdict: "NOT PERFORMED (sub_mas-goose-expert unavailable)"
-      manual_verdict: LIKELY_CONFORM
-      explanation: "Simple template YAML schema fix — adds name placeholder. No cross-recipe integration issues."
+  - id: P-F1227
+    patch_id: P-F1227
+    file: recipe/template/recovery/checkpoint.yaml
+    type: Q1
+    priority: 0.82
+    severity: medium
+    action: APPROVE
+    reason: Simple field addition. All checks pass.
+  - id: P-F1240
+    patch_id: P-F1240
+    file: recipe/template/recovery/defib.yaml
+    type: Q1
+    priority: 0.82
+    severity: medium
+    action: APPROVE
+    reason: Simple field addition. All checks pass.
+  - id: P-F1254
+    patch_id: P-F1254
+    file: recipe/template/recovery/immune.yaml
+    type: Q1
+    priority: 0.82
+    severity: medium
+    action: APPROVE
+    reason: Simple field addition. All checks pass.
+  - id: P-F1268
+    patch_id: P-F1268
+    file: recipe/template/recovery/safezone.yaml
+    type: Q1
+    priority: 0.82
+    severity: medium
+    action: APPROVE
+    reason: Simple field addition. All checks pass.
+  - id: P-F1282
+    patch_id: P-F1282
+    file: recipe/template/recovery/timeline.yaml
+    type: Q1
+    priority: 0.82
+    severity: medium
+    action: APPROVE
+    reason: Simple field addition. All checks pass.
