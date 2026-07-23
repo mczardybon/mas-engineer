@@ -1,0 +1,15 @@
+#!/bin/bash
+# Block any sk-* (deepseek/openai), ghp_*, gho_* (github) from being committed.
+# Uses `git diff --cached` (not --staged) to see actual content additions.
+SECRETS=$(git diff --cached | grep -nE "^\+.*(sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{30,}|gho_[A-Za-z0-9]{30,})" 2>/dev/null)
+if [ -n "$SECRETS" ]; then
+    echo ""
+    echo "🚨 SECRET DETECTED in staged changes:"
+    echo "----------------------------------------"
+    echo "$SECRETS"
+    echo "----------------------------------------"
+    echo "Commit blocked. Use <REDACTED> for test fixtures."
+    echo "If this is a false positive, edit .githooks/pre-commit."
+    exit 1
+fi
+exit 0
