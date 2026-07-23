@@ -42,3 +42,87 @@ inheritance (losing the `developer` extension that the parent has).
 Those commits may have been unnecessary based on the inheritance analysis.
 They are still deployed and pass e2e tests, but goose-expert RESTRICTED verdict
 suggests they could be reverted in a future round if cost-vs-value warrants it.
+
+---
+
+## Outstanding work for next MAS rounds
+
+**State (post-Round 19):**
+- 1509 total findings (1434 low + 75 medium + 0 high)
+- 0 patches applied
+- Mode: `mas`, status: `ready`
+
+### 75 medium findings, by status:
+
+| Group | Count | Type | Action |
+|-------|-------|------|--------|
+| NOT_POSSIBLE | 2 | D1, D3 | None — MAS convention vs Goose-native |
+| RESTRICTED | 14 | A5 (6), MM3 (5), MM4 (3) | Conflict with rules, MAS skips |
+| CONFORM | 12 | JJ1 (6), MM6 (6) | False positive — inheritance works |
+| **NO-VERDICT** | **47** | NN1 (40), NN3 (3), N2 (3), E1 (1) | **Awaiting goose-expert review** |
+
+### 47 unreviewed medium findings — opportunity for next rounds
+
+| Type | Count | Issue |
+|------|-------|-------|
+| NN1 | 40 | multi_role_agent: recipes with 5-12 distinct roles (single-responsibility violation) |
+| NN3 | 3 | scope_bloat: description > 200 chars with 4+ domains |
+| N2 | 3 | sub-recipes without `summon` delegation capability |
+| E1 | 1 | intention-parser missing pattern |
+
+### Why these weren't addressed in Round 19
+
+Round 19 ran out of goose-expert consult budget (4× CONFORM + 1× RESTRICTED) before
+the no-verdict findings could be reviewed. The orchestrator's `apply_only` mode
+(SCHEDULE rule R-08) and 24h cooldown (RECURSION_OVERRIDE) limited the run to
+patch-application, not new goose-expert consultations.
+
+### Recommended next action
+
+Run `delegate(im-finder)` + `delegate(im-rank)` to refresh findings, then
+`delegate(goose-expert)` for the 47 no-verdict medium findings. If goose-expert
+verdicts split ~50/50 between CONFORM and actionable, the actionable ones can
+be designed as patches in a follow-up Round 20.
+
+
+---
+
+## Outstanding work for next MAS rounds
+
+**State (post-Round 19):**
+- 1509 total findings (1434 low + 75 medium + 0 high)
+- 0 patches applied
+- Mode: `mas`, status: `ready`
+
+### 75 medium findings, by status:
+
+| Group | Count | Type | Action |
+|-------|-------|------|--------|
+| NOT_POSSIBLE | 2 | D1, D3 | None — MAS convention vs Goose-native |
+| RESTRICTED | 14 | A5 (6), MM3 (5), MM4 (3) | Conflict with rules, MAS skips |
+| CONFORM | 12 | JJ1 (6), MM6 (6) | False positive — inheritance works |
+| **NO-VERDICT** | **47** | NN1 (40), NN3 (3), N2 (3), E1 (1) | **Awaiting goose-expert review** |
+
+### 47 unreviewed medium findings — opportunity for next rounds
+
+| Type | Count | Issue |
+|------|-------|-------|
+| NN1 | 40 | multi_role_agent: recipes with 5-12 distinct roles (single-responsibility violation) |
+| NN3 | 3 | scope_bloat: description > 200 chars with 4+ domains |
+| N2 | 3 | sub-recipes without `summon` delegation capability |
+| E1 | 1 | intention-parser missing pattern |
+
+### Why these weren't addressed in Round 19
+
+Round 19 ran out of goose-expert consult budget (4x CONFORM + 1x RESTRICTED) before
+the no-verdict findings could be reviewed. The orchestrator's `apply_only` mode
+(SCHEDULE rule R-08) and 24h cooldown (RECURSION_OVERRIDE) limited the run to
+patch-application, not new goose-expert consultations.
+
+### Recommended next action
+
+Run `delegate(im-finder)` + `delegate(im-rank)` to refresh findings, then
+`delegate(goose-expert)` for the 47 no-verdict medium findings. If goose-expert
+verdicts split ~50/50 between CONFORM and actionable, the actionable ones can
+be designed as patches in a follow-up Round 20.
+
