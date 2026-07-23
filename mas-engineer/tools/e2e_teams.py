@@ -316,14 +316,17 @@ def build_wrapper_recipe(team, level, case, team_recipe_path):
         "parameters": param_defs,
         "extensions": [
             {"type": "builtin", "name": "developer", "display_name": "Developer",
-             "timeout": 60, "bundled": True}
+             "timeout": 60, "bundled": True},
+            {"type": "builtin", "name": "summon", "display_name": "Summon",
+             "timeout": 60, "bundled": True},
         ],
         "sub_recipes": [
             {"name": team_short, "path": team_recipe_path}
         ],
         "settings": {
             "timeout": case["timeout_s"],
-            "max_steps": 50,
+            "max_steps": 30,
+            "max_turns": 25,
             "goose_provider": "openai",
             "goose_model": "deepseek-chat",
         }
