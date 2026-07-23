@@ -1,0 +1,113 @@
+name: e2e-verify-german-fixes
+version: 1.0.0
+title: ✓ E2E-VERIFY-GERMAN-DESCS-FIX — translation + placeholder validation
+description: |
+  v1.0.0 | Verify the 2 follow-up fixes from ce5ac4e session:
+  1. Translate remaining German descs in task_workflows to English
+  2. Replace placeholder echo-only steps in wf_recovery_* with real logic
+  Agent-driven e2e test, similar to e2e-verify-phoenix-fixes recipe.
+
+instructions: |
+  # E2E Verify German + Placeholder Fixes
+
+  You are a verification agent. Run real commands, write final report.
+
+  ## SCOPE — what you are testing
+
+  From analysis (see /tmp/analyze_followups.py for reproduction):
+
+  ### A. German descs in 7 task_workflows
+  - wf_defib_resurrect
+  - wf_engine_execute
+  - wf_im_design_patches
+  - wf_im_read_sessions_with_messages
+  - wf_rd_conceive
+  - wf_team_validate (false positive — "an" is OK)
+  - wf_yaml_clone
+  Expected: All translated to English (except false positives).
+
+  ### B. Placeholder steps in 5 wf_recovery_* workflows
+  - wf_recovery_checkpoint (1 echo step)
+  - wf_recovery_defib (1 echo step)
+  - wf_recovery_immune (1 echo step)
+  - wf_recovery_safezone (1 echo step)
+  - wf_recovery_timeline (1 echo step)
+  Expected: Each workflow has REAL logic steps that actually do something
+  (not just `echo`). At minimum 2 steps each: validation + recovery action.
+
+  ## TESTS
+
+  ### T1: 0 German descs remaining in task_workflows
+  Run:
+  ```python
+  python3 -c "
+  import yaml, re
+  data = yaml.safe_load(open('.state/workflows.yaml'))
+  GERMAN = ['und','der','die','das','mit','für','von','aus','bei',
+    'Schritt','Inhalt','Prüfung','Erstellen','letzten','zeigen',
+    'anzeigen','wieder','Beliebig','Bitt','erzeugen','ändern',
+    'ausführen','überprüfen','ermitteln','wiederherstellen',
+    'initialisieren','konfigurieren']
+  twfs = data.get('task_workflows', {})
+  bad = []
+  for name, wf in twfs.items():
+    desc = wf.get('desc', '')
+    found = [w for w in GERMAN if re.search(rf'\\b{w}\\b', desc, re.IGNORECASE)]
+    if found:
+      bad.append((name, desc, found))
+  print(f'German descs remaining: {len(bad)}')
+  for b in bad: print(b)
+  "
+  ```
+  Expected: 0 (or list only true positives like "an" in "team package")
+
+  ### T2: No placeholder (echo-only) steps in wf_recovery_*
+  Run:
+  ```python
+  python3 -c "
+  import yaml
+  data = yaml.safe_load(open('.state/workflows.yaml'))
+  recovery = [n for n in data['task_workflows'] if n.startswith('wf_recovery_')]
+  for n in recovery:
+    wf = data['task_workflows'][n]
+    steps = wf.get('steps', [])
+    echo_only = all(s.get('cmd','').strip().startswith('echo ') for s in steps)
+    print(f'{n}: {len(steps)} steps, placeholder={echo_only}')
+    for s in steps:
+      print(f'    - {s.get(\"id\")}: {s.get(\"cmd\", s.get(\"action\"))[:80]}')
+  "
+  ```
+  Expected: 0 workflows with placeholder=True
+
+  ### T3: All wf_recovery_* workflows can be invoked via dev_workflow_runner
+  For each of 5 recovery workflows, run:
+  `python3 tools/dev_workflow_runner.py wf_recovery_<name> 2>&1 | tail -5`
+  Expected: each shows ▶ Workflow: ... ✅ status: ok
+  Allowed: some steps can be "skipped" if dependencies failed
+
+  ### T4: dev_workflow_runner --list still shows 130+ workflows
+  Run: `python3 tools/dev_workflow_runner.py --list 2>&1 | wc -l`
+  Expected: > 130 lines (we had 130+ in previous fix)
+
+  ### T5: All YAML files still parse
+  Run: existing validation script that checks 57 files
+
+  ## REPORT
+  Write to e2e-results/2026-07-22-verify-german-fixes/REPORT.md
+  Include: T1-T5 results, actual outputs, summary table, any follow-up issues.
+
+prompt: |
+  Run the 5 tests. Test results, write final report. All English.
+
+settings:
+  timeout: 600
+  max_steps: 50
+  temperature: 0.3
+extensions:
+- type: platform
+  name: summon
+- type: builtin
+  name: developer
+  display_name: Developer
+  timeout: 300
+  bundled: true

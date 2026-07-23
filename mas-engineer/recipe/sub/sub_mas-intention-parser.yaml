@@ -48,6 +48,50 @@ prompt: 'I am intention-parser (v1.0.0) | MODE-CHECK: mas-engineer | 🧠 INTENT
   # - "(auto)" -> auto-split workflow (default)
   # - "(interactive)", "(manual)", "(let me define)", "(no-split)", "(shell)" -> interactive workflow (generic-init)
   # - "in context (MAS/DEV/Generic)" -> domain detection'
+patterns:
+  - pattern: "I need an agent that..."
+    type: sub
+    description: Create a sub-agent (default)
+  - pattern: "Create an autonomous agent"
+    type: full
+    description: Create a full autonomous agent
+  - pattern: "Build a function into existing agent"
+    type: internal
+    description: Integrate into existing recipe
+  - pattern: "update/refresh agent {name}"
+    type: refresh
+    description: Refresh an existing agent
+  - pattern: "update all agents"
+    type: refresh_all
+    description: Refresh all agents
+  - pattern: "show what is missing"
+    type: dry_run
+    description: Dry-run mode
+  - pattern: "what has changed"
+    type: diff
+    description: Show changes
+  - pattern: "may NOT..."
+    field: restrictions.forbidden_paths
+    description: Set forbidden paths
+  - pattern: "should ONLY..."
+    field: restrictions.allowed_paths
+    description: Set allowed paths
+  - pattern: "first X, then Y"
+    field: workflow.steps
+    description: Define workflow steps
+  - pattern: "on error cancel"
+    field: on_error
+    value: abort
+    description: Abort on error
+  - pattern: "(auto)"
+    type: auto_split
+    description: Auto-split workflow (default)
+  - pattern: "(interactive|manual|let me define|no-split|shell)"
+    type: interactive
+    description: Interactive workflow (generic-init)
+  - pattern: "in context \\(MAS/DEV/Generic\\)"
+    field: domain
+    description: Domain detection
 sub_recipes:
   - name: sub_mas-generic-init
     path: ./sub_mas-generic-init.yaml

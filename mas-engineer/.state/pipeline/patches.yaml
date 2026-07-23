@@ -1,125 +1,366 @@
 # ============================================================
 # patches.yaml — Stage 3: DESIGN (im-designer)
-# Generated: 2026-07-23T20:25:00Z
+# Generated: 2026-07-23T20:33:00Z
 # ============================================================
 stage: 3
 agent: im-designer
-timestamp: "2026-07-23T20:25:00Z"
+timestamp: "2026-07-23T20:33:00Z"
 input_file: .state/pipeline/ranked_findings.yaml
 
 patches:
   # ---------------------------------------------------------------
-  # F-350 — JJ1: e2e-verify-auto-repair.yaml missing summon extension
-  # Goose-expert verdict: CONFORM (from ranked_findings.yaml)
+  # F-1523 — E1: intention-parser.yaml missing pattern definitions
+  # Goose-expert: Not required (E1 not in mandatory consultation prefixes)
   # ---------------------------------------------------------------
-  - file: recipe/e2e-verify-auto-repair.yaml
-    field: extensions
-    from: |-
-      extensions:
-      - type: builtin
-        name: developer
-        display_name: Developer
-        timeout: 300
-        bundled: true
-    to: |-
-      extensions:
-      - type: platform
-        name: summon
-      - type: builtin
-        name: developer
-        display_name: Developer
-        timeout: 300
-        bundled: true
+  - file: recipe/sub/sub_mas-intention-parser.yaml
+    field: patterns
+    from: null
+    to: |
+      patterns:
+        - pattern: "I need an agent that..."
+          type: sub
+          description: Create a sub-agent (default)
+        - pattern: "Create an autonomous agent"
+          type: full
+          description: Create a full autonomous agent
+        - pattern: "Build a function into existing agent"
+          type: internal
+          description: Integrate into existing recipe
+        - pattern: "update/refresh agent {name}"
+          type: refresh
+          description: Refresh an existing agent
+        - pattern: "update all agents"
+          type: refresh_all
+          description: Refresh all agents
+        - pattern: "show what is missing"
+          type: dry_run
+          description: Dry-run mode
+        - pattern: "what has changed"
+          type: diff
+          description: Show changes
+        - pattern: "may NOT..."
+          field: restrictions.forbidden_paths
+          description: Set forbidden paths
+        - pattern: "should ONLY..."
+          field: restrictions.allowed_paths
+          description: Set allowed paths
+        - pattern: "first X, then Y"
+          field: workflow.steps
+          description: Define workflow steps
+        - pattern: "on error cancel"
+          field: on_error
+          value: abort
+          description: Abort on error
+        - pattern: "(auto)"
+          type: auto_split
+          description: Auto-split workflow (default)
+        - pattern: "(interactive|manual|let me define|no-split|shell)"
+          type: interactive
+          description: Interactive workflow (generic-init)
+        - pattern: "in context \\(MAS/DEV/Generic\\)"
+          field: domain
+          description: Domain detection
     reason: |
-      Why: extensions block exists without summon — sub-agents cannot be delegated to.
-      Goose requires summon extension for delegation. Without it, load() and delegate()
-      are unavailable, breaking sub-agent orchestration for e2e tests that may need
-      to delegate verification steps.
-      Type: JJ1 — Add summon extension to extensions list.
-      Goose-expert verdict: CONFORM — Goose requires summon extension in extensions list
-      for sub-agent delegation. Adding it is the correct fix.
-      Ref: https://goose-docs.ai/docs/mcp/summon-mcp/
-    type: JJ1
-    priority: 0.82
+      Why: Intention parser has patterns embedded as comments in prompt but no
+      structured patterns: field. Adding explicit patterns enables programmatic
+      pattern matching and documentation. Patterns extracted from existing
+      instructions file (recipe/instructions/sub_mas-intention-parser.md).
+      Type: E1 — Add pattern definitions to intention-parser.yaml.
+      Goose-expert: Not required (E1 not in mandatory consultation prefix list).
+    type: E1
+    priority: 0.70
     current_chars: 0
     target_chars: 0
 
   # ---------------------------------------------------------------
-  # F-362 — JJ1: e2e-verify-german-fixes.yaml missing summon extension
-  # Goose-expert verdict: CONFORM (from ranked_findings.yaml)
+  # F-1524 — NN1: e2e-verify-german-fixes.yaml multi_role_agent
+  # Design split into orchestrator + sub-agents
   # ---------------------------------------------------------------
-  - file: recipe/e2e-verify-german-fixes.yaml
-    field: extensions
-    from: |-
+  - type: create_orchestrator
+    file: recipe/sub/sub_mas-e2e-verify-director.yaml
+    content:
+      name: e2e-verify-director
+      version: 1.0.0
+      description: Orchestrator for e2e verification — delegates to specialized sub-agents
+      instructions: |
+        # E2E Verify Director
+
+        You are the orchestrator for e2e verification tasks.
+        Delegate to specialized sub-agents based on the task.
+
+        ## Delegation Map
+        - test_runner: sub_mas-e2e-test-runner — Runs test scripts and captures output
+        - report_writer: sub_mas-e2e-report-writer — Writes verification reports
+        - code_reader: sub_mas-e2e-code-reader — Reads and analyzes source files
+        - design_validator: sub_mas-e2e-design-validator — Validates design patterns
+
+        ## Workflow
+        1. Receive verification task from parent
+        2. Delegate to appropriate sub-agent(s)
+        3. Collect results
+        4. Synthesize final report
+      prompt: |
+        ⛔ I am e2e-verify-director (v1.0.0) | MODE-CHECK: mas-engineer | ✓ E2E-VERIFY-DIRECTOR (v1.0.0)
+        ⛔ ONLY orchestration — delegate to sub-agents. → Give Result as Report back
+
+        # E2E Verify Director
+
+        ## Identity
+        You are the E2E VERIFICATION ORCHESTRATOR.
+        You receive verification tasks and delegate to specialized sub-agents.
+        Collect results and synthesize into a final report.
+      settings:
+        timeout: 600
+        max_steps: 50
+        temperature: 0.3
       extensions:
-      - type: builtin
-        name: developer
-        display_name: Developer
+        - type: platform
+          name: summon
+        - type: builtin
+          name: developer
+          display_name: Developer
+          timeout: 300
+          bundled: true
+      sub_recipes:
+        - name: sub_mas-e2e-test-runner
+          path: ./sub_mas-e2e-test-runner.yaml
+          description: Runs test scripts and captures output
+        - name: sub_mas-e2e-report-writer
+          path: ./sub_mas-e2e-report-writer.yaml
+          description: Writes verification reports
+        - name: sub_mas-e2e-code-reader
+          path: ./sub_mas-e2e-code-reader.yaml
+          description: Reads and analyzes source files
+        - name: sub_mas-e2e-design-validator
+          path: ./sub_mas-e2e-design-validator.yaml
+          description: Validates design patterns
+
+  - type: create_sub_agent
+    file: recipe/sub/sub_mas-e2e-test-runner.yaml
+    content:
+      name: e2e-test-runner
+      version: 1.0.0
+      description: Runs e2e test scripts and captures output for verification
+      instructions: |
+        # E2E Test Runner
+
+        You are a test execution specialist.
+        Run test scripts, capture stdout/stderr, and report results.
+
+        ## Core Instructions
+        1. Read test specification
+        2. Execute test commands via shell
+        3. Capture all output
+        4. Report pass/fail for each test
+      prompt: |
+        ⛔ I am e2e-test-runner (v1.0.0) | MODE-CHECK: mas-engineer | 🧪 E2E-TEST-RUNNER (v1.0.0)
+        ⛔ ONLY run tests — no analysis or reporting. → Give Result as Report back
+      settings:
+        timeout: 600
+        max_steps: 30
+        temperature: 0.3
+
+  - type: create_sub_agent
+    file: recipe/sub/sub_mas-e2e-report-writer.yaml
+    content:
+      name: e2e-report-writer
+      version: 1.0.0
+      description: Writes verification reports from test results
+      instructions: |
+        # E2E Report Writer
+
+        You are a report writing specialist.
+        Take test results and write structured verification reports.
+
+        ## Core Instructions
+        1. Receive test results from test-runner
+        2. Format into structured report
+        3. Include pass/fail summary table
+        4. Note any follow-up issues
+      prompt: |
+        ⛔ I am e2e-report-writer (v1.0.0) | MODE-CHECK: mas-engineer | 📝 E2E-REPORT-WRITER (v1.0.0)
+        ⛔ ONLY write reports — no test execution. → Give Result as Report back
+      settings:
         timeout: 300
-        bundled: true
-    to: |-
-      extensions:
-      - type: platform
-        name: summon
-      - type: builtin
-        name: developer
-        display_name: Developer
+        max_steps: 20
+        temperature: 0.5
+
+  - type: create_sub_agent
+    file: recipe/sub/sub_mas-e2e-code-reader.yaml
+    content:
+      name: e2e-code-reader
+      version: 1.0.0
+      description: Reads and analyzes source files for verification
+      instructions: |
+        # E2E Code Reader
+
+        You are a code analysis specialist.
+        Read source files and extract relevant information for verification.
+
+        ## Core Instructions
+        1. Read specified files
+        2. Extract relevant patterns/data
+        3. Report findings to orchestrator
+      prompt: |
+        ⛔ I am e2e-code-reader (v1.0.0) | MODE-CHECK: mas-engineer | 📖 E2E-CODE-READER (v1.0.0)
+        ⛔ ONLY read and analyze code — no modifications. → Give Result as Report back
+      settings:
         timeout: 300
-        bundled: true
+        max_steps: 20
+        temperature: 0.3
+
+  - type: create_sub_agent
+    file: recipe/sub/sub_mas-e2e-design-validator.yaml
+    content:
+      name: e2e-design-validator
+      version: 1.0.0
+      description: Validates design patterns in verification tasks
+      instructions: |
+        # E2E Design Validator
+
+        You are a design validation specialist.
+        Check that designs meet specified criteria.
+
+        ## Core Instructions
+        1. Receive design specification
+        2. Validate against criteria
+        3. Report pass/fail with evidence
+      prompt: |
+        ⛔ I am e2e-design-validator (v1.0.0) | MODE-CHECK: mas-engineer | ✅ E2E-DESIGN-VALIDATOR (v1.0.0)
+        ⛛ ONLY validate designs — no creation. → Give Result as Report back
+      settings:
+        timeout: 300
+        max_steps: 20
+        temperature: 0.3
+
+  - type: archive_original
+    file: recipe/sub/legacy/e2e-verify-german-fixes-ORIGINAL.yaml
+    from: recipe/e2e-verify-german-fixes.yaml
     reason: |
-      Why: extensions block exists without summon — sub-agents cannot be delegated to.
-      Goose requires summon extension for delegation. Without it, load() and delegate()
-      are unavailable, breaking sub-agent orchestration for e2e tests that may need
-      to delegate verification steps.
-      Type: JJ1 — Add summon extension to extensions list.
-      Goose-expert verdict: CONFORM — Goose requires summon extension in extensions list
-      for sub-agent delegation. Adding it is the correct fix.
-      Ref: https://goose-docs.ai/docs/mcp/summon-mcp/
-    type: JJ1
-    priority: 0.82
+      Why: Original e2e-verify-german-fixes.yaml archived after NN1 split.
+      The monolithic agent is replaced by orchestrator + 4 sub-agents.
+      Type: NN1 — Archive original after split.
+
+  - type: update_sot
+    file: .state/workflows.yaml
+    operation: register 5 new agents (1 orchestrator + 4 sub-agents)
+    reason: |
+      Why: After NN1 split, the orchestrator and sub-agents must be registered
+      in the SOT (workflows.yaml) for discovery and delegation.
+      Type: NN1 — SOT registration.
+
+    reason: |
+      Why: e2e-verify-german-fixes.yaml has 7 distinct roles (analyze, validate,
+      report, design, read) violating single-responsibility principle.
+      Design: Split into orchestrator (sub_mas-e2e-verify-director) + 4 sub-agents
+      (test-runner, report-writer, code-reader, design-validator).
+      The orchestrator delegates via summon extension; each sub-agent has 1 role.
+      Original archived to recipe/sub/legacy/.
+      Type: NN1 — Multi-role agent split into orchestrator + sub-agents.
+      Goose-expert: Not required (NN1 not in mandatory consultation prefix list).
+    type: NN1
+    priority: 0.58
     current_chars: 0
     target_chars: 0
 
   # ---------------------------------------------------------------
-  # F-378 — JJ1: e2e-verify-phoenix-fixes.yaml missing summon extension
-  # Goose-expert verdict: CONFORM (from ranked_findings.yaml)
+  # F-1525 — NN3: e2e-verify-german-fixes.yaml scope_bloat
+  # Design split by domain boundaries
   # ---------------------------------------------------------------
-  - file: recipe/e2e-verify-phoenix-fixes.yaml
-    field: extensions
-    from: |-
-      extensions:
-      - type: builtin
-        name: developer
-        display_name: Developer
+  - type: create_sub_agent
+    file: recipe/sub/sub_mas-e2e-recipe-validator.yaml
+    content:
+      name: e2e-recipe-validator
+      version: 1.0.0
+      description: Validates recipe files for correctness
+      instructions: |
+        # E2E Recipe Validator
+
+        You are a recipe validation specialist.
+        Validate recipe YAML files for syntax, structure, and conventions.
+
+        ## Core Instructions
+        1. Read recipe files
+        2. Validate YAML syntax
+        3. Check required fields
+        4. Report validation results
+      prompt: |
+        ⛔ I am e2e-recipe-validator (v1.0.0) | MODE-CHECK: mas-engineer | 📋 E2E-RECIPE-VALIDATOR (v1.0.0)
+        ⛛ ONLY validate recipes — no modifications. → Give Result as Report back
+      settings:
         timeout: 300
-        bundled: true
-    to: |-
-      extensions:
-      - type: platform
-        name: summon
-      - type: builtin
-        name: developer
-        display_name: Developer
+        max_steps: 20
+        temperature: 0.3
+
+  - type: create_sub_agent
+    file: recipe/sub/sub_mas-e2e-test-validator.yaml
+    content:
+      name: e2e-test-validator
+      version: 1.0.0
+      description: Validates test files and test results
+      instructions: |
+        # E2E Test Validator
+
+        You are a test validation specialist.
+        Validate test files, test output, and test coverage.
+
+        ## Core Instructions
+        1. Read test files
+        2. Execute and validate test output
+        3. Check test coverage
+        4. Report validation results
+      prompt: |
+        ⛔ I am e2e-test-validator (v1.0.0) | MODE-CHECK: mas-engineer | 🧪 E2E-TEST-VALIDATOR (v1.0.0)
+        ⛛ ONLY validate tests — no modifications. → Give Result as Report back
+      settings:
+        timeout: 600
+        max_steps: 30
+        temperature: 0.3
+
+  - type: create_sub_agent
+    file: recipe/sub/sub_mas-e2e-session-validator.yaml
+    content:
+      name: e2e-session-validator
+      version: 1.0.0
+      description: Validates session data and logs
+      instructions: |
+        # E2E Session Validator
+
+        You are a session validation specialist.
+        Validate session logs, execution traces, and historical data.
+
+        ## Core Instructions
+        1. Read session logs
+        2. Validate execution traces
+        3. Check for anomalies
+        4. Report validation results
+      prompt: |
+        ⛔ I am e2e-session-validator (v1.0.0) | MODE-CHECK: mas-engineer | 📊 E2E-SESSION-VALIDATOR (v1.0.0)
+        ⛛ ONLY validate sessions — no modifications. → Give Result as Report back
+      settings:
         timeout: 300
-        bundled: true
+        max_steps: 20
+        temperature: 0.3
+
     reason: |
-      Why: extensions block exists without summon — sub-agents cannot be delegated to.
-      Goose requires summon extension for delegation. Without it, load() and delegate()
-      are unavailable, breaking sub-agent orchestration for e2e tests that may need
-      to delegate verification steps.
-      Type: JJ1 — Add summon extension to extensions list.
-      Goose-expert verdict: CONFORM — Goose requires summon extension in extensions list
-      for sub-agent delegation. Adding it is the correct fix.
-      Ref: https://goose-docs.ai/docs/mcp/summon-mcp/
-    type: JJ1
-    priority: 0.82
+      Why: e2e-verify-german-fixes.yaml has scope_bloat covering 4 domains
+      (recipe, test, session) in a single agent. Design: Split by domain
+      into 3 domain-specific sub-agents (recipe-validator, test-validator,
+      session-validator) managed by the orchestrator from NN1 patch.
+      Type: NN3 — Scope bloat split by domain boundaries.
+      Goose-expert: Not required (NN3 not in mandatory consultation prefix list).
+    type: NN3
+    priority: 0.58
     current_chars: 0
     target_chars: 0
 
 skipped:
-  - finding_id: F-274
-    reason: "Already fixed in live file — sub_mas-framework-scanner.yaml already has settings: {timeout: 600, max_steps: 100, temperature: 0.3}. Finding was from backup recipe/.backups/20260722_130627/sub_mas-framework-scanner.yaml."
-    why_skipped: "Finding references backup file; live file is already correct."
-  - finding_id: F-290
-    reason: "Already fixed in live file — security-scanner.yaml already has settings: {timeout: 600, max_steps: 100, temperature: 0.3}. Finding was from backup recipe/.backups/20260722_130633/security-scanner.yaml."
-    why_skipped: "Finding references backup file; live file is already correct."
+  - finding_id: F-1208
+    reason: "False positive — sub_mas-seo-researcher.yaml has NO explicit extensions: block. Goose auto-injects summon for sub_recipes when no explicit extensions block exists. Per goose_verdict already in finding: 'Only flag if extensions: block exists AND summon is missing.'"
+    why_skipped: "No explicit extensions: block → Goose auto-injects summon. No patch needed."
+    goose_verdict: "RESTRICTED — Goose auto-injects summon. Only flag if extensions: block exists AND summon is missing."
+
+  - finding_id: F-1250
+    reason: "False positive — sub_mas-social-media-manager.yaml has NO explicit extensions: block. Same logic as F-1208. Goose auto-injects summon for sub_recipes."
+    why_skipped: "No explicit extensions: block → Goose auto-injects summon. No patch needed."
+    goose_verdict: "RESTRICTED — Goose auto-injects summon. Only flag if extensions: block exists AND summon is missing."
