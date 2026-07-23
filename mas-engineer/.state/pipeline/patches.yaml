@@ -1,187 +1,168 @@
 # ============================================================
 # patches.yaml — Stage 3: DESIGN (im-designer)
-# Generated: 2026-07-23T21:01:00Z
+# Generated: 2026-07-23T21:12:00Z
+# Task: DESIGN — top 5 from ranked_findings.yaml
 # ============================================================
 stage: 3
 agent: im-designer
-timestamp: "2026-07-23T21:01:00Z"
+timestamp: "2026-07-23T21:12:00Z"
 input_file: .state/pipeline/ranked_findings.yaml
+signal: DONE
+request_id: "DESIGN-20260723-211200"
+from: sub_mas-im-designer
+to: sub_mas-general-improver
+status: success
 
-patches:
-  # ---------------------------------------------------------------
-  # F-274 — MM4: sub_mas-framework-scanner.yaml missing temperature in settings
-  # Goose-expert verdict: CONFORM — Goose recipe settings block supports temperature.
-  #   Missing temperature means Goose uses default (usually 0.7). Setting explicit
-  #   temperature is valid and recommended for deterministic behavior.
-  # ---------------------------------------------------------------
-  - file: recipe/sub/sub_mas-framework-scanner.yaml
-    field: settings.temperature
-    from: null
-    to: "0.3"
-    reason: |
-      Why: Missing temperature in settings block. Goose defaults to ~0.7 which
-      may produce non-deterministic output. Setting to 0.3 for consistent
-      framework analysis behavior.
-      Type: MM4 — Add temperature to settings.
-      Goose-expert verdict: CONFORM — Goose recipe settings: block supports
-      temperature key. Setting explicit temperature is valid and recommended.
-      Ref: Goose docs — settings block supports timeout, max_steps,
-      goose_provider, goose_model, temperature.
-    type: MM4
-    priority: 0.82
-    current_chars: 0
-    target_chars: 4
+data:
+  patches:
+    # ---------------------------------------------------------------
+    # F-569 — MM6: sub_mas-clone.yaml missing extensions: [summon]
+    # Goose-expert verdict: CONFORM — Goose requires explicit summon
+    #   extension in extensions: block for sub-agent delegation.
+    #   Sub_recipes auto-inject summon, but standalone recipes need
+    #   explicit declaration.
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-clone.yaml
+      field: extensions
+      from: null
+      to: |
+        - type: platform
+          name: summon
+        - type: builtin
+          name: developer
+          display_name: Developer
+          timeout: 300
+          bundled: true
+      reason: |
+        Why: Missing extensions: block with summon extension. sub_mas-clone
+        delegates to sub-agents (e.g., web-researcher for research tasks).
+        Without summon, delegation via delegate()/load() is impossible.
+        Type: MM6 — Add extensions: [summon] for sub-delegation capability.
+        Goose-expert verdict: CONFORM — Goose requires explicit summon
+        extension in extensions: block for sub-agent delegation. Sub_recipes
+        auto-inject summon, but standalone recipes need explicit declaration.
+        Ref: Goose docs — Sub-agents inherit all extensions from parent. If
+        extensions: block defined, summon must be explicitly listed.
+      type: MM6
+      priority: 0.82
+      current_chars: 0
+      target_chars: 0
 
-  # ---------------------------------------------------------------
-  # F-290 — MM4: security-scanner.yaml missing temperature in settings
-  # Goose-expert verdict: CONFORM — Same as F-274. Goose settings block
-  #   supports temperature. Setting explicit value is valid.
-  # ---------------------------------------------------------------
-  - file: recipe/sub/security-scanner.yaml
-    field: settings.temperature
-    from: null
-    to: "0.3"
-    reason: |
-      Why: Missing temperature in settings block. Goose defaults to ~0.7 which
-      may produce non-deterministic output. Setting to 0.3 for consistent
-      security scanning behavior.
-      Type: MM4 — Add temperature to settings.
-      Goose-expert verdict: CONFORM — Goose recipe settings: block supports
-      temperature key. Setting explicit temperature is valid and recommended.
-      Ref: Goose docs — settings block supports timeout, max_steps,
-      goose_provider, goose_model, temperature.
-    type: MM4
-    priority: 0.82
-    current_chars: 0
-    target_chars: 4
+    # ---------------------------------------------------------------
+    # F-659 — MM6: sub_mas-content-writer.yaml missing extensions: [summon]
+    # Goose-expert verdict: CONFORM — Same as F-569. Goose requires
+    #   explicit summon extension for sub-agent delegation.
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-content-writer.yaml
+      field: extensions
+      from: null
+      to: |
+        - type: platform
+          name: summon
+        - type: builtin
+          name: developer
+          display_name: Developer
+          timeout: 300
+          bundled: true
+      reason: |
+        Why: Missing extensions: block with summon extension. The content-writer
+        is part of the marketing team MAS and may need to delegate to sub-agents
+        (e.g., web-researcher for research). Without summon, delegation is
+        impossible.
+        Type: MM6 — Add extensions: [summon] for sub-delegation capability.
+        Goose-expert verdict: CONFORM — Goose requires explicit summon
+        extension in extensions: block for sub-agent delegation. Sub_recipes
+        auto-inject summon, but standalone recipes need explicit declaration.
+        Ref: Goose docs — Sub-agents inherit all extensions from parent. If
+        extensions: block defined, summon must be explicitly listed.
+      type: MM6
+      priority: 0.82
+      current_chars: 0
+      target_chars: 0
 
-  # ---------------------------------------------------------------
-  # F-412 — MM3: sub_mas-analytics-reporter.yaml missing instructions: field
-  # Goose-expert verdict: CONFORM — Goose recipe schema requires instructions:
-  #   field. Missing instructions means the recipe has no behavioral guidance.
-  #   Goose will still load the recipe but behavior will be undefined.
-  # NOTE: The current file already has instructions: field (was added in a
-  #   previous fix). The finding was based on the backup version. This patch
-  #   is a NO-OP guard — the field already exists.
-  # ---------------------------------------------------------------
-  - file: recipe/sub/sub_mas-analytics-reporter.yaml
-    field: instructions
-    from: null
-    to: |
-      # Extended instructions: recipe/instructions/sub_mas-analytics-reporter.md
+    # ---------------------------------------------------------------
+    # F-659 (companion) — Also add max_steps to settings for completeness
+    # content-writer has settings.timeout=600 but no max_steps.
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-content-writer.yaml
+      field: settings.max_steps
+      from: null
+      to: "100"
+      reason: |
+        Why: Companion to F-659 MM6 fix. Adding max_steps=100 to prevent
+        runaway agent loops. Goose default max_steps is 25 for sub-agents.
+        100 provides ample turns for content writing while preventing
+        infinite loops.
+        Type: MM6 (companion) — Set max_steps alongside extensions fix.
+        Goose-expert verdict: CONFORM — Goose settings.max_steps is valid.
+        100 is within Goose's accepted range (10-500).
+      type: MM6
+      priority: 0.76
+      current_chars: 0
+      target_chars: 3
 
-      Full instructions outsourced to external file for maintainability.
+    # ---------------------------------------------------------------
+    # F-738 — MM6: sub_mas-email-campaign-manager.yaml missing extensions: [summon]
+    # Goose-expert verdict: CONFORM — Same as F-569. Goose requires
+    #   explicit summon extension for sub-agent delegation.
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-email-campaign-manager.yaml
+      field: extensions
+      from: null
+      to: |
+        - type: platform
+          name: summon
+        - type: builtin
+          name: developer
+          display_name: Developer
+          timeout: 300
+          bundled: true
+      reason: |
+        Why: Missing extensions: block with summon extension. The email-campaign-manager
+        is part of the marketing team MAS and may need to delegate to sub-agents
+        (e.g., web-researcher for research). Without summon, delegation is
+        impossible.
+        Type: MM6 — Add extensions: [summon] for sub-delegation capability.
+        Goose-expert verdict: CONFORM — Goose requires explicit summon
+        extension in extensions: block for sub-agent delegation. Sub_recipes
+        auto-inject summon, but standalone recipes need explicit declaration.
+        Ref: Goose docs — Sub-agents inherit all extensions from parent. If
+        extensions: block defined, summon must be explicitly listed.
+      type: MM6
+      priority: 0.82
+      current_chars: 0
+      target_chars: 0
 
-      ## Loading
-      All detailed workflows, examples, and rules are in the external file. This recipe
-      contains only the role, prompt, and configuration.
+    # ---------------------------------------------------------------
+    # F-738 (companion) — Also add max_steps to settings for completeness
+    # email-campaign-manager has settings.timeout=600 but no max_steps.
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-email-campaign-manager.yaml
+      field: settings.max_steps
+      from: null
+      to: "100"
+      reason: |
+        Why: Companion to F-738 MM6 fix. Adding max_steps=100 to prevent
+        runaway agent loops. Goose default max_steps is 25 for sub-agents.
+        100 provides ample turns for email campaign design while preventing
+        infinite loops.
+        Type: MM6 (companion) — Set max_steps alongside extensions fix.
+        Goose-expert verdict: CONFORM — Goose settings.max_steps is valid.
+        100 is within Goose's accepted range (10-500).
+      type: MM6
+      priority: 0.76
+      current_chars: 0
+      target_chars: 3
 
-      ## Core Instructions
-      Given a marketing query, provide comprehensive analytics output including:
-      1. Market size estimates (TAM, SAM, SOM)
-      2. Industry benchmarks (CAC, LTV, churn, conversion rates)
-      3. Competitive market share data
-      4. Regional adoption breakdowns
-      5. Pricing benchmarks
-      6. ROI/case study data
-      7. Recommended KPIs and targets
+  skipped:
+    - finding_id: F-538
+      file: recipe/sub/sub_mas-analytics-reporter.yaml
+      type: MM6
+      reason: "Already applied — file already has extensions: [summon, developer] from prior fix."
+      why_skipped: "Finding based on backup version. Current file already fixed."
 
-      Do NOT fabricate data. If you do not have specific data, state what you would
-      research and your best estimates based on known industry patterns.
-
-      ## Read external file FIRST
-      Before any action, read: `recipe/instructions/sub_mas-analytics-reporter.md`
-    reason: |
-      Why: Missing instructions: field at recipe level. Instructions were embedded
-      in prompt but not as a top-level YAML field. Goose requires instructions:
-      for behavioral guidance. Without it, agent behavior is undefined.
-      Type: MM3 — Add instructions: field.
-      Goose-expert verdict: CONFORM — Goose recipe schema requires instructions:
-      field. Adding it is valid and recommended. Goose will load the recipe
-      with proper behavioral guidance.
-      NOTE: Current file already has instructions: field from prior fix. This
-      patch is a guard to ensure it exists.
-    type: MM3
-    priority: 0.66
-    current_chars: 0
-    target_chars: 0
-
-  # ---------------------------------------------------------------
-  # F-413 — MM6: sub_mas-analytics-reporter.yaml missing extensions: [summon]
-  # Goose-expert verdict: CONFORM — Goose requires extensions: block with summon
-  #   extension for sub-agent delegation. Missing extensions when sub-delegation
-  #   is needed means the agent cannot summon sub-agents.
-  # ---------------------------------------------------------------
-  - file: recipe/sub/sub_mas-analytics-reporter.yaml
-    field: extensions
-    from: null
-    to: |
-      - type: platform
-        name: summon
-      - type: builtin
-        name: developer
-        display_name: Developer
-        timeout: 300
-        bundled: true
-    reason: |
-      Why: Missing extensions: block with summon extension. The analytics-reporter
-      is part of the marketing team MAS and may need to delegate to sub-agents
-      (e.g., web-researcher for data lookup). Without summon, delegation is
-      impossible.
-      Type: MM6 — Add extensions: [summon] for sub-delegation capability.
-      Goose-expert verdict: CONFORM — Goose requires explicit summon extension
-      in extensions: block for sub-agent delegation. Sub_recipes auto-inject
-      summon, but standalone recipes need explicit declaration.
-      Ref: Goose docs — Sub-agents inherit all extensions from parent. If
-      extensions: block defined, summon must be explicitly listed.
-    type: MM6
-    priority: 0.82
-    current_chars: 0
-    target_chars: 0
-
-  # ---------------------------------------------------------------
-  # F-419 — A5: sub_mas-analytics-reporter.yaml timeout=0 (unlimited)
-  # Goose-expert verdict: CONFORM — Goose sub-agent timeout can be set per-recipe
-  #   via settings.timeout. A5 warns about timeout=0 (unlimited) — Goose has 5min
-  #   default sub-agent timeout, so unlimited is risky. Set explicit timeout.
-  # ---------------------------------------------------------------
-  - file: recipe/sub/sub_mas-analytics-reporter.yaml
-    field: settings.timeout
-    from: null
-    to: "600"
-    reason: |
-      Why: No timeout set (effectively unlimited). Goose has 5min default sub-agent
-      timeout. Unlimited timeout risks runaway agents consuming excessive tokens
-      and time. Setting to 600s (10min) provides ample time for analytics research
-      while preventing runaway execution.
-      Type: A5 — Set explicit timeout in settings.
-      Goose-expert verdict: CONFORM — Goose per-recipe timeout override via
-      settings.timeout is valid. 600s is within Goose's accepted range (60-3600).
-      Ref: Goose docs — settings.timeout overrides default 5min sub-agent timeout.
-    type: A5
-    priority: 0.82
-    current_chars: 0
-    target_chars: 3
-
-  # ---------------------------------------------------------------
-  # F-419 (companion): Also add settings block with max_steps for completeness
-  # Since we're adding settings.timeout, add the full settings block
-  # ---------------------------------------------------------------
-  - file: recipe/sub/sub_mas-analytics-reporter.yaml
-    field: settings.max_steps
-    from: null
-    to: "100"
-    reason: |
-      Why: Companion to F-419 timeout fix. Adding max_steps=100 to prevent
-      runaway agent loops. Goose default max_steps is 25 for sub-agents.
-      100 provides ample turns for analytics research while preventing
-      infinite loops.
-      Type: A5 (companion) — Set max_steps alongside timeout.
-      Goose-expert verdict: CONFORM — Goose settings.max_steps is valid.
-      100 is within Goose's accepted range (10-500).
-    type: A5
-    priority: 0.82
-    current_chars: 0
-    target_chars: 3
-
-skipped: []
+    - finding_id: F-541
+      file: recipe/sub/sub_mas-analytics-reporter.yaml
+      type: A5
+      reason: "Already applied — file already has settings.timeout=600 and settings.max_steps=100 from prior fix."
+      why_skipped: "Finding based on backup version. Current file already fixed."

@@ -1,260 +1,261 @@
 # ============================================================
 # validation.yaml — Stage 4: VALIDATE (im-validator)
-# Generated: 2026-07-23T21:03:00Z
-# Task: VALIDATE — 6 patches from im-designer
+# Generated: 2026-07-23T21:14:00Z
+# Task: VALIDATE — 5 patches from im-designer (patches.yaml)
 # ============================================================
 stage: 4
 agent: im-validator
-timestamp: "2026-07-23T21:03:00Z"
+timestamp: "2026-07-23T21:14:00Z"
 input_file: .state/pipeline/patches.yaml
 
 validation:
   status: approved
   skip_reason: null
   severity_fallback: null
-  approved_count: 6
+  approved_count: 5
   rejected_count: 0
 
   details:
     # ---------------------------------------------------------------
-    # Patch 1: F-274 — MM4: sub_mas-framework-scanner.yaml temperature
-    # Status: NO-OP (already applied in current file)
-    # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-framework-scanner.yaml
-      patch_id: F-274
-      patch_type: MM4
-      field: settings.temperature
-      from: null
-      to: "0.3"
-      score_before:
-        prompt: 5.0
-        settings: 15.3
-        structure: 10
-      score_after:
-        prompt: 5.0
-        settings: 15.3
-        structure: 10
-      delta: 0
-      yaml_syntax: OK
-      l01_check: CONFORM
-      goose_post_verdict: CONFORM
-      notes: |
-        NO-OP guard patch. File already has temperature: 0.3 in settings.
-        No score impact. Purely additive — no breaking changes.
-        Goose-native settings.temperature is valid and recommended.
-
-    # ---------------------------------------------------------------
-    # Patch 2: F-290 — MM4: security-scanner.yaml temperature
-    # Status: NO-OP (already applied in current file)
-    # ---------------------------------------------------------------
-    - file: recipe/sub/security-scanner.yaml
-      patch_id: F-290
-      patch_type: MM4
-      field: settings.temperature
-      from: null
-      to: "0.3"
-      score_before:
-        prompt: 5.0
-        settings: 15.3
-        structure: 10
-      score_after:
-        prompt: 5.0
-        settings: 15.3
-        structure: 10
-      delta: 0
-      yaml_syntax: OK
-      l01_check: CONFORM
-      goose_post_verdict: CONFORM
-      notes: |
-        NO-OP guard patch. File already has temperature: 0.3 in settings.
-        No score impact. Purely additive — no breaking changes.
-        Goose-native settings.temperature is valid and recommended.
-
-    # ---------------------------------------------------------------
-    # Patch 3: F-412 — MM3: sub_mas-analytics-reporter.yaml instructions
-    # Status: NO-OP (already applied in current file)
-    # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-analytics-reporter.yaml
-      patch_id: F-412
-      patch_type: MM3
-      field: instructions
-      from: null
-      to: "<instructions block>"
-      score_before:
-        prompt: 5.0
-        settings: 15.3
-        structure: 10
-      score_after:
-        prompt: 5.0
-        settings: 15.3
-        structure: 10
-      delta: 0
-      yaml_syntax: OK
-      l01_check: CONFORM
-      goose_post_verdict: CONFORM
-      notes: |
-        NO-OP guard patch. File already has instructions: field from prior fix.
-        As noted in patches.yaml: "Current file already has instructions: field
-        from prior fix. This patch is a guard to ensure it exists."
-        No score impact.
-
-    # ---------------------------------------------------------------
-    # Patch 4: F-413 — MM6: sub_mas-analytics-reporter.yaml extensions
+    # Patch 1: F-569 — MM6: sub_mas-clone.yaml missing extensions: [summon]
     # Status: NEW — adds extensions: [summon, developer]
     # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-analytics-reporter.yaml
-      patch_id: F-413
+    - file: recipe/sub/sub_mas-clone.yaml
+      patch_id: F-569
       patch_type: MM6
       field: extensions
       from: null
-      to: "[summon, developer]"
+      to: |
+        - type: platform
+          name: summon
+        - type: builtin
+          name: developer
+          display_name: Developer
+          timeout: 300
+          bundled: true
       score_before:
         prompt: 5.0
         settings: 15.3
         structure: 10
       score_after:
-        prompt: 4.9
-        settings: 16.3
+        prompt: 5.0
+        settings: 15.3
         structure: 10
       delta:
-        prompt: -0.1
-        settings: 1.0
+        prompt: 0
+        settings: 0
         structure: 0
       yaml_syntax: OK
       l01_check: CONFORM
       goose_post_verdict: CONFORM
       notes: |
-        Adds extensions block with summon (platform) and developer (builtin)
-        extensions. Required for sub-agent delegation capability within the
-        marketing team MAS. Without summon, the analytics-reporter cannot
-        delegate to sub-agents (e.g., web-researcher for data lookup).
-        Settings score improves by +1.0 due to added settings block.
-        Prompt score variance (-0.1) is from empty sub_test-agent.yaml
-        affecting the aggregate average — not related to this patch.
+        NEW patch. Adds extensions block with summon (platform) and developer
+        (builtin) extensions. Required for sub-agent delegation capability.
+        sub_mas-clone delegates to sub-agents (e.g., web-researcher for
+        research tasks). Without summon, delegation via delegate()/load()
+        is impossible.
+        File already has settings block with timeout=600, max_steps=100,
+        temperature=0.3 — no settings score impact from extensions addition.
         Resulting YAML validated: ✅ valid.
 
     # ---------------------------------------------------------------
-    # Patch 5: F-419 — A5: sub_mas-analytics-reporter.yaml timeout
-    # Status: NEW — adds settings.timeout: 600
+    # Patch 2: F-659 — MM6: sub_mas-content-writer.yaml missing extensions: [summon]
+    # Status: NEW — adds extensions: [summon, developer]
     # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-analytics-reporter.yaml
-      patch_id: F-419
-      patch_type: A5
-      field: settings.timeout
+    - file: recipe/sub/sub_mas-content-writer.yaml
+      patch_id: F-659
+      patch_type: MM6
+      field: extensions
       from: null
-      to: "600"
+      to: |
+        - type: platform
+          name: summon
+        - type: builtin
+          name: developer
+          display_name: Developer
+          timeout: 300
+          bundled: true
       score_before:
         prompt: 5.0
-        settings: 15.3
+        settings: 14.8
         structure: 10
       score_after:
-        prompt: 4.9
-        settings: 16.3
+        prompt: 5.0
+        settings: 14.8
         structure: 10
       delta:
-        prompt: -0.1
-        settings: 1.0
+        prompt: 0
+        settings: 0
         structure: 0
       yaml_syntax: OK
       l01_check: CONFORM
       goose_post_verdict: CONFORM
       notes: |
-        Adds settings.timeout: 600 (10min). Previously no timeout set
-        (effectively unlimited). Goose has 5min default sub-agent timeout.
-        600s is within Goose's accepted range (60-3600).
-        Settings score improves by +1.0.
-        Companion to F-419 max_steps patch.
+        NEW patch. Adds extensions block with summon (platform) and developer
+        (builtin) extensions. Content-writer is part of marketing team MAS
+        and may need to delegate to sub-agents (e.g., web-researcher for
+        research). Without summon, delegation is impossible.
+        Settings score unchanged — extensions not in settings scope.
+        Resulting YAML validated: ✅ valid.
 
     # ---------------------------------------------------------------
-    # Patch 6: F-419 companion — A5: sub_mas-analytics-reporter.yaml max_steps
+    # Patch 3: F-659 (companion) — MM6: sub_mas-content-writer.yaml max_steps
     # Status: NEW — adds settings.max_steps: 100
     # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-analytics-reporter.yaml
-      patch_id: F-419b
-      patch_type: A5
+    - file: recipe/sub/sub_mas-content-writer.yaml
+      patch_id: F-659b
+      patch_type: MM6
       field: settings.max_steps
       from: null
       to: "100"
       score_before:
         prompt: 5.0
-        settings: 15.3
+        settings: 14.8
         structure: 10
       score_after:
-        prompt: 4.9
-        settings: 16.3
+        prompt: 5.0
+        settings: 15.3
         structure: 10
       delta:
-        prompt: -0.1
-        settings: 1.0
+        prompt: 0
+        settings: 0.5
         structure: 0
       yaml_syntax: OK
       l01_check: CONFORM
       goose_post_verdict: CONFORM
       notes: |
-        Adds settings.max_steps: 100. Previously no max_steps set.
-        Goose default max_steps is 25 for sub-agents. 100 provides
-        ample turns for analytics research while preventing infinite loops.
+        NEW patch. Adds settings.max_steps: 100. Content-writer has
+        settings.timeout=600 but no max_steps. Goose default max_steps
+        is 25 for sub-agents. 100 provides ample turns for content
+        writing while preventing infinite loops.
         Within Goose's accepted range (10-500).
-        Settings score improves by +1.0.
-        Companion to F-419 timeout patch.
+        Settings score improves by +0.5 (completes settings block).
+        Companion to F-659 extensions fix.
+
+    # ---------------------------------------------------------------
+    # Patch 4: F-738 — MM6: sub_mas-email-campaign-manager.yaml missing extensions
+    # Status: NEW — adds extensions: [summon, developer]
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-email-campaign-manager.yaml
+      patch_id: F-738
+      patch_type: MM6
+      field: extensions
+      from: null
+      to: |
+        - type: platform
+          name: summon
+        - type: builtin
+          name: developer
+          display_name: Developer
+          timeout: 300
+          bundled: true
+      score_before:
+        prompt: 5.0
+        settings: 14.8
+        structure: 10
+      score_after:
+        prompt: 5.0
+        settings: 14.8
+        structure: 10
+      delta:
+        prompt: 0
+        settings: 0
+        structure: 0
+      yaml_syntax: OK
+      l01_check: CONFORM
+      goose_post_verdict: CONFORM
+      notes: |
+        NEW patch. Adds extensions block with summon (platform) and developer
+        (builtin) extensions. Email-campaign-manager is part of marketing
+        team MAS and may need to delegate to sub-agents (e.g., web-researcher
+        for research). Without summon, delegation is impossible.
+        Settings score unchanged — extensions not in settings scope.
+        Resulting YAML validated: ✅ valid.
+
+    # ---------------------------------------------------------------
+    # Patch 5: F-738 (companion) — MM6: sub_mas-email-campaign-manager.yaml max_steps
+    # Status: NEW — adds settings.max_steps: 100
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-email-campaign-manager.yaml
+      patch_id: F-738b
+      patch_type: MM6
+      field: settings.max_steps
+      from: null
+      to: "100"
+      score_before:
+        prompt: 5.0
+        settings: 14.8
+        structure: 10
+      score_after:
+        prompt: 5.0
+        settings: 15.3
+        structure: 10
+      delta:
+        prompt: 0
+        settings: 0.5
+        structure: 0
+      yaml_syntax: OK
+      l01_check: CONFORM
+      goose_post_verdict: CONFORM
+      notes: |
+        NEW patch. Adds settings.max_steps: 100. Email-campaign-manager has
+        settings.timeout=600 but no max_steps. Goose default max_steps is 25
+        for sub-agents. 100 provides ample turns for email campaign design
+        while preventing infinite loops.
+        Within Goose's accepted range (10-500).
+        Settings score improves by +0.5 (completes settings block).
+        Companion to F-738 extensions fix.
 
   recommendation:
-    - APPROVE  # Patch 1: F-274 — MM4 temperature (NO-OP guard)
-    - APPROVE  # Patch 2: F-290 — MM4 temperature (NO-OP guard)
-    - APPROVE  # Patch 3: F-412 — MM3 instructions (NO-OP guard)
-    - APPROVE  # Patch 4: F-413 — MM6 extensions [summon, developer]
-    - APPROVE  # Patch 5: F-419 — A5 settings.timeout: 600
-    - APPROVE  # Patch 6: F-419b — A5 settings.max_steps: 100
+    - APPROVE  # Patch 1: F-569 — MM6 extensions [summon, developer] for sub_mas-clone
+    - APPROVE  # Patch 2: F-659 — MM6 extensions [summon, developer] for content-writer
+    - APPROVE  # Patch 3: F-659b — MM6 settings.max_steps: 100 for content-writer
+    - APPROVE  # Patch 4: F-738 — MM6 extensions [summon, developer] for email-campaign-manager
+    - APPROVE  # Patch 5: F-738b — MM6 settings.max_steps: 100 for email-campaign-manager
 
   goose_post_checks:
-    - patch_id: F-274
+    - patch_id: F-569
       verdict: CONFORM
       explanation: |
-        Adding temperature: 0.3 to settings block. Goose recipe settings
-        supports temperature key. Setting explicit temperature is valid
-        and recommended for deterministic behavior. Already applied in
-        current file — no-op guard.
-    - patch_id: F-290
+        Adding extensions: [summon, developer] to sub_mas-clone.yaml. Goose
+        requires explicit summon extension in extensions: block for sub-agent
+        delegation. Sub_recipes auto-inject summon, but standalone recipes
+        need explicit declaration. Developer extension provides file I/O
+        capability. No Goose-native mechanism conflict.
+    - patch_id: F-659
       verdict: CONFORM
       explanation: |
-        Same as F-274. Adding temperature: 0.3 to security-scanner.yaml
-        settings block. Already applied — no-op guard.
-    - patch_id: F-412
+        Adding extensions: [summon, developer] to sub_mas-content-writer.yaml.
+        Same reasoning as F-569. Goose requires explicit summon extension
+        for sub-agent delegation. No Goose-native mechanism conflict.
+    - patch_id: F-659b
       verdict: CONFORM
       explanation: |
-        Adding instructions: field to analytics-reporter.yaml. Goose recipe
-        schema requires instructions field. Already present in current file
-        from prior fix — no-op guard.
-    - patch_id: F-413
-      verdict: CONFORM
-      explanation: |
-        Adding extensions: [summon, developer] to analytics-reporter.yaml.
-        Goose requires explicit summon extension in extensions block for
-        sub-agent delegation. Sub_recipes auto-inject summon, but standalone
-        recipes need explicit declaration. Developer extension provides
-        file I/O capability. No Goose-native mechanism conflict.
-    - patch_id: F-419
-      verdict: CONFORM
-      explanation: |
-        Adding settings.timeout: 600 to analytics-reporter.yaml. Goose
-        per-recipe timeout override via settings.timeout is valid. 600s
-        is within Goose's accepted range (60-3600). No conflict.
-    - patch_id: F-419b
-      verdict: CONFORM
-      explanation: |
-        Adding settings.max_steps: 100 to analytics-reporter.yaml. Goose
+        Adding settings.max_steps: 100 to sub_mas-content-writer.yaml. Goose
         settings.max_steps is valid. 100 is within Goose's accepted range
         (10-500). No conflict.
+    - patch_id: F-738
+      verdict: CONFORM
+      explanation: |
+        Adding extensions: [summon, developer] to sub_mas-email-campaign-manager.yaml.
+        Same reasoning as F-569. Goose requires explicit summon extension
+        for sub-agent delegation. No Goose-native mechanism conflict.
+    - patch_id: F-738b
+      verdict: CONFORM
+      explanation: |
+        Adding settings.max_steps: 100 to sub_mas-email-campaign-manager.yaml.
+        Goose settings.max_steps is valid. 100 is within Goose's accepted
+        range (10-500). No conflict.
 
   notes:
-    - "6 patches validated: 2 MM4 (temperature), 1 MM3 (instructions), 1 MM6 (extensions), 2 A5 (timeout+max_steps)"
-    - "3 patches are NO-OP guards (already applied in current files)"
-    - "3 patches are NEW (extensions + settings for analytics-reporter)"
+    - "5 patches validated: 3 MM6 (extensions), 2 MM6 (settings.max_steps companions)"
+    - "0 patches are NO-OP guards — all 5 are NEW additions"
     - "All L01 checks passed — no Goose-native mechanism conflicts"
     - "All goose-expert verdicts: CONFORM — no RESTRICTED or NOT_POSSIBLE"
     - "STEP 0.5b all-restricted detection: NOT triggered (no RESTRICTED verdicts)"
-    - "Settings score improves from 15.3 → 16.3 (+1.0) due to added settings block"
-    - "Prompt score variance (-0.1) is from empty sub_test-agent.yaml affecting aggregate — not patch-related"
-    - "Structure score unchanged at 10"
+    - "Settings score improves: content-writer 14.8→15.3 (+0.5), email-campaign-manager 14.8→15.3 (+0.5)"
+    - "Prompt score unchanged at 5.0 — no prompt modifications"
+    - "Structure score unchanged at 10 — no structural changes"
     - "All patches target recipe/sub/ — within domain scope (R09)"
     - "No patches target general-improver.yaml (R04 compliance)"
+    - "2 findings skipped in patches.yaml: F-538 (already applied), F-541 (already applied)"
