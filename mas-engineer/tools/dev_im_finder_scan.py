@@ -72,6 +72,29 @@ def _is_path_excluded(path):
             return True
     return False
 
+# Directories to skip during scan (excluded by name match)
+EXCLUDED_DIR_NAMES = {
+    '.backups',          # mas-engineer auto-backups (R27 fix)
+    '.git',              # version control
+    'node_modules',      # dependencies
+    '__pycache__',       # python bytecode
+}
+# Path patterns to skip (substring match on full path)
+EXCLUDED_PATH_PATTERNS = [
+    '/.config/goose/recipes/',  # external marketing recipes (not mas-engineer)
+    '/.config/goose/sessions/', # goose runtime session data
+    '/.config/goose/memory/',   # goose memory
+    '/.config/goose/workspace/',# goose workspace
+    '/.local/share/goose/',     # goose internal storage
+]
+
+def _is_path_excluded(path):
+    """Check if a path matches any exclusion pattern."""
+    for pat in EXCLUDED_PATH_PATTERNS:
+        if pat in path:
+            return True
+    return False
+
 for SCAN_DIR in SCAN_DIRS:
     if not os.path.isdir(SCAN_DIR):
         continue
