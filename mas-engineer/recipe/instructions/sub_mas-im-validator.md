@@ -43,6 +43,52 @@ This is a different check from im-designer's pre-design consultation:
    → orchestrator will trigger ROLLBACK.
 4. If verdict is RESTRICTED: include caveat in `details[].notes`.
 
+### STEP 0.5b — ALL-RESTRICTED DETECTION (MM6 fix by Hermes 2026-07-23)
+
+**If ALL patches in this charge received verdict=RESTRICTED from goose-expert,
+this is the "all-restricted" pattern. The charge is too ambitious for the
+current Goose-architecture constraints and must be recycled with a lower
+severity ceiling instead of being silently skipped.**
+
+Detection logic:
+```python
+verdicts = [check.verdict for check in goose_post_checks]
+if len(verdicts) > 0 and all(v == "RESTRICTED" for v in verdicts):
+    # All restricted — set skip signal
+    validation.status = "skipped_charge"
+    validation.skip_reason = "all_restricted"
+    validation.severity_fallback = "next_lower_band"  # orchestrator interprets
+    # Do NOT set approved_count=0 + status=rejected (that signals hard failure)
+    # Do NOT set status=partial (that mixes success/failure)
+```
+
+Output additions (when all_restricted):
+- `validation.status: "skipped_charge"`
+- `validation.skip_reason: "all_restricted"`
+- `validation.severity_fallback: "next_lower_band"`
+- `validation.approved_count: 0`
+- `validation.rejected_count: 0` (RESTRICTED is not a rejection, it's a deferral)
+- `validation.notes[]: "All N patches returned RESTRICTED from goose-expert.
+   Severity ceiling too high for current architecture. Recycled with
+   severity_fallback=next_lower_band."`
+
+**Why this matters (lesson L04 from 2026-07-23 0/9 e2e):**
+Without this signal, general-improver sees `status=approved + 0 approved_count`
+and treats the run as a no-op (apply-only with 0 patches). The pipeline ends
+without flagging that the charge was wrong, and the next 24h-cooldown blocks
+re-attempts with the same severity ceiling.
+
+With `status=skipped_charge`, general-improver:
+1. Logs the skip reason to .state/changes.json
+2. Re-runs im-finder + im-rank with `severity_ceiling` one band lower
+3. Re-enters DESIGN → VALIDATE → APPLY for the new charge
+4. Does NOT consume a 24h-cooldown slot (recycle is not a full improvement)
+
+**When to NOT trigger this signal:**
+- If ANY patch got CONFORM → use normal logic, do not skip
+- If ANY patch got NOT POSSIBLE → use ROLLBACK logic, not skip
+- If 0 patches in charge (empty) → not applicable
+
 **Why this is mandatory:**
 - im-validator previously only ran YAML-syntax and score-checks. It caught
   bad numbers but missed architectural issues (e.g. applying a patch that
@@ -61,7 +107,7 @@ It reads the previous stage's output and writes its own.
 
 **Input:**   `[SOT-PATCHES]` (from im-designer)
 **Output:**  `.state/pipeline/validation.yaml`
-**Schema:**  validation: {status, details, recommendation[], approved_count, rejected_count, goose_post_checks?}
+**Schema:**  validation: {status, skip_reason?, severity_fallback?, details, recommendation[], approved_count, rejected_count, goose_post_checks?, notes?}
 **Next:**    -> general-improver (reads Output file)
 
 ```yaml
@@ -117,6 +163,9 @@ For each change:
   - IF score < before → recommendation: KEEP (might still be net positive)
   - IF goose-expert NOT_POSSIBLE → recommendation: ROLLBACK (critical)
   - IF score >= before AND goose-conform → recommendation: APPROVE
+  - **NEW (MM6 fix): IF all goose-expert verdicts are RESTRICTED →
+    recommendation: RECYCLE_CHARGE (not APPROVE, not ROLLBACK).
+    See STEP 0.5b for full signal.**
 
 ## OUTPUT
 As YAML-Struct via stdout:
@@ -127,12 +176,15 @@ As YAML-Struct via stdout:
 - status: ok | warn | error
 - data:
     validation:
-      status: approved | partial | rejected
+      status: approved | partial | rejected | **skipped_charge** (NEW)
+      skip_reason: null | **"all_restricted"** (NEW, when status=skipped_charge)
+      severity_fallback: null | **"next_lower_band"** (NEW, when status=skipped_charge)
       details: [{file, score_before, score_after, delta, notes}]
-      recommendation: ["ROLLBACK"|"KEEP"|"APPROVE", ...]
+      recommendation: ["ROLLBACK"|"KEEP"|"APPROVE"|**"RECYCLE_CHARGE"** (NEW), ...]
       approved_count: int
       rejected_count: int
       goose_post_checks: [{patch_id, verdict, explanation}]
+      notes: ["..."] (NEW — populated when all_restricted, see STEP 0.5b)
 
 ⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions.
 dev_rule_checker.py enforces.
