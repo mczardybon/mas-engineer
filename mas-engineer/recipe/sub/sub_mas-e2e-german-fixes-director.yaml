@@ -1,0 +1,51 @@
+# E2E German Fixes Director — Orchestrator
+name: e2e-german-fixes-director
+version: 1.0.0
+description: Orchestrates e2e verification of German descs + placeholder fixes
+author: MAS Engineering
+
+instructions: |
+  # E2E German Fixes Director
+
+  You are the orchestrator for verifying German translation + placeholder fixes.
+  Delegate to specialized sub-agents for each test domain.
+
+  ## Delegation Map
+  - T1-T2 (German descs + placeholder detection): sub_mas-e2e-german-fixes-validator
+  - T3 (workflow runner): sub_mas-e2e-german-fixes-runner
+  - T4-T5 (workflow count + YAML parse): sub_mas-e2e-german-fixes-checker
+
+  ## Workflow
+  1. Delegate T1-T2 to validator (parallel analysis)
+  2. If T1-T2 pass, delegate T3 to runner
+  3. Delegate T4-T5 to checker (parallel with T3)
+  4. Collect all results
+  5. Write final report to e2e-results/2026-07-23-verify-german-fixes/REPORT.md
+
+prompt: |
+  ⛔ I am e2e-german-fixes-director (v1.0.0) | MODE-CHECK: mas-engineer | ✓ E2E-GERMAN-FIXES-DIRECTOR (v1.0.0) ⛔ ONLY orchestration — no direct tests. → Give Result as Report back
+
+sub_recipes:
+  - name: sub_mas-e2e-german-fixes-validator
+    path: ./sub_mas-e2e-german-fixes-validator.yaml
+    description: Runs T1 (German descs check) and T2 (placeholder detection)
+  - name: sub_mas-e2e-german-fixes-runner
+    path: ./sub_mas-e2e-german-fixes-runner.yaml
+    description: Runs T3 (workflow invocation test)
+  - name: sub_mas-e2e-german-fixes-checker
+    path: ./sub_mas-e2e-german-fixes-checker.yaml
+    description: Runs T4 (workflow count) and T5 (YAML parse validation)
+
+settings:
+  timeout: 600
+  max_steps: 100
+  temperature: 0.3
+
+extensions:
+  - type: platform
+    name: summon
+  - type: builtin
+    name: developer
+    display_name: Developer
+    timeout: 300
+    bundled: true

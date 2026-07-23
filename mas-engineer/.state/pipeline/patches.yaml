@@ -1,168 +1,147 @@
-# ============================================================
-# patches.yaml — Stage 3: DESIGN (im-designer)
-# Generated: 2026-07-23T21:12:00Z
-# Task: DESIGN — top 5 from ranked_findings.yaml
-# ============================================================
 stage: 3
 agent: im-designer
-timestamp: "2026-07-23T21:12:00Z"
+timestamp: '2026-07-23T22:57:00+00:00'
 input_file: .state/pipeline/ranked_findings.yaml
 signal: DONE
-request_id: "DESIGN-20260723-211200"
+request_id: im-designer-auto-001
 from: sub_mas-im-designer
 to: sub_mas-general-improver
 status: success
-
 data:
   patches:
-    # ---------------------------------------------------------------
-    # F-569 — MM6: sub_mas-clone.yaml missing extensions: [summon]
-    # Goose-expert verdict: CONFORM — Goose requires explicit summon
-    #   extension in extensions: block for sub-agent delegation.
-    #   Sub_recipes auto-inject summon, but standalone recipes need
-    #   explicit declaration.
-    # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-clone.yaml
-      field: extensions
-      from: null
-      to: |
-        - type: platform
-          name: summon
-        - type: builtin
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
-      reason: |
-        Why: Missing extensions: block with summon extension. sub_mas-clone
-        delegates to sub-agents (e.g., web-researcher for research tasks).
-        Without summon, delegation via delegate()/load() is impossible.
-        Type: MM6 — Add extensions: [summon] for sub-delegation capability.
-        Goose-expert verdict: CONFORM — Goose requires explicit summon
-        extension in extensions: block for sub-agent delegation. Sub_recipes
-        auto-inject summon, but standalone recipes need explicit declaration.
-        Ref: Goose docs — Sub-agents inherit all extensions from parent. If
-        extensions: block defined, summon must be explicitly listed.
-      type: MM6
-      priority: 0.82
-      current_chars: 0
-      target_chars: 0
-
-    # ---------------------------------------------------------------
-    # F-659 — MM6: sub_mas-content-writer.yaml missing extensions: [summon]
-    # Goose-expert verdict: CONFORM — Same as F-569. Goose requires
-    #   explicit summon extension for sub-agent delegation.
-    # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-content-writer.yaml
-      field: extensions
-      from: null
-      to: |
-        - type: platform
-          name: summon
-        - type: builtin
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
-      reason: |
-        Why: Missing extensions: block with summon extension. The content-writer
-        is part of the marketing team MAS and may need to delegate to sub-agents
-        (e.g., web-researcher for research). Without summon, delegation is
-        impossible.
-        Type: MM6 — Add extensions: [summon] for sub-delegation capability.
-        Goose-expert verdict: CONFORM — Goose requires explicit summon
-        extension in extensions: block for sub-agent delegation. Sub_recipes
-        auto-inject summon, but standalone recipes need explicit declaration.
-        Ref: Goose docs — Sub-agents inherit all extensions from parent. If
-        extensions: block defined, summon must be explicitly listed.
-      type: MM6
-      priority: 0.82
-      current_chars: 0
-      target_chars: 0
-
-    # ---------------------------------------------------------------
-    # F-659 (companion) — Also add max_steps to settings for completeness
-    # content-writer has settings.timeout=600 but no max_steps.
-    # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-content-writer.yaml
-      field: settings.max_steps
-      from: null
-      to: "100"
-      reason: |
-        Why: Companion to F-659 MM6 fix. Adding max_steps=100 to prevent
-        runaway agent loops. Goose default max_steps is 25 for sub-agents.
-        100 provides ample turns for content writing while preventing
-        infinite loops.
-        Type: MM6 (companion) — Set max_steps alongside extensions fix.
-        Goose-expert verdict: CONFORM — Goose settings.max_steps is valid.
-        100 is within Goose's accepted range (10-500).
-      type: MM6
-      priority: 0.76
-      current_chars: 0
-      target_chars: 3
-
-    # ---------------------------------------------------------------
-    # F-738 — MM6: sub_mas-email-campaign-manager.yaml missing extensions: [summon]
-    # Goose-expert verdict: CONFORM — Same as F-569. Goose requires
-    #   explicit summon extension for sub-agent delegation.
-    # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-email-campaign-manager.yaml
-      field: extensions
-      from: null
-      to: |
-        - type: platform
-          name: summon
-        - type: builtin
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
-      reason: |
-        Why: Missing extensions: block with summon extension. The email-campaign-manager
-        is part of the marketing team MAS and may need to delegate to sub-agents
-        (e.g., web-researcher for research). Without summon, delegation is
-        impossible.
-        Type: MM6 — Add extensions: [summon] for sub-delegation capability.
-        Goose-expert verdict: CONFORM — Goose requires explicit summon
-        extension in extensions: block for sub-agent delegation. Sub_recipes
-        auto-inject summon, but standalone recipes need explicit declaration.
-        Ref: Goose docs — Sub-agents inherit all extensions from parent. If
-        extensions: block defined, summon must be explicitly listed.
-      type: MM6
-      priority: 0.82
-      current_chars: 0
-      target_chars: 0
-
-    # ---------------------------------------------------------------
-    # F-738 (companion) — Also add max_steps to settings for completeness
-    # email-campaign-manager has settings.timeout=600 but no max_steps.
-    # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-email-campaign-manager.yaml
-      field: settings.max_steps
-      from: null
-      to: "100"
-      reason: |
-        Why: Companion to F-738 MM6 fix. Adding max_steps=100 to prevent
-        runaway agent loops. Goose default max_steps is 25 for sub-agents.
-        100 provides ample turns for email campaign design while preventing
-        infinite loops.
-        Type: MM6 (companion) — Set max_steps alongside extensions fix.
-        Goose-expert verdict: CONFORM — Goose settings.max_steps is valid.
-        100 is within Goose's accepted range (10-500).
-      type: MM6
-      priority: 0.76
-      current_chars: 0
-      target_chars: 3
-
-  skipped:
-    - finding_id: F-538
-      file: recipe/sub/sub_mas-analytics-reporter.yaml
-      type: MM6
-      reason: "Already applied — file already has extensions: [summon, developer] from prior fix."
-      why_skipped: "Finding based on backup version. Current file already fixed."
-
-    - finding_id: F-541
-      file: recipe/sub/sub_mas-analytics-reporter.yaml
-      type: A5
-      reason: "Already applied — file already has settings.timeout=600 and settings.max_steps=100 from prior fix."
-      why_skipped: "Finding based on backup version. Current file already fixed."
+  - finding_id: F-375
+    type: JJ1
+    file: recipe/sub/sub_mas-e2e-german-fixes-checker.yaml
+    field: extensions
+    from: '[{"type": "builtin", "name": "developer", "display_name": "Developer", "timeout": 300, "bundled": true}]'
+    to: '[{"type": "platform", "name": "summon"}, {"type": "builtin", "name": "developer", "display_name": "Developer", "timeout":
+      300, "bundled": true}]'
+    reason: 'Why: extensions list missing summon — sub-agents cannot delegate. Goose-expert verdict: CONFORM — Goose accepts
+      type:platform,name:summon as canonical pattern.'
+    priority: 0.82
+    severity: medium
+    current_chars: 104
+    target_chars: 144
+    goose_verdict: CONFORM
+  - finding_id: F-381
+    type: N2
+    file: recipe/sub/sub_mas-e2e-german-fixes-checker.yaml
+    field: extensions
+    from: '[{"type": "builtin", "name": "developer", "display_name": "Developer", "timeout": 300, "bundled": true}]'
+    to: '[{"type": "platform", "name": "summon"}, {"type": "builtin", "name": "developer", "display_name": "Developer", "timeout":
+      300, "bundled": true}]'
+    reason: 'Why: missing delegation capability (no summon). N2 recipe update — add summon to enable delegate/load tools.'
+    priority: 0.82
+    severity: medium
+    current_chars: 104
+    target_chars: 144
+    goose_verdict: CONFORM
+  - finding_id: F-403
+    type: JJ1
+    file: recipe/sub/sub_mas-e2e-german-fixes-runner.yaml
+    field: extensions
+    from: '[{"type": "builtin", "name": "developer", "display_name": "Developer", "timeout": 300, "bundled": true}]'
+    to: '[{"type": "platform", "name": "summon"}, {"type": "builtin", "name": "developer", "display_name": "Developer", "timeout":
+      300, "bundled": true}]'
+    reason: 'Why: extensions list missing summon — sub-agents cannot delegate. Goose-expert verdict: CONFORM — Goose accepts
+      type:platform,name:summon as canonical pattern.'
+    priority: 0.82
+    severity: medium
+    current_chars: 104
+    target_chars: 144
+    goose_verdict: CONFORM
+  - finding_id: F-409
+    type: N2
+    file: recipe/sub/sub_mas-e2e-german-fixes-runner.yaml
+    field: extensions
+    from: '[{"type": "builtin", "name": "developer", "display_name": "Developer", "timeout": 300, "bundled": true}]'
+    to: '[{"type": "platform", "name": "summon"}, {"type": "builtin", "name": "developer", "display_name": "Developer", "timeout":
+      300, "bundled": true}]'
+    reason: 'Why: missing delegation capability (no summon). N2 recipe update — add summon to enable delegate/load tools.'
+    priority: 0.82
+    severity: medium
+    current_chars: 104
+    target_chars: 144
+    goose_verdict: CONFORM
+  - finding_id: F-418
+    type: JJ1
+    file: recipe/sub/sub_mas-e2e-german-fixes-validator.yaml
+    field: extensions
+    from: '[{"type": "builtin", "name": "developer", "display_name": "Developer", "timeout": 300, "bundled": true}]'
+    to: '[{"type": "platform", "name": "summon"}, {"type": "builtin", "name": "developer", "display_name": "Developer", "timeout":
+      300, "bundled": true}]'
+    reason: 'Why: extensions list missing summon — sub-agents cannot delegate. Goose-expert verdict: CONFORM — Goose accepts
+      type:platform,name:summon as canonical pattern.'
+    priority: 0.82
+    severity: medium
+    current_chars: 104
+    target_chars: 144
+    goose_verdict: CONFORM
+  - finding_id: F-424
+    type: N2
+    file: recipe/sub/sub_mas-e2e-german-fixes-validator.yaml
+    field: extensions
+    from: '[{"type": "builtin", "name": "developer", "display_name": "Developer", "timeout": 300, "bundled": true}]'
+    to: '[{"type": "platform", "name": "summon"}, {"type": "builtin", "name": "developer", "display_name": "Developer", "timeout":
+      300, "bundled": true}]'
+    reason: 'Why: missing delegation capability (no summon). N2 recipe update — add summon to enable delegate/load tools.'
+    priority: 0.82
+    severity: medium
+    current_chars: 104
+    target_chars: 144
+    goose_verdict: CONFORM
+  - finding_id: F-899
+    type: JJ1
+    file: recipe/sub/sub_mas-seo-researcher.yaml
+    field: extensions
+    from: '[{"type": "builtin", "name": "developer", "display_name": "Developer", "timeout": 300, "bundled": true}]'
+    to: '[{"type": "platform", "name": "summon"}, {"type": "builtin", "name": "developer", "display_name": "Developer", "timeout":
+      300, "bundled": true}]'
+    reason: 'Why: extensions list missing summon — sub-agents cannot delegate. Goose-expert verdict: CONFORM — Goose accepts
+      type:platform,name:summon as canonical pattern.'
+    priority: 0.82
+    severity: medium
+    current_chars: 104
+    target_chars: 144
+    goose_verdict: CONFORM
+  - finding_id: F-906
+    type: N2
+    file: recipe/sub/sub_mas-seo-researcher.yaml
+    field: extensions
+    from: '[{"type": "builtin", "name": "developer", "display_name": "Developer", "timeout": 300, "bundled": true}]'
+    to: '[{"type": "platform", "name": "summon"}, {"type": "builtin", "name": "developer", "display_name": "Developer", "timeout":
+      300, "bundled": true}]'
+    reason: 'Why: missing delegation capability (no summon). N2 recipe update — add summon to enable delegate/load tools.'
+    priority: 0.82
+    severity: medium
+    current_chars: 104
+    target_chars: 144
+    goose_verdict: CONFORM
+  - finding_id: F-942
+    type: JJ1
+    file: recipe/sub/sub_mas-social-media-manager.yaml
+    field: extensions
+    from: '[{"type": "builtin", "name": "developer", "display_name": "Developer", "timeout": 300, "bundled": true}]'
+    to: '[{"type": "platform", "name": "summon"}, {"type": "builtin", "name": "developer", "display_name": "Developer", "timeout":
+      300, "bundled": true}]'
+    reason: 'Why: extensions list missing summon — sub-agents cannot delegate. Goose-expert verdict: CONFORM — Goose accepts
+      type:platform,name:summon as canonical pattern.'
+    priority: 0.82
+    severity: medium
+    current_chars: 104
+    target_chars: 144
+    goose_verdict: CONFORM
+  - finding_id: F-949
+    type: N2
+    file: recipe/sub/sub_mas-social-media-manager.yaml
+    field: extensions
+    from: '[{"type": "builtin", "name": "developer", "display_name": "Developer", "timeout": 300, "bundled": true}]'
+    to: '[{"type": "platform", "name": "summon"}, {"type": "builtin", "name": "developer", "display_name": "Developer", "timeout":
+      300, "bundled": true}]'
+    reason: 'Why: missing delegation capability (no summon). N2 recipe update — add summon to enable delegate/load tools.'
+    priority: 0.82
+    severity: medium
+    current_chars: 104
+    target_chars: 144
+    goose_verdict: CONFORM
+  skipped: []

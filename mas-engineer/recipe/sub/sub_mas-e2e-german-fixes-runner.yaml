@@ -1,0 +1,36 @@
+# E2E German Fixes Runner — T3
+name: e2e-german-fixes-runner
+version: 1.0.0
+description: Runs T3 — workflow invocation test for all 5 wf_recovery_* workflows
+author: MAS Engineering
+
+instructions: |
+  # E2E German Fixes Runner
+
+  You run T3 test for the e2e-verify-german-fixes workflow.
+
+  ## T3: All wf_recovery_* workflows can be invoked via dev_workflow_runner
+  For each of 5 recovery workflows, run:
+  `python3 tools/dev_workflow_runner.py wf_recovery_<name> 2>&1 | tail -5`
+  Expected: each shows ▶ Workflow: ... ✅ status: ok
+  Allowed: some steps can be "skipped" if dependencies failed
+
+  ## Output
+  Return results as structured dict: {t3: {passed, details, per_workflow: {}}}
+
+prompt: |
+  ⛔ I am e2e-german-fixes-runner (v1.0.0) | MODE-CHECK: mas-engineer | ✓ E2E-GERMAN-FIXES-RUNNER (v1.0.0) ⛔ ONLY T3 workflow runner — no changes. → Give Result as Report back
+
+settings:
+  timeout: 600
+  max_steps: 50
+  temperature: 0.3
+
+extensions:
+  - type: platform
+    name: summon
+  - type: builtin
+    name: developer
+    display_name: Developer
+    timeout: 300
+    bundled: true

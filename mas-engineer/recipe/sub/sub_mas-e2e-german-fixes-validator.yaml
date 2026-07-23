@@ -1,0 +1,72 @@
+# E2E German Fixes Validator — T1 + T2
+name: e2e-german-fixes-validator
+version: 1.0.0
+description: Validates German descs (T1) and placeholder detection (T2)
+author: MAS Engineering
+
+instructions: |
+  # E2E German Fixes Validator
+
+  You run T1 and T2 tests for the e2e-verify-german-fixes workflow.
+
+  ## T1: 0 German descs remaining in task_workflows
+  Run:
+  ```python
+  python3 -c "
+  import yaml, re
+  data = yaml.safe_load(open('.state/workflows.yaml'))
+  GERMAN = ['und','der','die','das','mit','für','von','aus','bei',
+    'Schritt','Inhalt','Prüfung','Erstellen','letzten','zeigen',
+    'anzeigen','wieder','Beliebig','Bitt','erzeugen','ändern',
+    'ausführen','überprüfen','ermitteln','wiederherstellen',
+    'initialisieren','konfigurieren']
+  twfs = data.get('task_workflows', {})
+  bad = []
+  for name, wf in twfs.items():
+    desc = wf.get('desc', '')
+    found = [w for w in GERMAN if re.search(rf'\\b{w}\\b', desc, re.IGNORECASE)]
+    if found:
+      bad.append((name, desc, found))
+  print(f'German descs remaining: {len(bad)}')
+  for b in bad: print(b)
+  "
+  ```
+  Expected: 0
+
+  ## T2: No placeholder (echo-only) steps in wf_recovery_*
+  Run:
+  ```python
+  python3 -c "
+  import yaml
+  data = yaml.safe_load(open('.state/workflows.yaml'))
+  recovery = [n for n in data['task_workflows'] if n.startswith('wf_recovery_')]
+  for n in recovery:
+    wf = data['task_workflows'][n]
+    steps = wf.get('steps', [])
+    echo_only = all(s.get('cmd','').strip().startswith('echo ') for s in steps)
+    print(f'{n}: {len(steps)} steps, placeholder={echo_only}')
+    for s in steps:
+      print(f'    - {s.get(\"id\")}: {s.get(\"cmd\", s.get(\"action\"))[:80]}')
+  "
+  ```
+  Expected: 0 workflows with placeholder=True
+
+  ## Output
+  Return results as structured dict: {t1: {passed, details}, t2: {passed, details}}
+
+prompt: |
+  ⛔ I am e2e-german-fixes-validator (v1.0.0) | MODE-CHECK: mas-engineer | ✓ E2E-GERMAN-FIXES-VALIDATOR (v1.0.0) ⛔ ONLY T1+T2 validation — no changes. → Give Result as Report back
+
+settings:
+  timeout: 600
+  max_steps: 50
+  temperature: 0.3
+
+extensions:
+  - type: platform
+    name: summon
+  - type: builtin
+    name: developer
+    display_name: Developer
+    timeout: 300
+    bundled: true

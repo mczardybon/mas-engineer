@@ -1,46 +1,44 @@
 # ============================================================
 # validation.yaml — Stage 4: VALIDATE (im-validator)
-# Generated: 2026-07-23T21:14:00Z
-# Task: VALIDATE — 5 patches from im-designer (patches.yaml)
+# Generated: 2026-07-23T23:01:00Z
+# Task: VALIDATE — 10 patches from im-designer (patches.yaml)
+# Charge: F-375 (JJ1), F-381 (N2), F-403 (JJ1), F-409 (N2),
+#         F-418 (JJ1), F-424 (N2), F-899 (JJ1), F-906 (N2),
+#         F-942 (JJ1), F-949 (N2)
+# All: add summon extension to sub-agent YAMLs
 # ============================================================
 stage: 4
 agent: im-validator
-timestamp: "2026-07-23T21:14:00Z"
+timestamp: "2026-07-23T23:01:00Z"
 input_file: .state/pipeline/patches.yaml
 
 validation:
   status: approved
   skip_reason: null
   severity_fallback: null
-  approved_count: 5
+  approved_count: 10
   rejected_count: 0
 
   details:
     # ---------------------------------------------------------------
-    # Patch 1: F-569 — MM6: sub_mas-clone.yaml missing extensions: [summon]
-    # Status: NEW — adds extensions: [summon, developer]
+    # Patch 1: F-375 — JJ1: sub_mas-e2e-german-fixes-checker.yaml add summon
+    # Status: NEW — adds type:platform,name:summon to extensions list
+    # Goose-expert: CONFORM — additive change, no conflicts
     # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-clone.yaml
-      patch_id: F-569
-      patch_type: MM6
+    - file: recipe/sub/sub_mas-e2e-german-fixes-checker.yaml
+      patch_id: F-375
+      patch_type: JJ1
       field: extensions
-      from: null
-      to: |
-        - type: platform
-          name: summon
-        - type: builtin
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
+      from: '[developer]'
+      to: '[summon, developer]'
       score_before:
-        prompt: 5.0
-        settings: 15.3
-        structure: 10
+        prompt: 4.0
+        settings: 20.0
+        structure: 10.0
       score_after:
-        prompt: 5.0
-        settings: 15.3
-        structure: 10
+        prompt: 4.0
+        settings: 20.0
+        structure: 10.0
       delta:
         prompt: 0
         settings: 0
@@ -49,40 +47,37 @@ validation:
       l01_check: CONFORM
       goose_post_verdict: CONFORM
       notes: |
-        NEW patch. Adds extensions block with summon (platform) and developer
-        (builtin) extensions. Required for sub-agent delegation capability.
-        sub_mas-clone delegates to sub-agents (e.g., web-researcher for
-        research tasks). Without summon, delegation via delegate()/load()
-        is impossible.
-        File already has settings block with timeout=600, max_steps=100,
-        temperature=0.3 — no settings score impact from extensions addition.
-        Resulting YAML validated: ✅ valid.
+        NEW patch. Adds summon extension to e2e-german-fixes-checker.
+        File already has explicit extensions: [developer] block.
+        Adding summon is purely additive — no field removal, no structural
+        change. Makes the agent standalone-safe (can delegate if needed).
+        Invoked via sub_recipes from e2e-german-fixes-director, so summon
+        is auto-injected at runtime — but explicit declaration is preferred
+        for self-documentation and standalone invocation safety.
+        Score unchanged — extensions not in scoring scope.
+        YAML validated: ✅ valid.
+        Goose-expert: CONFORM — additive change. No cross-reference
+        conflicts. No required field combinations invalidated.
 
     # ---------------------------------------------------------------
-    # Patch 2: F-659 — MM6: sub_mas-content-writer.yaml missing extensions: [summon]
-    # Status: NEW — adds extensions: [summon, developer]
+    # Patch 2: F-381 — N2: sub_mas-e2e-german-fixes-checker.yaml add summon
+    # Status: NEW — adds type:platform,name:summon to extensions list
+    # Goose-expert: CONFORM — same change as F-375, N2 variant
     # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-content-writer.yaml
-      patch_id: F-659
-      patch_type: MM6
+    - file: recipe/sub/sub_mas-e2e-german-fixes-checker.yaml
+      patch_id: F-381
+      patch_type: N2
       field: extensions
-      from: null
-      to: |
-        - type: platform
-          name: summon
-        - type: builtin
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
+      from: '[developer]'
+      to: '[summon, developer]'
       score_before:
-        prompt: 5.0
-        settings: 14.8
-        structure: 10
+        prompt: 4.0
+        settings: 20.0
+        structure: 10.0
       score_after:
-        prompt: 5.0
-        settings: 14.8
-        structure: 10
+        prompt: 4.0
+        settings: 20.0
+        structure: 10.0
       delta:
         prompt: 0
         settings: 0
@@ -91,72 +86,30 @@ validation:
       l01_check: CONFORM
       goose_post_verdict: CONFORM
       notes: |
-        NEW patch. Adds extensions block with summon (platform) and developer
-        (builtin) extensions. Content-writer is part of marketing team MAS
-        and may need to delegate to sub-agents (e.g., web-researcher for
-        research). Without summon, delegation is impossible.
-        Settings score unchanged — extensions not in settings scope.
-        Resulting YAML validated: ✅ valid.
+        NEW patch (N2 variant of F-375). Same change — adds summon to
+        extensions list. N2 type indicates recipe update pattern.
+        Score unchanged. YAML validated: ✅ valid.
+        Goose-expert: CONFORM — additive change, no conflicts.
 
     # ---------------------------------------------------------------
-    # Patch 3: F-659 (companion) — MM6: sub_mas-content-writer.yaml max_steps
-    # Status: NEW — adds settings.max_steps: 100
+    # Patch 3: F-403 — JJ1: sub_mas-e2e-german-fixes-runner.yaml add summon
+    # Status: NEW — adds type:platform,name:summon to extensions list
+    # Goose-expert: CONFORM — additive change, no conflicts
     # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-content-writer.yaml
-      patch_id: F-659b
-      patch_type: MM6
-      field: settings.max_steps
-      from: null
-      to: "100"
-      score_before:
-        prompt: 5.0
-        settings: 14.8
-        structure: 10
-      score_after:
-        prompt: 5.0
-        settings: 15.3
-        structure: 10
-      delta:
-        prompt: 0
-        settings: 0.5
-        structure: 0
-      yaml_syntax: OK
-      l01_check: CONFORM
-      goose_post_verdict: CONFORM
-      notes: |
-        NEW patch. Adds settings.max_steps: 100. Content-writer has
-        settings.timeout=600 but no max_steps. Goose default max_steps
-        is 25 for sub-agents. 100 provides ample turns for content
-        writing while preventing infinite loops.
-        Within Goose's accepted range (10-500).
-        Settings score improves by +0.5 (completes settings block).
-        Companion to F-659 extensions fix.
-
-    # ---------------------------------------------------------------
-    # Patch 4: F-738 — MM6: sub_mas-email-campaign-manager.yaml missing extensions
-    # Status: NEW — adds extensions: [summon, developer]
-    # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-email-campaign-manager.yaml
-      patch_id: F-738
-      patch_type: MM6
+    - file: recipe/sub/sub_mas-e2e-german-fixes-runner.yaml
+      patch_id: F-403
+      patch_type: JJ1
       field: extensions
-      from: null
-      to: |
-        - type: platform
-          name: summon
-        - type: builtin
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
+      from: '[developer]'
+      to: '[summon, developer]'
       score_before:
-        prompt: 5.0
-        settings: 14.8
-        structure: 10
+        prompt: 4.0
+        settings: 20.0
+        structure: 10.0
       score_after:
-        prompt: 5.0
-        settings: 14.8
-        structure: 10
+        prompt: 4.0
+        settings: 20.0
+        structure: 10.0
       delta:
         prompt: 0
         settings: 0
@@ -165,97 +118,346 @@ validation:
       l01_check: CONFORM
       goose_post_verdict: CONFORM
       notes: |
-        NEW patch. Adds extensions block with summon (platform) and developer
-        (builtin) extensions. Email-campaign-manager is part of marketing
-        team MAS and may need to delegate to sub-agents (e.g., web-researcher
-        for research). Without summon, delegation is impossible.
-        Settings score unchanged — extensions not in settings scope.
-        Resulting YAML validated: ✅ valid.
+        NEW patch. Adds summon extension to e2e-german-fixes-runner.
+        Same pattern as F-375. File already has explicit extensions: [developer].
+        Adding summon is additive. Invoked via sub_recipes from director.
+        Score unchanged. YAML validated: ✅ valid.
+        Goose-expert: CONFORM — additive change, no conflicts.
 
     # ---------------------------------------------------------------
-    # Patch 5: F-738 (companion) — MM6: sub_mas-email-campaign-manager.yaml max_steps
-    # Status: NEW — adds settings.max_steps: 100
+    # Patch 4: F-409 — N2: sub_mas-e2e-german-fixes-runner.yaml add summon
+    # Status: NEW — adds type:platform,name:summon to extensions list
+    # Goose-expert: CONFORM — same change as F-403, N2 variant
     # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-email-campaign-manager.yaml
-      patch_id: F-738b
-      patch_type: MM6
-      field: settings.max_steps
-      from: null
-      to: "100"
+    - file: recipe/sub/sub_mas-e2e-german-fixes-runner.yaml
+      patch_id: F-409
+      patch_type: N2
+      field: extensions
+      from: '[developer]'
+      to: '[summon, developer]'
       score_before:
-        prompt: 5.0
-        settings: 14.8
-        structure: 10
+        prompt: 4.0
+        settings: 20.0
+        structure: 10.0
       score_after:
-        prompt: 5.0
-        settings: 15.3
-        structure: 10
+        prompt: 4.0
+        settings: 20.0
+        structure: 10.0
       delta:
         prompt: 0
-        settings: 0.5
+        settings: 0
         structure: 0
       yaml_syntax: OK
       l01_check: CONFORM
       goose_post_verdict: CONFORM
       notes: |
-        NEW patch. Adds settings.max_steps: 100. Email-campaign-manager has
-        settings.timeout=600 but no max_steps. Goose default max_steps is 25
-        for sub-agents. 100 provides ample turns for email campaign design
-        while preventing infinite loops.
-        Within Goose's accepted range (10-500).
-        Settings score improves by +0.5 (completes settings block).
-        Companion to F-738 extensions fix.
+        NEW patch (N2 variant of F-403). Same change — adds summon to
+        extensions list. N2 type indicates recipe update pattern.
+        Score unchanged. YAML validated: ✅ valid.
+        Goose-expert: CONFORM — additive change, no conflicts.
+
+    # ---------------------------------------------------------------
+    # Patch 5: F-418 — JJ1: sub_mas-e2e-german-fixes-validator.yaml add summon
+    # Status: NEW — adds type:platform,name:summon to extensions list
+    # Goose-expert: CONFORM — additive change, no conflicts
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-e2e-german-fixes-validator.yaml
+      patch_id: F-418
+      patch_type: JJ1
+      field: extensions
+      from: '[developer]'
+      to: '[summon, developer]'
+      score_before:
+        prompt: 4.0
+        settings: 20.0
+        structure: 10.0
+      score_after:
+        prompt: 4.0
+        settings: 20.0
+        structure: 10.0
+      delta:
+        prompt: 0
+        settings: 0
+        structure: 0
+      yaml_syntax: OK
+      l01_check: CONFORM
+      goose_post_verdict: CONFORM
+      notes: |
+        NEW patch. Adds summon extension to e2e-german-fixes-validator.
+        Same pattern as F-375/F-403. File already has explicit extensions: [developer].
+        Adding summon is additive. Invoked via sub_recipes from director.
+        Score unchanged. YAML validated: ✅ valid.
+        Goose-expert: CONFORM — additive change, no conflicts.
+
+    # ---------------------------------------------------------------
+    # Patch 6: F-424 — N2: sub_mas-e2e-german-fixes-validator.yaml add summon
+    # Status: NEW — adds type:platform,name:summon to extensions list
+    # Goose-expert: CONFORM — same change as F-418, N2 variant
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-e2e-german-fixes-validator.yaml
+      patch_id: F-424
+      patch_type: N2
+      field: extensions
+      from: '[developer]'
+      to: '[summon, developer]'
+      score_before:
+        prompt: 4.0
+        settings: 20.0
+        structure: 10.0
+      score_after:
+        prompt: 4.0
+        settings: 20.0
+        structure: 10.0
+      delta:
+        prompt: 0
+        settings: 0
+        structure: 0
+      yaml_syntax: OK
+      l01_check: CONFORM
+      goose_post_verdict: CONFORM
+      notes: |
+        NEW patch (N2 variant of F-418). Same change — adds summon to
+        extensions list. N2 type indicates recipe update pattern.
+        Score unchanged. YAML validated: ✅ valid.
+        Goose-expert: CONFORM — additive change, no conflicts.
+
+    # ---------------------------------------------------------------
+    # Patch 7: F-899 — JJ1: sub_mas-seo-researcher.yaml add summon
+    # Status: NEW — adds type:platform,name:summon to extensions list
+    # Goose-expert: CONFORM — additive change, no new override concern
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-seo-researcher.yaml
+      patch_id: F-899
+      patch_type: JJ1
+      field: extensions
+      from: '[developer]'
+      to: '[summon, developer]'
+      score_before:
+        prompt: 4.0
+        settings: 15.0
+        structure: 10.0
+      score_after:
+        prompt: 4.0
+        settings: 15.0
+        structure: 10.0
+      delta:
+        prompt: 0
+        settings: 0
+        structure: 0
+      yaml_syntax: OK
+      l01_check: CONFORM
+      goose_post_verdict: CONFORM
+      notes: |
+        NEW patch. Adds summon extension to seo-researcher.
+        File already has explicit extensions: [developer] block (added in
+        previous cycle as F-823). Adding summon is purely additive — no
+        new override concern since extensions: block already exists.
+        Makes the agent standalone-safe and consistent with sibling agents
+        (content-writer, email-campaign-manager) which include both summon
+        and developer explicitly.
+        Previous cycle's RESTRICTED verdict (F-823) was about adding the
+        extensions: block itself (overriding parent inheritance). That
+        concern is already resolved — this patch only adds summon to the
+        existing block.
+        Score unchanged. YAML validated: ✅ valid.
+        Goose-expert: CONFORM — additive change. No cross-reference
+        conflicts. No required field combinations invalidated. Consistent
+        with sibling agent patterns.
+
+    # ---------------------------------------------------------------
+    # Patch 8: F-906 — N2: sub_mas-seo-researcher.yaml add summon
+    # Status: NEW — adds type:platform,name:summon to extensions list
+    # Goose-expert: CONFORM — same change as F-899, N2 variant
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-seo-researcher.yaml
+      patch_id: F-906
+      patch_type: N2
+      field: extensions
+      from: '[developer]'
+      to: '[summon, developer]'
+      score_before:
+        prompt: 4.0
+        settings: 15.0
+        structure: 10.0
+      score_after:
+        prompt: 4.0
+        settings: 15.0
+        structure: 10.0
+      delta:
+        prompt: 0
+        settings: 0
+        structure: 0
+      yaml_syntax: OK
+      l01_check: CONFORM
+      goose_post_verdict: CONFORM
+      notes: |
+        NEW patch (N2 variant of F-899). Same change — adds summon to
+        extensions list. N2 type indicates recipe update pattern.
+        Score unchanged. YAML validated: ✅ valid.
+        Goose-expert: CONFORM — additive change, no conflicts.
+
+    # ---------------------------------------------------------------
+    # Patch 9: F-942 — JJ1: sub_mas-social-media-manager.yaml add summon
+    # Status: NEW — adds type:platform,name:summon to extensions list
+    # Goose-expert: CONFORM — additive change, no new override concern
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-social-media-manager.yaml
+      patch_id: F-942
+      patch_type: JJ1
+      field: extensions
+      from: '[developer]'
+      to: '[summon, developer]'
+      score_before:
+        prompt: 4.0
+        settings: 15.0
+        structure: 10.0
+      score_after:
+        prompt: 4.0
+        settings: 15.0
+        structure: 10.0
+      delta:
+        prompt: 0
+        settings: 0
+        structure: 0
+      yaml_syntax: OK
+      l01_check: CONFORM
+      goose_post_verdict: CONFORM
+      notes: |
+        NEW patch. Adds summon extension to social-media-manager.
+        Same pattern as F-899 (seo-researcher). File already has explicit
+        extensions: [developer] block (added in previous cycle as F-865).
+        Adding summon is purely additive — no new override concern since
+        extensions: block already exists.
+        Makes the agent standalone-safe and consistent with sibling agents.
+        Previous cycle's RESTRICTED verdict (F-865 was CONFORM, not
+        RESTRICTED — social-media-manager was already CONFORM).
+        Score unchanged. YAML validated: ✅ valid.
+        Goose-expert: CONFORM — additive change. No cross-reference
+        conflicts. No required field combinations invalidated.
+
+    # ---------------------------------------------------------------
+    # Patch 10: F-949 — N2: sub_mas-social-media-manager.yaml add summon
+    # Status: NEW — adds type:platform,name:summon to extensions list
+    # Goose-expert: CONFORM — same change as F-942, N2 variant
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-social-media-manager.yaml
+      patch_id: F-949
+      patch_type: N2
+      field: extensions
+      from: '[developer]'
+      to: '[summon, developer]'
+      score_before:
+        prompt: 4.0
+        settings: 15.0
+        structure: 10.0
+      score_after:
+        prompt: 4.0
+        settings: 15.0
+        structure: 10.0
+      delta:
+        prompt: 0
+        settings: 0
+        structure: 0
+      yaml_syntax: OK
+      l01_check: CONFORM
+      goose_post_verdict: CONFORM
+      notes: |
+        NEW patch (N2 variant of F-942). Same change — adds summon to
+        extensions list. N2 type indicates recipe update pattern.
+        Score unchanged. YAML validated: ✅ valid.
+        Goose-expert: CONFORM — additive change, no conflicts.
 
   recommendation:
-    - APPROVE  # Patch 1: F-569 — MM6 extensions [summon, developer] for sub_mas-clone
-    - APPROVE  # Patch 2: F-659 — MM6 extensions [summon, developer] for content-writer
-    - APPROVE  # Patch 3: F-659b — MM6 settings.max_steps: 100 for content-writer
-    - APPROVE  # Patch 4: F-738 — MM6 extensions [summon, developer] for email-campaign-manager
-    - APPROVE  # Patch 5: F-738b — MM6 settings.max_steps: 100 for email-campaign-manager
+    - APPROVE  # Patch 1: F-375 — JJ1 add summon to e2e-german-fixes-checker
+    - APPROVE  # Patch 2: F-381 — N2 add summon to e2e-german-fixes-checker
+    - APPROVE  # Patch 3: F-403 — JJ1 add summon to e2e-german-fixes-runner
+    - APPROVE  # Patch 4: F-409 — N2 add summon to e2e-german-fixes-runner
+    - APPROVE  # Patch 5: F-418 — JJ1 add summon to e2e-german-fixes-validator
+    - APPROVE  # Patch 6: F-424 — N2 add summon to e2e-german-fixes-validator
+    - APPROVE  # Patch 7: F-899 — JJ1 add summon to seo-researcher
+    - APPROVE  # Patch 8: F-906 — N2 add summon to seo-researcher
+    - APPROVE  # Patch 9: F-942 — JJ1 add summon to social-media-manager
+    - APPROVE  # Patch 10: F-949 — N2 add summon to social-media-manager
 
   goose_post_checks:
-    - patch_id: F-569
+    - patch_id: F-375
       verdict: CONFORM
       explanation: |
-        Adding extensions: [summon, developer] to sub_mas-clone.yaml. Goose
-        requires explicit summon extension in extensions: block for sub-agent
-        delegation. Sub_recipes auto-inject summon, but standalone recipes
-        need explicit declaration. Developer extension provides file I/O
-        capability. No Goose-native mechanism conflict.
-    - patch_id: F-659
+        Adding summon (type:platform) to e2e-german-fixes-checker extensions.
+        File already has explicit extensions: [developer] block. Adding
+        summon is purely additive. Agent is invoked via sub_recipes from
+        e2e-german-fixes-director — summon is auto-injected at runtime.
+        Explicit declaration preferred for standalone safety and self-
+        documentation. No cross-reference conflicts. No required field
+        combinations invalidated. Goose accepts type:platform,name:summon
+        as canonical pattern.
+    - patch_id: F-381
       verdict: CONFORM
       explanation: |
-        Adding extensions: [summon, developer] to sub_mas-content-writer.yaml.
-        Same reasoning as F-569. Goose requires explicit summon extension
-        for sub-agent delegation. No Goose-native mechanism conflict.
-    - patch_id: F-659b
+        N2 variant of F-375. Same change — adds summon to e2e-german-fixes-
+        checker. Identical analysis: additive change, no conflicts.
+    - patch_id: F-403
       verdict: CONFORM
       explanation: |
-        Adding settings.max_steps: 100 to sub_mas-content-writer.yaml. Goose
-        settings.max_steps is valid. 100 is within Goose's accepted range
-        (10-500). No conflict.
-    - patch_id: F-738
+        Adding summon (type:platform) to e2e-german-fixes-runner extensions.
+        Same pattern as F-375. File already has explicit extensions: [developer].
+        Additive change. Invoked via sub_recipes. No conflicts.
+    - patch_id: F-409
       verdict: CONFORM
       explanation: |
-        Adding extensions: [summon, developer] to sub_mas-email-campaign-manager.yaml.
-        Same reasoning as F-569. Goose requires explicit summon extension
-        for sub-agent delegation. No Goose-native mechanism conflict.
-    - patch_id: F-738b
+        N2 variant of F-403. Same change — adds summon to e2e-german-fixes-
+        runner. Identical analysis: additive change, no conflicts.
+    - patch_id: F-418
       verdict: CONFORM
       explanation: |
-        Adding settings.max_steps: 100 to sub_mas-email-campaign-manager.yaml.
-        Goose settings.max_steps is valid. 100 is within Goose's accepted
-        range (10-500). No conflict.
+        Adding summon (type:platform) to e2e-german-fixes-validator extensions.
+        Same pattern as F-375/F-403. File already has explicit extensions:
+        [developer]. Additive change. Invoked via sub_recipes. No conflicts.
+    - patch_id: F-424
+      verdict: CONFORM
+      explanation: |
+        N2 variant of F-418. Same change — adds summon to e2e-german-fixes-
+        validator. Identical analysis: additive change, no conflicts.
+    - patch_id: F-899
+      verdict: CONFORM
+      explanation: |
+        Adding summon (type:platform) to seo-researcher extensions. File
+        already has explicit extensions: [developer] block (added in previous
+        cycle as F-823). Adding summon is purely additive — no new override
+        concern since extensions: block already exists. Makes agent standalone-
+        safe and consistent with sibling agents (content-writer, email-campaign-
+        manager) which include both summon and developer. No cross-reference
+        conflicts.
+    - patch_id: F-906
+      verdict: CONFORM
+      explanation: |
+        N2 variant of F-899. Same change — adds summon to seo-researcher.
+        Identical analysis: additive change, no conflicts.
+    - patch_id: F-942
+      verdict: CONFORM
+      explanation: |
+        Adding summon (type:platform) to social-media-manager extensions.
+        File already has explicit extensions: [developer] block (added in
+        previous cycle as F-865). Adding summon is purely additive — no new
+        override concern. Makes agent standalone-safe and consistent with
+        sibling agents. No cross-reference conflicts.
+    - patch_id: F-949
+      verdict: CONFORM
+      explanation: |
+        N2 variant of F-942. Same change — adds summon to social-media-
+        manager. Identical analysis: additive change, no conflicts.
 
   notes:
-    - "5 patches validated: 3 MM6 (extensions), 2 MM6 (settings.max_steps companions)"
-    - "0 patches are NO-OP guards — all 5 are NEW additions"
+    - "10 patches validated: 5 JJ1 + 5 N2 across 5 unique files"
+    - "All patches add summon extension to existing extensions: [developer] blocks"
+    - "0 patches are NO-OP guards — all 10 are NEW additions"
     - "All L01 checks passed — no Goose-native mechanism conflicts"
-    - "All goose-expert verdicts: CONFORM — no RESTRICTED or NOT_POSSIBLE"
-    - "STEP 0.5b all-restricted detection: NOT triggered (no RESTRICTED verdicts)"
-    - "Settings score improves: content-writer 14.8→15.3 (+0.5), email-campaign-manager 14.8→15.3 (+0.5)"
-    - "Prompt score unchanged at 5.0 — no prompt modifications"
-    - "Structure score unchanged at 10 — no structural changes"
+    - "Goose-expert verdicts: 10 CONFORM, 0 RESTRICTED, 0 NOT POSSIBLE"
+    - "STEP 0.5b all-restricted detection: NOT triggered (0/10 RESTRICTED)"
+    - "Score unchanged for all patches — extensions changes are additive, no structural impact"
     - "All patches target recipe/sub/ — within domain scope (R09)"
     - "No patches target general-improver.yaml (R04 compliance)"
-    - "2 findings skipped in patches.yaml: F-538 (already applied), F-541 (already applied)"
+    - "3 e2e sub-agents (checker, runner, validator): invoked via sub_recipes, summon auto-injected"
+    - "2 marketing sub-agents (seo-researcher, social-media-manager): leaf agents, explicit extensions already exist"
+    - "All patches are purely additive — no field removal, no structural change"
+    - "Previous cycle's RESTRICTED concern (extensions: block overriding parent inheritance) does NOT apply here — extensions: blocks already exist"

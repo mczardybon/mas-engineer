@@ -165,6 +165,53 @@ and the original failure scenario was never re-run. The user
 flagged this as overclaim. This check prevents recurrence by
 making the pre-push gate reject unbacked strong claims.
 
+
+### Check 10 — e2e regression baseline (behavioral verification)
+
+**Why:** The pre-push validator currently checks STRUCTURE (yaml valid, secrets absent, no overclaims) but not BEHAVIOR. A "commit message says fix" + structure-OK can still ship broken recipes (cf. 602648a claiming 140/140 PASS while only changing 1 line). This check runs the actual e2e suite and fails the push if pass-rate regressed.
+
+**Command (FOREGROUND, ~25-60s, no PTY):**
+```bash
+cd {workspace}
+python3 tools/e2e_run_all.py --quick --no-interactive --no-write-results 2>&1 | tail -30
+```
+
+**Parse output:** look for `✅ All {N} tests passed (100%)` or the summary line. Extract pass-count from the YAML report at the end of stdout (or stderr). The output format is: `Summary: {ok}/{total} passed ({pct}%)` — this is the canonical signal.
+
+**Baseline source:**
+- PRIMARY: last successful `e2e-results/<date>-run-N/raw-results.json` where `summary` shows 100% (or highest known)
+- FALLBACK: hardcoded known-good baseline per run-mode
+  - `quick` mode: 83/83 (as of 2026-07-22)
+  - `full` mode: 139/139 (as of 2026-07-22)
+
+**Block conditions (ANY of):**
+- ⛔ current pass-count < baseline pass-count (regression)
+- ⛔ current pass-rate < baseline pass-rate (regression)
+- ⛔ any previously-passing test now fails (per-test regression)
+- ⛔ command exits non-zero
+
+**Warn conditions:**
+- ⚠️ current pass-count == baseline but new test added (informational)
+- ⚠️ baseline file missing (use hardcoded fallback with WARN)
+
+**Note:** This check adds ~25-60s to the pre-push gate. If too slow for interactive use, can be skipped via `MAS_SKIP_E2E_BASELINE=1` env var (operator-initiated only, never auto-skip).
+
+**Evidence file (always written):**
+`.state/pre-push-e2e-baseline.json` — contains:
+```yaml
+checked_at: <ISO-8601>
+baseline_source: <file path or "fallback">
+baseline_pass: <int>
+baseline_total: <int>
+current_pass: <int>
+current_total: <int>
+regression_detected: <bool>
+failing_tests: [<name>, ...]
+command: <full command run>
+```
+
+**Reference:** docs/BUG-BRIEF-2026-07-23.md §3 (verification theater root cause).
+
 ## Output Format
 
 Write a YAML report to `.state/pipeline/pre_push_validation.yaml`:
@@ -180,7 +227,7 @@ data:
     ok: <bool>
     blocked_reasons: [<string>, ...]
     warnings: [<string>, ...]
-  checks_run: 9
+  checks_run: 10
   checks_passed: <int>
   checks_failed: <int>
   timestamp: <ISO-8601>
@@ -190,7 +237,7 @@ data:
 
 - ⛔ NEVER modify any source file — this agent is read-only
 - ⛔ NEVER run `git push` itself — only validate
-- ⛔ NEVER skip a check — all 8 must run
+- ⛔ NEVER skip a check — all 10 must run
 - ⛔ Max 300s timeout total (5 minutes)
 
 CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation.
