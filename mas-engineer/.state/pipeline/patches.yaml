@@ -1,181 +1,37 @@
 stage: 3
 agent: im-designer
-timestamp: '2026-07-23T14:14:04.897154+00:00'
-input_file: .state/pipeline/findings.yaml
-patches:
-- finding_id: F-1392
-  type: NN1
-  file: recipe/sub/code-reviewer.yaml
-  field: architecture
-  from: monolithic agent with 6 roles (analyze, generate, report, scan, find)
-  to: orchestrator + 3 specialized sub-agents (synthesizer, reporter, findings-validator)
-  reason: 'Why: 6 distinct roles violate single-responsibility principle. Split into
-    orchestrator that delegates to specialized sub-agents. Goose-expert verdict: N/A
-    (NN-type not in STEP 0.5 table).'
-  priority: 0.54
-  current_chars: 2702
-  target_chars: ~600 (orchestrator) + 3 x ~200 (sub-agents)
-  sub_patches:
-  - action: create_orchestrator
-    file: recipe/sub/sub_mas-code-reviewer-director.yaml
-    content_preview: Orchestrator with summon extension, delegates to sub_mas-code-reviewer-synthesizer,
-      sub_mas-code-reviewer-reporter, sub_mas-code-reviewer-validator
-  - action: create_sub_agent
-    file: recipe/sub/sub_mas-code-reviewer-synthesizer.yaml
-    content_preview: 'Single role: synthesize findings from static-analyzer + security-scanner'
-  - action: create_sub_agent
-    file: recipe/sub/sub_mas-code-reviewer-reporter.yaml
-    content_preview: 'Single role: generate formatted final report with priorities'
-  - action: create_sub_agent
-    file: recipe/sub/sub_mas-code-reviewer-validator.yaml
-    content_preview: 'Single role: cross-reference and validate findings'
-  - action: archive_original
-    file: recipe/sub/legacy/code-reviewer-ORIGINAL.yaml
-    from: recipe/sub/code-reviewer.yaml
-- finding_id: F-1382
-  type: E1
-  file: recipe/sub/sub_mas-intention-parser.yaml
-  field: prompt
-  from: 'I am intention-parser (v1.0.0) | MODE-CHECK: mas-engineer | 🧠 INTENTION-PARSER
-    (v1.0.0)
-
-
-    Analyze user description → call generator. ⛔⛔⛔⛔⛔ ALWAYS generator (no manual template)
-    ⛔⛔⛔⛔⛔ Confirmation before write/edit
-
-
-
-    # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune).
-    NO YAML-Save without vorherige Syntax-Check.'
-  to: 'I am intention-parser (v1.0.0) | MODE-CHECK: mas-engineer | 🧠 INTENTION-PARSER
-    (v1.0.0)
-
-
-    Analyze user description → call generator. ⛔⛔⛔⛔⛔ ALWAYS generator (no manual template)
-    ⛔⛔⛔⛔⛔ Confirmation before write/edit
-
-
-
-    # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune).
-    NO YAML-Save without vorherige Syntax-Check.
-
-    # Intention Patterns (for pattern detection):
-
-    # - "I need an agent that..." -> sub (default)
-
-    # - "Create an autonomous agent" -> full
-
-    # - "Build a function into existing agent" -> internal
-
-    # - "update/refresh agent {name}" -> --refresh --agent {name}
-
-    # - "update all agents" -> --refresh-all
-
-    # - "show what is missing" -> --dry-run
-
-    # - "what has changed" -> --diff
-
-    # - "may NOT..." -> restrictions.forbidden_paths
-
-    # - "should ONLY..." -> restrictions.allowed_paths
-
-    # - "first X, then Y" -> workflow.steps
-
-    # - "on error cancel" -> on_error: abort
-
-    '
-  reason: 'Why: Intention parser cannot detect patterns without explicit pattern field.
-    Adding pattern definitions enables pattern-based routing. Goose-expert verdict:
-    N/A (E-type not in STEP 0.5 table).'
-  priority: 0.66
-  current_chars: 353
-  target_chars: 900
-- finding_id: F-429
-  type: C1
-  file: recipe/sub/code-reviewer.yaml
-  field: instructions
-  from: '# Extended instructions: recipe/instructions/code-reviewer.md
-
-    Full instructions outsourced to external file for maintainability.
-
-    ## Loading
-
-    All detailed workflows, examples, and rules are in the external file. This recipe
-    contains only the role, prompt, and configuration.
-
-    ## Read external file FIRST
-
-    Before any action, read: `recipe/instructions/code-reviewer.md` '
-  to: "# Extended instructions: recipe/instructions/code-reviewer.md\nFull instructions\
-    \ outsourced to external file for maintainability.\n\n  # Prohibition Markers:\n\
-    \  #   - ONLY synthesis - no independent code scanning\n  #   - NEVER modify source\
-    \ code\n  #   - NEVER execute code from the target\n  #   - NEVER bypass static-analyzer\
-    \ or security-scanner\n\n  ## Loading\nAll detailed workflows, examples, and rules\
-    \ are in the external file. This recipe contains only the role, prompt, and configuration.\n\
-    ## Read external file FIRST\nBefore any action, read: `recipe/instructions/code-reviewer.md` "
-  reason: 'Why: Missing prohibition markers in instructions. Critical steps may not
-    be enforced without explicit markers. Goose-expert verdict: N/A (C-type not in
-    STEP 0.5 table).'
-  priority: 0.64
-  current_chars: 365
-  target_chars: 581
-- finding_id: F-430
-  type: C2
-  file: recipe/sub/code-reviewer.yaml
-  field: instructions
-  from: '# Extended instructions: recipe/instructions/code-reviewer.md
-
-    Full instructions outsourced to external file for maintainability.
-
-    ## Loading
-
-    All detailed workflows, examples, and rules are in the external file. This recipe
-    contains only the role, prompt, and configuration.
-
-    ## Read external file FIRST
-
-    Before any action, read: `recipe/instructions/code-reviewer.md` '
-  to: "# Extended instructions: recipe/instructions/code-reviewer.md\nFull instructions\
-    \ outsourced to external file for maintainability.\n## Loading\nAll detailed workflows,\
-    \ examples, and rules are in the external file. This recipe contains only the\
-    \ role, prompt, and configuration.\n\n  ## Steps:\n  1. Load external instructions\n\
-    \  2. Receive results from static-analyzer + security-scanner\n  3. Cross-reference\
-    \ findings for context\n  4. Prioritize issues (CRITICAL > HIGH > MEDIUM > LOW)\n\
-    \  5. Generate consolidated report with actionable recommendations\n\n  ## Read\
-    \ external file FIRST\nBefore any action, read: `recipe/instructions/code-reviewer.md` "
-  reason: 'Why: Steps not numbered in YAML instructions field. Agent may skip critical
-    phases without explicit numbered steps. Goose-expert verdict: N/A (C-type not
-    in STEP 0.5 table).'
-  priority: 0.48
-  current_chars: 365
-  target_chars: 638
-- finding_id: F-431
-  type: K1
-  file: recipe/sub/code-reviewer.yaml
-  field: instructions
-  from: '# Extended instructions: recipe/instructions/code-reviewer.md
-
-    Full instructions outsourced to external file for maintainability.
-
-    ## Loading
-
-    All detailed workflows, examples, and rules are in the external file. This recipe
-    contains only the role, prompt, and configuration.
-
-    ## Read external file FIRST
-
-    Before any action, read: `recipe/instructions/code-reviewer.md` '
-  to: "# Extended instructions: recipe/instructions/code-reviewer.md\nFull instructions\
-    \ outsourced to external file for maintainability.\n## Loading\nAll detailed workflows,\
-    \ examples, and rules are in the external file. This recipe contains only the\
-    \ role, prompt, and configuration.\n\n  ## Error Handling:\n  - If static-analyzer\
-    \ fails: report partial results from security-scanner only\n  - If security-scanner\
-    \ fails: report partial results from static-analyzer only\n  - If both fail: return\
-    \ error with diagnostic info\n  - Wrap all sub-agent calls in try/except pattern\n\
-    \n  ## Read external file FIRST\nBefore any action, read: `recipe/instructions/code-reviewer.md` "
-  reason: 'Why: Missing try/except error handling in YAML instructions field. Errors
-    may go unhandled during delegation to sub-agents. Goose-expert verdict: N/A (K-type
-    not in STEP 0.5 table).'
-  priority: 0.48
-  current_chars: 365
-  target_chars: 653
+timestamp: '2026-07-23T15:47:00+00:00'
+input_file: .state/pipeline/ranked_findings.yaml
+data:
+  patches: []
+  skipped:
+    - finding_id: F-355
+      type: JJ1
+      file: recipe/e2e-verify-auto-repair.yaml
+      reason: "Goose-expert verdict: CONFORM (patch is unnecessary — recipe only runs shell commands, no sub-agent delegation needed)"
+      why_skipped: "Recipe has explicit extensions: [developer] but does not call delegate() or use sub_recipes. Adding summon would be harmless but unnecessary."
+      goose_verdict: CONFORM
+    - finding_id: F-367
+      type: JJ1
+      file: recipe/e2e-verify-german-fixes.yaml
+      reason: "Goose-expert verdict: CONFORM (patch is unnecessary — recipe only runs shell commands, no sub-agent delegation needed)"
+      why_skipped: "Recipe has explicit extensions: [developer] but does not call delegate() or use sub_recipes. Adding summon would be harmless but unnecessary."
+      goose_verdict: CONFORM
+    - finding_id: F-383
+      type: JJ1
+      file: recipe/e2e-verify-phoenix-fixes.yaml
+      reason: "Goose-expert verdict: CONFORM (patch is unnecessary — recipe only runs shell commands, no sub-agent delegation needed)"
+      why_skipped: "Recipe has explicit extensions: [developer] but does not call delegate() or use sub_recipes. Adding summon would be harmless but unnecessary."
+      goose_verdict: CONFORM
+    - finding_id: F-501
+      type: MM6
+      file: recipe/sub/sub_mas-analytics-reporter.yaml
+      reason: "Goose-expert verdict: CONFORM (patch is unnecessary — no extensions: block means inheritance from parent marketing-orchestrator which has summon)"
+      why_skipped: "No extensions: block defined → inherits all extensions from parent (marketing-orchestrator has summon). Adding explicit extensions: [summon] would break inheritance and lose developer tools."
+      goose_verdict: CONFORM
+    - finding_id: F-526
+      type: MM6
+      file: recipe/sub/sub_mas-clone.yaml
+      reason: "Goose-expert verdict: RESTRICTED (patch may be needed depending on parent context — parent dev-mas-engineer has summon, so inheritance works)"
+      why_skipped: "No extensions: block defined → inherits all extensions from parent (dev-mas-engineer has summon). Adding explicit extensions: [summon] would break inheritance and lose developer tools. Parent checked: dev-mas-engineer.yaml has extensions: [summon, developer]."
+      goose_verdict: RESTRICTED
