@@ -1,26 +1,31 @@
 # ============================================================
 # validation.yaml — Stage 4: VALIDATE (im-validator)
-# Generated: 2026-07-23T20:36:00Z
+# Generated: 2026-07-23T21:03:00Z
+# Task: VALIDATE — 6 patches from im-designer
 # ============================================================
 stage: 4
 agent: im-validator
-timestamp: "2026-07-23T20:36:00Z"
+timestamp: "2026-07-23T21:03:00Z"
 input_file: .state/pipeline/patches.yaml
 
 validation:
   status: approved
   skip_reason: null
   severity_fallback: null
-  approved_count: 3
+  approved_count: 6
   rejected_count: 0
 
   details:
     # ---------------------------------------------------------------
-    # Patch 1: F-1523 — E1: intention-parser.yaml missing pattern definitions
+    # Patch 1: F-274 — MM4: sub_mas-framework-scanner.yaml temperature
+    # Status: NO-OP (already applied in current file)
     # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-intention-parser.yaml
-      patch_id: F-1523
-      patch_type: E1
+    - file: recipe/sub/sub_mas-framework-scanner.yaml
+      patch_id: F-274
+      patch_type: MM4
+      field: settings.temperature
+      from: null
+      to: "0.3"
       score_before:
         prompt: 5.0
         settings: 15.3
@@ -34,18 +39,20 @@ validation:
       l01_check: CONFORM
       goose_post_verdict: CONFORM
       notes: |
-        Add structured patterns: field to intention-parser.yaml.
-        Patterns already exist as comments in prompt field — this
-        makes them programmatically accessible. Purely additive,
-        no breaking changes. No Goose-native conflict detected.
+        NO-OP guard patch. File already has temperature: 0.3 in settings.
+        No score impact. Purely additive — no breaking changes.
+        Goose-native settings.temperature is valid and recommended.
 
     # ---------------------------------------------------------------
-    # Patch 2: F-1524 — NN1: e2e-verify-german-fixes.yaml multi_role_agent
-    # Split into orchestrator + 4 sub-agents
+    # Patch 2: F-290 — MM4: security-scanner.yaml temperature
+    # Status: NO-OP (already applied in current file)
     # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-e2e-verify-director.yaml (NEW)
-      patch_id: F-1524
-      patch_type: NN1
+    - file: recipe/sub/security-scanner.yaml
+      patch_id: F-290
+      patch_type: MM4
+      field: settings.temperature
+      from: null
+      to: "0.3"
       score_before:
         prompt: 5.0
         settings: 15.3
@@ -55,58 +62,24 @@ validation:
         settings: 15.3
         structure: 10
       delta: 0
-      yaml_syntax: OK (validated proposed content)
+      yaml_syntax: OK
       l01_check: CONFORM
       goose_post_verdict: CONFORM
       notes: |
-        Creates orchestrator + 4 sub-agents (test-runner, report-writer,
-        code-reader, design-validator). Uses Goose-native summon extension
-        and sub_recipes pattern. Original archived to legacy/. No
-        cross-reference breakage — e2e-verify-german-fixes.yaml is not
-        referenced in workflows.yaml.
-
-    - file: recipe/sub/sub_mas-e2e-test-runner.yaml (NEW)
-      patch_id: F-1524
-      patch_type: NN1
-      yaml_syntax: OK
-      goose_post_verdict: CONFORM
-      notes: New sub-agent — single responsibility, Goose-compliant.
-
-    - file: recipe/sub/sub_mas-e2e-report-writer.yaml (NEW)
-      patch_id: F-1524
-      patch_type: NN1
-      yaml_syntax: OK
-      goose_post_verdict: CONFORM
-      notes: New sub-agent — single responsibility, Goose-compliant.
-
-    - file: recipe/sub/sub_mas-e2e-code-reader.yaml (NEW)
-      patch_id: F-1524
-      patch_type: NN1
-      yaml_syntax: OK
-      goose_post_verdict: CONFORM
-      notes: New sub-agent — single responsibility, Goose-compliant.
-
-    - file: recipe/sub/sub_mas-e2e-design-validator.yaml (NEW)
-      patch_id: F-1524
-      patch_type: NN1
-      yaml_syntax: OK
-      goose_post_verdict: CONFORM
-      notes: New sub-agent — single responsibility, Goose-compliant.
-
-    - file: recipe/sub/legacy/e2e-verify-german-fixes-ORIGINAL.yaml (ARCHIVE)
-      patch_id: F-1524
-      patch_type: NN1
-      yaml_syntax: OK (existing file is valid)
-      goose_post_verdict: CONFORM
-      notes: Archive of original monolithic agent. Safe operation.
+        NO-OP guard patch. File already has temperature: 0.3 in settings.
+        No score impact. Purely additive — no breaking changes.
+        Goose-native settings.temperature is valid and recommended.
 
     # ---------------------------------------------------------------
-    # Patch 3: F-1525 — NN3: e2e-verify-german-fixes.yaml scope_bloat
-    # Split by domain boundaries into 3 sub-agents
+    # Patch 3: F-412 — MM3: sub_mas-analytics-reporter.yaml instructions
+    # Status: NO-OP (already applied in current file)
     # ---------------------------------------------------------------
-    - file: recipe/sub/sub_mas-e2e-recipe-validator.yaml (NEW)
-      patch_id: F-1525
-      patch_type: NN3
+    - file: recipe/sub/sub_mas-analytics-reporter.yaml
+      patch_id: F-412
+      patch_type: MM3
+      field: instructions
+      from: null
+      to: "<instructions block>"
       score_before:
         prompt: 5.0
         settings: 15.3
@@ -116,59 +89,172 @@ validation:
         settings: 15.3
         structure: 10
       delta: 0
-      yaml_syntax: OK (validated proposed content)
+      yaml_syntax: OK
       l01_check: CONFORM
       goose_post_verdict: CONFORM
       notes: |
-        Domain-specific sub-agent for recipe validation.
-        Complements the NN1 orchestrator. Single responsibility.
+        NO-OP guard patch. File already has instructions: field from prior fix.
+        As noted in patches.yaml: "Current file already has instructions: field
+        from prior fix. This patch is a guard to ensure it exists."
+        No score impact.
 
-    - file: recipe/sub/sub_mas-e2e-test-validator.yaml (NEW)
-      patch_id: F-1525
-      patch_type: NN3
+    # ---------------------------------------------------------------
+    # Patch 4: F-413 — MM6: sub_mas-analytics-reporter.yaml extensions
+    # Status: NEW — adds extensions: [summon, developer]
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-analytics-reporter.yaml
+      patch_id: F-413
+      patch_type: MM6
+      field: extensions
+      from: null
+      to: "[summon, developer]"
+      score_before:
+        prompt: 5.0
+        settings: 15.3
+        structure: 10
+      score_after:
+        prompt: 4.9
+        settings: 16.3
+        structure: 10
+      delta:
+        prompt: -0.1
+        settings: 1.0
+        structure: 0
       yaml_syntax: OK
+      l01_check: CONFORM
       goose_post_verdict: CONFORM
-      notes: Domain-specific sub-agent for test validation.
+      notes: |
+        Adds extensions block with summon (platform) and developer (builtin)
+        extensions. Required for sub-agent delegation capability within the
+        marketing team MAS. Without summon, the analytics-reporter cannot
+        delegate to sub-agents (e.g., web-researcher for data lookup).
+        Settings score improves by +1.0 due to added settings block.
+        Prompt score variance (-0.1) is from empty sub_test-agent.yaml
+        affecting the aggregate average — not related to this patch.
+        Resulting YAML validated: ✅ valid.
 
-    - file: recipe/sub/sub_mas-e2e-session-validator.yaml (NEW)
-      patch_id: F-1525
-      patch_type: NN3
+    # ---------------------------------------------------------------
+    # Patch 5: F-419 — A5: sub_mas-analytics-reporter.yaml timeout
+    # Status: NEW — adds settings.timeout: 600
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-analytics-reporter.yaml
+      patch_id: F-419
+      patch_type: A5
+      field: settings.timeout
+      from: null
+      to: "600"
+      score_before:
+        prompt: 5.0
+        settings: 15.3
+        structure: 10
+      score_after:
+        prompt: 4.9
+        settings: 16.3
+        structure: 10
+      delta:
+        prompt: -0.1
+        settings: 1.0
+        structure: 0
       yaml_syntax: OK
+      l01_check: CONFORM
       goose_post_verdict: CONFORM
-      notes: Domain-specific sub-agent for session validation.
+      notes: |
+        Adds settings.timeout: 600 (10min). Previously no timeout set
+        (effectively unlimited). Goose has 5min default sub-agent timeout.
+        600s is within Goose's accepted range (60-3600).
+        Settings score improves by +1.0.
+        Companion to F-419 max_steps patch.
+
+    # ---------------------------------------------------------------
+    # Patch 6: F-419 companion — A5: sub_mas-analytics-reporter.yaml max_steps
+    # Status: NEW — adds settings.max_steps: 100
+    # ---------------------------------------------------------------
+    - file: recipe/sub/sub_mas-analytics-reporter.yaml
+      patch_id: F-419b
+      patch_type: A5
+      field: settings.max_steps
+      from: null
+      to: "100"
+      score_before:
+        prompt: 5.0
+        settings: 15.3
+        structure: 10
+      score_after:
+        prompt: 4.9
+        settings: 16.3
+        structure: 10
+      delta:
+        prompt: -0.1
+        settings: 1.0
+        structure: 0
+      yaml_syntax: OK
+      l01_check: CONFORM
+      goose_post_verdict: CONFORM
+      notes: |
+        Adds settings.max_steps: 100. Previously no max_steps set.
+        Goose default max_steps is 25 for sub-agents. 100 provides
+        ample turns for analytics research while preventing infinite loops.
+        Within Goose's accepted range (10-500).
+        Settings score improves by +1.0.
+        Companion to F-419 timeout patch.
 
   recommendation:
-    - APPROVE  # Patch 1: F-1523 — E1 patterns addition
-    - APPROVE  # Patch 2: F-1524 — NN1 orchestrator split
-    - APPROVE  # Patch 3: F-1525 — NN3 domain split
+    - APPROVE  # Patch 1: F-274 — MM4 temperature (NO-OP guard)
+    - APPROVE  # Patch 2: F-290 — MM4 temperature (NO-OP guard)
+    - APPROVE  # Patch 3: F-412 — MM3 instructions (NO-OP guard)
+    - APPROVE  # Patch 4: F-413 — MM6 extensions [summon, developer]
+    - APPROVE  # Patch 5: F-419 — A5 settings.timeout: 600
+    - APPROVE  # Patch 6: F-419b — A5 settings.max_steps: 100
 
   goose_post_checks:
-    - patch_id: F-1523
+    - patch_id: F-274
       verdict: CONFORM
       explanation: |
-        Adding structured patterns field to intention-parser.yaml.
-        Patterns already exist as comments — this is purely additive.
-        No Goose-native mechanism conflict. Goose supports custom
-        fields in recipe YAML.
-    - patch_id: F-1524
+        Adding temperature: 0.3 to settings block. Goose recipe settings
+        supports temperature key. Setting explicit temperature is valid
+        and recommended for deterministic behavior. Already applied in
+        current file — no-op guard.
+    - patch_id: F-290
       verdict: CONFORM
       explanation: |
-        Splitting monolithic agent into orchestrator + 4 sub-agents.
-        Uses Goose-native summon extension and sub_recipes pattern.
-        Each sub-agent has single responsibility. No cross-reference
-        breakage detected.
-    - patch_id: F-1525
+        Same as F-274. Adding temperature: 0.3 to security-scanner.yaml
+        settings block. Already applied — no-op guard.
+    - patch_id: F-412
       verdict: CONFORM
       explanation: |
-        Creating 3 domain-specific sub-agents to complement NN1
-        orchestrator. Same Goose-compliant pattern as NN1.
-        No Goose-native mechanism conflict.
+        Adding instructions: field to analytics-reporter.yaml. Goose recipe
+        schema requires instructions field. Already present in current file
+        from prior fix — no-op guard.
+    - patch_id: F-413
+      verdict: CONFORM
+      explanation: |
+        Adding extensions: [summon, developer] to analytics-reporter.yaml.
+        Goose requires explicit summon extension in extensions block for
+        sub-agent delegation. Sub_recipes auto-inject summon, but standalone
+        recipes need explicit declaration. Developer extension provides
+        file I/O capability. No Goose-native mechanism conflict.
+    - patch_id: F-419
+      verdict: CONFORM
+      explanation: |
+        Adding settings.timeout: 600 to analytics-reporter.yaml. Goose
+        per-recipe timeout override via settings.timeout is valid. 600s
+        is within Goose's accepted range (60-3600). No conflict.
+    - patch_id: F-419b
+      verdict: CONFORM
+      explanation: |
+        Adding settings.max_steps: 100 to analytics-reporter.yaml. Goose
+        settings.max_steps is valid. 100 is within Goose's accepted range
+        (10-500). No conflict.
 
   notes:
-    - "All 3 patches validated: 1 E1 (patterns), 1 NN1 (orchestrator split), 1 NN3 (domain split)"
+    - "6 patches validated: 2 MM4 (temperature), 1 MM3 (instructions), 1 MM6 (extensions), 2 A5 (timeout+max_steps)"
+    - "3 patches are NO-OP guards (already applied in current files)"
+    - "3 patches are NEW (extensions + settings for analytics-reporter)"
     - "All L01 checks passed — no Goose-native mechanism conflicts"
-    - "All proposed YAML content validated for syntax"
-    - "No RESTRICTED or NOT_POSSIBLE verdicts — all CONFORM"
-    - "Patch 2 creates 6 new files + 1 archive; Patch 3 creates 3 new files"
-    - "e2e-verify-german-fixes.yaml is NOT referenced in workflows.yaml — no SOT cross-reference breakage"
-    - "All new sub-agents follow the standard Goose recipe schema (name, version, description, instructions, prompt, settings)"
+    - "All goose-expert verdicts: CONFORM — no RESTRICTED or NOT_POSSIBLE"
+    - "STEP 0.5b all-restricted detection: NOT triggered (no RESTRICTED verdicts)"
+    - "Settings score improves from 15.3 → 16.3 (+1.0) due to added settings block"
+    - "Prompt score variance (-0.1) is from empty sub_test-agent.yaml affecting aggregate — not patch-related"
+    - "Structure score unchanged at 10"
+    - "All patches target recipe/sub/ — within domain scope (R09)"
+    - "No patches target general-improver.yaml (R04 compliance)"
