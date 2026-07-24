@@ -1,5 +1,7 @@
 # 📋 Project Health Report — 2026-07-19
 
+> **⚠️ HISTORICAL SNAPSHOT (2026-07-19).** Counts and rule numbers in this report reflect the state on that date. Current state (2026-07-24): **96 sub-agents** (was 51 at this snapshot), **57 tools** (was 47 Python + 6 Shell + 1 YAML), **10 active hard rules** (was 11 defined at this snapshot), **8-stage IM pipeline** (was 7-stage at this snapshot), **11-article Constitution** (unchanged).
+
 ![Status](https://img.shields.io/badge/status-reporting-blue)
 ![Date](https://img.shields.io/badge/date-2026--07--19-green)
 ![Mode](https://img.shields.io/badge/mode-framework-yellow)
