@@ -14,31 +14,40 @@ The framework has 52 specialists + 44 sub-agents + 4 core recipes.
 Domain separation: MAS writes in mas-engineer/, framework in framework/.
 Enforced via R09 (MODE-DOMAIN-COUPLING) + registry.yaml.
 
-## YOUR SUB-AGENTS (96 across 9 categories — see docs/agents.md for canonical list)
-> ⚠️ The detailed enumeration below is a legacy snapshot (~55 items across 8 categories)
-> and is **no longer canonical**. Current canonical 9-category breakdown:
-> Framework Builders (14) | Improvement Pipeline (8) | Monitoring (8) | Analysis (10)
-> | Recovery (5) | Utility (11) | Management (5) | Testing & E2E (24) | Special (11).
+## YOUR SUB-AGENTS (96 across 9 categories — canonical per docs/manifest.md 2026-07-24)
+> Last regenerated: 2026-07-24 via IM-Pipeline v2 scan (1,961 findings, top-5 NN1).
 > Run `ls mas-engineer/recipe/sub/*.yaml | wc -l` to verify (96 in 2026-07-24 snapshot).
 
-Analysis: framework-knowledge, framework-scanner, session-analyst,
-config-auditor, prompt-engineer, goose-expert, im-finder,
-im-designer, im-validator
-Recovery: recovery-checkpoint, recovery-defib, recovery-immune,
-recovery-safezone, recovery-timeline, migration-helper
-Monitoring: agent-guardian, monitor-health, monitor-recovery,
-monitor-runtime, monitor-session, mas-controller
-Management: goose-admin, recipe-manager, yaml-editor,
-worktree-manager, verification-runner, summarizer, interpreter
-Improvement: general-improver, im-session-reader, im-finder,
-im-rank, im-designer, im-validator, generic-init,
-master-constitution, test-runner
-Generation: doc-generator, signal-generator, degradation-handler
-Builder: bootstrap, demo-runner, team-packager
-Utility: git-operator, python-repair, doc-writer, json-utility,
-health-reporter, recipe-designer, web-researcher,
-pre-push-validator, intention-parser, workflow-engine,
-dashboard-refresh, doc-generator
+Framework Builders (14): bootstrap, dev-builder, dev-director,
+dev-observer, dev-tester, dev-analyzer, intention-parser,
+recipe-designer, framework-scanner, framework-director,
+framework-knowledge, framework-audit-agent, framework-scan-agent,
+framework-harden-agent
+Improvement Pipeline (8): general-improver, im-session-reader,
+im-finder, im-rank, im-designer, im-validator, self-auditor,
+yaml-editor
+Monitoring (8): monitor-health, monitor-recovery, monitor-runtime,
+monitor-session, agent-guardian, degradation-handler, mas-controller,
+health-reporter
+Analysis (10): config-auditor, python-analyzer, python-validator,
+python-fixer, python-repair, python-repair-director, migration-helper,
+tff-crossref, tff-rule, tff-syntax-validator
+Recovery (5): recovery-immune, recovery-checkpoint, recovery-safezone,
+recovery-timeline, recovery-defib
+Utility (11): goose-admin, goose-expert, git-operator, json-utility,
+summarizer, system-knowledge, interpreter, worktree-manager,
+workflow-engine, team-packager, recipe-manager
+Management (5): pre-push-validator, verification-runner,
+dashboard-refresh, signal-generator, session-analyst
+Testing & E2E (24): test-director, test-runner, test-agent,
+test-scanner, test-reporter, unix-test-runner, prompt-engineer,
+4× e2e-auto-repair, 4× e2e-german-fixes, 3× e2e-phoenix-fixes,
+7× test-fix-failures (director, designer, finder, ranker,
+applier, validator, validator-director)
+Special (11): master-constitution, generic-init, web-researcher,
+doc-writer, doc-generator, content-writer,
+email-campaign-manager, seo-researcher, social-media-manager,
+static-analyzer, security-scanner
 
 ╔══════════════════════════════════════════════╗
 ║  SOT WORKFLOW CONTROL                     ║
