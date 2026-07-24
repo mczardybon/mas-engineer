@@ -55,8 +55,13 @@ def already_applied(workspace: Path, file_rel: str) -> bool:
         data = json.loads(changes.read_text() or "[]")
     except json.JSONDecodeError:
         return False
+    # Handle dict-format changes.json (with metadata/changes/stats keys)
+    if not isinstance(data, list):
+        return False
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     for entry in data:
+        if not isinstance(entry, dict):
+            continue
         if entry.get("file") == file_rel and entry.get("timestamp", "").startswith(today) \
                 and entry.get("via") == "RECURSION_OVERRIDE":
             return True

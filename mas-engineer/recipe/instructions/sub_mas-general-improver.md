@@ -136,7 +136,7 @@ task from FOUR sources, in priority order:
 3. env `RECURSION_OVERRIDE=1` → maps to APPLY_ONLY (operator-initiated)
 4. Initial user message (first line matching one of: FULL_IMPROVEMENT,
    REVIEW, COST_ANALYSIS, ERROR_PATTERN, CORRECTION_LOG, USAGE_PATTERN,
-   APPLY_ONLY)
+   APPLY_ONLY, FIX_SPECIFIC)
 5. Fallback: ASK user (default behavior, only if no source above)
 
 VALID TASKS: FULL_IMPROVEMENT | REVIEW | COST_ANALYSIS | ERROR_PATTERN

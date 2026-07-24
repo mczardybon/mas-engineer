@@ -644,3 +644,73 @@ validation:
 # ═══════════════════════════════════════════════════════════════
 # END OF R36 REPORT
 # ═══════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════
+# VALIDATION REPORT — 11 Patches (R36 FIX_SPECIFIC)
+# ═══════════════════════════════════════════════════════════════
+stage: 4
+agent: im-validator-manual-fallback
+timestamp: '2026-07-24T08:35:00+00:00'
+input_file: .state/pipeline/round36_findings.json
+validation:
+  status: PASS
+  summary: "11/11 patches applied via manual fallback (R36). F-CONST-001 (9) + F-VALID-001 (1) + F-VALID-002 (1). dev_recursion_override.py bug bypassed (FIXED in R37)."
+
+
+# ═══════════════════════════════════════════════════════════════
+# VALIDATION REPORT — 2 Patches (R37 FIX_SPECIFIC)
+# ═══════════════════════════════════════════════════════════════
+
+- patch_id: F-BUG-001
+  type: bugfix
+  status: PASS
+  verdict: CONFORM
+  file: tools/dev_recursion_override.py
+  notes: "Add isinstance(data, list) guard in already_applied() — mirrors log_change() pattern at line 92"
+  find: |
+            try:
+                data = json.loads(changes.read_text() or "[]")
+            except json.JSONDecodeError:
+                return False
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            for entry in data:
+                if entry.get("file") == file_rel and entry.get("timestamp", "").startswith(today) \
+                        and entry.get("via") == "RECURSION_OVERRIDE":
+                    return True
+            return False
+  replace: |
+            try:
+                data = json.loads(changes.read_text() or "[]")
+            except json.JSONDecodeError:
+                return False
+            # Handle dict-format changes.json (with metadata/changes/stats keys)
+            if not isinstance(data, list):
+                return False
+            today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            for entry in data:
+                if not isinstance(entry, dict):
+                    continue
+                if entry.get("file") == file_rel and entry.get("timestamp", "").startswith(today) \
+                        and entry.get("via") == "RECURSION_OVERRIDE":
+                    return True
+            return False
+
+- patch_id: F-BUG-002-md
+  type: feature
+  status: PASS
+  verdict: CONFORM
+  file: recipe/instructions/sub_mas-general-improver.md
+  notes: "Add FIX_SPECIFIC to TASK-DETECTION keyword list"
+  find: "   APPLY_ONLY)"
+  replace: "   APPLY_ONLY, FIX_SPECIFIC)"
+
+- patch_id: F-BUG-002-prompt
+  type: feature
+  status: PASS
+  verdict: CONFORM
+  file: recipe/sub/sub_mas-general-improver.yaml
+  notes: "Add FIX_SPECIFIC definition to prompt"
+  find: "APPLY_ONLY). Only if ALL four sources fail, ask user."
+  replace: "APPLY_ONLY, FIX_SPECIFIC). Only if ALL four sources fail, ask user. | FIX_SPECIFIC MODE: skip im-finder/im-rank/im-designer, read .state/pipeline/round*_findings.json directly, jump to im-validator + yaml-editor (apply)."
+
+# END OF R37
