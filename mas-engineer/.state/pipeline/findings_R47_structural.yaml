@@ -1,0 +1,56 @@
+# R47 FIX_SPECIFIC findings
+# Root cause: R45 directors referenzierten 5 nicht-existente sub-agents
+# 3 strukturelle fixes nötig:
+
+fixes:
+  - id: CHECK-12-sub-recipe-resolution
+    type: validator-extension
+    priority: critical
+    description: |
+      Pre-push-validator braucht Check #12 der prüft ob alle sub_recipes.path
+      auf existente files zeigen. R45 hat 4 directors APPROVED die auf 5
+      tote refs zeigten (sub_mas-framework-finder, hardener, security-secrets,
+      deserizlize, cmd-injection).
+    acceptance_criteria:
+      - Check 12 parses every recipe/sub/*.yaml
+      - For each sub_recipes[].path: resolve relative to director's dir
+      - If path doesn't exist → BLOCKED with file:line:missing-target
+      - Tested with R45 5-missing scenario → must BLOCK
+    target_files:
+      - mas-engineer/recipe/sub/sub_mas-pre-push-validator.yaml
+      - mas-engineer/recipe/instructions/sub_mas-pre-push-validator.md
+      - mas-engineer/tools/pre_push_validator.py (if exists)
+
+  - id: CAVEATS-ARE-BLOCKING
+    type: design-stage-rule-change
+    priority: high
+    description: |
+      In sub_mas-general-improver STEP 4 (DRAFT PATCHES), patches that
+      contain "caveat:" / "requires separate creation" / "not in this
+      patch set" markers must be REJECTED, not APPROVED. Currently they
+      are marked informational and applied.
+    acceptance_criteria:
+      - Design-stage parses all patch objects
+      - If patch.reason contains "caveat" OR "separate" OR "not in this set" → verdict: REJECTED
+      - Stage logs "BLOCKED: patch N requires external creation"
+    target_files:
+      - mas-engineer/recipe/sub/sub_mas-general-improver.yaml
+      - mas-engineer/recipe/instructions/sub_mas-general-improver.md
+
+  - id: NN1-ATOMIC-DIRECTOR-BUNDLE
+    type: patch-pattern
+    priority: high
+    description: |
+      NN1 patch-pattern (replace_with_director) must be ATOMIC: the
+      patch-set must include both (a) the director refactor AND
+      (b) all referenced sub-agents as create_sub_agent patches.
+      Currently design-stage approves directors without checking
+      sub_recipes references exist.
+    acceptance_criteria:
+      - For every replace_with_director patch: scan proposed new sub_recipes[].path
+      - For each referenced file: check if create_sub_agent patch in same set
+      - If not: emit "BLOCKING CAVEAT" + add auto-create-patch to set
+      - OR: if can't auto-create, REJECT the director patch
+    target_files:
+      - mas-engineer/recipe/sub/sub_mas-general-improver.yaml
+      - mas-engineer/recipe/instructions/sub_mas-general-improver.md
