@@ -1,0 +1,89 @@
+Build a complete Multi-Agent System called "marketing-team" at
+/tmp/marketing-team using a HUB-AND-SPOKE architecture. Do NOT just
+plan it — actually create the files, run live tests, and report results.
+
+ARCHITECTURE (HUB-AND-SPOKE — IMPORTANT):
+The marketing-orchestrator is the HUB. It receives any marketing query
+and DYNAMICALLY decides which specialist(s) to invoke. There is NO
+fixed pipeline order. Each specialist can be called independently,
+in parallel, or skipped entirely based on the query.
+
+STEP 1 — Initialize the project skeleton
+Run: python3 ~/.config/goose/recipes/tools/dev_generic_init.py
+     --init /tmp/marketing-team --components all
+
+STEP 2 — Create 5+ agents in /tmp/marketing-team/recipe/sub/:
+
+1. marketing-orchestrator.yaml (root: /tmp/marketing-team/recipe/
+   marketing-team.yaml)
+   - HUB. Receives any marketing query.
+   - Classifies intent into one or more:
+     * seo → call seo-researcher
+     * content → call content-writer
+     * social → call social-media-manager
+     * analytics → call analytics-reporter
+     * email → call email-campaign-manager
+   - DYNAMICALLY dispatches: can call 1, 2, 3, or all 5 in parallel.
+   - NO fixed order. NO mandatory pipeline. Orchestrator decides.
+   - Collects results and synthesizes a unified marketing plan.
+
+2. seo-researcher.yaml
+   - Uses web_search to find SEO keywords, competitor analysis,
+     search volume data.
+   - Returns: list of {keyword, volume, difficulty, source_url}.
+
+3. content-writer.yaml
+   - Receives brief (topic + SEO keywords if available).
+   - Writes blog post, landing page copy, or ad copy.
+   - Returns {title, body, meta_description, cta}.
+
+4. social-media-manager.yaml
+   - Receives content (or topic).
+   - Adapts to 3-4 platforms (Twitter/X, LinkedIn, Instagram, TikTok).
+   - Returns {platform, post_text, hashtags, source_url}.
+
+5. analytics-reporter.yaml
+   - Uses web_search to find marketing benchmarks, case studies,
+     industry stats.
+   - Returns {metric, value, source_url, confidence}.
+
+6. email-campaign-manager.yaml
+   - Receives content + audience.
+   - Drafts email sequence (subject + body + send-time).
+   - Returns {email_n, subject, body, send_time, cta}.
+
+STEP 3 — Create the orchestrator root recipe marketing-team.yaml
+that references all 5 sub-recipes via sub_recipes field.
+
+STEP 4 — LIVE TEST (mandatory):
+a) goose run --recipe /tmp/marketing-team/recipe/marketing-team.yaml
+   --no-session --explain
+b) goose run --recipe /tmp/marketing-team/recipe/sub/seo-researcher.yaml
+   --no-session --explain
+c) goose run --recipe /tmp/marketing-team/recipe/sub/content-writer.yaml
+   --no-session --explain
+d) goose run --recipe /tmp/marketing-team/recipe/sub/social-media-manager.yaml
+   --no-session --explain
+e) goose run --recipe /tmp/marketing-team/recipe/sub/analytics-reporter.yaml
+   --no-session --explain
+f) goose run --recipe /tmp/marketing-team/recipe/sub/email-campaign-manager.yaml
+   --no-session --explain
+g) python3 -c "import yaml; [yaml.safe_load(open(f))
+   for f in ['/tmp/marketing-team/recipe/marketing-team.yaml',
+            '/tmp/marketing-team/recipe/sub/seo-researcher.yaml',
+            '/tmp/marketing-team/recipe/sub/content-writer.yaml',
+            '/tmp/marketing-team/recipe/sub/social-media-manager.yaml',
+            '/tmp/marketing-team/recipe/sub/analytics-reporter.yaml',
+            '/tmp/marketing-team/recipe/sub/email-campaign-manager.yaml']]"
+
+STEP 5 — Report:
+- List all 7 files created with line counts.
+- Show PASS/FAIL for each of the 6 + 7 = 13 checks.
+- Show any YAML errors with line numbers.
+- CRITICALLY: confirm that the orchestrator's instructions contain the
+  string "DYNAMICALLY dispatches" and "NO fixed order" to prove the
+  hub-and-spoke pattern (not pipeline).
+
+Critical: This team uses HUB-AND-SPOKE. The orchestrator should NOT
+chain specialists in a fixed sequence. Each specialist is an
+independent tool the hub can call as needed.

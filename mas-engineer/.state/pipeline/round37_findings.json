@@ -1,0 +1,43 @@
+{
+  "version": "1.0.0",
+  "created": "2026-07-24T08:26:51.325858+00:00",
+  "scan_scope": "NONE - USER-PROVIDED FINDINGS ONLY",
+  "user_intent": "FIX THESE 2 SPECIFIC FINDINGS. DO NOT RUN YOUR OWN SCAN. DO NOT RE-RANK. APPLY EXACTLY THESE 2 PATCHES.",
+  "instructions_to_general_improver": {
+    "CRITICAL": "The user has provided exactly 2 pre-validated findings. You MUST apply them. DO NOT run sub_mas-im-finder, sub_mas-im-rank, or sub_mas-im-designer. The design phase is ALREADY DONE. Skip to APPLY.",
+    "task_name": "FIX_SPECIFIC",
+    "task_detection_keyword": "FIX_SPECIFIC",
+    "expected_stages": [
+      "APPLY_ONLY"
+    ],
+    "stages_to_skip": [
+      "im-finder",
+      "im-rank",
+      "im-designer"
+    ]
+  },
+  "findings": [
+    {
+      "id": "F-BUG-001",
+      "title": "dev_recursion_override.py crashes on dict-format changes.json",
+      "severity": "HIGH",
+      "type": "bugfix",
+      "file": "tools/dev_recursion_override.py",
+      "description": "The already_applied() function (line 49-63) loads .state/changes.json and iterates over the parsed data assuming it's a list. When the file is a dict (e.g. {'metadata': {...}, 'changes': [...], 'stats': {...}}), `for entry in data` iterates over dict keys (strings like 'metadata', 'changes'), and `entry.get('file')` crashes with AttributeError on strings. log_change() (line 84-93) has the fallback (`if not isinstance(data, list): data = []`) but already_applied() does NOT.",
+      "expected_fix": "Add `if not isinstance(data, list): return False` after json.loads() in already_applied() (around line 57), mirroring the existing log_change() pattern.",
+      "verdict": "CONFORM",
+      "test": "After fix: run with RECURSION_OVERRIDE=1 and a dict-format changes.json \u2014 should not crash."
+    },
+    {
+      "id": "F-BUG-002",
+      "title": "general-improver does not recognize FIX_SPECIFIC task",
+      "severity": "HIGH",
+      "type": "feature",
+      "file": "recipe/instructions/sub_mas-general-improver.md",
+      "description": "TASK-DETECTION (STEP 0.5) supports these task types: FULL_IMPROVEMENT, REVIEW, COST_ANALYSIS, ERROR_PATTERN, CORRECTION_LOG, USAGE_PATTERN, APPLY_ONLY. When user provides a pre-validated findings file (e.g. round36_findings.json) and says 'apply these findings', the keyword is typically 'FIX_SPECIFIC' or 'FIX_ONLY' or 'APPLY_FINDINGS'. These are NOT in the detection list, so the improver falls back to 'ASK user' and then runs the wrong pipeline. Need to add FIX_SPECIFIC to the task-detection list and implement a short-circuit path that skips FIND/RANK/DESIGN when findings are user-provided.",
+      "expected_fix": "1. Add 'FIX_SPECIFIC' to the task-detection list in sub_mas-general-improver.md (line 137-139). 2. Add a 'FIX_SPECIFIC' branch in the workflow that: (a) reads .state/pipeline/roundNN_findings.json (or similar), (b) skips sub_mas-im-finder, sub_mas-im-rank, sub_mas-im-designer, (c) jumps directly to sub_mas-im-validator + sub_mas-yaml-editor (apply). 3. Update the prompt in sub_mas-general-improver.yaml to include FIX_SPECIFIC in the task keyword list.",
+      "verdict": "CONFORM",
+      "test": "After fix: invoke goose with 'FIX_SPECIFIC' keyword \u2014 should skip FIND/RANK and jump to APPLY."
+    }
+  ]
+}

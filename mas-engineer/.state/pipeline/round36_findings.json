@@ -1,0 +1,94 @@
+{
+  "version": "1.0.0",
+  "created": "2026-07-24T08:30:00+00:00",
+  "scan_scope": "ALL",
+  "user_intent": "ADDRESS THESE 3 SPECIFIC FINDINGS ONLY. No other patches. No new scans. No ranking. Just apply these 3 fixes exactly as described.",
+  "context": "Round 36 \u2014 User-directed fixes. 3 findings below are EXPLICITLY REQUESTED by user. Do NOT run im-finder. Do NOT scan. Do NOT rank. Apply these 3 patches in this order: F-CONST-001 first, then F-VALID-001, then F-VALID-002.",
+  "scope_constraints": {
+    "ONLY_EDIT": [
+      "recipe/sub/sub_mas-pre-push-validator.yaml",
+      "recipe/sub/sub_mas-content-writer.yaml",
+      "recipe/sub/sub_mas-e2e-german-fixes-runner.yaml",
+      "recipe/sub/sub_mas-e2e-german-fixes-director.yaml",
+      "recipe/sub/sub_mas-e2e-german-fixes-checker.yaml",
+      "recipe/sub/sub_mas-e2e-german-fixes-validator.yaml",
+      "recipe/sub/sub_mas-social-media-manager.yaml",
+      "recipe/sub/sub_mas-email-campaign-manager.yaml",
+      "recipe/sub/sub_mas-seo-researcher.yaml",
+      "recipe/sub/demo-team/sub_mas-analytics-reporter.yaml"
+    ],
+    "MAX_PATCHES": 11,
+    "REJECT_OTHER": true,
+    "NO_SCAN": true,
+    "NO_RANK": true,
+    "FIX_ONLY": true
+  },
+  "findings": [
+    {
+      "id": "F-CONST-001",
+      "type": "MM2",
+      "severity": "high",
+      "score": 9.0,
+      "category": "constitution-missing",
+      "title": "9 pre-existing sub-agents missing constitution-reference",
+      "fix_steps": [
+        "1. Read recipe/sub/sub_mas-content-writer.yaml",
+        "2. Find the `name:` line",
+        "3. Insert `constitution: sub_mas-master-constitution.yaml` as the line right after `name:`",
+        "4. Repeat for all 9 files in files list",
+        "5. Each file: ONLY one new line added. Do NOT change anything else."
+      ],
+      "files": [
+        "recipe/sub/sub_mas-content-writer.yaml",
+        "recipe/sub/sub_mas-e2e-german-fixes-runner.yaml",
+        "recipe/sub/sub_mas-e2e-german-fixes-director.yaml",
+        "recipe/sub/sub_mas-e2e-german-fixes-checker.yaml",
+        "recipe/sub/sub_mas-e2e-german-fixes-validator.yaml",
+        "recipe/sub/sub_mas-social-media-manager.yaml",
+        "recipe/sub/sub_mas-email-campaign-manager.yaml",
+        "recipe/sub/sub_mas-seo-researcher.yaml",
+        "recipe/sub/demo-team/sub_mas-analytics-reporter.yaml"
+      ],
+      "expected_patches": 9
+    },
+    {
+      "id": "F-VALID-001",
+      "type": "MM2",
+      "severity": "high",
+      "score": 9.5,
+      "category": "missing-validation",
+      "title": "sub_mas-pre-push-validator lacks constitution-coverage check",
+      "target_file": "recipe/sub/sub_mas-pre-push-validator.yaml",
+      "fix_steps": [
+        "1. Read recipe/sub/sub_mas-pre-push-validator.yaml",
+        "2. Find the list of checks (likely in the instructions section)",
+        "3. Add a new check called 'constitution_coverage' that:",
+        "   - Globs all files in recipe/sub/*.yaml and recipe/sub/demo-team/*.yaml",
+        "   - Excludes sub_mas-master-constitution.yaml from check",
+        "   - Parses each as YAML",
+        "   - Checks if `constitution: sub_mas-master-constitution.yaml` field exists",
+        "   - If ANY file is missing \u2192 FAIL with list of files",
+        "4. Add to the check list in the validator"
+      ],
+      "expected_patches": 1
+    },
+    {
+      "id": "F-VALID-002",
+      "type": "MM4",
+      "severity": "medium",
+      "score": 7.0,
+      "category": "ux",
+      "title": "sub_mas-pre-push-validator is interactive (R01 confirmation) \u2014 blocks non-interactive runs",
+      "target_file": "recipe/sub/sub_mas-pre-push-validator.yaml",
+      "fix_steps": [
+        "1. Read recipe/sub/sub_mas-pre-push-validator.yaml",
+        "2. Find the R01 confirmation step in the instructions",
+        "3. Add a guard: if RECURSION_OVERRIDE env var is set to value >= 1, OR if --no-session flag is detected, skip the R01 confirmation and proceed directly with checks.",
+        "4. Keep the interactive R01 prompt for normal runs."
+      ],
+      "expected_patches": 1
+    }
+  ],
+  "expected_total_patches": 11,
+  "rejection_policy": "Any patch not in this list will be REJECTED by the user."
+}
