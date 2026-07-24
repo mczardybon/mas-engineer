@@ -1,6 +1,6 @@
 # Architecture
 
-MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 52 specialized sub-agents, 52 tools (45 Python, 6 Shell, 1 YAML), and a workflow engine driven by a Single Source of Truth (SOT).
+MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 96 specialized sub-agents, 57 tools (50 Python, 6 Shell, 1 YAML), and a workflow engine driven by a Single Source of Truth (SOT).
 
 ```mermaid
 flowchart TB
@@ -13,8 +13,8 @@ flowchart TB
     end
     subgraph ENGINEER["MAS-Engineer"]
         E1["dev-mas-engineer.yaml\nNatural Language Interface"]
-        E2["52 Sub-Agents\n7 categories"]
-        E3["52 Tools\n45 Python + 6 Shell + 1 YAML"]
+        E2["96 Sub-Agents\n8 categories"]
+        E3["57 Tools\n50 Python + 6 Shell + 1 YAML"]
         E4[".state/\nSOT · Rules · Knowledge"]
     end
     subgraph USER["User Framework"]
@@ -159,7 +159,7 @@ The `workflows.yaml` file in `.state/` is the central registry:
 
 ```mermaid
 graph TD
-    SOT["workflows.yaml\n.state/workflows.yaml"] --> RULES["11 Rules\nR01-R18"]
+    SOT["workflows.yaml\n.state/workflows.yaml"] --> RULES["10 active rules\nR01-R18 (gaps reserved)"]
     SOT --> SIGNALS["10 Signal Types\nDONE · ERROR · HANDOVER · DRIFT · RESURRECTED"]
     SOT --> WORKFLOWS["116+ Workflow Bodies\nAll possible operations"]
     SOT --> MODES["20+ detect_mode Workflows\nMode awareness"]
@@ -171,7 +171,7 @@ graph TD
 ```
 
 - **116+ workflow bodies** defining all possible operations
-- **11 hard rules** (R01-R18) with hardness levels
+- **10 active hard rules** (R01-R18 with R03, R11-R17 reserved) with hardness levels
 - **10 signal types** for event handling
 - **20+ detect_mode workflows** for mode awareness
 - **Agent definitions** with tiers, token budgets, and task bindings
@@ -199,7 +199,7 @@ framework  → Framework mode: work on user's system
 
 ## Rules System (R01-R18)
 
-All agents follow the **Constitution** (11 articles in `sub_mas-master-constitution.yaml`). **11 hard rules** are enforced by `dev_rule_checker.py` at runtime:
+All agents follow the **Constitution** (11 articles in `sub_mas-master-constitution.yaml`). **10 hard rules** are currently active (R01, R02, R04-R10, R18) and are enforced by `dev_rule_checker.py` at runtime:
 
 ```mermaid
 flowchart TD

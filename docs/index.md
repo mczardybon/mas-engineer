@@ -1,8 +1,10 @@
 # MAS-Engineer
 
 **Version:** v1.0.0  
-**Sub-Agents:** 52  
-**Tools:** 52 total (45 Python, 6 Shell, 1 YAML)
+**Sub-Agents:** 96
+**Tools:** 57 total (50 Python, 6 Shell, 1 YAML)
+
+> **Latest verified results (2026-07-24):** 9/9 demo-team generation runs (R38) · 8/8 e2e infrastructure tests (R39) · 11/11 pre-push validation (every commit) · 2 dogfooded user-bug fixes (R37). Full evidence under `e2e-results/2026-07-24-*/` and the commit graph.
 
 ---
 
@@ -39,11 +41,11 @@ goose run --recipe recipe/dev-mas-engineer.yaml
 |---------|----------------------|--------|
 | "Create a new multi-agent system" | `sub_mas-generic-init` | Lightweight project with symlinks + base agent |
 | "Scan my system for issues" | `sub_mas-framework-scanner` | Framework analysis report |
-| "Improve my agent's performance" | `sub_mas-general-improver` | 7-stage optimization pipeline |
+| "Improve my agent's performance" | `sub_mas-general-improver` | 5-stage optimization pipeline + dispatcher |
 | "Fix this agent's prompt" | `sub_mas-prompt-engineer` | Optimized prompt |
 | "Show me the health status" | `sub_mas-monitor-*` | Health report |
 | "Set up a dashboard" | Setup dashboard recipe | MCP dashboard app |
-| "Deploy MAS-Engineer standalone" | `sub_mas-bootstrap` | Complete distribution with all 52 sub-agents |
+| "Deploy MAS-Engineer standalone" | `sub_mas-bootstrap` | Complete distribution with all 96 sub-agents |
 
 ## Architecture
 
@@ -92,7 +94,7 @@ flowchart TD
 | [installation.md](installation.md) | Install, update, uninstall |
 | [architecture.md](architecture.md) | Complete system architecture |
 | [usage.md](usage.md) | How to create, improve, monitor |
-| [agents.md](agents.md) | Catalog of all 52 sub-agents |
-| [improvement-pipeline.md](improvement-pipeline.md) | 7-stage self-improvement |
+| [agents.md](agents.md) | Catalog of all 96 sub-agents (snapshot: 52 detailed) |
+| [improvement-pipeline.md](improvement-pipeline.md) | 5-stage self-improvement (im-finder → im-rank → im-designer → im-session-reader → im-validator) + general-improver dispatcher |
 | [recovery-system.md](recovery-system.md) | 5-stage Phoenix recovery |
 | [dashboard.md](dashboard.md) | Framework dashboard setup |

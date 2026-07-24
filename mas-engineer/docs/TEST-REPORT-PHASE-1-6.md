@@ -1,6 +1,8 @@
 # MAS-Engineer Test Report — PHASE 1-6 Real Validation
 
 **Date**: 2026-07-18
+
+> **⚠️ HISTORICAL SNAPSHOT.** Numbers reflect the state on 2026-07-18. "52 sub-agent recipes" = 50/52 of the catalog at that time. **Current state (2026-07-24): 96 sub-agents, 57 tools, 10 active hard rules, 5-stage IM pipeline + general-improver dispatcher.** For the latest run, see `e2e-results/2026-07-24-demo-team-generation-rate/`.
 **Test method**: Manual, step-by-step, no LLM provider
 **Test environment**: Sandbox (no crontab, no DEEPSEEK_API_KEY, no network)
 

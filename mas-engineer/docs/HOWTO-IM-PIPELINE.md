@@ -1,6 +1,6 @@
 # How to run the IM-Pipeline
 
-The IM-Pipeline (Improvement Pipeline) is MAS-Engineer's 7-stage workflow for
+The IM-Pipeline (Improvement Pipeline) is MAS-Engineer's 5-stage workflow for
 finding, ranking, designing, validating, and applying improvements to a
 codebase. This guide shows when to use it, how to trigger it, and what to
 expect at each stage.
@@ -40,9 +40,9 @@ Then describe the target:
 orchestrator. Find any duplication or missing documentation."
 ```
 
-## The 7 stages
+## The 5 IM stages (+ dispatcher flow)
 
-The IM-Pipeline runs the following stages in order:
+The IM-Pipeline has 5 dedicated stages (`im-finder` → `im-rank` → `im-designer` → `im-session-reader` → `im-validator`) and runs through a general-improver dispatcher. The 7 numbered steps below show the full user-visible flow; the 5 dedicated stages (steps 1, 2, 3, 5) are what those 5 sub-agents produce:
 
 1. **FIND**: `im-finder` scans the target area and writes findings to
    `.state/pipeline/findings.yaml`. Each finding has an id, type, location,
@@ -56,17 +56,17 @@ The IM-Pipeline runs the following stages in order:
    `.state/pipeline/patches.yaml`. Each patch has a target file, old string,
    and new string.
 
-4. **IMPLEMENT**: The patches are applied to the codebase.
+4. **IMPLEMENT** (dispatcher step): The patches are applied to the codebase by the general-improver dispatcher.
 
 5. **VALIDATE**: `im-validator` checks that the patches are correct, that
    the YAML files parse, and that the SOT is consistent. Results go to
    `.state/pipeline/validation.yaml`.
 
-6. **SUMMARIZE**: The user sees a summary of changes and a diff. R01
+6. **SUMMARIZE** (dispatcher step): The user sees a summary of changes and a diff. R01
    confirmation is requested.
 
-7. **PUSH**: After confirmation, the changes are committed and pushed to
-   the repository.
+7. **PUSH** (dispatcher step): After confirmation, the changes are committed and pushed to the
+   repository.
 
 ## Common invocation patterns
 
@@ -76,7 +76,7 @@ The IM-Pipeline runs the following stages in order:
 "Run the IM-pipeline on the dev-mas-engineer orchestrator."
 ```
 
-This runs the full 7-stage pipeline. Use it when you want a broad
+This runs the full 5-stage IM pipeline (with the general-improver dispatcher handling IMPLEMENT/SUMMARIZE/PUSH). Use it when you want a broad improvement pass.
 improvement pass.
 
 ### Targeted improvement

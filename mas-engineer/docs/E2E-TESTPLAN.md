@@ -1,6 +1,8 @@
 # MAS-ENGINEER E2E-TESTPLAN v1.0
 
 **Ziel:** Jederzeit wiederholbar. Alle Funktionen, Schalter, Modi abdecken. Echte runs (kein wrapper).
+
+> **⚠️ HISTORICAL TEST SPEC (2026-07-18).** "52 sub-agents" / "45 Python tools" referenced below reflect the catalog at that date. **Current state (2026-07-24): 96 sub-agents, 57 tools, 10 active hard rules, 5-stage IM pipeline + general-improver dispatcher.** Update the operator-script if running today; the test logic remains valid.
 Jede KI kann diesen Plan ausfuehren.
 
 **Stand:** 2026-07-23

@@ -1,9 +1,9 @@
 # Agent Catalog
 
-MAS-Engineer contains 52 sub-agents, organized into functional categories.
+MAS-Engineer contains 96 sub-agents, organized into functional categories. The detailed listing below covers 52 of them (snapshot as of 2026-07-19); for the full 96-agent catalog, run `ls mas-engineer/recipe/sub/sub_mas-*.yaml` or see `e2e-results/2026-07-24-demo-team-generation-rate/`.
 
 ```mermaid
-pie title 52 Sub-Agents by Category
+pie title 52 Sub-Agents by Category (snapshot 2026-07-19; current total: 96)
     "Framework Builders" : 6
     "Improvement Pipeline" : 7
     "Monitoring" : 7
@@ -48,7 +48,7 @@ flowchart LR
 | Agent | Task | Delegates To |
 |-------|------|:------------:|
 | `sub_mas-generic-init` | Initialize new projects (lightweight, symlink-based) | recipe-designer, web-researcher |
-| `sub_mas-bootstrap` | Deploy MAS-Engineer as standalone distribution (all 52 sub-agents) | dev_generic_init.py |
+| `sub_mas-bootstrap` | Deploy MAS-Engineer as standalone distribution (all 96 sub-agents — snapshot 2026-07-19 listed 52) | dev_generic_init.py |
 | `sub_mas-intention-parser` | Parse natural language → agent YAML | dev_template_generator.py |
 | `sub_mas-recipe-designer` | Create new sub-agents from template | recovery-checkpoint |
 | `sub_mas-recipe-manager` | Install/uninstall/list recipes | dev_recipe_manager.py |
@@ -62,7 +62,7 @@ The self-improvement system. Analyzes sessions, detects issues, designs patches,
 
 | Agent | Task | Delegates To |
 |-------|------|:------------:|
-| `sub_mas-general-improver` | Orchestrate the 7-stage improvement pipeline | ALL im-* agents, yaml-editor, web-researcher, generic-init |
+| `sub_mas-general-improver` | Orchestrate the 5-stage improvement pipeline (im-finder → im-rank → im-designer → im-session-reader → im-validator) + apply patches + summarize + push | ALL im-* agents, yaml-editor, web-researcher, generic-init |
 | `sub_mas-im-session-reader` | Read Goose session DB with 3-level project filter | (none) |
 | `sub_mas-im-finder` | Detect optimization potential (53 documented patterns) | (none) |
 | `sub_mas-im-rank` | Prioritize findings, check Constitution, deduplicate | (none) |
@@ -145,7 +145,7 @@ Administration and system operation.
 |-------|------|:------------:|
 | `sub_mas-goose-admin` | Manage Goose components (sessions, skills, logs) | dev_goose_manager.py |
 | `sub_mas-workflow-engine` | Execute SOT workflows (11 action types) | ANY sub-agent |
-| `sub_mas-master-constitution` | Central rules for ALL 52 sub-agents (11 articles) | (none) |
+| `sub_mas-master-constitution` | Central rules for ALL 96 sub-agents (11 articles) | (none) |
 | `sub_mas-system-knowledge` | Auto-loaded system knowledge at startup | (none) |
 | `sub_mas-dashboard-refresh` | On-demand dashboard data generation | dev_dashboard_refresh.py |
 | `sub_mas-doc-generator` | Framework documentation currency checker | yaml-editor |

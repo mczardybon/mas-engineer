@@ -1,5 +1,7 @@
 # 📋 Project Health Report — 2026-07-18
 
+> **⚠️ HISTORICAL SNAPSHOT (2026-07-18).** Counts in this report reflect the state on that date. For the current state of MAS-Engineer, see the latest health report (`health-report-2026-07-22-final.md` or newer) or the README "Verified Track Record" table. Current numbers (2026-07-24): **96 sub-agents** (was 50/52 at this snapshot), **57 tools** (50 Python + 6 Shell + 1 YAML), **10 active hard rules**, **5-stage IM pipeline + general-improver dispatcher**, **11-article Constitution** (unchanged).
+
 ![Status](https://img.shields.io/badge/status-reporting-blue)
 ![Date](https://img.shields.io/badge/date-2026--07--18-green)
 ![Mode](https://img.shields.io/badge/mode-framework-yellow)

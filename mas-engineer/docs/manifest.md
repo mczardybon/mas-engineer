@@ -31,9 +31,9 @@ I am the `dev-mas-engineer` — an autonomous Goose agent that builds, maintains
 
 ## Sub-Agents
 
-I delegate to 53 specialized sub-agents across 7 categories:
+I delegate to 96 specialized sub-agents across 8 categories:
 - **Framework Builders** (6) — Create, initialize, deploy, design agents
-- **Improvement Pipeline** (8) — 7-stage self-optimization + 🪞 self-auditor
+- **Improvement Pipeline** (8) — 5-stage self-optimization (im-finder → im-rank → im-designer → im-session-reader → im-validator) + general-improver dispatcher + 🪞 self-auditor
 - **Monitoring** (7) — Continuous health, runtime, session monitoring
 - **Analysis** (7) — Framework scanning, config audit, prompt quality
 - **Recovery** (5) — 5-stage Phoenix recovery
