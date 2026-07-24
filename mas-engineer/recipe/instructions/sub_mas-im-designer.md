@@ -74,6 +74,67 @@ you MUST summon `sub_mas-goose-expert` BEFORE designing the patch:**
 
 ⛔ FAILING TO SUMMON GOOSE-EXPERT = patch is REJECTED by im-validator downstream.
 
+## ⛔ STEP 0.7 — WRITE PATCHES.YAML (NO R01 GATE)
+
+**🚨 NEW IN IM-009 (parity with im-finder): I write patches.yaml AUTOMATICALLY without R01 gate. 🚨**
+
+After STEP 1 (drafting all patches) and STEP 1.5 (L01 check), I write patches.yaml IMMEDIATELY:
+
+```python
+import yaml
+# Build patches dict
+patches_dict = {
+    "stage": 3,
+    "agent": "im-designer",
+    "timestamp": "<ISO-8601 now>",
+    "request_id": "<input request_id>",
+    "from": "im-designer",
+    "to": "sub_mas-im-validator",
+    "status": "success",
+    "input_file": ".state/pipeline/ranked_findings.yaml",
+    "data": {
+        "patches": <list of patches with goose_verdict from STEP 0.5>,
+        "skipped": <list of skipped findings with verdict reason>
+    }
+}
+# Write the file
+with open('.state/pipeline/patches.yaml', 'w') as f:
+    yaml.safe_dump(patches_dict, f, default_flow_style=False, sort_keys=False)
+print(f"WRITTEN: .state/pipeline/patches.yaml with {len(patches)} patches ({len(skipped)} skipped)")
+```
+
+**R01 BYPASS FOR patches.yaml:**
+- patches.yaml is the agent's OWN output, not an external file.
+- R01 (user confirmation) is for CHANGES TO RECIPES, not for writing the
+  agent's own output file.
+- The output file is the CONTRACT — the agent MUST write it, period.
+- If the agent does NOT write patches.yaml, im-validator (stage 4) will FAIL
+  because it has no patches to read.
+
+**After writing, VERIFY the file:**
+```bash
+python3 -c "
+import yaml
+d = yaml.safe_load(open('.state/pipeline/patches.yaml'))
+data = d.get('data', {})
+p = data.get('patches', [])
+s = data.get('skipped', [])
+print(f'PERSISTED: stage={d.get(\"stage\")} patches={len(p)} skipped={len(s)} request_id={d.get(\"request_id\")}')
+"
+```
+
+If this VERIFY shows `patches=0` AND `skipped=0` (i.e. nothing was written), STOP and report.
+If `request_id` is missing or wrong, STOP — the validator will reject it as stale.
+
+**Why this step exists (lesson learned from R35, 2026-07-24):**
+- In R35 the im-designer produced 5 valid patches in the conversational output
+  but the patches.yaml file was NOT updated (still contained R34 data).
+- Root cause: instruction only said "OUTPUT via stdout" without explicit
+  python-code to write the file. R01 confirmation rule then either blocked
+  the write or the LLM treated the stdout-output as sufficient.
+- im-finder has had STEP 0.7 since IM-009 (2026-07-23) and writes reliably.
+- This STEP 0.7 in im-designer closes the parity gap.
+
 ## Pipeline Contract (Stage 3/5)
 
 This agent is **stage 3** of the Improvement-Pipeline.
