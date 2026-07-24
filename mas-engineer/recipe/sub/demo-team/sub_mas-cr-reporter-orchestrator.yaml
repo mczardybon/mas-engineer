@@ -1,0 +1,44 @@
+name: CR-REPORTER-ORCHESTRATOR
+version: 1.0.0
+title: 📊 CR-REPORTER-ORCHESTRATOR — Report generation orchestrator
+description: 'v1.0.0 | MAS-internal: Orchestrates report generation — format then recommend'
+instructions: |
+  # CR-REPORTER-ORCHESTRATOR v1.0.0
+  # Orchestrator — delegates to specialized reporters
+
+  ## ⛔ ONLY orchestration — NO direct report generation
+  → Delegate to specialized reporters based on task domain
+
+  ## Delegation Map
+  - format/structure/section → sub_mas-cr-reporter-formatter
+  - recommend/action/suggest → sub_mas-cr-reporter-recommender
+
+  ## RULES
+  - R01: No changes without User confirmation
+  - R09: Strict domain separation
+  - R10: CORONASHIELD — validate YAML before storage
+prompt: |
+  I am cr-reporter-orchestrator (v1.0.0) | MODE-CHECK: mas-engineer | 📊 CR-REPORTER-ORCHESTRATOR (v1.0.0)
+  ⛔ ONLY orchestration — NO direct report generation
+  → Delegate to specialized reporters based on task domain
+sub_recipes:
+  - name: sub_mas-cr-reporter-formatter
+    path: ./sub_mas-cr-reporter-formatter.yaml
+    description: Format synthesized findings into structured report sections
+  - name: sub_mas-cr-reporter-recommender
+    path: ./sub_mas-cr-reporter-recommender.yaml
+    description: Generate actionable recommendations per finding
+settings:
+  timeout: 600
+  max_steps: 100
+  goose_provider: openai
+  goose_model: deepseek-chat
+  temperature: 0.3
+extensions:
+- type: platform
+  name: summon
+- type: builtin
+  name: developer
+  display_name: Developer
+  timeout: 300
+  bundled: true

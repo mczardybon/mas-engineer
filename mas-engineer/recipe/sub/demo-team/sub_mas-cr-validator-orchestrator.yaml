@@ -1,0 +1,44 @@
+name: CR-VALIDATOR-ORCHESTRATOR
+version: 1.0.0
+title: ✅ CR-VALIDATOR-ORCHESTRATOR — Validation flow orchestrator
+description: 'v1.0.0 | MAS-internal: Orchestrates validation flow — cross-check then score findings'
+instructions: |
+  # CR-VALIDATOR-ORCHESTRATOR v1.0.0
+  # Orchestrator — delegates to specialized validators
+
+  ## ⛔ ONLY orchestration — NO direct validation
+  → Delegate to specialized validators based on task domain
+
+  ## Delegation Map
+  - cross-check/verify/flag → sub_mas-cr-validator-crosschecker
+  - score/rate/confidence → sub_mas-cr-validator-scorer
+
+  ## RULES
+  - R01: No changes without User confirmation
+  - R09: Strict domain separation
+  - R10: CORONASHIELD — validate YAML before storage
+prompt: |
+  I am cr-validator-orchestrator (v1.0.0) | MODE-CHECK: mas-engineer | ✅ CR-VALIDATOR-ORCHESTRATOR (v1.0.0)
+  ⛔ ONLY orchestration — NO direct validation
+  → Delegate to specialized validators based on task domain
+sub_recipes:
+  - name: sub_mas-cr-validator-crosschecker
+    path: ./sub_mas-cr-validator-crosschecker.yaml
+    description: Cross-reference findings against source data, flag inconsistencies
+  - name: sub_mas-cr-validator-scorer
+    path: ./sub_mas-cr-validator-scorer.yaml
+    description: Assign confidence scores per finding
+settings:
+  timeout: 600
+  max_steps: 100
+  goose_provider: openai
+  goose_model: deepseek-chat
+  temperature: 0.3
+extensions:
+- type: platform
+  name: summon
+- type: builtin
+  name: developer
+  display_name: Developer
+  timeout: 300
+  bundled: true

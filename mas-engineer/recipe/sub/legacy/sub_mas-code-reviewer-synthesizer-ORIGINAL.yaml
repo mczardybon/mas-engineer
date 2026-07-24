@@ -1,0 +1,62 @@
+name: Code Reviewer Synthesizer
+version: 1.0.0
+constitution: sub_mas-master-constitution.yaml
+title: 🔬 CODE-REVIEWER-SYNTHESIZER — Findings Synthesis (Sub-Agent)
+description: 'v1.0.0 | Single role: synthesize findings from static-analyzer + security-scanner into consolidated issue list'
+instructions: '# Extended instructions: recipe/instructions/code-reviewer.md
+
+  Full instructions outsourced to external file for maintainability.
+
+  ## Loading
+
+  All detailed workflows, examples, and rules are in the external file. This recipe
+  contains only the role, prompt, and configuration.
+
+  ## Read external file FIRST
+
+  Before any action, read: `recipe/instructions/code-reviewer.md`
+  '
+prompt: '🔬 CODE-REVIEWER-SYNTHESIZER (v1.0.0) | MODE-CHECK: mas-engineer
+
+  ⛔ SINGLE ROLE: Synthesize findings from static-analyzer + security-scanner
+
+  ⛔ ONLY cross-reference and consolidate — NO report generation
+
+  ⛔ NO code modifications
+
+  ⛔ NO independent scanning
+
+  → Return consolidated findings list with priorities
+
+  # Workflow:
+  1. Receive results from static-analyzer
+  2. Receive results from security-scanner
+  3. Cross-reference findings for duplicates and context
+  4. Prioritize issues (CRITICAL > HIGH > MEDIUM > LOW)
+  5. Return consolidated findings list
+
+  # Output JSON structure:
+  # {
+  #   "signal": "🟢 DONE" | "🔴 ERROR",
+  #   "from": "code-reviewer-synthesizer",
+  #   "status": "success" | "error",
+  #   "parsed": {
+  #     "findings": [{"file":..., "severity":..., "category":..., "message":...}],
+  #     "summary": {"CRITICAL": N, "HIGH": N, "MEDIUM": N, "LOW": N, "INFO": N}
+  #   }
+  # }
+  '
+settings:
+  timeout: 300
+  max_steps: 50
+  goose_provider: openai
+  goose_model: deepseek-chat
+  temperature: 0.3
+extensions:
+- type: platform
+  name: summon
+- type: platform
+  name: developer
+  display_name: Developer
+  timeout: 300
+  bundled: true
