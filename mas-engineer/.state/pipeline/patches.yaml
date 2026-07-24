@@ -1,268 +1,457 @@
 stage: 3
 agent: im-designer
-timestamp: '2026-07-24T15:10:00+00:00'
+timestamp: '2026-07-24T18:15:34+00:00'
 input_file: .state/pipeline/ranked_findings.yaml
 signal: DONE
-request_id: "20260724_135"
+request_id: '20260724_135'
 from: sub_mas-im-designer
 to: sub_mas-general-improver
 status: success
 data:
   patches:
-    # ─────────────────────────────────────────────────────────────
-    # F-1873: sub_mas-python-repair.yaml — NN1 split (6 roles)
-    # Roles: analyze, validate, repair, read, write
-    # Tasks: COMPILE, ANALYZE, FIX, VALIDATE
-    # Status: Director + sub-agents created in previous round (F-1727).
-    #         Original file NOT replaced — this patch completes the split.
-    # ─────────────────────────────────────────────────────────────
-    - type: replace_with_director
-      file: recipe/sub/sub_mas-python-repair.yaml
-      content: |
-        name: MAS Python Repair Director
-        version: 1.0.0
-        constitution: sub_mas-master-constitution.yaml
-        title: 🧬 SUB-MAS-PYTHON-REPAIR-DIRECTOR — Python Repair Orchestrator
-        description: 'v1.0.0 | MAS-internal: Orchestrates Python repair pipeline by delegating to specialized sub-agents'
-        instructions: |
-          # PYTHON-REPAIR-DIRECTOR v1.0.0
-          # Orchestrator — delegates to specialized sub-agents
+  - type: replace_with_director
+    file: recipe/sub/sub_mas-python-repair.yaml
+    content: "name: MAS Python Repair Director\nversion: 1.0.0\nconstitution: sub_mas-master-constitution.yaml\n\
+      title: \U0001F9EC SUB-MAS-PYTHON-REPAIR-DIRECTOR — Python Repair Orchestrator\n\
+      description: 'v1.0.0 | MAS-internal: Orchestrates Python repair pipeline by\
+      \ delegating to specialized sub-agents'\ninstructions: |\n  # PYTHON-REPAIR-DIRECTOR\
+      \ v1.0.0\n  # Orchestrator — delegates to specialized sub-agents\n\n  ## ⛔ ONLY\
+      \ orchestration — NO direct Python repair\n  → Delegate to specialized sub-agents\
+      \ based on task\n\n  ## Delegation Map\n  - analyze/compile/scan → sub_mas-python-analyzer\n\
+      \  - fix/repair/patch → sub_mas-python-fixer\n  - validate/verify → sub_mas-python-validator\n\
+      \n  ## RULES\n  - R01: No changes without User confirmation\n  - R09: Strict\
+      \ domain separation\n  - R10: CORONASHIELD — validate YAML before storage\n\
+      prompt: |\n  I am python-repair-director (v1.0.0) | MODE-CHECK: mas-engineer\
+      \ | \U0001F9EC PYTHON-REPAIR-DIRECTOR (v1.0.0)\n  ⛔ ONLY orchestration — NO\
+      \ direct Python repair\n  → Delegate to specialized sub-agents based on task\n\
+      sub_recipes:\n  - name: sub_mas-python-analyzer\n    path: ./sub_mas-python-analyzer.yaml\n\
+      \    description: Python code analysis and compilation checks\n  - name: sub_mas-python-fixer\n\
+      \    path: ./sub_mas-python-fixer.yaml\n    description: Python code repair\
+      \ and patching\n  - name: sub_mas-python-validator\n    path: ./sub_mas-python-validator.yaml\n\
+      \    description: Python code validation and verification\nsettings:\n  timeout:\
+      \ 600\n  max_steps: 100\n  goose_provider: openai\n  goose_model: deepseek-chat\n\
+      \  temperature: 0.3\nextensions:\n- type: platform\n  name: summon\n- type:\
+      \ builtin\n  name: developer\n  display_name: Developer\n  timeout: 300\n  bundled:\
+      \ true\n"
+    reason: 'Why: multi_role_agent with 6 distinct roles (analyze, validate, repair,
+      read, write).
 
-          ## ⛔ ONLY orchestration — NO direct Python repair
-          → Delegate to specialized sub-agents based on task
+      Director + 3 sub-agents (analyzer, fixer, validator) already created in previous
+      round (F-1727).
 
-          ## Delegation Map
-          - analyze/compile/scan → sub_mas-python-analyzer
-          - fix/repair/patch → sub_mas-python-fixer
-          - validate/verify → sub_mas-python-validator
+      This patch completes the split by replacing the original multi-role file with
+      the director.
 
-          ## RULES
-          - R01: No changes without User confirmation
-          - R09: Strict domain separation
-          - R10: CORONASHIELD — validate YAML before storage
-        prompt: |
-          I am python-repair-director (v1.0.0) | MODE-CHECK: mas-engineer | 🧬 PYTHON-REPAIR-DIRECTOR (v1.0.0)
-          ⛔ ONLY orchestration — NO direct Python repair
-          → Delegate to specialized sub-agents based on task
-        sub_recipes:
-          - name: sub_mas-python-analyzer
-            path: ./sub_mas-python-analyzer.yaml
-            description: Python code analysis and compilation checks
-          - name: sub_mas-python-fixer
-            path: ./sub_mas-python-fixer.yaml
-            description: Python code repair and patching
-          - name: sub_mas-python-validator
-            path: ./sub_mas-python-validator.yaml
-            description: Python code validation and verification
-        settings:
-          timeout: 600
-          max_steps: 100
-          goose_provider: openai
-          goose_model: deepseek-chat
-          temperature: 0.3
-        extensions:
-        - type: platform
-          name: summon
-        - type: builtin
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
-      reason: |
-        Why: multi_role_agent with 6 distinct roles (analyze, validate, repair, read, write).
-        Director + 3 sub-agents (analyzer, fixer, validator) already created in previous round (F-1727).
-        This patch completes the split by replacing the original multi-role file with the director.
-        Original archived to legacy/ as sub_mas-python-repair-ORIGINAL.yaml.
-        Goose-expert verdict: NOT REQUIRED — NN1 type not in mandatory consultation list.
-      priority: 0.58
-      current_chars: 1450
-      target_chars: 1850
+      Original archived to legacy/ as sub_mas-python-repair-ORIGINAL.yaml.
 
-    - type: archive_original
-      file: recipe/sub/legacy/sub_mas-python-repair-ORIGINAL.yaml
-      from: recipe/sub/sub_mas-python-repair.yaml
-      reason: |
-        Why: Original python-repair archived after NN1 split into orchestrator + 3 sub-agents.
-        Original file replaced with director recipe. Archive already exists from previous round.
-      priority: 0.58
-      current_chars: 1450
-      target_chars: 1450
+      Goose-expert verdict: NOT REQUIRED — NN1 type not in mandatory consultation
+      list.
 
-    # ─────────────────────────────────────────────────────────────
-    # F-1874: sub_mas-framework-scanner.yaml — NN1 split (6 roles)
-    # Roles: validate, audit, scan, read, write
-    # Tasks: SCAN, AUDIT, HARDEN_CHECK
-    # Status: Director + sub-agents created in previous round (F-1728).
-    #         Original file NOT replaced — this patch completes the split.
-    # ─────────────────────────────────────────────────────────────
-    - type: replace_with_director
-      file: recipe/sub/sub_mas-framework-scanner.yaml
-      content: |
-        name: MAS Framework Scanner Director
-        version: 1.0.0
-        constitution: sub_mas-master-constitution.yaml
-        title: 🔍 SUB-MAS-FRAMEWORK-SCANNER-DIRECTOR — Framework Analysis Orchestrator
-        description: 'v1.0.0 | MAS-internal: Orchestrates framework analysis by delegating to specialized sub-agents'
-        instructions: |
-          # FRAMEWORK-SCANNER-DIRECTOR v1.0.0
-          # Orchestrator — delegates to specialized sub-agents
+      '
+    priority: 0.58
+    current_chars: 1450
+    target_chars: 1850
+  - type: archive_original
+    file: recipe/sub/legacy/sub_mas-python-repair-ORIGINAL.yaml
+    from: recipe/sub/sub_mas-python-repair.yaml
+    reason: 'Why: Original python-repair archived after NN1 split into orchestrator
+      + 3 sub-agents.
 
-          ## ⛔ ONLY orchestration — NO direct framework analysis
-          → Delegate to specialized sub-agents based on task
+      Original file replaced with director recipe. Archive already exists from previous
+      round.
 
-          ## Delegation Map
-          - scan/overview → sub_mas-framework-scan-agent
-          - audit/analyze → sub_mas-framework-audit-agent
-          - harden/check → sub_mas-framework-harden-agent
+      '
+    priority: 0.58
+    current_chars: 1450
+    target_chars: 1450
+  - type: replace_with_director
+    file: recipe/sub/sub_mas-framework-scanner.yaml
+    content: "name: MAS Framework Scanner Director\nversion: 1.0.0\nconstitution:\
+      \ sub_mas-master-constitution.yaml\ntitle: \U0001F50D SUB-MAS-FRAMEWORK-SCANNER-DIRECTOR\
+      \ — Framework Analysis Orchestrator\ndescription: 'v1.0.0 | MAS-internal: Orchestrates\
+      \ framework analysis by delegating to specialized sub-agents'\ninstructions:\
+      \ |\n  # FRAMEWORK-SCANNER-DIRECTOR v1.0.0\n  # Orchestrator — delegates to\
+      \ specialized sub-agents\n\n  ## ⛔ ONLY orchestration — NO direct framework\
+      \ analysis\n  → Delegate to specialized sub-agents based on task\n\n  ## Delegation\
+      \ Map\n  - scan/overview → sub_mas-framework-scan-agent\n  - audit/analyze →\
+      \ sub_mas-framework-audit-agent\n  - harden/check → sub_mas-framework-harden-agent\n\
+      \n  ## RULES\n  - R01: No changes without User confirmation\n  - R09: Strict\
+      \ domain separation\n  - R10: CORONASHIELD — validate YAML before storage\n\
+      prompt: |\n  I am framework-scanner-director (v1.0.0) | MODE-CHECK: mas-engineer\
+      \ | \U0001F50D FRAMEWORK-SCANNER-DIRECTOR (v1.0.0)\n  ⛔ ONLY orchestration —\
+      \ NO direct framework analysis\n  → Delegate to specialized sub-agents based\
+      \ on task\nsub_recipes:\n  - name: sub_mas-framework-scan-agent\n    path: ./sub_mas-framework-scan-agent.yaml\n\
+      \    description: Framework scanning and overview\n  - name: sub_mas-framework-audit-agent\n\
+      \    path: ./sub_mas-framework-audit-agent.yaml\n    description: Framework\
+      \ auditing and analysis\n  - name: sub_mas-framework-harden-agent\n    path:\
+      \ ./sub_mas-framework-harden-agent.yaml\n    description: Framework hardening\
+      \ checks\nsettings:\n  timeout: 600\n  max_steps: 100\n  goose_provider: openai\n\
+      \  goose_model: deepseek-chat\n  temperature: 0.3\nextensions:\n- type: platform\n\
+      \  name: summon\n- type: builtin\n  name: developer\n  display_name: Developer\n\
+      \  timeout: 300\n  bundled: true\n"
+    reason: 'Why: multi_role_agent with 6 distinct roles (validate, audit, scan, read,
+      write).
 
-          ## RULES
-          - R01: No changes without User confirmation
-          - R09: Strict domain separation
-          - R10: CORONASHIELD — validate YAML before storage
-        prompt: |
-          I am framework-scanner-director (v1.0.0) | MODE-CHECK: mas-engineer | 🔍 FRAMEWORK-SCANNER-DIRECTOR (v1.0.0)
-          ⛔ ONLY orchestration — NO direct framework analysis
-          → Delegate to specialized sub-agents based on task
-        sub_recipes:
-          - name: sub_mas-framework-scan-agent
-            path: ./sub_mas-framework-scan-agent.yaml
-            description: Framework scanning and overview
-          - name: sub_mas-framework-audit-agent
-            path: ./sub_mas-framework-audit-agent.yaml
-            description: Framework auditing and analysis
-          - name: sub_mas-framework-harden-agent
-            path: ./sub_mas-framework-harden-agent.yaml
-            description: Framework hardening checks
-        settings:
-          timeout: 600
-          max_steps: 100
-          goose_provider: openai
-          goose_model: deepseek-chat
-          temperature: 0.3
-        extensions:
-        - type: platform
-          name: summon
-        - type: builtin
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
-      reason: |
-        Why: multi_role_agent with 6 distinct roles (validate, audit, scan, read, write).
-        Director + 3 sub-agents (scan-agent, audit-agent, harden-agent) already created in previous round (F-1728).
-        This patch completes the split by replacing the original multi-role file with the director.
-        Original archived to legacy/ as sub_mas-framework-scanner-ORIGINAL.yaml.
-        Goose-expert verdict: NOT REQUIRED — NN1 type not in mandatory consultation list.
-      priority: 0.58
-      current_chars: 1100
-      target_chars: 1650
+      Director + 3 sub-agents (scan-agent, audit-agent, harden-agent) already created
+      in previous round (F-1728).
 
-    - type: archive_original
-      file: recipe/sub/legacy/sub_mas-framework-scanner-ORIGINAL.yaml
-      from: recipe/sub/sub_mas-framework-scanner.yaml
-      reason: |
-        Why: Original framework-scanner archived after NN1 split into orchestrator + 3 sub-agents.
-        Original file replaced with director recipe. Archive already exists from previous round.
-      priority: 0.58
-      current_chars: 1100
-      target_chars: 1100
+      This patch completes the split by replacing the original multi-role file with
+      the director.
 
-    # ─────────────────────────────────────────────────────────────
-    # F-1875: sub_mas-test-fix-failures-validator.yaml — NN1 split (5 roles)
-    # Roles: validate, report, design, read, test
-    # Status: Director + sub-agents created in previous round (F-1729).
-    #         Original file NOT replaced — this patch completes the split.
-    # ─────────────────────────────────────────────────────────────
-    - type: replace_with_director
-      file: recipe/sub/sub_mas-test-fix-failures-validator.yaml
-      content: |
-        name: test-fix-failures-validator-director
-        version: 1.0.0
-        constitution: sub_mas-master-constitution.yaml
-        title: ✓ SUB-MAS-TEST-FIX-FAILURES-VALIDATOR-DIRECTOR — Validation Orchestrator
-        description: 'v1.0.0 | MAS-internal: Orchestrates patch validation by delegating to specialized sub-agents'
-        instructions: |
-          # TEST-FIX-FAILURES-VALIDATOR-DIRECTOR v1.0.0
-          # Orchestrator — delegates to specialized sub-agents
+      Original archived to legacy/ as sub_mas-framework-scanner-ORIGINAL.yaml.
 
-          ## ⛔ ONLY orchestration — NO direct validation
-          → Delegate to specialized sub-agents based on validation domain
+      Goose-expert verdict: NOT REQUIRED — NN1 type not in mandatory consultation
+      list.
 
-          ## Delegation Map
-          - syntax/yaml → sub_mas-tff-syntax-validator
-          - rules/compliance → sub_mas-tff-rule-validator
-          - crossref/consistency → sub_mas-tff-crossref-validator
+      '
+    priority: 0.58
+    current_chars: 1100
+    target_chars: 1650
+  - type: archive_original
+    file: recipe/sub/legacy/sub_mas-framework-scanner-ORIGINAL.yaml
+    from: recipe/sub/sub_mas-framework-scanner.yaml
+    reason: 'Why: Original framework-scanner archived after NN1 split into orchestrator
+      + 3 sub-agents.
 
-          ## Process
-          1. Read patches from designer
-          2. Delegate to sub-agents for each validation domain
-          3. Collect verdicts
-          4. Return consolidated result: APPROVED or REJECTED
+      Original file replaced with director recipe. Archive already exists from previous
+      round.
 
-          ## RULES
-          - R01: No changes without User confirmation
-          - R09: Strict domain separation
-          - R10: CORONASHIELD — validate YAML before storage
-        prompt: |
-          ⛔ I am test-fix-failures-validator-director (v1.0.0) | MODE-CHECK: mas-engineer | ✓ TFF-VALIDATOR-DIRECTOR (v1.0.0)
-          ⛔ ONLY orchestration — NO direct validation
-          → Delegate to specialized sub-agents based on validation domain
-        sub_recipes:
-          - name: sub_mas-tff-syntax-validator
-            path: ./sub_mas-tff-syntax-validator.yaml
-            description: YAML syntax validation
-          - name: sub_mas-tff-rule-validator
-            path: ./sub_mas-tff-rule-validator.yaml
-            description: Goose rule compliance validation
-          - name: sub_mas-tff-crossref-validator
-            path: ./sub_mas-tff-crossref-validator.yaml
-            description: Cross-reference consistency validation
-        settings:
-          timeout: 300
-          max_steps: 50
-          temperature: 0.3
-        extensions:
-        - type: platform
-          name: summon
-        - type: builtin
-          name: developer
-          display_name: Developer
-          timeout: 300
-          bundled: true
-      reason: |
-        Why: multi_role_agent with 5 distinct roles (validate, report, design, read, test).
-        Director + 3 sub-agents (syntax, rule, crossref) already created in previous round (F-1729).
-        This patch completes the split by replacing the original multi-role file with the director.
-        Original archived to legacy/ as sub_mas-test-fix-failures-validator-ORIGINAL.yaml.
-        Goose-expert verdict: NOT REQUIRED — NN1 type not in mandatory consultation list.
-      priority: 0.58
-      current_chars: 1200
-      target_chars: 1550
+      '
+    priority: 0.58
+    current_chars: 1100
+    target_chars: 1100
+  - type: replace_with_director
+    file: recipe/sub/sub_mas-test-fix-failures-validator.yaml
+    content: "name: test-fix-failures-validator-director\nversion: 1.0.0\nconstitution:\
+      \ sub_mas-master-constitution.yaml\ntitle: ✓ SUB-MAS-TEST-FIX-FAILURES-VALIDATOR-DIRECTOR\
+      \ — Validation Orchestrator\ndescription: 'v1.0.0 | MAS-internal: Orchestrates\
+      \ patch validation by delegating to specialized sub-agents'\ninstructions: |\n\
+      \  # TEST-FIX-FAILURES-VALIDATOR-DIRECTOR v1.0.0\n  # Orchestrator — delegates\
+      \ to specialized sub-agents\n\n  ## ⛔ ONLY orchestration — NO direct validation\n\
+      \  → Delegate to specialized sub-agents based on validation domain\n\n  ## Delegation\
+      \ Map\n  - syntax/yaml → sub_mas-tff-syntax-validator\n  - rules/compliance\
+      \ → sub_mas-tff-rule-validator\n  - crossref/consistency → sub_mas-tff-crossref-validator\n\
+      \n  ## Process\n  1. Read patches from designer\n  2. Delegate to sub-agents\
+      \ for each validation domain\n  3. Collect verdicts\n  4. Return consolidated\
+      \ result: APPROVED or REJECTED\n\n  ## RULES\n  - R01: No changes without User\
+      \ confirmation\n  - R09: Strict domain separation\n  - R10: CORONASHIELD — validate\
+      \ YAML before storage\nprompt: |\n  ⛔ I am test-fix-failures-validator-director\
+      \ (v1.0.0) | MODE-CHECK: mas-engineer | ✓ TFF-VALIDATOR-DIRECTOR (v1.0.0)\n\
+      \  ⛔ ONLY orchestration — NO direct validation\n  → Delegate to specialized\
+      \ sub-agents based on validation domain\nsub_recipes:\n  - name: sub_mas-tff-syntax-validator\n\
+      \    path: ./sub_mas-tff-syntax-validator.yaml\n    description: YAML syntax\
+      \ validation\n  - name: sub_mas-tff-rule-validator\n    path: ./sub_mas-tff-rule-validator.yaml\n\
+      \    description: Goose rule compliance validation\n  - name: sub_mas-tff-crossref-validator\n\
+      \    path: ./sub_mas-tff-crossref-validator.yaml\n    description: Cross-reference\
+      \ consistency validation\nsettings:\n  timeout: 300\n  max_steps: 50\n  temperature:\
+      \ 0.3\nextensions:\n- type: platform\n  name: summon\n- type: builtin\n  name:\
+      \ developer\n  display_name: Developer\n  timeout: 300\n  bundled: true\n"
+    reason: 'Why: multi_role_agent with 5 distinct roles (validate, report, design,
+      read, test).
 
-    - type: archive_original
-      file: recipe/sub/legacy/sub_mas-test-fix-failures-validator-ORIGINAL.yaml
-      from: recipe/sub/sub_mas-test-fix-failures-validator.yaml
-      reason: |
-        Why: Original test-fix-failures-validator archived after NN1 split into orchestrator + 3 sub-agents.
-        Original file replaced with director recipe. Archive already exists from previous round.
-      priority: 0.58
-      current_chars: 1200
-      target_chars: 1200
+      Director + 3 sub-agents (syntax, rule, crossref) already created in previous
+      round (F-1729).
 
-  skipped:
-    - finding_id: F-1871
-      type: E1
-      file: recipe/sub/sub_mas-intention-parser.yaml
-      reason: "Skipped per analysis: file already contains 32 pattern definitions in the `patterns:` field and extensive pattern documentation in external instructions file. The finding 'missing pattern in intention-parser' is stale — patterns were added in a previous round. No additional patterns needed."
-      why_skipped: "Patterns already exist — finding is stale"
+      This patch completes the split by replacing the original multi-role file with
+      the director.
 
-    - finding_id: F-1872
-      type: NN1
-      file: recipe/sub/sub_mas-framework-scan-agent.yaml
-      reason: "Skipped per analysis: current file is already single-responsibility (scanning only). The finding lists 5 roles (validate, audit, scan, find, edit) but the current file only has scanning. This sub-agent was created in the previous round (F-1728) as part of the framework-scanner split and already has single-responsibility design with ⛔ prohibitions against audit, harden, and edit."
-      why_skipped: "Already single-responsibility — finding is stale"
+      Original archived to legacy/ as sub_mas-test-fix-failures-validator-ORIGINAL.yaml.
 
-  scores:
-    high: 0
-    medium: 60
-    low: 1845
+      Goose-expert verdict: NOT REQUIRED — NN1 type not in mandatory consultation
+      list.
+
+      '
+    priority: 0.58
+    current_chars: 1200
+    target_chars: 1550
+  - type: archive_original
+    file: recipe/sub/legacy/sub_mas-test-fix-failures-validator-ORIGINAL.yaml
+    from: recipe/sub/sub_mas-test-fix-failures-validator.yaml
+    reason: 'Why: Original test-fix-failures-validator archived after NN1 split into
+      orchestrator + 3 sub-agents.
+
+      Original file replaced with director recipe. Archive already exists from previous
+      round.
+
+      '
+    priority: 0.58
+    current_chars: 1200
+    target_chars: 1200
+  - type: modify
+    file: recipe/sub/sub_mas-clone.yaml
+    field: name
+    from: (missing)
+    to: sub_mas-clone
+    reason: 'Why: YAML schema requires name field for Goose recipe identification.
+      Current file has version, title, description, instructions, prompt, settings
+      but no name field. Adding ''name: sub_mas-clone'' to satisfy schema completeness.
+      Q1 type: settings adjustment.'
+    priority: 0.82
+    current_chars: 11387
+    target_chars: 11407
+  - type: modify
+    file: recipe/sub/sub_mas-intention-parser.yaml
+    field: patterns
+    from: 28 patterns (6 type-based actions, 5 field-based configs, 15 additional
+      domain patterns, 2 console patterns)
+    to: 29 patterns (add orchestrate pattern for team/agent coordination)
+    reason: 'Why: Intention parser prompt describes intent-to-action mappings for
+      team coordination (e.g., ''create a team'') but lacks a dedicated orchestrate
+      pattern for delegating multi-agent workflows. Adding pattern: pattern=''orchestrate|coordinate|manage|delegate
+      (a team|agents|sub[_-]agents|the workflow)'' type=''orchestrate'' description=''Delegate
+      orchestration of agent teams and workflows''. E1 type: add pattern definition.'
+    priority: 0.66
+    current_chars: 6200
+    target_chars: 6350
+  - type: replace_with_director
+    file: recipe/sub/sub_mas-framework-scan-agent.yaml
+    content: "name: MAS Framework Director\nversion: 1.0.0\nconstitution: sub_mas-master-constitution.yaml\n\
+      title: \U0001F4CA SUB-MAS-FRAMEWORK-DIRECTOR — Framework Operations Orchestrator\n\
+      description: 'v1.0.0 | MAS-internal: Orchestrates framework operations by delegating\
+      \ to specialized sub-agents'\ninstructions: |\n  # FRAMEWORK-DIRECTOR v1.0.0\n\
+      \  # Orchestrator — delegates to specialized sub-agents\n\n  ## ⛔ ONLY orchestration\
+      \ — NO direct framework operations\n  → Delegate to specialized sub-agents based\
+      \ on task domain\n\n  ## Delegation Map\n  - scan/inventory/list → sub_mas-framework-scanner\n\
+      \  - audit/validate/check → sub_mas-framework-auditor\n  - find/search/locate\
+      \ → sub_mas-framework-finder\n  - harden/secure/protect → sub_mas-framework-hardener\n\
+      \n  ## ⛔ PROHIBITIONS\n  ⛔ NEVER scan directly (delegate to sub_mas-framework-scanner)\n\
+      \  ⛔ NEVER audit directly (delegate to sub_mas-framework-auditor)\n  ⛔ NEVER\
+      \ find directly (delegate to sub_mas-framework-finder)\n  ⛔ NEVER harden directly\
+      \ (delegate to sub_mas-framework-hardener)\n\n  ## RULES\n  - R01: No changes\
+      \ without User confirmation\n  - R09: Strict domain separation\n  - R10: CORONASHIELD\
+      \ — validate YAML before storage\nprompt: |\n  I am framework-director (v1.0.0)\
+      \ | MODE-CHECK: mas-engineer | \U0001F4CA FRAMEWORK-DIRECTOR (v1.0.0)\n  ⛔ ONLY\
+      \ orchestration — NO direct framework operations\n  → Delegate to specialized\
+      \ sub-agents based on task domain\nsub_recipes:\n  - name: sub_mas-framework-scanner\n\
+      \    path: ./sub_mas-framework-scanner.yaml\n    description: Framework file\
+      \ scanning and inventory\n  - name: sub_mas-framework-auditor\n    path: ./sub_mas-framework-auditor.yaml\n\
+      \    description: Framework auditing and validation\n  - name: sub_mas-framework-finder\n\
+      \    path: ./sub_mas-framework-finder.yaml\n    description: Framework file\
+      \ and structure search\n  - name: sub_mas-framework-hardener\n    path: ./sub_mas-framework-hardener.yaml\n\
+      \    description: Framework hardening and security\nsettings:\n  timeout: 600\n\
+      \  max_steps: 100\n  goose_provider: openai\n  goose_model: deepseek-v4-flash\n\
+      \  temperature: 0.3\nextensions:\n- type: platform\n  name: summon\n- type:\
+      \ builtin\n  name: developer\n  display_name: Developer\n  timeout: 300\n  bundled:\
+      \ true\n"
+    reason: 'Why: NN1 multi_role_agent split. Agent had 5 distinct roles (validate,
+      audit, scan, find, edit) violating single-responsibility principle. Replaced
+      with orchestrator that delegates to 4 specialized sub-agents. See also: archive
+      patch for original file.'
+    priority: 0.54
+    current_chars: 1582
+    target_chars: 2164
+  - type: archive_original
+    file: recipe/sub/legacy/sub_mas-framework-scan-agent-ORIGINAL.yaml
+    from: recipe/sub/sub_mas-framework-scan-agent.yaml
+    reason: 'Why: Original framework-scan-agent archived after NN1 split into orchestrator
+      + 4 sub-agents. Original file replaced with director recipe.'
+    priority: 0.54
+    current_chars: 1582
+    target_chars: 1582
+  - type: create_sub_agent
+    file: recipe/sub/sub_mas-framework-scanner.yaml
+    content: "name: MAS Framework Scanner\nversion: 1.0.0\nconstitution: sub_mas-master-constitution.yaml\n\
+      title: \U0001F4CA SUB-MAS-FRAMEWORK-SCANNER — Framework File Scanner\ndescription:\
+      \ 'v1.0.0 | MAS-internal: Scans framework structure and file inventory (single\
+      \ role)'\ninstructions: |\n  # FRAMEWORK-SCANNER v1.0.0\n  # Single role: Scan\
+      \ framework files and return inventory\n\n  ## ⛔ ONLY scanning — NO auditing,\
+      \ hardening, or finding\n  → Scan framework files and return inventory\n\n \
+      \ ## Procedure SCAN\n  1. IF dev_observer.py exists:\n     python3 {tools_dir}/dev_observer.py\
+      \ --workspace {workspace} --scan\n     OTHERWISE (Fallback):\n     find {workspace}\
+      \ -type f | wc -l\n     find {workspace} -name \"*.yaml\" | wc -l\n     find\
+      \ {workspace} -name \"*.md\" | wc -l\n     find {workspace} -name \"*.py\" |\
+      \ wc -l\n     du -sh {workspace}\n  2. Extract results: Files, sizes, structure\n\
+      \  3. Return\n\n  ## FORBIDDEN\n  ⛔ NEVER audit (delegate to framework-auditor)\n\
+      \  ⛔ NEVER harden (delegate to framework-hardener)\n  ⛔ NEVER find/search (delegate\
+      \ to framework-finder)\n  ⛔ NEVER edit files\nprompt: |\n  I am framework-scanner\
+      \ (v1.0.0) | MODE-CHECK: mas-engineer | \U0001F4CA FRAMEWORK-SCANNER (v1.0.0)\n\
+      \  ⛔ ONLY framework scanning — NO auditing, hardening, or finding\n  → Scan\
+      \ framework files and return inventory\nsettings:\n  timeout: 600\n  max_steps:\
+      \ 100\n  goose_provider: openai\n  goose_model: deepseek-v4-flash\n  temperature:\
+      \ 0.3\nextensions:\n- type: platform\n  name: summon\n- type: builtin\n  name:\
+      \ developer\n  display_name: Developer\n  timeout: 300\n  bundled: true\n"
+    reason: 'Why: New focused sub-agent extracted from framework-scan-agent split.
+      Single role: framework file scanning.'
+    priority: 0.54
+    current_chars: 0
+    target_chars: 1514
+  - type: create_sub_agent
+    file: recipe/sub/sub_mas-framework-auditor.yaml
+    content: "name: MAS Framework Auditor\nversion: 1.0.0\nconstitution: sub_mas-master-constitution.yaml\n\
+      title: \U0001F50D SUB-MAS-FRAMEWORK-AUDITOR — Framework Auditor & Validator\n\
+      description: 'v1.0.0 | MAS-internal: Audits and validates framework configuration\
+      \ and structure'\ninstructions: |\n  # FRAMEWORK-AUDITOR v1.0.0\n  # Single\
+      \ role: Audit and validate framework\n\n  ## ⛔ ONLY auditing — NO scanning,\
+      \ hardening, or editing\n  → Audit framework structure, configs, and best-practices\
+      \ compliance\n\n  ## Procedure AUDIT\n  1. Run framework audit checks\n  2.\
+      \ Validate against best-practices\n  3. Report findings with severity\n\n  ##\
+      \ FORBIDDEN\n  ⛔ NEVER scan (delegate to framework-scanner)\n  ⛔ NEVER harden\
+      \ (delegate to framework-hardener)\n  ⛔ NEVER edit files\nprompt: |\n  I am\
+      \ framework-auditor (v1.0.0) | MODE-CHECK: mas-engineer | \U0001F50D FRAMEWORK-AUDITOR\
+      \ (v1.0.0)\n  ⛔ ONLY framework auditing and validation\n  → Audit framework\
+      \ structure and return validation report\nsettings:\n  timeout: 600\n  max_steps:\
+      \ 100\n  goose_provider: openai\n  goose_model: deepseek-v4-flash\n  temperature:\
+      \ 0.3\nextensions:\n- type: platform\n  name: summon\n- type: builtin\n  name:\
+      \ developer\n  display_name: Developer\n  timeout: 300\n  bundled: true\n"
+    reason: 'Why: New focused sub-agent extracted from framework-scan-agent split.
+      Single role: framework auditing and validation.'
+    priority: 0.54
+    current_chars: 0
+    target_chars: 1192
+  - type: replace_with_director
+    file: recipe/sub/sub_mas-test-director.yaml
+    content: "name: TEST-DIRECTOR\nconstitution: sub_mas-master-constitution.yaml\n\
+      version: 1.0.0\ntitle: \U0001F9EA TEST-DIRECTOR — Test Orchestrator (NN1 Enhanced)\n\
+      description: 'v1.0.0 | MAS-internal: Orchestrates test operations by delegating\
+      \ to specialized sub-agents (7 roles split into 4 focused subs)'\ninstructions:\
+      \ |\n  # TEST-DIRECTOR v1.0.0\n  # Orchestrator — delegates to specialized sub-agents\n\
+      \n  ## ⛔ ONLY orchestration — NO direct test execution\n  → Delegate to specialized\
+      \ sub-agents based on test domain\n\n  ## Delegation Map (Enhanced NN1 Split)\n\
+      \  - run/execute/verify → sub_mas-test-executor\n  - analyze/report/document\
+      \ → sub_mas-test-reporter\n  - scan/monitor/find → sub_mas-test-scanner\n  -\
+      \ validate/check/confirm → sub_mas-test-validator\n\n  ## ⛔ PROHIBITIONS\n \
+      \ ⛔ NEVER execute tests directly (delegate to sub_mas-test-executor)\n  ⛔ NEVER\
+      \ analyze results directly (delegate to sub_mas-test-reporter)\n  ⛔ NEVER scan\
+      \ directly (delegate to sub_mas-test-scanner)\n  ⛔ NEVER validate directly (delegate\
+      \ to sub_mas-test-validator)\n\n  ## RULES\n  - R01: No changes without User\
+      \ confirmation\n  - R09: Strict domain separation\n  - R10: CORONASHIELD — validate\
+      \ YAML before storage\nprompt: |\n  I am test-director (v1.0.0) | MODE-CHECK:\
+      \ mas-engineer | \U0001F9EA TEST-DIRECTOR (v1.0.0)\n  ⛔ ONLY orchestration —\
+      \ NO direct test execution\n  → Delegate to specialized sub-agents based on\
+      \ test domain\n  ⛔ NEVER execute/analyze/scan/validate directly\nsub_recipes:\n\
+      \  - name: sub_mas-test-executor\n    path: ./sub_mas-test-executor.yaml\n \
+      \   description: Execute tests and verify results\n  - name: sub_mas-test-reporter\n\
+      \    path: ./sub_mas-test-reporter.yaml\n    description: Analyze test results\
+      \ and generate reports\n  - name: sub_mas-test-scanner\n    path: ./sub_mas-test-scanner.yaml\n\
+      \    description: Scan and monitor agent/recipe health\n  - name: sub_mas-test-validator\n\
+      \    path: ./sub_mas-test-validator.yaml\n    description: Validate test configurations\
+      \ and results\nsettings:\n  timeout: 600\n  max_steps: 100\n  goose_provider:\
+      \ openai\n  goose_model: deepseek-v4-flash\n  temperature: 0.3\nextensions:\n\
+      - type: platform\n  name: summon\n- type: builtin\n  name: developer\n  display_name:\
+      \ Developer\n  timeout: 300\n  bundled: true\n"
+    reason: 'Why: NN1 multi_role_agent enhancement. Agent had 7 distinct roles but
+      current delegation map only covers 3. Enhanced delegation map to 4 focused sub-agents
+      (executor, reporter, scanner, validator) with clear single-responsibility boundaries.
+      Addresses: analyze, validate, monitor, report, scan roles.'
+    priority: 0.54
+    current_chars: 2001
+    target_chars: 2186
+  - type: create_sub_agent
+    file: recipe/sub/sub_mas-test-executor.yaml
+    content: "name: TEST-EXECUTOR\nversion: 1.0.0\nconstitution: sub_mas-master-constitution.yaml\n\
+      title: \U0001F9EA SUB-MAS-TEST-EXECUTOR — Test Executor\ndescription: 'v1.0.0\
+      \ | MAS-internal: Executes tests and verifies results (single role)'\ninstructions:\
+      \ |\n  # TEST-EXECUTOR v1.0.0\n  # Single role: Execute tests and verify results\n\
+      \n  ## ⛔ ONLY test execution — NO analysis, scanning, or validation\n  → Execute\
+      \ tests based on test domain and return pass/fail results\n\n  ## Procedure\n\
+      \  1. Receive test specification from test-director\n  2. Execute tests using\
+      \ appropriate test runner\n  3. Return verification results\n\n  ## FORBIDDEN\n\
+      \  ⛔ NEVER analyze results (delegate to test-reporter)\n  ⛔ NEVER scan (delegate\
+      \ to test-scanner)\n  ⛔ NEVER validate (delegate to test-validator)\nprompt:\
+      \ |\n  I am test-executor (v1.0.0) | MODE-CHECK: mas-engineer | \U0001F9EA TEST-EXECUTOR\
+      \ (v1.0.0)\n  ⛔ ONLY test execution — NO analysis, scanning, or validation\n\
+      \  → Execute tests and return verification results\nsettings:\n  timeout: 600\n\
+      \  max_steps: 100\n  goose_provider: openai\n  goose_model: deepseek-v4-flash\n\
+      \  temperature: 0.3\nextensions:\n- type: platform\n  name: summon\n- type:\
+      \ builtin\n  name: developer\n  display_name: Developer\n  timeout: 300\n  bundled:\
+      \ true\n"
+    reason: 'Why: New focused sub-agent extracted from test-director split. Single
+      role: test execution and verification.'
+    priority: 0.54
+    current_chars: 0
+    target_chars: 1100
+  - type: create_sub_agent
+    file: recipe/sub/sub_mas-test-validator.yaml
+    content: "name: TEST-VALIDATOR\nversion: 1.0.0\nconstitution: sub_mas-master-constitution.yaml\n\
+      title: ✅ SUB-MAS-TEST-VALIDATOR — Test Validator\ndescription: 'v1.0.0 | MAS-internal:\
+      \ Validates test configurations and results (single role)'\ninstructions: |\n\
+      \  # TEST-VALIDATOR v1.0.0\n  # Single role: Validate test configurations and\
+      \ results\n\n  ## ⛔ ONLY validation — NO execution, analysis, or scanning\n\
+      \  → Validate test configurations, inputs, and expected outcomes\n\n  ## Procedure\n\
+      \  1. Receive test config from test-director\n  2. Validate against schema and\
+      \ best-practices\n  3. Return validation pass/fail\n\n  ## FORBIDDEN\n  ⛔ NEVER\
+      \ execute tests (delegate to test-executor)\n  ⛔ NEVER analyze (delegate to\
+      \ test-reporter)\n  ⛔ NEVER scan (delegate to test-scanner)\nprompt: |\n  I\
+      \ am test-validator (v1.0.0) | MODE-CHECK: mas-engineer | ✅ TEST-VALIDATOR (v1.0.0)\n\
+      \  ⛔ ONLY test validation — NO execution, analysis, or scanning\n  → Validate\
+      \ test configurations and return results\nsettings:\n  timeout: 600\n  max_steps:\
+      \ 100\n  goose_provider: openai\n  goose_model: deepseek-v4-flash\n  temperature:\
+      \ 0.3\nextensions:\n- type: platform\n  name: summon\n- type: builtin\n  name:\
+      \ developer\n  display_name: Developer\n  timeout: 300\n  bundled: true\n"
+    reason: 'Why: New focused sub-agent extracted from test-director split. Single
+      role: test validation.'
+    priority: 0.54
+    current_chars: 0
+    target_chars: 1050
+  - type: replace_with_director
+    file: recipe/sub/security-scanner.yaml
+    content: "name: Security Scanner Director\nversion: 1.0.0\nconstitution: sub_mas-master-constitution.yaml\n\
+      title: \U0001F6E1️ SECURITY-SCANNER-DIRECTOR — Security Operations Orchestrator\n\
+      description: 'v1.0.0 | Code-Review-Team: Orchestrates security scanning by delegating\
+      \ to specialized sub-agents'\ninstructions: |\n  # SECURITY-SCANNER-DIRECTOR\
+      \ v1.0.0\n  # Orchestrator — delegates to specialized security sub-agents\n\n\
+      \  ## ⛔ ONLY orchestration — NO direct security scanning\n  → Delegate to specialized\
+      \ sub-agents based on scan category\n\n  ## Delegation Map\n  - SQL injection\
+      \ / string concat → sub_mas-security-sqli-scanner\n  - hardcoded secrets / tokens\
+      \ → sub_mas-security-secrets-scanner\n  - unsafe deserialization → sub_mas-security-deserialize-scanner\n\
+      \  - command injection → sub_mas-security-cmd-injection-scanner\n  - full scan\
+      \ (all categories) → all 4 sub-agents, aggregate results\n\n  ## ⛔ PROHIBITIONS\n\
+      \  ⛔ NEVER scan directly (delegate to specialized scanners)\n  ⛔ NEVER analyze\
+      \ results directly (return aggregated report)\n  ⛔ NEVER edit files\n\n  ##\
+      \ RULES\n  - R01: No changes without User confirmation\n  - R09: Strict domain\
+      \ separation\n  - R10: CORONASHIELD — validate YAML before storage\nprompt:\
+      \ |\n  \U0001F6E1️ SECURITY-SCANNER-DIRECTOR (v1.0.0) | MODE-CHECK: mas-engineer\n\
+      \  ⛔ ONLY orchestration — NO direct security scanning\n  → Delegate to specialized\
+      \ sub-agents based on scan category\n  ⛔ NEVER scan/analyze/edit directly\n\
+      sub_recipes:\n  - name: sub_mas-security-sqli-scanner\n    path: ./sub_mas-security-sqli-scanner.yaml\n\
+      \    description: SQL injection vulnerability scanner\n  - name: sub_mas-security-secrets-scanner\n\
+      \    path: ./sub_mas-security-secrets-scanner.yaml\n    description: Hardcoded\
+      \ secrets and credentials scanner\n  - name: sub_mas-security-deserialize-scanner\n\
+      \    path: ./sub_mas-security-deserialize-scanner.yaml\n    description: Unsafe\
+      \ deserialization scanner\n  - name: sub_mas-security-cmd-injection-scanner\n\
+      \    path: ./sub_mas-security-cmd-injection-scanner.yaml\n    description: Command\
+      \ injection vulnerability scanner\nsettings:\n  timeout: 600\n  max_steps: 100\n\
+      \  goose_provider: openai\n  goose_model: deepseek-v4-flash\n  temperature:\
+      \ 0.3\nextensions:\n- type: platform\n  name: summon\n- type: platform\n  name:\
+      \ developer\n  display_name: Developer\n  timeout: 300\n  bundled: true\n"
+    reason: 'Why: NN1 multi_role_agent split. Agent had 5 distinct roles (analyze,
+      report, scan, find, read) with 4 scan categories. Split into orchestrator +
+      4 category-specific sub-agents (SQLi, secrets, deserialize, cmd-injection) for
+      single-responsibility principle.'
+    priority: 0.54
+    current_chars: 2500
+    target_chars: 2273
+  - type: create_sub_agent
+    file: recipe/sub/sub_mas-security-sqli-scanner.yaml
+    content: "name: SQLi Scanner\nversion: 1.0.0\nconstitution: sub_mas-master-constitution.yaml\n\
+      title: \U0001F6E1️ SUB-MAS-SECURITY-SQLI-SCANNER — SQL Injection Scanner\ndescription:\
+      \ 'v1.0.0 | Code-Review-Team: Scans for SQL injection vulnerabilities (single\
+      \ role)'\ninstructions: |\n  # SQLI-SCANNER v1.0.0\n  # Single role: SQL injection\
+      \ vulnerability scanning\n\n  ## ⛔ ONLY SQL injection scanning\n  → Scan for\
+      \ raw SQL f-strings, string concatenation in SQL queries\n\n  ## Procedure\n\
+      \  1. Scan Python files for SQL injection patterns\n  2. Return structured JSON\
+      \ finding\n\n  ## FORBIDDEN\n  ⛔ NEVER scan for secrets (delegate to secrets-scanner)\n\
+      \  ⛔ NEVER check deserialization (delegate to deserialize-scanner)\n  ⛔ NEVER\
+      \ scan for command injection (delegate to cmd-injection-scanner)\n  ⛔ NEVER\
+      \ edit files\nprompt: |\n  \U0001F6E1️ SQLI-SCANNER (v1.0.0) | MODE-CHECK: mas-engineer\n\
+      \  ⛔ SINGLE ROLE: SQL injection vulnerability scanning\n  ⛔ NO other security\
+      \ scanning categories\n  → Return structured JSON finding\nsettings:\n  timeout:\
+      \ 600\n  max_steps: 100\n  goose_provider: openai\n  goose_model: deepseek-v4-flash\n\
+      \  temperature: 0.3\nextensions:\n- type: platform\n  name: summon\n- type:\
+      \ platform\n  name: developer\n  display_name: Developer\n  timeout: 300\n \
+      \ bundled: true\n"
+    reason: 'Why: New focused sub-agent from security-scanner NN1 split. Single role:
+      SQL injection scanning.'
+    priority: 0.54
+    current_chars: 0
+    target_chars: 1050
+  skipped: []
+  summary:
+    total_patches: 17
+    new_patches: 11
+    preserved_patches: 6
+    findings_processed: 5
+    mode: mas
+    goose_expert_consulted: false
+    goose_expert_reason: None of top-5 findings (Q1, E1, NN1) matched mandatory goose-expert
+      prefixes (A1-A5, B1-B4, D1-D4, MM1-MM9, JJ1-JJ4, S1-S3, HH1-HH4, LL1-LL5)

@@ -1,89 +1,266 @@
 stage: 4
 agent: im-validator
-timestamp: '2026-07-24T15:16:00+00:00'
+timestamp: '2026-07-24T18:18:00+00:00'
 input_file: .state/pipeline/patches.yaml
 signal: DONE
-request_id: '20260724_142'
+request_id: '20260724_178'
 from: sub_mas-im-validator
 to: sub_mas-general-improver
 status: ok
 data:
   validation:
-    status: approved
+    status: partial
     skip_reason: null
     severity_fallback: null
+    approved_count: 10
+    rejected_count: 7
+    notes:
+      - "Patches 0-5 rejected: Files already transformed to directors in previous rounds (F-1727, F-1728, F-1729). Patches are redundant — current state already matches intended outcome."
+      - "Patch 10 rejected: FILE PATH CONFLICT — both Patch 2 (replace_with_director) and Patch 10 (create_sub_agent) target sub_mas-framework-scanner.yaml. Additionally, the file already exists as MAS Framework Scanner Director."
+      - "Patch 8 caveat: Director references sub_mas-framework-finder and sub_mas-framework-hardener which have no creation patches in this set. These sub-agents need to be created separately."
+      - "Patch 15 caveat: Director references 3 sub-agents (sub_mas-security-secrets-scanner, sub_mas-security-deserialize-scanner, sub_mas-security-cmd-injection-scanner) not created in this patch set."
     details:
       - file: recipe/sub/sub_mas-python-repair.yaml
-        patch: "replace_with_director — NN1 split (6 roles → director + 3 sub-agents)"
+        patch_index: 0
+        patch_type: replace_with_director
+        verdict: REJECTED
         yaml_syntax: PASS
-        l01_check: PASS
-        score_before: null
-        score_after:
-          prompt: 8
-          settings: 10
-          structure: 10
-        delta: null
-        notes: "Multi-role agent replaced with director pattern. All 3 sub-recipes (analyzer, fixer, validator) exist and are valid. Constitution field present. Settings within Goose limits (timeout: 600, max_steps: 100). Summon extension listed for delegation."
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "File is ALREADY a director (MAS Python Repair Director with sub_recipes: analyzer, fixer, validator). NN1 split was already completed in round F-1727. Patch is redundant."
+      - file: recipe/sub/legacy/sub_mas-python-repair-ORIGINAL.yaml
+        patch_index: 1
+        patch_type: archive_original
+        verdict: REJECTED
+        yaml_syntax: PASS
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "Dependent on rejected Patch 0. The source file (sub_mas-python-repair.yaml) is already a director, not the original multi-role agent."
       - file: recipe/sub/sub_mas-framework-scanner.yaml
-        patch: "replace_with_director — NN1 split (6 roles → director + 3 sub-agents)"
+        patch_index: 2
+        patch_type: replace_with_director
+        verdict: REJECTED
         yaml_syntax: PASS
-        l01_check: PASS
-        score_before: null
-        score_after:
-          prompt: 8
-          settings: 10
-          structure: 10
-        delta: null
-        notes: "Multi-role agent replaced with director pattern. All 3 sub-recipes (scan-agent, audit-agent, harden-agent) exist and are valid. Constitution field present. Settings within Goose limits (timeout: 600, max_steps: 100). Summon extension listed for delegation."
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "File is ALREADY a director (MAS Framework Scanner Director with sub_recipes: scan-agent, audit-agent, harden-agent). NN1 split was already completed. Patch is redundant."
+      - file: recipe/sub/legacy/sub_mas-framework-scanner-ORIGINAL.yaml
+        patch_index: 3
+        patch_type: archive_original
+        verdict: REJECTED
+        yaml_syntax: PASS
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "Dependent on rejected Patch 2. The source file is already a director, not original."
       - file: recipe/sub/sub_mas-test-fix-failures-validator.yaml
-        patch: "replace_with_director — NN1 split (5 roles → director + 3 sub-agents)"
+        patch_index: 4
+        patch_type: replace_with_director
+        verdict: REJECTED
         yaml_syntax: PASS
-        l01_check: PASS
-        score_before: null
-        score_after:
-          prompt: 8
-          settings: 10
-          structure: 10
-        delta: null
-        notes: "Multi-role agent replaced with director pattern. All 3 sub-recipes (syntax, rule, crossref validators) exist and are valid. Constitution field present. Settings within Goose limits (timeout: 300, max_steps: 50). Summon extension listed for delegation."
-      - file: recipe/sub/sub_mas-test-fix-failures-director.yaml
-        patch: "cross-reference update — validator path corrected"
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "File is ALREADY a director (test-fix-failures-validator-director with sub_recipes: syntax, rule, crossref). NN1 split was already completed in round F-1729. Patch is redundant."
+      - file: recipe/sub/legacy/sub_mas-test-fix-failures-validator-ORIGINAL.yaml
+        patch_index: 5
+        patch_type: archive_original
+        verdict: REJECTED
         yaml_syntax: PASS
-        l01_check: PASS
-        score_before: null
-        score_after:
-          prompt: 8
-          settings: 10
-          structure: 10
-        delta: null
-        notes: "Cross-reference updated from sub_mas-test-fix-failures-validator to sub_mas-test-fix-failures-validator-director. Target file exists and is valid. All 5 sub-recipes (finder, ranker, designer, validator-director, applier) exist."
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "Dependent on rejected Patch 4. The source file is already a director, not original."
+      - file: recipe/sub/sub_mas-clone.yaml
+        patch_index: 6
+        patch_type: modify
+        verdict: APPROVED
+        yaml_syntax: PASS
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "Valid Q1 fix. Current file confirmed missing name field (keys: version, title, description, instructions, prompt, settings). Adding 'name: sub_mas-clone' satisfies Goose YAML schema completeness."
+        notes: "Field change: name from (missing) → sub_mas-clone"
+      - file: recipe/sub/sub_mas-intention-parser.yaml
+        patch_index: 7
+        patch_type: modify
+        verdict: APPROVED
+        yaml_syntax: PASS
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "Valid E1 enhancement. Current file confirmed lacking orchestrate pattern. Adding delegation pattern for team/agent coordination improves multi-agent workflow routing."
+        notes: "Field change: patterns from 28 → 29 (add orchestrate pattern)"
+      - file: recipe/sub/sub_mas-framework-scan-agent.yaml
+        patch_index: 8
+        patch_type: replace_with_director
+        verdict: APPROVED
+        yaml_syntax: PASS
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "Valid NN1 split. Current file is multi-role agent (MAS Framework Scan Agent) with no sub_recipes. Director pattern with 4 focused sub-agents is architecturally sound."
+        notes: "CAVEAT: Director references sub_mas-framework-finder and sub_mas-framework-hardener which are NOT created by any patch in this set. Only sub_mas-framework-scanner (Patch 10, REJECTED) and sub_mas-framework-auditor (Patch 11, APPROVED) have creation patches. Finder + hardener must be created separately."
+      - file: recipe/sub/legacy/sub_mas-framework-scan-agent-ORIGINAL.yaml
+        patch_index: 9
+        patch_type: archive_original
+        verdict: APPROVED
+        yaml_syntax: PASS
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "Valid archive. Source file (sub_mas-framework-scan-agent.yaml) is a multi-role agent that will be replaced by Patch 8. Archiving preserves original for rollback."
+      - file: recipe/sub/sub_mas-framework-scanner.yaml
+        patch_index: 10
+        patch_type: create_sub_agent
+        verdict: REJECTED
+        yaml_syntax: PASS
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "CRITICAL: FILE PATH CONFLICT. This patch targets the same file (sub_mas-framework-scanner.yaml) as Patch 2 (replace_with_director). Additionally, the file already exists as 'MAS Framework Scanner Director', not a scanner sub-agent. Designer must choose a different filename for the scanner sub-agent (e.g., sub_mas-scanner-simple.yaml) or remove this dependency."
+      - file: recipe/sub/sub_mas-framework-auditor.yaml
+        patch_index: 11
+        patch_type: create_sub_agent
+        verdict: APPROVED
+        yaml_syntax: PASS
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "Valid new focused sub-agent. File does not exist. Single-role auditor for framework auditing supports Patch 8's director pattern."
+      - file: recipe/sub/sub_mas-test-director.yaml
+        patch_index: 12
+        patch_type: replace_with_director
+        verdict: APPROVED
+        yaml_syntax: PASS
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "Valid enhancement. Current director has 3 sub-recipes (test-agent, reporter, scanner). Enhancement adds executor + validator for 4-sub pattern. All sub-recipes will exist after applying Patch 13 (executor) and Patch 14 (validator). Reporter and scanner already exist."
+      - file: recipe/sub/sub_mas-test-executor.yaml
+        patch_index: 13
+        patch_type: create_sub_agent
+        verdict: APPROVED
+        yaml_syntax: PASS
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "Valid new focused sub-agent. File does not exist. Single-role executor for test execution supports Patch 12's enhanced director pattern."
+      - file: recipe/sub/sub_mas-test-validator.yaml
+        patch_index: 14
+        patch_type: create_sub_agent
+        verdict: APPROVED
+        yaml_syntax: PASS
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "Valid new focused sub-agent. File does not exist. Single-role validator for test validation supports Patch 12's enhanced director pattern."
+      - file: recipe/sub/security-scanner.yaml
+        patch_index: 15
+        patch_type: replace_with_director
+        verdict: APPROVED
+        yaml_syntax: PASS
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "Valid NN1 split. Current file is multi-role agent (Security Scanner) with no sub_recipes. Director + 4 category-specific sub-agents is architecturally sound."
+        notes: "CAVEAT: Director references 3 sub-agents NOT created in this patch set: sub_mas-security-secrets-scanner, sub_mas-security-deserialize-scanner, sub_mas-security-cmd-injection-scanner. Only sub_mas-security-sqli-scanner (Patch 16) is created. The 3 missing sub-agents must be created separately for the director to function."
+      - file: recipe/sub/sub_mas-security-sqli-scanner.yaml
+        patch_index: 16
+        patch_type: create_sub_agent
+        verdict: APPROVED
+        yaml_syntax: PASS
+        l01_check: CONFORM
+        r04_check: PASS
+        r09_check: PASS
+        r10_check: PASS
+        reason: "Valid new focused sub-agent. File does not exist. Single-role SQLi scanner supports Patch 15's security director pattern."
     recommendation:
-      - APPROVE
-    approved_count: 4
-    rejected_count: 0
+      - "APPROVE: Patches 6, 7 — Q1/E1 modifications (clone name field, intention-parser pattern)"
+      - "APPROVE: Patches 8, 9 — NN1 split + archive for framework-scan-agent"
+      - "APPROVE: Patches 11 — New framework-auditor sub-agent"
+      - "APPROVE: Patches 12, 13, 14 — Enhanced test-director (3-sub→4-sub) + executor + validator"
+      - "APPROVE: Patches 15, 16 — Security-scanner NN1 split + SQLi scanner"
+      - "REJECT: Patches 0-5 — Redundant NN1 splits already applied. These are stale patches."
+      - "REJECT: Patch 10 — File path conflict with existing director at sub_mas-framework-scanner.yaml. Designer must use unique filename."
+      - "FIX: Patch 8's missing sub-recipes (finder, hardener) need creation patches before runtime."
+      - "FIX: Patch 15's missing sub-recipes (secrets, deserialize, cmd-injection) need creation patches before runtime."
+      - "RECOMMEND: Designer should reconcile the framework-scanner.yaml naming conflict. The original was already split. Use a different filename for the scanner sub-agent."
+    cross_reference_issues:
+      - severity: medium
+        description: "Patch 8 director references sub_mas-framework-finder and sub_mas-framework-hardener which have no creation patches in this set"
+      - severity: medium
+        description: "Patch 15 director references sub_mas-security-secrets-scanner, sub_mas-security-deserialize-scanner, sub_mas-security-cmd-injection-scanner which have no creation patches in this set"
+      - severity: critical
+        description: "Patch 10 targets same file as Patch 2 (sub_mas-framework-scanner.yaml). File already exists as director. Cannot create scanner sub-agent at same path."
     goose_post_checks:
-      - patch_id: F-1873
-        file: recipe/sub/sub_mas-python-repair.yaml
+      - patch_id: "0"
         verdict: CONFORM
-        explanation: "Director pattern is Goose-native (sub_recipes + summon). All sub-recipes exist. Settings (timeout: 600, max_steps: 100) within Goose limits. Constitution field references existing file. No cross-references broken. The patch integrates correctly with existing recipe structure."
-      - patch_id: F-1874
-        file: recipe/sub/sub_mas-framework-scanner.yaml
+        explanation: "NN1 split of python-repair — Goose provides no native multi-role-to-director mechanism, so this pattern is acceptable"
+      - patch_id: "1"
         verdict: CONFORM
-        explanation: "Same director pattern as F-1873. All sub-recipes exist. Settings valid. Constitution field present. No integration issues detected."
-      - patch_id: F-1875
-        file: recipe/sub/sub_mas-test-fix-failures-validator.yaml
+        explanation: "Archive operation — no Goose-native conflict"
+      - patch_id: "2"
         verdict: CONFORM
-        explanation: "Same director pattern. All sub-recipes exist. Settings (timeout: 300, max_steps: 50) valid. Constitution field present. No integration issues detected."
-      - patch_id: F-1875-crossref
-        file: recipe/sub/sub_mas-test-fix-failures-director.yaml
+        explanation: "NN1 split of framework-scanner — Goose provides no native multi-role-to-director mechanism"
+      - patch_id: "3"
         verdict: CONFORM
-        explanation: "Cross-reference update is purely additive — replaces old validator path with new director path. Target file exists. All 5 sub-recipes in director are valid. No integration issues."
-    notes:
-      - "All 4 patches validated successfully (3 replace_with_director + 1 cross-reference update)."
-      - "YAML syntax: PASS for all 4 files."
-      - "L01 mechanism check: PASS — no Goose-native conflicts detected for any patch."
-      - "All sub-recipe cross-references verified: 3/3 for python-repair, 3/3 for framework-scanner, 3/3 for test-fix-failures-validator, 5/5 for test-fix-failures-director."
-      - "Constitution field present in all 4 files, referencing existing sub_mas-master-constitution.yaml."
-      - "sub_mas-goose-expert recipe exists but was not available as a delegatable source in this context. Post-apply analysis performed manually with CONFORM verdict for all patches based on goose-docs.ai knowledge."
-      - "Score impact: low-severity findings reduced from 1870 to 1845 (25 resolved), consistent with 3 NN1 splits + 1 cross-reference update."
-      - "No all-restricted pattern detected — all patches received CONFORM verdict."
+        explanation: "Archive operation — no Goose-native conflict"
+      - patch_id: "4"
+        verdict: CONFORM
+        explanation: "NN1 split of tff-validator — Goose provides no native multi-role-to-director mechanism"
+      - patch_id: "5"
+        verdict: CONFORM
+        explanation: "Archive operation — no Goose-native conflict"
+      - patch_id: "6"
+        verdict: CONFORM
+        explanation: "Adding missing name field — no Goose-native conflict"
+      - patch_id: "7"
+        verdict: CONFORM
+        explanation: "Adding orchestrate pattern — no Goose-native conflict"
+      - patch_id: "8"
+        verdict: CONFORM
+        explanation: "NN1 split of framework-scan-agent — Goose provides no native multi-role-to-director mechanism"
+      - patch_id: "9"
+        verdict: CONFORM
+        explanation: "Archive operation — no Goose-native conflict"
+      - patch_id: "10"
+        verdict: CONFORM
+        explanation: "Create sub-agent — no Goose-native conflict, but file path conflicts with existing director"
+      - patch_id: "11"
+        verdict: CONFORM
+        explanation: "Create sub-agent — no Goose-native conflict"
+      - patch_id: "12"
+        verdict: CONFORM
+        explanation: "Enhance test-director — expansion of existing director pattern"
+      - patch_id: "13"
+        verdict: CONFORM
+        explanation: "Create test-executor — no Goose-native conflict"
+      - patch_id: "14"
+        verdict: CONFORM
+        explanation: "Create test-validator — no Goose-native conflict"
+      - patch_id: "15"
+        verdict: CONFORM
+        explanation: "NN1 split of security-scanner — Goose provides no native multi-role-to-director mechanism"
+      - patch_id: "16"
+        verdict: CONFORM
+        explanation: "Create SQLi scanner — no Goose-native conflict"
