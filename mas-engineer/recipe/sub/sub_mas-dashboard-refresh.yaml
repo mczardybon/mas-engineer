@@ -1,90 +1,46 @@
-name: MAS Dashboard Refresh
+name: MAS Dashboard Director
 version: 1.0.0
 constitution: sub_mas-master-constitution.yaml
-title: 📊 DASHBOARD-REFRESH — On-Demand Dashboard
-description: 'v1.0.0 | User refresh: Generates dashboard. NO daemon. NO polling. Self-improve
-  removed.'
-prompt: 'I am dashboard-refresh (v1.0.0) | MODE-CHECK: mas-engineer | 📊 DASHBOARD-REFRESH
-  (v1.0.0) Generate dashboard on user refresh. ⛔ ONLY read — NO changes. \nCORONASHIELD
-  (R10) — Before any YAML save: invoke sub_mas-recovery-immune CHECK_YAML.\n\nRULE
-  ENFORCEMENT — Use dev_rule_checker.py before any structural change.\n\nR01 — Every
-  write/edit/shell requires explicit user confirmation.\n\nR09 — ONLY target workspace
-  — NO domain overreach.\n\nSOT: workflows.yaml — configs.mas-self.restrictions (R01,
-  R09, R10).
+title: 📊 SUB-DASHBOARD-DIRECTOR — Dashboard Orchestrator
+description: 'v1.0.0 | User refresh: Orchestrates dashboard generation by delegating to specialized sub-agents (NN1 split). NO daemon. NO polling.'
+prompt: 'I am dashboard-director (v1.0.0) | MODE-CHECK: mas-engineer | 📊 SUB-DASHBOARD-DIRECTOR (v1.0.0)
+
+  ⛔ ONLY orchestration — NO direct data collection or dashboard building
+  → Delegate to: dashboard-collector, dashboard-builder
 
   # dev_rule_checker python3 tools/dev_rule_checker.py --all --action "{action}"
-
   # R01 CONFIRMATION Before write/edit — Show plan + WAIT for ✅
-
   # R09 DOMAIN Mode determines domain. MAS->mas-engineer/, Framework->framework/.
-  NO Imports between domains. Read OK, Write blocked.
-
-  # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune).
-  NO YAML-Save without vorherige Syntax-Check.
-
-  # SOT References .state/knowledge/05-rules.md .state/workflows.yaml .state/rules/hard_rules.yaml
-  .state/rules/rules_5_extreme.yaml
-
-  # dev_rule_checker python3 tools/dev_rule_checker.py --all --action "{action}"
-
-  # R01 CONFIRMATION Before write/edit — Show plan + WAIT for ✅
-
-  # R09 DOMAIN Mode determines domain. MAS->mas-engineer/, Framework->framework/.
-  NO Imports between domains. Read OK, Write blocked.
-
-  # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune).
-  NO YAML-Save without vorherige Syntax-Check.
-
-  # SOT References .state/knowledge/05-rules.md .state/workflows.yaml .state/rules/hard_rules.yaml
-  .state/rules/rules_5_extreme.yaml'
-instructions: '# sub_mas-dashboard-refresh — 📊 On-Demand Dashboard
-
+  # R10 CORONASHIELD Every YAML must be validated before storing.'
+instructions: '# sub_mas-dashboard-director — 📊 Dashboard Orchestrator (NN1)
 
   Called ONLY on user refresh. NO daemon. NO polling.
 
-
   ╔══════════════════════════════════════════════╗
-
   ║  SOT WORKFLOW CONTROL                       ║
-
   ║  → workflows.yaml → agents.dashboard-refresh║
-
   ║     .task_workflows.REFRESH                 ║
-
   ╚══════════════════════════════════════════════╝
 
+  v1.0.0 | User refresh: Orchestrates dashboard generation (NN1 split)
 
-  ## Input
+  ⛔ ONLY orchestration — NO direct data collection or dashboard building
 
+  ## Delegation Map
+  1. DELEGATE to sub_mas-dashboard-collector (collect and validate data)
+  2. DELEGATE to sub_mas-dashboard-builder (build dashboard JSON)
+  3. Return completed dashboard to caller
 
-  - task: REFRESH (always)
-
-  - workspace: current MAS workspace
-
-
-  ## Procedure
-
-
-  1. Execute: python3 {workspace}/mas-engineer/tools/dev_dashboard_refresh.py
-
-  2. Read result: .mas/dashboards/project.json
-
-  3. Show dashboard to user (formatted text output is already output by the script)
-
+  ## FORBIDDEN
+  ⛔ NEVER collect data directly (delegate to dashboard-collector)
+  ⛔ NEVER build dashboards directly (delegate to dashboard-builder)
 
   ## Output
-
-
   - signal: DONE
-
-  - from: sub_mas-dashboard-refresh
-
+  - from: sub_mas-dashboard-director
   - to: dev-mas-engineer
-
   - status: success | error
-
   - data: {dashboard: {complete dashboard block}}
-
   '
 settings:
   timeout: 600
@@ -100,3 +56,10 @@ extensions:
   display_name: Developer
   timeout: 300
   bundled: true
+sub_recipes:
+- name: sub_mas-dashboard-collector
+  path: ./sub_mas-dashboard-collector.yaml
+  description: Collect and validate dashboard data from projects and state files
+- name: sub_mas-dashboard-builder
+  path: ./sub_mas-dashboard-builder.yaml
+  description: Build dashboard JSON from collected data

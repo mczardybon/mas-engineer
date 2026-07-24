@@ -1,0 +1,61 @@
+# R49 — 3 structural fixes als RECIPE-EDITS (nicht design-konzepte!)
+# Lehre aus R47: mas lehnt design-konzepte ab. Wir geben konkrete recipe-patches.
+
+target_fixes:
+  - id: check-12-sub-recipe-resolution
+    description: |
+      Add sub_recipe_ref_resolution check to pre-push-validator.
+      Location: mas-engineer/recipe/instructions/sub_mas-pre-push-validator.md
+      Append to "checks" list, and corresponding python implementation in
+      mas-engineer/recipe/sub/sub_mas-pre-push-validator.yaml prompt section.
+    proposed_edit:
+      file: mas-engineer/recipe/instructions/sub_mas-pre-push-validator.md
+      change: |
+        Append to checks list:
+        12. SUB_RECIPE_REF_RESOLUTION: scan mas-engineer/recipe/sub/*.yaml,
+            for each sub_recipes[].path, verify file exists. If any missing,
+            return BLOCKED with director:ref:path details.
+      verify: |
+        python3 -c "
+        import yaml, glob, os
+        for f in glob.glob('mas-engineer/recipe/sub/*.yaml'):
+            if 'ORIGINAL' in f: continue
+            d = yaml.safe_load(open(f))
+            for s in d.get('sub_recipes', []):
+                p = s.get('path','').lstrip('./')
+                full = os.path.join(os.path.dirname(f), p)
+                assert os.path.exists(full), f'{f} -> {p}'
+        print('OK all refs resolve')
+        "
+
+  - id: caveats-are-blocking
+    description: |
+      In sub_mas-general-improver design stage, treat patches with caveats
+      (text: "caveat", "requires separate", "not in this set", "separate creation")
+      as REJECTED instead of informational.
+      Location: mas-engineer/recipe/instructions/sub_mas-general-improver.md
+    proposed_edit:
+      file: mas-engineer/recipe/instructions/sub_mas-general-improver.md
+      change: |
+        In STEP 4 (DRAFT PATCHES), add rule:
+        "Patches that contain caveats/references to external creation must
+        be REJECTED with verdict: BLOCKED_CAVEAT. The required sub_recipes
+        must be added to the same patch set, or the director patch must be
+        rejected entirely. Caveats as informational are forbidden."
+
+  - id: nn1-atomic-bundle
+    description: |
+      In sub_mas-general-improver design stage, NN1 director-patches must
+      be atomic: if a director is being added/modified AND it references
+      new sub_recipes that don't exist, the design stage must auto-emit
+      create_sub_agent patches for those sub_recipes OR reject the director.
+      Location: mas-engineer/recipe/instructions/sub_mas-general-improver.md
+    proposed_edit:
+      file: mas-engineer/recipe/instructions/sub_mas-general-improver.md
+      change: |
+        In STEP 4 NN1-handling:
+        "When applying replace_with_director pattern:
+         1. Parse proposed new sub_recipes[].path list
+         2. For each path not in existing files: emit create_sub_agent patch
+         3. If unable to auto-emit: REJECT director patch with BLOCKED_SUB_RECIPE_MISSING
+         4. Atomicity: directors + sub-agents MUST be in same patch-set"

@@ -1,459 +1,399 @@
-stage: 3
-agent: im-designer
-timestamp: '2026-07-24T21:30:44Z'
-request_id: im-rank-20260724-212755
-from: im-designer
-to: sub_mas-im-validator
+signal: DONE
+request_id: 902f4fd5-4c31-42ae-85ba-2dd17de5a409
+from: sub_mas-im-designer
+to: sub_mas-general-improver
 status: success
+timestamp: '2026-07-24T22:21:21.543544+00:00'
 input_file: .state/pipeline/ranked_findings.yaml
 data:
   patches:
-  - finding_id: F-1968
+  - id: F-2071
     type: E1
+    severity: medium
     file: recipe/sub/sub_mas-intention-parser.yaml
     field: patterns
-    action: add_items
-    from: 30 existing patterns
-    to: '35 patterns (add 5 new: pipeline, dashboard, signal, health, rank)'
-    value:
-    - pattern: improvement pipeline|im-pipeline|self-improve|improvement cycle
-      type: improve
-      description: Trigger the self-improvement pipeline for agents and recipes
-    - pattern: dashboard (refresh|update|generate|show)
-      type: dashboard
-      description: Generate or refresh the project dashboard
-    - pattern: signal (send|receive|broadcast) (health|degradation|improvement|status)
-      type: signal
-      description: Handle signal-based agent communication
-    - pattern: health (report|check|status|audit|monitor)
-      type: health
-      description: Generate health report for agents or system
-    - pattern: rank (findings|patches|improvements|priorities)
-      type: rank
-      description: Rank and prioritize findings or improvement patches
-    reason: 'Why: Intention parser missing patterns for recent MAS architecture additions
-      (pipeline, dashboard, signal, health, rank). These enable direct user intent
-      detection for these workflows. E1: add missing pattern definitions.'
-    priority: 0.66
-    severity: medium
-    current_chars: 0
-    target_chars: 0
-  - finding_id: F-1971
+    operation: add_entries
+    from: No fork/review/recover/assign patterns
+    to: Add 4 new patterns covering fork, review, recover, and assign intents
+    current_chars: 3256
+    target_chars: 3580
+    patch_detail:
+      new_patterns:
+      - pattern: fork (an? )?(agent|recipe|workflow|pipeline)
+        type: fork
+        description: Fork an agent, recipe, or workflow for independent development
+      - pattern: review (the )?(code|recipe|agent|yaml|config|workflow|changes)
+        type: review
+        description: Review code, recipe, configuration, or planned changes
+      - pattern: recover (the )?(agent|recipe|system|state|from) (failure|degradation|error|crash)
+        type: recover
+        description: Recover agent, recipe, or system from failure or degradation
+      - pattern: assign (the )?(task|role|agent|work) (to|for)
+        type: assign
+        description: Assign a task or agent to a specific role or responsibility
+    reason: 'Why: F-2071 — missing pattern coverage in intention-parser. The MAS ecosystem
+      includes fork (agent-forker), review (code-reviewer), recover (degradation-handler),
+      and assign (team-packager) agents, but the intention parser lacks corresponding
+      detection patterns. Adding these 4 patterns closes the gap and ensures user
+      intents for these operations are correctly routed.'
+    priority: 0.82
+    goose_verdict: NOT_REQUIRED
+  - id: F-2074
     type: NN1
-    file: recipe/sub/sub_mas-degradation-director.yaml
-    field: new_file
-    action: create_orchestrator
-    from: single agent with 6 roles
-    to: orchestrator delegating to 2 sub-agents
-    content_yaml:
-      name: MAS Degradation Director
-      version: 1.0.0
-      constitution: sub_mas-master-constitution.yaml
-      title: DEGRADATION-DIRECTOR — Degradation Handling Orchestrator
-      description: 'v1.0.0 | MAS-internal: Orchestrates degradation handling by delegating
-        to specialized sub-agents'
-      instructions: '# DEGRADATION-DIRECTOR v1.0.0
-
-        # Orchestrator — delegates to specialized sub-agents
-
-
-        ## Delegation Map
-
-        - analyze/diagnose -> sub_mas-degradation-analyzer
-
-        - report/document -> sub_mas-degradation-reporter
-
-
-        ## PROHIBITIONS
-
-        - NEVER analyze directly (delegate to sub_mas-degradation-analyzer)
-
-        - NEVER generate reports directly (delegate to sub_mas-degradation-reporter)
-
-
-        ## RULES
-
-        - R01: No changes without User confirmation
-
-        - R09: Strict domain separation
-
-        - R10: CORONASHIELD — validate YAML before storage'
-      prompt: 'I am degradation-director (v1.0.0) | MODE-CHECK: mas-engineer | DEGRADATION-DIRECTOR
-        (v1.0.0)
-
-        ONLY orchestration — NO direct handling
-
-        Delegate to specialized sub-agents based on handling phase
-
-        NEVER analyze/report directly'
-      sub_recipes:
-      - name: sub_mas-degradation-analyzer
-        path: ./sub_mas-degradation-analyzer.yaml
-        description: Analyze degraded agents and create treatment plans
-      - name: sub_mas-degradation-reporter
-        path: ./sub_mas-degradation-reporter.yaml
-        description: Report degradation handling results
-      settings:
-        timeout: 600
-        max_steps: 100
-        goose_provider: openai
-        goose_model: deepseek-v4-flash
-        temperature: 0.3
-      extensions:
-      - type: platform
-        name: summon
-      - type: builtin
-        name: developer
-        display_name: Developer
-        timeout: 300
-        bundled: true
-    reason: 'Why: Degradation handler has 6 distinct roles violating single-responsibility.
-      NN1 split into director + analyzer + reporter clarifies responsibility.'
-    priority: 0.54
     severity: medium
-    current_chars: 0
-    target_chars: 0
-  - finding_id: F-1971
+    file: recipe/sub/sub_mas-degradation-handler.yaml
+    field: structure
+    operation: split_agent
+    from: Monolithic agent with 6 roles (analyze, validate, report, read, write)
+    to: 'Orchestrator + 3 specialized sub-agents: analyzer, treatment-planner, report-writer'
+    current_chars: 1540
+    target_chars: 4200
+    patch_detail:
+      orchestrator:
+        file: recipe/sub/sub_mas-degradation-handler.yaml
+        changes:
+          description: 'v1.0.0 | MAS-internal: Orchestrates degradation handling by
+            delegating to specialized sub-agents (NN1 split)'
+          instructions: Add delegation map routing degraded-agent reports → analyzer,
+            treatment decisions → planner, and treatment reports → reporter
+          prompt: 'Update to orchestrator prompt: ''I am degradation-director (v1.0.0)
+            | ⛔ ONLY orchestration — NO direct handling'''
+          sub_recipes:
+          - name: sub_mas-degradation-analyzer
+            path: ./sub_mas-degradation-analyzer.yaml
+            description: Analyze degraded agent reports and identify root causes
+          - name: sub_mas-degradation-planner
+            path: ./sub_mas-degradation-planner.yaml
+            description: Design treatment plans for degraded agents
+          - name: sub_mas-degradation-reporter
+            path: ./sub_mas-degradation-reporter.yaml
+            description: Generate treatment reports and summaries
+      sub_agent_1:
+        file: recipe/sub/sub_mas-degradation-analyzer.yaml
+        content:
+          name: DEGRADATION-ANALYZER
+          version: 1.0.0
+          constitution: sub_mas-master-constitution.yaml
+          title: 🔍 SUB-DEGRADATION-ANALYZER — Degradation Analysis
+          description: 'v1.0.0 | MAS-internal: Analyzes degraded agent reports and
+            identifies root causes (single role)'
+          instructions: '# DEGRADATION-ANALYZER v1.0.0
+
+            # Single role: Analyze degraded agent reports
+
+
+            ## ⛔ ONLY analysis — NO treatment planning or report writing
+
+            → Analyze degradation signals and identify root causes
+
+
+            ## Procedure
+
+            1. Receive degraded agent report from degradation-director
+
+            2. Analyze degradation patterns and metrics
+
+            3. Return root cause analysis
+
+
+            ## FORBIDDEN
+
+            ⛔ NEVER design treatment plans (delegate to degradation-planner)
+
+            ⛔ NEVER generate reports (delegate to degradation-reporter)'
+          prompt: 'I am degradation-analyzer (v1.0.0) | MODE-CHECK: mas-engineer |
+            🔍 DEGRADATION-ANALYZER (v1.0.0)
+
+            ⛔ ONLY analysis — NO treatment planning or report writing
+
+            → Analyze degraded agents and identify root causes'
+          settings:
+            timeout: 600
+            max_steps: 100
+            goose_provider: openai
+            goose_model: deepseek-v4-flash
+            temperature: 0.3
+          extensions:
+          - type: platform
+            name: summon
+          - type: builtin
+            name: developer
+            display_name: Developer
+            timeout: 300
+            bundled: true
+      sub_agent_2:
+        file: recipe/sub/sub_mas-degradation-planner.yaml
+        content:
+          name: DEGRADATION-PLANNER
+          version: 1.0.0
+          constitution: sub_mas-master-constitution.yaml
+          title: 💊 SUB-DEGRADATION-PLANNER — Treatment Planning
+          description: 'v1.0.0 | MAS-internal: Designs treatment plans for degraded
+            agents (single role)'
+          instructions: '# DEGRADATION-PLANNER v1.0.0
+
+            # Single role: Design treatment plans
+
+
+            ## ⛔ ONLY treatment planning — NO analysis or report writing
+
+            → Design treatment plans based on root cause analysis
+
+
+            ## Procedure
+
+            1. Receive root cause analysis from degradation-analyzer
+
+            2. Design appropriate treatment steps (restart, reconfigure, rollback,
+            escalate)
+
+            3. Return treatment plan
+
+
+            ## FORBIDDEN
+
+            ⛔ NEVER analyze degradation (delegate to degradation-analyzer)
+
+            ⛔ NEVER generate reports (delegate to degradation-reporter)'
+          prompt: 'I am degradation-planner (v1.0.0) | MODE-CHECK: mas-engineer |
+            💊 DEGRADATION-PLANNER (v1.0.0)
+
+            ⛔ ONLY treatment planning — NO analysis or report writing
+
+            → Design treatment plans for degraded agents'
+          settings:
+            timeout: 600
+            max_steps: 100
+            goose_provider: openai
+            goose_model: deepseek-v4-flash
+            temperature: 0.3
+          extensions:
+          - type: platform
+            name: summon
+          - type: builtin
+            name: developer
+            display_name: Developer
+            timeout: 300
+            bundled: true
+      sub_agent_3:
+        file: recipe/sub/sub_mas-degradation-reporter.yaml
+        content:
+          name: DEGRADATION-REPORTER
+          version: 1.0.0
+          constitution: sub_mas-master-constitution.yaml
+          title: 📋 SUB-DEGRADATION-REPORTER — Treatment Reporting
+          description: 'v1.0.0 | MAS-internal: Generates treatment reports and summaries
+            (single role)'
+          instructions: '# DEGRADATION-REPORTER v1.0.0
+
+            # Single role: Generate treatment reports
+
+
+            ## ⛔ ONLY report writing — NO analysis or treatment planning
+
+            → Generate structured treatment reports and summaries
+
+
+            ## Procedure
+
+            1. Receive treatment plan from degradation-planner
+
+            2. Format treatment report with status, actions taken, and recommendations
+
+            3. Return completed report to degradation-director
+
+
+            ## FORBIDDEN
+
+            ⛔ NEVER analyze degradation (delegate to degradation-analyzer)
+
+            ⛔ NEVER design treatments (delegate to degradation-planner)'
+          prompt: 'I am degradation-reporter (v1.0.0) | MODE-CHECK: mas-engineer |
+            📋 DEGRADATION-REPORTER (v1.0.0)
+
+            ⛔ ONLY report writing — NO analysis or treatment planning
+
+            → Generate treatment reports and summaries'
+          settings:
+            timeout: 600
+            max_steps: 100
+            goose_provider: openai
+            goose_model: deepseek-v4-flash
+            temperature: 0.3
+          extensions:
+          - type: platform
+            name: summon
+          - type: builtin
+            name: developer
+            display_name: Developer
+            timeout: 300
+            bundled: true
+    reason: 'Why: F-2074 — multi_role_agent with 6 roles. NN1 split reduces cognitive
+      load per agent, enforces separation of concerns (analyze vs. plan vs. report),
+      and matches the established NN1 pattern used by test-director and security-scanner.
+      Each sub-agent has exactly 1 role and explicit FORBIDDEN sections preventing
+      scope creep.'
+    priority: 0.54
+    goose_verdict: NOT_REQUIRED
+  - id: F-2075
     type: NN1
-    file: recipe/sub/sub_mas-degradation-analyzer.yaml
-    field: new_file
-    action: create_sub_agent
-    from: N/A (new file)
-    to: analyzer sub-agent with focused diagnostic role
-    content_yaml:
-      name: MAS Degradation Analyzer
-      version: 1.0.0
-      constitution: sub_mas-master-constitution.yaml
-      title: SUB-DEGRADATION-ANALYZER — Degradation Analysis
-      description: 'v1.0.0 | MAS-internal: Analyzes degraded agents from guardian
-        reports and creates treatment plans'
-      instructions: '# SUB-DEGRADATION-ANALYZER v1.0.0
-
-        # Analyzes degraded agents and creates treatment plans
-
-
-        ## ONLY analysis — NO handling or reporting
-
-        Analyze guardian reports and create treatment plans
-
-
-        ## RULES
-
-        - R01: No changes without User confirmation
-
-        - R09: Strict domain separation
-
-        - R10: CORONASHIELD — validate YAML before storage'
-      prompt: 'I am degradation-analyzer (v1.0.0) | MODE-CHECK: mas-engineer | SUB-DEGRADATION-ANALYZER
-        (v1.0.0)
-
-        ONLY analysis — NO handling or reporting
-
-        Analyze guardian degradation reports and produce treatment plans'
-      settings:
-        timeout: 600
-        max_steps: 100
-        goose_provider: openai
-        goose_model: deepseek-v4-flash
-        temperature: 0.3
-      extensions:
-      - type: platform
-        name: summon
-      - type: builtin
-        name: developer
-        display_name: Developer
-        timeout: 300
-        bundled: true
-    reason: 'Why: New sub-agent focused on analyzing degraded agents and creating
-      treatment plans, extracted from monolithic degradation-handler.'
-    priority: 0.54
     severity: medium
-    current_chars: 0
-    target_chars: 0
-  - finding_id: F-1971
-    type: NN1
-    file: recipe/sub/sub_mas-degradation-reporter.yaml
-    field: new_file
-    action: create_sub_agent
-    from: N/A (new file)
-    to: reporter sub-agent with focused reporting role
-    content_yaml:
-      name: MAS Degradation Reporter
-      version: 1.0.0
-      constitution: sub_mas-master-constitution.yaml
-      title: SUB-DEGRADATION-REPORTER — Degradation Reporting
-      description: 'v1.0.0 | MAS-internal: Generates reports on degradation handling
-        results'
-      instructions: '# SUB-DEGRADATION-REPORTER v1.0.0
+    file: recipe/sub/sub_mas-dashboard-refresh.yaml
+    field: structure
+    operation: split_agent
+    from: Monolithic agent with 5 roles (validate, generate, read, write, edit)
+    to: 'Orchestrator + 2 specialized sub-agents: data-collector, dashboard-builder'
+    current_chars: 2180
+    target_chars: 3600
+    patch_detail:
+      orchestrator:
+        file: recipe/sub/sub_mas-dashboard-refresh.yaml
+        changes:
+          description: 'v1.0.0 | User refresh: Orchestrates dashboard generation by
+            delegating to specialized sub-agents (NN1 split). NO daemon. NO polling.'
+          instructions: 'Add delegation map: data collection → dashboard-collector,
+            dashboard building → dashboard-builder'
+          prompt: 'Update to orchestrator prompt: ''I am dashboard-director (v1.0.0)
+            | ⛔ ONLY orchestration — NO direct data collection or dashboard building'''
+          sub_recipes:
+          - name: sub_mas-dashboard-collector
+            path: ./sub_mas-dashboard-collector.yaml
+            description: Collect and validate dashboard data from projects and state
+              files
+          - name: sub_mas-dashboard-builder
+            path: ./sub_mas-dashboard-builder.yaml
+            description: Build dashboard JSON from collected data
+      sub_agent_1:
+        file: recipe/sub/sub_mas-dashboard-collector.yaml
+        content:
+          name: DASHBOARD-COLLECTOR
+          version: 1.0.0
+          constitution: sub_mas-master-constitution.yaml
+          title: 📊 SUB-DASHBOARD-COLLECTOR — Dashboard Data Collection
+          description: 'v1.0.0 | MAS-internal: Collects and validates dashboard data
+            from projects and state files (single role)'
+          instructions: '# DASHBOARD-COLLECTOR v1.0.0
 
-        # Reports on degradation handling results
+            # Single role: Collect and validate dashboard data
 
 
-        ## ONLY reporting — NO analysis or handling
+            ## ⛔ ONLY data collection — NO dashboard building
 
-        Generate structured reports from degradation analysis
+            → Collect project metrics and state data
 
 
-        ## RULES
+            ## Procedure
 
-        - R01: No changes without User confirmation
+            1. Receive collection request from dashboard-director
 
-        - R09: Strict domain separation
+            2. Execute dev_dashboard_refresh.py to gather metrics
 
-        - R10: CORONASHIELD — validate YAML before storage'
-      prompt: 'I am degradation-reporter (v1.0.0) | MODE-CHECK: mas-engineer | SUB-DEGRADATION-REPORTER
-        (v1.0.0)
+            3. Validate collected data
 
-        ONLY reporting — NO analysis or handling
+            4. Return validated data to dashboard-director
 
-        Document degradation events and treatment outcomes'
-      settings:
-        timeout: 300
-        max_steps: 50
-        goose_provider: openai
-        goose_model: deepseek-v4-flash
-        temperature: 0.3
-      extensions:
-      - type: platform
-        name: summon
-      - type: builtin
-        name: developer
-        display_name: Developer
-        timeout: 300
-        bundled: true
-    reason: 'Why: New sub-agent focused on reporting degradation handling results,
-      extracted from monolithic degradation-handler.'
+
+            ## FORBIDDEN
+
+            ⛔ NEVER build dashboards (delegate to dashboard-builder)
+
+            ⛔ NEVER edit project files'
+          prompt: 'I am dashboard-collector (v1.0.0) | MODE-CHECK: mas-engineer |
+            📊 DASHBOARD-COLLECTOR (v1.0.0)
+
+            ⛔ ONLY data collection — NO dashboard building
+
+            → Collect and validate dashboard data'
+          settings:
+            timeout: 600
+            max_steps: 100
+            goose_provider: openai
+            goose_model: deepseek-v4-flash
+            temperature: 0.3
+          extensions:
+          - type: platform
+            name: summon
+          - type: builtin
+            name: developer
+            display_name: Developer
+            timeout: 300
+            bundled: true
+      sub_agent_2:
+        file: recipe/sub/sub_mas-dashboard-builder.yaml
+        content:
+          name: DASHBOARD-BUILDER
+          version: 1.0.0
+          constitution: sub_mas-master-constitution.yaml
+          title: 📊 SUB-DASHBOARD-BUILDER — Dashboard Builder
+          description: 'v1.0.0 | MAS-internal: Builds dashboard JSON from collected
+            data (single role)'
+          instructions: '# DASHBOARD-BUILDER v1.0.0
+
+            # Single role: Build dashboard JSON
+
+
+            ## ⛔ ONLY dashboard building — NO data collection
+
+            → Build structured dashboard JSON from collected metrics
+
+
+            ## Procedure
+
+            1. Receive validated data from dashboard-director
+
+            2. Format data into structured dashboard JSON
+
+            3. Return completed dashboard to dashboard-director
+
+
+            ## FORBIDDEN
+
+            ⛔ NEVER collect data (delegate to dashboard-collector)
+
+            ⛔ NEVER edit project files'
+          prompt: 'I am dashboard-builder (v1.0.0) | MODE-CHECK: mas-engineer | 📊
+            DASHBOARD-BUILDER (v1.0.0)
+
+            ⛔ ONLY dashboard building — NO data collection
+
+            → Build dashboard JSON from collected data'
+          settings:
+            timeout: 600
+            max_steps: 100
+            goose_provider: openai
+            goose_model: deepseek-v4-flash
+            temperature: 0.3
+          extensions:
+          - type: platform
+            name: summon
+          - type: builtin
+            name: developer
+            display_name: Developer
+            timeout: 300
+            bundled: true
+    reason: 'Why: F-2075 — multi_role_agent with 5 roles. NN1 split into data-collector
+      (read/validate) and dashboard-builder (generate/write) sub-agents. Dashboard-refresh
+      is a simpler agent than degradation-handler, so a 2-way split is appropriate.
+      The collector focuses on reading/validating project data; the builder focuses
+      on formatting/creating the dashboard output.'
     priority: 0.54
-    severity: medium
-    current_chars: 0
-    target_chars: 0
-  - finding_id: F-1971
-    type: NN1
-    file: recipe/sub/legacy/sub_mas-degradation-handler-ORIGINAL.yaml
-    field: archive_file
-    action: archive_original
-    from: recipe/sub/sub_mas-degradation-handler.yaml
-    to: recipe/sub/legacy/sub_mas-degradation-handler-ORIGINAL.yaml
-    reason: 'Why: Archive original monolithic degradation-handler after split into
-      director + 2 sub-agents.'
-    priority: 0.54
-    severity: medium
-    current_chars: 0
-    target_chars: 0
-  - finding_id: F-1972
-    type: NN1
-    file: recipe/sub/sub_mas-dashboard-director.yaml
-    field: new_file
-    action: create_orchestrator
-    from: single agent with 5 roles
-    to: orchestrator delegating to 2 sub-agents
-    content_yaml:
-      name: MAS Dashboard Director
-      version: 1.0.0
-      constitution: sub_mas-master-constitution.yaml
-      title: DASHBOARD-DIRECTOR — Dashboard Orchestration
-      description: 'v1.0.0 | MAS-internal: Orchestrates dashboard operations by delegating
-        to specialized sub-agents'
-      instructions: '# DASHBOARD-DIRECTOR v1.0.0
-
-        # Orchestrator — delegates to specialized sub-agents
-
-
-        ## Delegation Map
-
-        - read/collect/data -> sub_mas-dashboard-data-reader
-
-        - generate/build/render -> sub_mas-dashboard-generator
-
-
-        ## PROHIBITIONS
-
-        - NEVER collect data directly (delegate to sub_mas-dashboard-data-reader)
-
-        - NEVER generate dashboard directly (delegate to sub_mas-dashboard-generator)
-
-
-        ## RULES
-
-        - R01: No changes without User confirmation
-
-        - R09: Strict domain separation
-
-        - R10: CORONASHIELD — validate YAML before storage'
-      prompt: 'I am dashboard-director (v1.0.0) | MODE-CHECK: mas-engineer | DASHBOARD-DIRECTOR
-        (v1.0.0)
-
-        ONLY orchestration — NO direct dashboard operations
-
-        Delegate to specialized sub-agents
-
-        NEVER collect/generate directly'
-      sub_recipes:
-      - name: sub_mas-dashboard-data-reader
-        path: ./sub_mas-dashboard-data-reader.yaml
-        description: Read and collect project data for dashboard
-      - name: sub_mas-dashboard-generator
-        path: ./sub_mas-dashboard-generator.yaml
-        description: Generate and render the project dashboard
-      settings:
-        timeout: 600
-        max_steps: 100
-        goose_provider: openai
-        goose_model: deepseek-v4-flash
-        temperature: 0.3
-      extensions:
-      - type: platform
-        name: summon
-      - type: builtin
-        name: developer
-        display_name: Developer
-        timeout: 300
-        bundled: true
-    reason: 'Why: Dashboard-refresh has 5 distinct roles violating single-responsibility.
-      NN1 split into director + data-reader + generator clarifies responsibility.'
-    priority: 0.54
-    severity: medium
-    current_chars: 0
-    target_chars: 0
-  - finding_id: F-1972
-    type: NN1
-    file: recipe/sub/sub_mas-dashboard-data-reader.yaml
-    field: new_file
-    action: create_sub_agent
-    from: N/A (new file)
-    to: data-reader sub-agent with focused data collection role
-    content_yaml:
-      name: MAS Dashboard Data Reader
-      version: 1.0.0
-      constitution: sub_mas-master-constitution.yaml
-      title: SUB-DASHBOARD-DATA-READER — Dashboard Data Collection
-      description: 'v1.0.0 | MAS-internal: Reads and collects project data for dashboard
-        generation'
-      instructions: '# SUB-DASHBOARD-DATA-READER v1.0.0
-
-        # Reads project data for dashboard
-
-
-        ## ONLY data collection — NO generation or editing
-
-        Read project files, state data, and metrics for dashboard
-
-
-        ## RULES
-
-        - R01: No changes without User confirmation
-
-        - R09: Strict domain separation
-
-        - R10: CORONASHIELD — validate YAML before storage'
-      prompt: 'I am dashboard-data-reader (v1.0.0) | MODE-CHECK: mas-engineer | SUB-DASHBOARD-DATA-READER
-        (v1.0.0)
-
-        ONLY data collection — NO generation or editing
-
-        Read project data: state files, metrics, configs'
-      settings:
-        timeout: 300
-        max_steps: 50
-        goose_provider: openai
-        goose_model: deepseek-v4-flash
-        temperature: 0.3
-      extensions:
-      - type: platform
-        name: summon
-      - type: builtin
-        name: developer
-        display_name: Developer
-        timeout: 300
-        bundled: true
-    reason: 'Why: New sub-agent focused on reading project data for dashboard, extracted
-      from monolithic dashboard-refresh.'
-    priority: 0.54
-    severity: medium
-    current_chars: 0
-    target_chars: 0
-  - finding_id: F-1972
-    type: NN1
-    file: recipe/sub/sub_mas-dashboard-generator.yaml
-    field: new_file
-    action: create_sub_agent
-    from: N/A (new file)
-    to: generator sub-agent with focused dashboard generation role
-    content_yaml:
-      name: MAS Dashboard Generator
-      version: 1.0.0
-      constitution: sub_mas-master-constitution.yaml
-      title: SUB-DASHBOARD-GENERATOR — Dashboard Rendering
-      description: 'v1.0.0 | MAS-internal: Generates and renders the project dashboard
-        from collected data'
-      instructions: '# SUB-DASHBOARD-GENERATOR v1.0.0
-
-        # Generates and renders dashboards
-
-
-        ## ONLY generation — NO data collection or editing
-
-        Generate dashboard from pre-collected data
-
-
-        ## RULES
-
-        - R01: No changes without User confirmation
-
-        - R09: Strict domain separation
-
-        - R10: CORONASHIELD — validate YAML before storage'
-      prompt: 'I am dashboard-generator (v1.0.0) | MODE-CHECK: mas-engineer | SUB-DASHBOARD-GENERATOR
-        (v1.0.0)
-
-        ONLY generation — NO data collection or editing
-
-        Generate dashboard visualization from project data'
-      settings:
-        timeout: 600
-        max_steps: 100
-        goose_provider: openai
-        goose_model: deepseek-v4-flash
-        temperature: 0.3
-      extensions:
-      - type: platform
-        name: summon
-      - type: builtin
-        name: developer
-        display_name: Developer
-        timeout: 300
-        bundled: true
-    reason: 'Why: New sub-agent focused on generating dashboard from collected data,
-      extracted from monolithic dashboard-refresh.'
-    priority: 0.54
-    severity: medium
-    current_chars: 0
-    target_chars: 0
-  - finding_id: F-1972
-    type: NN1
-    file: recipe/sub/legacy/sub_mas-dashboard-refresh-ORIGINAL.yaml
-    field: archive_file
-    action: archive_original
-    from: recipe/sub/sub_mas-dashboard-refresh.yaml
-    to: recipe/sub/legacy/sub_mas-dashboard-refresh-ORIGINAL.yaml
-    reason: 'Why: Archive original monolithic dashboard-refresh after split into director
-      + 2 sub-agents.'
-    priority: 0.54
-    severity: medium
-    current_chars: 0
-    target_chars: 0
+    goose_verdict: NOT_REQUIRED
   skipped:
-  - finding_id: F-1969
+  - id: F-2072
     type: NN1
     file: recipe/sub/sub_mas-test-director.yaml
-    reason: Already split into orchestrator + 4 sub-agents (executor, reporter, scanner,
-      validator). Roles [analyze, validate, monitor, report, scan] properly delegated.
-    why_skipped: Split already completed in previous pipeline iteration. Current architecture
-      has delegation map covering all 5 detected roles.
-  - finding_id: F-1970
+    reason: 'Finding flags multi_role_agent with 7 roles, but test-director.yaml already
+      implements NN1 split (description says ''NN1 Enhanced'') with 4 sub-agents:
+      sub_mas-test-executor, sub_mas-test-reporter, sub_mas-test-scanner, sub_mas-test-validator.
+      Roles are already delegated and the orchestrator pattern is in place.'
+    why_skipped: Already NN1-compliant — split was done in a prior iteration.
+  - id: F-2073
     type: NN1
     file: recipe/sub/security-scanner.yaml
-    reason: Already split into orchestrator + 4 sub-agents (SQLi, secrets, deserialize,
-      cmd-injection). Roles properly delegated.
-    why_skipped: Split already completed. Current YAML shows delegation map to 4 specialized
-      scanners covering all detected security roles.
+    reason: 'Finding flags multi_role_agent with 5 roles, but security-scanner.yaml
+      already implements NN1 split with 4 sub-agents: sub_mas-security-sqli-scanner,
+      sub_mas-security-secrets-scanner, sub_mas-security-deserialize-scanner, sub_mas-security-cmd-injection-scanner.
+      Delegation map routes scan categories to each specialized scanner.'
+    why_skipped: Already NN1-compliant — split was done in a prior iteration.
+stage: 3
+agent: im-designer
