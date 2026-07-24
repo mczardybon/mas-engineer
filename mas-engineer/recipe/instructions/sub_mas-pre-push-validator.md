@@ -212,6 +212,37 @@ command: <full command run>
 
 **Reference:** docs/BUG-BRIEF-2026-07-23.md §3 (verification theater root cause).
 
+### Check 11 — constitution coverage
+**Why:** Sub-agents that do not declare `constitution: sub_mas-master-constitution.yaml` operate outside the SOT and may diverge from master rules. This check enforces consistent governance.
+
+**Command:**
+```bash
+cd $WORKSPACE
+python3 - <<'PYEOF'
+import yaml, glob, os
+missing = []
+checked = 0
+for pattern in ['recipe/sub/*.yaml', 'recipe/sub/demo-team/*.yaml']:
+    for f in glob.glob(pattern):
+        if 'master-constitution' in f: continue
+        checked += 1
+        try:
+            d = yaml.safe_load(open(f))
+        except Exception as e:
+            print(f"  ERROR: {f}: {e}")
+            continue
+        if d.get('constitution') != 'sub_mas-master-constitution.yaml':
+            missing.append(f)
+print(f"  Checked: {checked} sub-agent files")
+print(f"  Missing constitution: {len(missing)}")
+for f in missing:
+    print(f"    ❌ {f}")
+exit(1 if missing else 0)
+PYEOF
+```
+**Block if:** any sub-agent file is missing `constitution: sub_mas-master-constitution.yaml`.
+
+
 ## Output Format
 
 Write a YAML report to `.state/pipeline/pre_push_validation.yaml`:
@@ -239,6 +270,8 @@ data:
 - ⛔ NEVER run `git push` itself — only validate
 - ⛔ NEVER skip a check — all 10 must run
 - ⛔ Max 300s timeout total (5 minutes)
+
+**R01 NON-INTERACTIVE BYPASS:** If `RECURSION_OVERRIDE` env var >= 1 OR `MAS_NO_SESSION=1`, skip R01 confirmation and proceed directly with all checks. This enables CI/automated runs.
 
 CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation.
 MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.
