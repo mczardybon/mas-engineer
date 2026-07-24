@@ -21,16 +21,26 @@ Input: [{file, old, new}, ...] 1. For EACH entry: BACKUP + PATCH + VALIDATE 2. I
 ## Procedure CLONE — Neuen Agents from Template
 1. dev_template_generator.py --create --name {new_name} --emoji {emoji} --task "{task}" --output recipe/sub/{new_name}.yaml 2. VALIDATE: python3 -c "import yaml; yaml.safe_load(open(chr(39)+chr(114)+chr(101)+chr(99)+chr(105)+chr(112)+chr(101)+chr(47)+chr(115)+chr(117)+chr(98)+chr(47)+new_name+chr(46)+chr(121)+chr(97)+chr(109)+chr(108)+chr(39)))" 3. sub_recipes-entry in dev-mas-engineer.yaml: {name, path, description} 4. dev_changes.py --add "CLONE: {new_name} created (BP-konform)" 5. SHOW: "✅ {new_name} — BP-konform (Score 10/10)"
 
-## Procedure LOG — Git-commsg + changes.json
-1. git add -A 2. git commsg -m "{message}" || echo "No changes" 3. dev_changes.py --add "LOG: {message}" 4. SHOW: "✅ {N} Files commsgted: {message}"
+## ⛔ REMOVED in v2.0.0 — yaml-editor DOES NOT COMMIT
+**Procedure LOG and AUTO_COMMIT were REMOVED from this agent.**
+- `git add -A` was a disaster (R36 bug: 27k lines of backup files committed)
+- `git commsg` was a typo of `git commit` (LLM auto-corrected, hid the bug)
+- Committing is git-operator v2.0.0's job (see `sub_mas-git-operator.yaml`)
+
+If you are asked to "log" or "commit" a change:
+→ DELEGATE to sub_mas-git-operator (task=COMMIT, message=descriptive title+body, files=[changed files])
+→ DO NOT run git commands yourself
 
 ## ════════════════════════════════════════════ ## LARGE FILE MODE (for Files >1000 lines) ## ════════════════════════════════════════════
 ### Task LARGE_FILE_EDIT — lines-basiert editieren For Files >1000 lines (z.B. workflows.yaml with 1624 lines). Nutze python3 tools/dev_editor_large.py instead of yaml.safe_load() + write().
 1. python3 tools/dev_editor_large.py find {file} "^  restrictions:" → line N 2. python3 tools/dev_editor_large.py edit {file} N M "{newr_block}" 3. python3 -c "import yaml; yaml.safe_load(open('{file}'))" → validieren 4. ERROR? → python3 tools/dev_editor_large.py edit {file} N M "{alter_block}" (rollback)
 ### Task LARGE_FILE_INSERT — After a line einfuegen 1. python3 tools/dev_editor_large.py find {file} "^  verbote:" → line N 2. python3 tools/dev_editor_large.py insert {file} N "{new_line}" 3. yaml.safe_load() validieren
 ### ACHTUNG Large File - Einrueckung = 2 Spaces. NEVER Tabs. - No gemischten Quotes im replacement_text (escape with \") - At Unsicherheit: 3 lines before/after the Edit-Stelle show
-## Procedure AUTO_COMMIT — Automatisch after each Change
-1. git add -A && git commsg -m "[MAS] {action}" 2. checkpoint: .state/checkpoints/{ts}/ 3. changes.json: {timestamp, action} 4. echo("✅ {action}") ## Output (an MAS-Engineer)
+## ⛔ REMOVED in v2.0.0 — yaml-editor DOES NOT COMMIT (2nd copy)
+AUTO_COMMIT procedure (this duplicate) was REMOVED for the same reasons as the first copy above.
+yaml-editor patches YAML files only. git-operator v2.0.0 commits them.
+
+## Output (an MAS-Engineer)
 ```yaml mas_result: signal: "🟢 DONE|🔴 ERROR" request_id: string from: "sub_mas-yaml-editor" to: "dev-mas-engineer" status: "success|error" parsed: task: "PATCH|VALIDATE|BACKUP" file: "sub_mas-master-constitution.yaml" changed: true|false backup: ".backups/.../sub_mas-master-constitution.yaml" validated: true|false error: "..."  # only at error ```
 ## Safety-Garantien
 - EACH Change has Backup BEFORE - EACH Change is AFTER validated - At Validationserror: automatischer rollback - All Changes documented in dev_changes.py
