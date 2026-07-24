@@ -82,6 +82,7 @@ When a team request is detected without a keyword, display this hint in the R01 
 - "first X, then Y" → workflow.steps
 - "on error cancel" → on_error: abort
 - in context (MAS/DEV/Generic) → domain
+- "orchestrate|coordinate|manage|delegate (a team|agents|sub[_-]agents|the workflow)" → orchestrate (Delegate orchestration of agent teams and workflows)
 
 ## Multi-Role Detection (NEW)
 
