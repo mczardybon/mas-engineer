@@ -9,12 +9,18 @@ MAS = autonomous Developer. framework = production system.
 MAS knows the framework. The framework does NOT know MAS.
 
 ## ARCHITECTURE
-You have 52 MAS sub-agents (sub_mas-*), 52 tools, 11 hardness rules.
+You have 96 MAS sub-agents (sub_mas-*) in 9 categories, 57 tools (50 Python + 6 Shell + 1 YAML), 11 active hard rules (R01-R18 framework, R03+R12-R17 reserved).
 The framework has 52 specialists + 44 sub-agents + 4 core recipes.
 Domain separation: MAS writes in mas-engineer/, framework in framework/.
 Enforced via R09 (MODE-DOMAIN-COUPLING) + registry.yaml.
 
-## YOUR SUB-AGENTS (52)
+## YOUR SUB-AGENTS (96 across 9 categories — see docs/agents.md for canonical list)
+> ⚠️ The detailed enumeration below is a legacy snapshot (~55 items across 8 categories)
+> and is **no longer canonical**. Current canonical 9-category breakdown:
+> Framework Builders (14) | Improvement Pipeline (8) | Monitoring (8) | Analysis (10)
+> | Recovery (5) | Utility (11) | Management (5) | Testing & E2E (24) | Special (11).
+> Run `ls mas-engineer/recipe/sub/*.yaml | wc -l` to verify (96 in 2026-07-24 snapshot).
+
 Analysis: framework-knowledge, framework-scanner, session-analyst,
 config-auditor, prompt-engineer, goose-expert, im-finder,
 im-designer, im-validator
@@ -111,11 +117,11 @@ Update: ./update.sh --mas or ./update.sh --framework
 Installation targets:
 ~/.config/goose/recipes/ (RECIPE_PATH):
   Cores: dev-mas-engineer, executor, planner, controller, starter
-   Specialists: 52 specialist_*.yaml (directly findable)
-  FW-Subs: 44 sub_*.yaml (directly findable)
-  MAS-Subs: 52 sub_mas-*.yaml in sub/
+   Specialists: 52 specialist_*.yaml (legacy — see Framework category in 9-cat breakdown)
+  FW-Subs: 44 sub_*.yaml (legacy — sub_* prefix)
+  MAS-Subs: 96 sub_mas-*.yaml + 2 (security-scanner, static-analyzer) in sub/
   core/: specialist-constitution.yaml
-   mas-engineer-tools/: 52 Tools (49 dev_*)
+   mas-engineer-tools/: 57 Tools (50 dev_*.py + 6 *.sh + 1 *.yaml)
 /develop              → Standard Dialog
 /develop --scan       → Analyze framework
 /develop --audit      → Deep analysis
@@ -131,8 +137,8 @@ Detailed knowledge in .state/knowledge/:
 03-installation.md   → ZIP structure + Target locations
 04-recovery.md       → 5-stage Recovery detailed
 05-rules.md          → R01-R18 with Explanations
-06-tools.md          → All 52 Tools with Descriptions
-07-agents.md         → All 52 MAS Agents + framework
+06-tools.md          → All 57 Tools with Descriptions
+07-agents.md         → All 96 MAS Agents + framework
 08-build.md          → Build System detailed
 
 ## SOT RULES (apply to ALL operations)
