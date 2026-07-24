@@ -40,33 +40,44 @@ Then describe the target:
 orchestrator. Find any duplication or missing documentation."
 ```
 
-## The 5 IM stages (+ dispatcher flow)
+## The 8 pipeline stages (S1-S8) + S0 prerequisites
 
-The IM-Pipeline has 5 dedicated stages (`im-finder` → `im-rank` → `im-designer` → `im-session-reader` → `im-validator`) and runs through a general-improver dispatcher. The 7 numbered steps below show the full user-visible flow; the 5 dedicated stages (steps 1, 2, 3, 5) are what those 5 sub-agents produce:
+The IM-Pipeline runs as an 8-stage orchestrator flow (`general-improver` dispatcher) with an optional S0 prerequisites check before it. Of those 8 stages, 5 are executed by dedicated `im-*` sub-agents (S1, S2, S3, S4, S6) and 3 by the general-improver dispatcher (S5 apply, S7 summary, S8 push):
 
-1. **FIND**: `im-finder` scans the target area and writes findings to
+1. **READ SESSION DATA** (im-session-reader, S1): Reads past Goose session history from the SQLite DB into `.state/pipeline/session_data.yaml`. Feeds FIND in the next step.
+
+2. **FIND** (im-finder, S2): Scans the target area and writes findings to
    `.state/pipeline/findings.yaml`. Each finding has an id, type, location,
-   and severity.
+   and severity. Detects 53 documented optimization patterns (A-MM).
 
-2. **RANK**: `im-rank` reads the findings and produces
+3. **RANK** (im-rank, S3): Reads the findings and produces
    `.state/pipeline/ranked_findings.yaml`. Findings are sorted by severity
-   and impact.
+   and impact, with Article 1-6 constitution check.
 
-3. **DESIGN**: `im-designer` reads the ranked findings and produces
+4. **DESIGN** (im-designer, S4): Reads the ranked findings and produces
    `.state/pipeline/patches.yaml`. Each patch has a target file, old string,
    and new string.
 
-4. **IMPLEMENT** (dispatcher step): The patches are applied to the codebase by the general-improver dispatcher.
+5. **IMPLEMENT** (dispatcher, S5): The user reviews patches; on approval
+   `sub_mas-yaml-editor` (or `sub_mas-generic-init` for non-YAML targets)
+   applies each patch with backup → edit → validate → rollback-on-fail.
 
-5. **VALIDATE**: `im-validator` checks that the patches are correct, that
+6. **VALIDATE** (im-validator, S6): Checks that the patches are correct, that
    the YAML files parse, and that the SOT is consistent. Results go to
-   `.state/pipeline/validation.yaml`.
+   `.state/pipeline/validation.yaml`. May also call `sub_mas-prompt-engineer`
+   (prompt score) and `sub_mas-agent-guardian` (drift check) for before/after
+   comparison.
 
-6. **SUMMARIZE** (dispatcher step): The user sees a summary of changes and a diff. R01
+7. **SUMMARIZE** (dispatcher, S7): The user sees a summary of changes and a diff. R01
    confirmation is requested.
 
-7. **PUSH** (dispatcher step): After confirmation, the changes are committed and pushed to the
-   repository.
+8. **PUSH** (dispatcher, S8): After confirmation, `PUSH_IMPROVEMENTS` task copies improvements to user projects
+   (knowledge files, agent templates, SOT updates) and the changes are
+   committed to git.
+
+**S0 Prerequisites** (pre-pipeline, optional): mode detection, rule-hardness check, web-research prompt, recursion-guard. Only at FULL_IMPROVEMENT or REVIEW.
+
+For the canonical stage-by-stage documentation (with all 53 pattern categories, rate limiting, and rollback semantics), see [`../../docs/improvement-pipeline.md`](../../docs/improvement-pipeline.md).
 
 ## Common invocation patterns
 
@@ -76,8 +87,7 @@ The IM-Pipeline has 5 dedicated stages (`im-finder` → `im-rank` → `im-design
 "Run the IM-pipeline on the dev-mas-engineer orchestrator."
 ```
 
-This runs the full 5-stage IM pipeline (with the general-improver dispatcher handling IMPLEMENT/SUMMARIZE/PUSH). Use it when you want a broad improvement pass.
-improvement pass.
+This runs the full 8-stage pipeline (S1-S8) with the `general-improver` dispatcher handling IMPLEMENT (S5) / SUMMARIZE (S7) / PUSH (S8) and the 5 dedicated `im-*` sub-agents running S1, S2, S3, S4, S6. Use it when you want a broad improvement pass.
 
 ### Targeted improvement
 

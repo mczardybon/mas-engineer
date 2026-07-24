@@ -237,7 +237,7 @@ flowchart TD
 
 ---
 
-## The 52 Tools
+## The 57 Tools (50 Python, 6 Shell, 1 YAML)
 
 All Python and shell tools live in `tools/` and are managed by `dev_workspace.py`. Key categories:
 
@@ -248,7 +248,7 @@ flowchart LR
         A2["general-improver\ndoc-writer\ndashboard-refresh"]
         A3["session-analyst\ngoose-admin\nworkflow-engine"]
     end
-    subgraph TOOLS["52 Tools by Category"]
+    subgraph TOOLS["57 Tools by Category"]
         T1["⚙️ Hardening\ndev_rule_checker\ndev_rule_refresh\ndev_haerte_propagation"]
         T2["🔨 Build\ndev_build.sh\ndev_autobuild.sh\ndev_mode.sh"]
         T3["🔍 Analysis\ndev_observer\ndev_architect\ndev_analyst"]

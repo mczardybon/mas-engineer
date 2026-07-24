@@ -100,7 +100,7 @@ The `recipe-designer`:
 You: "Improve my framework's agents"
 Engineer: "I'll start the improvement pipeline..."
 
-[delegates to sub_mas-general-improver → 5-stage pipeline + dispatcher]
+[delegates to sub_mas-general-improver → 8-stage pipeline (S1-S8 with S0 prerequisites) + dispatcher]
 ```
 
 The pipeline:

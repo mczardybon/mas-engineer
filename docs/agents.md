@@ -3,7 +3,7 @@
 MAS-Engineer contains 96 sub-agents, organized into functional categories. The detailed listing below covers 52 of them (snapshot as of 2026-07-19); for the full 96-agent catalog, run `ls mas-engineer/recipe/sub/sub_mas-*.yaml` or see `e2e-results/2026-07-24-demo-team-generation-rate/`.
 
 ```mermaid
-pie title 52 Sub-Agents by Category (snapshot 2026-07-19; current total: 96)
+pie title Sub-Agents by Category — 2026-07-19 snapshot (52 total; current canonical: 96 in 9 categories, see Current Counts below)
     "Framework Builders" : 6
     "Improvement Pipeline" : 7
     "Monitoring" : 7
@@ -13,6 +13,21 @@ pie title 52 Sub-Agents by Category (snapshot 2026-07-19; current total: 96)
     "Management" : 7
     "Internal POC Tools" : 3
 ```
+
+**Current Counts (2026-07-24 canonical, 96 sub-agents across 9 categories):**
+
+| Category | Count |
+|----------|------:|
+| Framework Builders | 14 |
+| Improvement Pipeline (8-stage S1-S8 + S0 prerequisites) | 8 |
+| Monitoring | 8 |
+| Analysis | 10 |
+| Recovery (Phoenix 5-stage) | 5 |
+| Utility | 11 |
+| Management | 5 |
+| Testing & E2E | 24 |
+| Special (master-constitution, generic-init, docs, content, code-review team) | 11 |
+| **Total** | **96** |
 
 ---
 
@@ -62,7 +77,7 @@ The self-improvement system. Analyzes sessions, detects issues, designs patches,
 
 | Agent | Task | Delegates To |
 |-------|------|:------------:|
-| `sub_mas-general-improver` | Orchestrate the 5-stage improvement pipeline (im-finder → im-rank → im-designer → im-session-reader → im-validator) + apply patches + summarize + push | ALL im-* agents, yaml-editor, web-researcher, generic-init |
+| `sub_mas-general-improver` | Orchestrate the 8-stage improvement pipeline (S1-S8 with S0 prerequisites): 5 im-* sub-agents (im-session-reader → im-finder → im-rank → im-designer → im-validator) + apply patches (S5) + summarize (S7) + push (S8) | ALL im-* agents, yaml-editor, web-researcher, generic-init |
 | `sub_mas-im-session-reader` | Read Goose session DB with 3-level project filter | (none) |
 | `sub_mas-im-finder` | Detect optimization potential (53 documented patterns) | (none) |
 | `sub_mas-im-rank` | Prioritize findings, check Constitution, deduplicate | (none) |
@@ -190,7 +205,8 @@ graph TD
 
 | Metric | Value |
 |--------|-------|
-| **Total sub-agents** | 52 |
+| **Total sub-agents (2026-07-19 snapshot, this catalog)** | 52 |
+| **Total sub-agents (2026-07-24 canonical, current)** | 96 (in 9 categories) |
 | **Agents that delegate (R18)** | ~15 |
 | **Agents that work via direct execution** | ~37 |
 | **Mode-aware agents** | 11 (all others are internal-only) |

@@ -12,7 +12,7 @@
 
 MAS-Engineer is a **Goose-based Multi-Agent System generator** and **self-improving framework builder**. It helps you create, maintain, improve, monitor, and distribute multi-agent systems — all through natural language conversation.
 
-You talk to the Engineer. The Engineer delegates to its 52 specialized sub-agents. This is a **proof of concept** demonstrating the architecture.
+You talk to the Engineer. The Engineer delegates to its 96 specialized sub-agents across 9 categories (Framework Builders, Improvement Pipeline, Monitoring, Analysis, Recovery, Utility, Management, Testing & E2E, Special). This is **production-ready** (8/8 e2e tests, 11/11 pre-push checks at every commit as of 2026-07-24).
 
 ## Three Operating Modes
 
@@ -41,7 +41,7 @@ goose run --recipe recipe/dev-mas-engineer.yaml
 |---------|----------------------|--------|
 | "Create a new multi-agent system" | `sub_mas-generic-init` | Lightweight project with symlinks + base agent |
 | "Scan my system for issues" | `sub_mas-framework-scanner` | Framework analysis report |
-| "Improve my agent's performance" | `sub_mas-general-improver` | 5-stage optimization pipeline + dispatcher |
+| "Improve my agent's performance" | `sub_mas-general-improver` | 8-stage optimization pipeline (S1-S8 with S0 prerequisites, 5 `im-*` sub-agents + dispatcher) |
 | "Fix this agent's prompt" | `sub_mas-prompt-engineer` | Optimized prompt |
 | "Show me the health status" | `sub_mas-monitor-*` | Health report |
 | "Set up a dashboard" | Setup dashboard recipe | MCP dashboard app |
@@ -52,15 +52,16 @@ goose run --recipe recipe/dev-mas-engineer.yaml
 ```mermaid
 flowchart TD
     YOU["You\n🗣️ Natural Language"] --> ENGINEER["MAS-Engineer\ndev-mas-engineer.yaml"]
-    ENGINEER --> FB["Framework Builders\n6 agents"]
-    ENGINEER --> IP["Improvement Pipeline\n7 agents"]
-    ENGINEER --> MON["Monitoring\n7 agents"]
+    ENGINEER --> FB["Framework Builders\n14 agents"]
+    ENGINEER --> IP["Improvement Pipeline\n8 agents"]
+    ENGINEER --> MON["Monitoring\n8 agents"]
+    ENGINEER --> AN["Analysis\n10 agents"]
     ENGINEER --> REC["Recovery\n5 agents"]
-    ENGINEER --> UT["Utility\n10 agents"]
-    ENGINEER --> AN["Analysis\n7 agents"]
-    ENGINEER --> MG["Management\n7 agents"]
-    ENGINEER --> POC["Internal POC Tools\n3 agents"]
-    FB & IP & MON & REC & UT & AN & MG & POC --> TOOLS["52 Tools"]
+    ENGINEER --> UT["Utility\n11 agents"]
+    ENGINEER --> MG["Management\n5 agents"]
+    ENGINEER --> TEST["Testing & E2E\n24 agents"]
+    ENGINEER --> SPEC["Special\n11 agents"]
+    FB & IP & MON & AN & REC & UT & MG & TEST & SPEC --> TOOLS["96 sub-agents + 57 tools"]
 ```
 
 ## Key Concepts
@@ -94,7 +95,7 @@ flowchart TD
 | [installation.md](installation.md) | Install, update, uninstall |
 | [architecture.md](architecture.md) | Complete system architecture |
 | [usage.md](usage.md) | How to create, improve, monitor |
-| [agents.md](agents.md) | Catalog of all 96 sub-agents (snapshot: 52 detailed) |
-| [improvement-pipeline.md](improvement-pipeline.md) | 5-stage self-improvement (im-finder → im-rank → im-designer → im-session-reader → im-validator) + general-improver dispatcher |
+| [agents.md](agents.md) | Catalog of all 96 sub-agents (catalog entry covers 52 with 2026-07-19 snapshot; canonical 96 in 9 categories as of 2026-07-24) |
+| [improvement-pipeline.md](improvement-pipeline.md) | 8-stage self-improvement (S1-S8 with S0 prerequisites; 5 im-* sub-agents: im-session-reader, im-finder, im-rank, im-designer, im-validator, plus general-improver dispatcher) |
 | [recovery-system.md](recovery-system.md) | 5-stage Phoenix recovery |
 | [dashboard.md](dashboard.md) | Framework dashboard setup |

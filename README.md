@@ -6,7 +6,7 @@
   <h3 align="center">Build Multi-Agent Systems by Talking, Not Coding</h3>
 <p align="center">
   <em>The world's first natural-language Multi-Agent System generator.<br>
-  Ships with 96 sub-agents, 5-stage self-improvement (+ general-improver dispatcher), and 5-stage recovery.<br>
+  Ships with 96 sub-agents, 8-stage self-improvement pipeline (5 im-* sub-agents + general-improver dispatcher + S0 prerequisites), and 5-stage recovery.<br>
   You bring the idea. It builds the system.</em>
 </p>
 </p>
@@ -20,9 +20,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/agents-52-blue?style=for-the-badge" alt="Agents">
-  <img src="https://img.shields.io/badge/tools-52-success?style=for-the-badge" alt="Tools">
-  <img src="https://img.shields.io/badge/self--improvement-7_stages-blue?style=for-the-badge" alt="Self-Improvement">
+  <img src="https://img.shields.io/badge/agents-96-blue?style=for-the-badge" alt="Agents">
+  <img src="https://img.shields.io/badge/tools-57-success?style=for-the-badge" alt="Tools">
+  <img src="https://img.shields.io/badge/self--improvement-8_stages-blue?style=for-the-badge" alt="Self-Improvement">
   <img src="https://img.shields.io/badge/recovery-5_stages-orange?style=for-the-badge" alt="Recovery">
   <img src="https://img.shields.io/badge/status-High--Confidence_Architecture-orange?style=for-the-badge" alt="Status">
   <img src="https://img.shields.io/badge/runtime-Goose-purple?style=for-the-badge" alt="Goose">
@@ -76,7 +76,7 @@ goose run --recipe dev-mas-engineer  # → Start talking
 | Monitoring | Hours setting up infrastructure | Included. Runs automatically. |
 | Recovery from crash | Build your own retry/rollback | 5-stage system. Auto-activated. |
 | Performance dashboard | Enterprise plan ($$$) | Free. Per project. MCP app. |
-| Self-improvement | Not possible. Framework doesn't know itself. | 5-stage pipeline (im-finder → im-rank → im-designer → im-session-reader → im-validator) + general-improver dispatcher. Analyzes + fixes itself. |
+| Self-improvement | Not possible. Framework doesn't know itself. | 8-stage pipeline (S1-S8, with S0 prerequisites). Five `im-*` sub-agents (`im-session-reader`, `im-finder`, `im-rank`, `im-designer`, `im-validator`) do the work; `general-improver` is the dispatcher. Analyzes + fixes itself. |
 
 **Time to first result: 1 workday → 1 coffee break.**
 
@@ -199,7 +199,7 @@ The same result. **Done through conversation.**
 │                                                │
 ├─ MAS-Engineer ─────────────────────────────────┤
 │                                                │
-│   🔄 5-stage improvement pipeline running...   │
+│   🔄 8-stage improvement pipeline running...   │
 │   ✅ 3 patches applied.                        │
 │   ✅ Prompt score: 6.2 → 8.1/10               │
 │   ✅ Guardian: no new drifts detected          │
@@ -224,7 +224,7 @@ The same result. **Done through conversation.**
     <tr>
       <td align="center"><h2>🛡️</h2><b>96</b><br>Ready-to-Use<br>Sub-Agents</td>
       <td align="center"><h2>🔧</h2><b>57</b><br>Tools (50 Python,<br>6 Shell, 1 YAML)<br><sub>(npm install needed)</sub></td>
-      <td align="center"><h2>🔄</h2><b>5</b><br>Stage Self-<br>Improvement<br>+ 1 dispatcher<br><sub>(E2E-tested)</sub></td>
+      <td align="center"><h2>🔄</h2><b>8</b><br>Stage Self-<br>Improvement<br>(5 im-* agents<br>+ dispatcher)<br><sub>(E2E-tested)</sub></td>
       <td align="center"><h2>🏥</h2><b>5</b><br>Stage<br>Recovery<br><sub>(designed)</sub></td>
       <td align="center"><h2>📊</h2><b>Free</b><br>Dashboard<br>Per Project</td>
       <td align="center"><h2>📜</h2><b>10</b><br>Active Hard<br>Rules<br><sub>(R01-R18, gaps reserved)</sub></td>
@@ -241,7 +241,7 @@ The same result. **Done through conversation.**
 | | **Code-Based Frameworks** (CrewAI, AutoGPT, LangGraph) | **MAS-Engineer** |
 |---|---|---|
 | **How you build agents** | 🐍 Python: `Agent(role=..., goal=...)` | 🗣️ "Create me a researcher agent" |
-| **Agents out of the box** | **0** — you build everything | **52** — POC, not production-ready |
+| **Agents out of the box** | **0** — you build everything | **96** — production-ready sub-agents across 9 categories |
 | **Self-improvement** | ❌ Your system stays the same forever | ✅ Analyzes itself, improves its agents |
 | **Recovery from failure** | `max_retry_limit=2` | ✅ 5 stages: Immune→Checkpoint→Safezone→Timeline→Defib |
 | **Per-project dashboard** | Enterprise plan 💰 | ✅ Free, refreshable, every project |
@@ -257,7 +257,7 @@ The same result. **Done through conversation.**
 |---|---|---|---|---|---|
 | **Natural Language Interface** | ✅ Core design | ❌ | ✅ CLI only | ❌ | ❌ |
 | **Pre-built Agents** | 96 | 0 | 5 roles | 0 (builder) | 0 |
-| **Self-Improvement** | ✅ 5-stage pipeline + general-improver dispatcher (E2E-tested) | ❌ | ❌ | ❌ | ❌ |
+| **Self-Improvement** | ✅ 8-stage pipeline (5 im-* sub-agents + general-improver dispatcher, E2E-tested) | ❌ | ❌ | ❌ | ❌ |
 | **Recovery System** | ✅ 5 stages (designed) | ❌ | ❌ | ❌ | ❌ |
 | **Framework Bootstrap** | Recipe-defined, E2E test pending | ❌ | ❌ | ❌ | ❌ |
 | **Dashboard per System** | ✅ Free MCP app (needs `npm install`) | 💰 AMP | ❌ | Built-in | LangSmith |
@@ -272,15 +272,16 @@ The same result. **Done through conversation.**
 ```mermaid
 flowchart TD
     YOU["You\n🗣️ Natural Language"] --> ENGINEER["MAS-Engineer\ndev-mas-engineer.yaml"]
-    ENGINEER --> FB["Framework Builders\n6 agents"]
-    ENGINEER --> IP["Improvement Pipeline\n7 agents"]
-    ENGINEER --> MON["Monitoring\n7 agents"]
+    ENGINEER --> FB["Framework Builders\n14 agents"]
+    ENGINEER --> IP["Improvement Pipeline\n8 agents"]
+    ENGINEER --> MON["Monitoring\n8 agents"]
+    ENGINEER --> AN["Analysis\n10 agents"]
     ENGINEER --> REC["Recovery\n5 agents"]
-    ENGINEER --> UT["Utility\n10 agents"]
-    ENGINEER --> AN["Analysis\n7 agents"]
-    ENGINEER --> MG["Management\n7 agents"]
-    ENGINEER --> POC["Internal POC Tools\n3 agents"]
-    FB & IP & MON & REC & UT & AN & MG & POC --> TOOLS["57 total (50 Python, 6 Shell, 1 YAML)"]
+    ENGINEER --> UT["Utility\n11 agents"]
+    ENGINEER --> MG["Management\n5 agents"]
+    ENGINEER --> TEST["Testing & E2E\n24 agents"]
+    ENGINEER --> SPEC["Special\n11 agents"]
+    FB & IP & MON & AN & REC & UT & MG & TEST & SPEC --> TOOLS["96 sub-agents + 57 tools (50 Python, 6 Shell, 1 YAML)"]
 ```
 
 ---
@@ -299,7 +300,7 @@ flowchart TB
     subgraph ENGINEER["MAS-Engineer"]
         E1["🧠 Natural Language Interface"]
         E2["96 Sub-Agents · 57 tools (50 Python, 6 Shell, 1 YAML)"]
-        E3["5-Stage Self-Improvement + general-improver dispatcher · 5-Stage Recovery"]
+        E3["8-Stage Self-Improvement (5 im-* sub-agents + general-improver dispatcher) · 5-Stage Recovery"]
         E4["10 Hard Rules (R01-R18, gaps reserved) · SOT Registry"]
     end
     subgraph SYSTEM["Your Multi-Agent System"]
@@ -395,7 +396,7 @@ flowchart LR
 | | Feature | What It Does |
 |---|---|---|
 | 🛡️ | **96 Sub-Agents** | Monitoring, Recovery, Improvement, Analysis, Management, Documentation, Utilities — YAML-defined; core IM-pipeline E2E-tested via `e2e-results/2026-07-19/` |
-| 🔄 | **5-Stage Self-Improvement** | IM pipeline: im-finder → im-rank → im-designer → im-session-reader → im-validator, plus general-improver dispatcher. 53 documented patterns. |
+| 🔄 | **8-Stage Self-Improvement** | IM pipeline: 5 `im-*` sub-agents (`im-session-reader` → `im-finder` → `im-rank` → `im-designer` → `im-validator`) in an 8-stage orchestrator flow (S1-S8 with S0 prerequisites), plus `general-improver` dispatcher. 53 documented patterns. |
 | 🏥 | **5-Stage Phoenix Recovery** | Immune (prevention) → Checkpoint (snapshots) → Safezone (isolated fork) → Timeline (best-point search) → Defib (emergency minimal config) |
 | 📊 | **Per-Project Dashboard** | MCP app with health status, agent list, change history, performance metrics. Refreshable via Goose scheduler. Free. |
 | 📜 | **Constitution + Rules** | 11 articles governing ALL agents + 10 hard rules (R01-R18, gaps reserved) |
@@ -427,7 +428,7 @@ MAS-Engineer is built on five beliefs:
 
 3. **Recovery should be automatic, not manual.** Five stages of protection ensure you never lose work.
 
-4. **52 well-designed sub-agents are better than an empty SDK.** You shouldn't start from zero. You should start from a complete, working system.
+4. **96 well-designed sub-agents are better than an empty SDK.** You shouldn't start from zero. You should start from a complete, working system.
 
 5. **Rules should be enforced, not suggested.** If a rule matters, it should be enforced at runtime — not written in a best-practices document.
 
@@ -442,7 +443,7 @@ MAS-Engineer is built on five beliefs:
 | [Architecture Overview](docs/architecture.md) | Agent hierarchy, communication protocol, SOT, rules, tools |
 | [Usage Guide](docs/usage.md) | Create, improve, monitor, repair, migrate, deploy |
 | [Agent Catalog](docs/agents.md) | All 96 sub-agents with tasks and delegation relationships |
-| [Improvement Pipeline](docs/improvement-pipeline.md) | The 5-stage self-improvement system (im-finder → im-rank → im-designer → im-session-reader → im-validator, plus general-improver dispatcher) |
+| [Improvement Pipeline](docs/improvement-pipeline.md) | The 8-stage self-improvement system (S1-S8 with S0 prerequisites; 5 im-* sub-agents: im-session-reader, im-finder, im-rank, im-designer, im-validator — plus general-improver dispatcher) |
 | [Recovery System](docs/recovery-system.md) | 5-stage Phoenix recovery in detail |
 | [Dashboard Setup](docs/dashboard.md) | Per-project MCP dashboard installation |
 
@@ -499,7 +500,7 @@ mindmap
       Dashboard
       Utilities
     Self-Improvement
-      5-Stage Pipeline + general-improver dispatcher
+      8-Stage Pipeline (5 im-* sub-agents + general-improver dispatcher, S0 prerequisites)
       53 Feature Types
       Rate Limited R11
     Recovery
