@@ -1,0 +1,57 @@
+{
+  "version": "1.0.0",
+  "created": "2026-07-24T07:15:00+00:00",
+  "scan_scope": "recipe/sub/**/*.yaml",
+  "findings": [
+    {
+      "id": "F-CONST-001",
+      "severity": "MM3",
+      "category": "constitution-missing",
+      "title": "9 pre-existing sub-agents missing constitution-reference",
+      "description": "All sub-agents in recipe/sub/ and recipe/sub/demo-team/ should have `constitution: sub_mas-master-constitution.yaml`. 9 pre-existing files (mostly marketing-team + e2e-german-fixes + analytics-reporter) are missing this. R31+R32 created 37 more but those were manually fixed in 561f4ed.",
+      "evidence": [
+        "recipe/sub/sub_mas-content-writer.yaml",
+        "recipe/sub/sub_mas-e2e-german-fixes-runner.yaml",
+        "recipe/sub/sub_mas-e2e-german-fixes-director.yaml",
+        "recipe/sub/sub_mas-e2e-german-fixes-checker.yaml",
+        "recipe/sub/sub_mas-e2e-german-fixes-validator.yaml",
+        "recipe/sub/sub_mas-social-media-manager.yaml",
+        "recipe/sub/sub_mas-email-campaign-manager.yaml",
+        "recipe/sub/sub_mas-seo-researcher.yaml",
+        "recipe/sub/demo-team/sub_mas-analytics-reporter.yaml"
+      ],
+      "fix": "Add `constitution: sub_mas-master-constitution.yaml` line right after `name:` line in each file",
+      "estimated_effort": "1 patch (9 files updated in one go)"
+    },
+    {
+      "id": "F-CONST-002",
+      "severity": "MM2",
+      "category": "systematic-bug",
+      "title": "Mas-engineer consistently forgets constitution-reference when creating new sub-agents",
+      "description": "Across R26, R27, R30, R31, R32: mas-engineer created 60+ new sub-agents, NONE had constitution-reference initially. Only fixed by external manual commit (561f4ed). This is a systematic bug in the agent-creation step of the design/apply pipeline.",
+      "evidence": "git log eba5230 --name-only | grep -E 'sub_mas-.*\\.yaml$' | wc-l = 21 (all without constitution until 561f4ed)",
+      "fix": "Add a post-step in sub_mas-im-applier that auto-injects constitution-reference into any newly created sub-agent YAML if missing",
+      "estimated_effort": "1 patch (modify sub_mas-im-applier to add constitution after name)"
+    },
+    {
+      "id": "F-VALID-001",
+      "severity": "MM2",
+      "category": "missing-validation",
+      "title": "sub_mas-pre-push-validator lacks constitution-coverage check",
+      "description": "Pre-push-validator has 9 checks but does NOT check that sub-agents have constitution-reference. Without this check, the F-CONST-001 bug went undetected. Should add a check that all files in recipe/sub/**/*.yaml have constitution field set to sub_mas-master-constitution.yaml (with sensible exceptions for master-constitution.yaml itself).",
+      "evidence": "Read recipe/sub/sub_mas-pre-push-validator.yaml \u2014 no check for constitution field",
+      "fix": "Add a 10th check in pre-push-validator: parse all sub-agents, count those without constitution-reference, FAIL if count > 0",
+      "estimated_effort": "1 patch (add 10-15 lines to validator)"
+    },
+    {
+      "id": "F-VALID-002",
+      "severity": "MM4",
+      "category": "ux-issue",
+      "title": "sub_mas-pre-push-validator is interactive (R01 confirmation) \u2014 blocks non-interactive runs",
+      "description": "When run with --no-session + RECURSION_OVERRIDE, pre-push-validator cannot be invoked because it asks for R01 user confirmation. This forced manual 9-check fallback. Should detect non-interactive context and skip R01.",
+      "evidence": "Tried `goose run --recipe recipe/sub/sub_mas-pre-push-validator.yaml --no-session` \u2014 hangs at R01 confirmation prompt",
+      "fix": "Modify validator to detect `--no-session` mode (RECURSION_OVERRIDE or NO_SESSION env) and proceed without confirmation. Alternative: split validator into non-interactive variant.",
+      "estimated_effort": "1 patch (small UX fix in validator)"
+    }
+  ]
+}

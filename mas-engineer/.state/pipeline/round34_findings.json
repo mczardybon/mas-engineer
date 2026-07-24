@@ -1,0 +1,42 @@
+{
+  "version": "1.0.0",
+  "created": "2026-07-24T08:00:00+00:00",
+  "scan_scope": "recipe/sub/sub_mas-pre-push-validator.yaml + recipe/sub/**/*.yaml",
+  "context": "Round 34 follow-up. R33 applied 5 unrelated patches (temperature+STEPs). Our 4 findings from R33 were not addressed. Re-submit for R34 with stronger specificity.",
+  "findings": [
+    {
+      "id": "F-CONST-001",
+      "severity": "MM3",
+      "category": "constitution-missing",
+      "title": "9 pre-existing sub-agents missing constitution-reference",
+      "files": [
+        "recipe/sub/sub_mas-content-writer.yaml",
+        "recipe/sub/sub_mas-e2e-german-fixes-runner.yaml",
+        "recipe/sub/sub_mas-e2e-german-fixes-director.yaml",
+        "recipe/sub/sub_mas-e2e-german-fixes-checker.yaml",
+        "recipe/sub/sub_mas-e2e-german-fixes-validator.yaml",
+        "recipe/sub/sub_mas-social-media-manager.yaml",
+        "recipe/sub/sub_mas-email-campaign-manager.yaml",
+        "recipe/sub/sub_mas-seo-researcher.yaml",
+        "recipe/sub/demo-team/sub_mas-analytics-reporter.yaml"
+      ],
+      "fix": "Add `constitution: sub_mas-master-constitution.yaml` line right after `name:` line in each file"
+    },
+    {
+      "id": "F-VALID-001",
+      "severity": "MM2",
+      "category": "missing-validation",
+      "title": "sub_mas-pre-push-validator lacks constitution-coverage check",
+      "target_file": "recipe/sub/sub_mas-pre-push-validator.yaml",
+      "fix": "Add a check that parses all files in recipe/sub/*.yaml + recipe/sub/demo-team/*.yaml (excluding sub_mas-master-constitution.yaml itself), verifies each has `constitution: sub_mas-master-constitution.yaml` field. If any missing \u2192 FAIL with list of files."
+    },
+    {
+      "id": "F-VALID-002",
+      "severity": "MM4",
+      "category": "ux",
+      "title": "sub_mas-pre-push-validator is interactive (R01 confirmation) \u2014 blocks non-interactive runs",
+      "target_file": "recipe/sub/sub_mas-pre-push-validator.yaml",
+      "fix": "Add env-var check: if RECURSION_OVERRIDE>=1 OR --no-session, skip R01 confirmation and proceed with checks. Otherwise, ask for confirmation."
+    }
+  ]
+}
