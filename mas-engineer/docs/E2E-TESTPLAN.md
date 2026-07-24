@@ -2,7 +2,7 @@
 
 **Ziel:** Jederzeit wiederholbar. Alle Funktionen, Schalter, Modi abdecken. Echte runs (kein wrapper).
 
-> **⚠️ HISTORICAL TEST SPEC (2026-07-18).** "52 sub-agents" / "45 Python tools" referenced below reflect the catalog at that date. **Current state (2026-07-24): 96 sub-agents, 57 tools, 10 active hard rules, 5-stage IM pipeline + general-improver dispatcher.** Update the operator-script if running today; the test logic remains valid.
+> **⚠️ HISTORICAL TEST SPEC (2026-07-18).** "52 sub-agents" / "45 Python tools" referenced below reflect the catalog at that date. **Current state (2026-07-24): 96 sub-agents in 9 categories, 57 tools (50 Python, 6 Shell, 1 YAML), 8-stage IM pipeline (S1-S8 with S0 prerequisites) + general-improver dispatcher.** Update the operator-script if running today; the test logic remains valid.
 Jede KI kann diesen Plan ausfuehren.
 
 **Stand:** 2026-07-23
@@ -308,7 +308,7 @@ timeout 1800 goose run --recipe recipe/dev-mas-engineer.yaml --name e2e-dev-mas-
 
 **Operator-Script (in PTY, antwortet wie ein Mensch):**
 1. Erstes prompt: "Was kannst du?" → erwartet: capabilities-listing
-2. "Liste alle 52 sub-agents" → erwartet: vollstaendige sub_recipes-liste
+2. "Liste alle 52 sub-agents" (snapshot 2026-07-18; canonical 96 as of 2026-07-24) → erwartet: vollstaendige sub_recipes-liste
 3. "delegate framework-scanner" → erwartet: framework-scanner delegation
 4. "delegate general-improver mit task=FULL_IMPROVEMENT" → erwartet: im-pipeline triggert
 5. Bei R01-prompt: submit "yes" oder "no"

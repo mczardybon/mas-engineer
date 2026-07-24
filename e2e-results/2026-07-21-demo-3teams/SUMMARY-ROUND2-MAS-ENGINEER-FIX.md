@@ -1,8 +1,10 @@
 # SUMMARY — Round 2: mas-engineer root recipe + 2 more library recipes fixed
 
+> **⚠️ HISTORICAL SNAPSHOT (2026-07-21).** Numbers and sub-agent counts in this summary reflect the state at that time. The catalog has since grown from 52 → 96 sub-agents (2026-07-24).
+
 **Date**: 2026-07-21 (after first fix push d03efd2)
 **Operator**: Hermes
-**Status**: ✅ All `type: builtin` references removed. mas-engineer now renders with `type: platform` and all 52 sub_recipes load.
+**Status**: ✅ All `type: builtin` references removed. mas-engineer now renders with `type: platform` and all 52 sub_recipes load (snapshot: 2026-07-21; canonical: 96 as of 2026-07-24).
 
 ## What was missed in commit d03efd2
 
@@ -20,7 +22,7 @@ Plus the installed copy:
 - `/root/.config/goose/recipes/dev-mas-engineer.yaml`
 
 Without these fixes, mas-engineer itself could not delegate to ANY of its
-52 sub-agents — the root recipe was the one that printed welcome but
+52 sub-agents (snapshot 2026-07-21; canonical 96 as of 2026-07-24) — the root recipe was the one that printed welcome but
 never invoked a sub-agent.
 
 ## Round 2 fix

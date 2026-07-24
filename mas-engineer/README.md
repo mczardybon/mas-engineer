@@ -3,17 +3,17 @@
 A Multi-Agent System for **developing, improving, monitoring, and operating
 Multi-Agent Systems (MAS)** for the User.
 
-MAS-Engineer itself is a MAS: 56 sub-agents and 55 tools that work together
+MAS-Engineer itself is a MAS: 96 sub-agents and 57 tools that work together
 to build other MAS frameworks.
 
 ## What you get
 
-- 56 specialized sub-agents (designer, finder, rank, validator, health-reporter, ...)
-- 55 tools (48 Python, 6 Shell, 1 YAML)
+- 96 specialized sub-agents (designer, finder, rank, validator, health-reporter, ...)
+- 57 tools (50 Python, 6 Shell, 1 YAML)
 - A complete dashboard (MCP server + 2 HTML webapps — note: requires `npm install` to start; not run during e2e tests)
 - Full audit trail in `.state/`
 - Single-source-of-truth workflows in `.state/workflows.yaml`
-- 7-stage IM-pipeline (FIND → RANK → DESIGN → IMPLEMENT → VALIDATE → SUMMARIZE → PUSH)
+- 8-stage IM-pipeline (S1-S8 with S0 prerequisites; im-session-reader → im-finder → im-rank → im-designer → im-validator → apply → summarize → push)
 - 6 Phoenix Recovery files (5 internal + 1 monitor) — but only 5 are listed in `docs/`; the 6th is `monitor-recovery`
 
 ## Quick start: run the demo
@@ -109,14 +109,14 @@ dev-mas-engineer  (root orchestrator)
   +-- delegate(generic-init)   create new framework skeleton
   +-- delegate(demo-runner)    run the research-team demo
   +-- delegate(pre-push-validator)  block bad pushes
-  +-- ... 56 sub-agents
+  +-- ... 96 sub-agents
 ```
 
 ## Documentation
 
 - [docs/WORKFLOWS.md](docs/WORKFLOWS.md) - Team creation workflows (AUTO-SPLIT vs INTERACTIVE)
 - [docs/HOWTO-CREATE-AGENT.md](docs/HOWTO-CREATE-AGENT.md) - Create a single agent with intention-parser
-- [docs/HOWTO-IM-PIPELINE.md](docs/HOWTO-IM-PIPELINE.md) - Run the 7-stage improvement pipeline
+- [docs/HOWTO-IM-PIPELINE.md](docs/HOWTO-IM-PIPELINE.md) - Run the 8-stage improvement pipeline
 - [docs/HOWTO-TEAM-STANDALONE.md](docs/HOWTO-TEAM-STANDALONE.md) - Are created teams standalone-runnable?
 - [docs/HOWTO-PACKAGE-TEAM.md](docs/HOWTO-PACKAGE-TEAM.md) - Package a team for standalone distribution
 - [docs/DEMO-RESEARCH-TEAM.md](docs/DEMO-RESEARCH-TEAM.md) - Run the research-team demo
@@ -133,11 +133,11 @@ dev-mas-engineer  (root orchestrator)
 mas-engineer/
   recipe/
     dev-mas-engineer.yaml       # root orchestrator
-    sub/                        # 56 sub-agent recipes
+    sub/                        # 96 sub-agent recipes
     instructions/               # detailed instructions per agent
     setup-dashboard.yaml        # dashboard setup
     dashboard-data-refresh.yaml # data.json refresher
-    tools/                        # 55 tools (48 Python, 6 Shell, 1 YAML)
+    tools/                        # 57 tools (50 Python, 6 Shell, 1 YAML)
   .mas/mcp/                     # MCP dashboard server
   .state/                       # SOT, audit trail, findings
   docs/                         # documentation

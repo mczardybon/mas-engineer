@@ -5,7 +5,9 @@
 ![Mode](https://img.shields.io/badge/mode-framework-yellow)
 ![Agents](https://img.shields.io/badge/agents-56-brightgreen)
 ![Health](https://img.shields.io/badge/health-100%25-brightgreen)
-![YAML](https://img.shields.io/badge/yaml-56%2F56-success)
+|![YAML](https://img.shields.io/badge/yaml-56%2F56-success)|
+
+> **⚠️ HISTORICAL SNAPSHOT (2026-07-21).** Sub-agent counts (56) in this report reflect the state at that time. The catalog has since grown to 96 sub-agents in 9 categories (2026-07-24). The 56/56 YAML-valid claim was accurate for 2026-07-21.
 
 > **UPDATE 2026-07-22:** Agent counts corrected from 53 → 56 to reflect
 > 3 new sub-agents added on 22.07 (im-session-reader, json-utility,

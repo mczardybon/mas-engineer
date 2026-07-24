@@ -1,5 +1,7 @@
 # E2E test — mas-engineer komplette Funktionalität in goose CLI
 
+> **⚠️ HISTORICAL SNAPSHOT (2026-07-21).** Sub-agent counts (53, 45) in this report reflect the state at that time. The catalog has since grown to 96 sub-agents (2026-07-24). The 8 test-categories listed below are **test scope** (user-listed), not framework category count.
+
 **Date:** 2026-07-21
 **Trigger:** User instruction (verbatim): "führe umfassende e2e echte e2e Tests
 des mas-engineer innerhalb der goose cli. bediene sie wie ein Mensch es tun wird"

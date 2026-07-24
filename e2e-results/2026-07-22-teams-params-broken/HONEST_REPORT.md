@@ -1,5 +1,7 @@
 # HONEST E2E TEST: 3 Business Demo Teams (Sales/Marketing/Translator)
 
+> **⚠️ HISTORICAL SNAPSHOT (2026-07-22).** Sub-agent counts and "7-stage" reference in this report reflect the state at that time. The catalog has since grown to 96 sub-agents in 9 categories with an 8-stage pipeline (2026-07-24). Test verdicts are timeless — they reflect what was true on 2026-07-22.
+
 **Date:** 2026-07-22 01:38 UTC
 **Tester:** Hermes (per user instruction: "teste es wie ein Mensch es tun wurd")
 **Test method:** Real goose CLI calls (no wrapper scripts), one foreground
