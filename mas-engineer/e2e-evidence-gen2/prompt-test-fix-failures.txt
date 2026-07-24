@@ -1,0 +1,17 @@
+Use the test-fix-failures pipeline (recipe/test-fix-failures.yaml)
+to check the mas-engineer e2e demo-runner scripts.
+
+Target: /workspace/mas-engineer-src/mas-engineer/scripts/e2e-test.sh
+and /workspace/mas-engineer-src/mas-engineer/scripts/e2e-full-pipeline.sh
+
+The 5 stages (finder → ranker → designer → validator → applier) should:
+1. FINDER: detect what could fail in these scripts (lint, parse,
+   shellcheck, missing dependencies, broken paths)
+2. RANKER: prioritize failures by impact
+3. DESIGNER: propose minimal patches
+4. VALIDATOR: validate proposed patches would work
+5. APPLIER: only APPLY if patches are non-destructive and you've asked
+   for user confirmation
+
+If no real failures: just produce a status report saying "no failures
+detected" — DO NOT fabricate findings. ack

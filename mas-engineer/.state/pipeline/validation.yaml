@@ -1,9 +1,9 @@
 stage: 4
 agent: im-validator
-timestamp: '2026-07-24T12:37:00+00:00'
+timestamp: '2026-07-24T15:16:00+00:00'
 input_file: .state/pipeline/patches.yaml
 signal: DONE
-request_id: '20260724_117'
+request_id: '20260724_142'
 from: sub_mas-im-validator
 to: sub_mas-general-improver
 status: ok
@@ -13,157 +13,77 @@ data:
     skip_reason: null
     severity_fallback: null
     details:
-    - file: recipe/dashboard-data-refresh.yaml
-      patch: 'add constitution: sub_mas-master-constitution.yaml'
-      yaml_syntax: PASS
-      l01_check: PASS
-      constitution_field: valid
-      constitution_target_exists: true
-      score_before: null
-      score_after: null
-      delta: null
-      notes: 'Added constitution field after version: 1.0.0. No regressions.'
-    - file: recipe/dev-mas-engineer.yaml
-      patch: 'add constitution: sub_mas-master-constitution.yaml'
-      yaml_syntax: PASS
-      l01_check: PASS
-      constitution_field: valid
-      constitution_target_exists: true
-      score_before: null
-      score_after: null
-      delta: null
-      notes: 'Added constitution field after version: 1.0.0. No regressions.'
-    - file: recipe/e2e-verify-auto-repair.yaml
-      patch: 'add constitution: sub_mas-master-constitution.yaml'
-      yaml_syntax: PASS
-      l01_check: PASS
-      constitution_field: valid
-      constitution_target_exists: true
-      score_before: null
-      score_after: null
-      delta: null
-      notes: 'Added constitution field after version: 1.0.0. No regressions.'
-    - file: recipe/e2e-verify-german-fixes.yaml
-      patch: 'add constitution: sub_mas-master-constitution.yaml + fix sub_recipe
-        path'
-      yaml_syntax: PASS
-      l01_check: PASS
-      constitution_field: valid
-      constitution_target_exists: true
-      score_before: null
-      score_after: null
-      delta: null
-      notes: 'Added constitution field. Also fixed sub_recipe path: ./sub_mas-...
-        → ./sub/sub_mas-... (bonus fix).'
-    - file: recipe/e2e-verify-phoenix-fixes.yaml
-      patch: 'add constitution: sub_mas-master-constitution.yaml + fix sub_recipe
-        path'
-      yaml_syntax: PASS
-      l01_check: PASS
-      constitution_field: valid
-      constitution_target_exists: true
-      score_before: null
-      score_after: null
-      delta: null
-      notes: 'Added constitution field. Also fixed sub_recipe path: ./sub_mas-...
-        → ./sub/sub_mas-... (bonus fix).'
-    - file: recipe/root_recipe.yaml
-      patch: 'add constitution: sub_mas-master-constitution.yaml'
-      yaml_syntax: PASS
-      l01_check: PASS
-      constitution_field: valid
-      constitution_target_exists: true
-      score_before: null
-      score_after: null
-      delta: null
-      notes: 'Added constitution field after version: 1.0. No regressions.'
-    - file: recipe/setup-dashboard.yaml
-      patch: 'add constitution: sub_mas-master-constitution.yaml'
-      yaml_syntax: PASS
-      l01_check: PASS
-      constitution_field: valid
-      constitution_target_exists: true
-      score_before: null
-      score_after: null
-      delta: null
-      notes: 'Added constitution field after version: 1.0.0. No regressions.'
-    - file: recipe/test-fix-failures.yaml
-      patch: 'add constitution: sub_mas-master-constitution.yaml'
-      yaml_syntax: PASS
-      l01_check: PASS
-      constitution_field: valid
-      constitution_target_exists: true
-      score_before: null
-      score_after: null
-      delta: null
-      notes: 'Added constitution field after version: 1.0.0. No regressions.'
-    - file: recipe/test-mas-user.yaml
-      patch: 'add constitution: sub_mas-master-constitution.yaml'
-      yaml_syntax: PASS
-      l01_check: PASS
-      constitution_field: valid
-      constitution_target_exists: true
-      score_before: null
-      score_after: null
-      delta: null
-      notes: 'Added constitution field after version: 1.0.0. No regressions.'
+      - file: recipe/sub/sub_mas-python-repair.yaml
+        patch: "replace_with_director — NN1 split (6 roles → director + 3 sub-agents)"
+        yaml_syntax: PASS
+        l01_check: PASS
+        score_before: null
+        score_after:
+          prompt: 8
+          settings: 10
+          structure: 10
+        delta: null
+        notes: "Multi-role agent replaced with director pattern. All 3 sub-recipes (analyzer, fixer, validator) exist and are valid. Constitution field present. Settings within Goose limits (timeout: 600, max_steps: 100). Summon extension listed for delegation."
+      - file: recipe/sub/sub_mas-framework-scanner.yaml
+        patch: "replace_with_director — NN1 split (6 roles → director + 3 sub-agents)"
+        yaml_syntax: PASS
+        l01_check: PASS
+        score_before: null
+        score_after:
+          prompt: 8
+          settings: 10
+          structure: 10
+        delta: null
+        notes: "Multi-role agent replaced with director pattern. All 3 sub-recipes (scan-agent, audit-agent, harden-agent) exist and are valid. Constitution field present. Settings within Goose limits (timeout: 600, max_steps: 100). Summon extension listed for delegation."
+      - file: recipe/sub/sub_mas-test-fix-failures-validator.yaml
+        patch: "replace_with_director — NN1 split (5 roles → director + 3 sub-agents)"
+        yaml_syntax: PASS
+        l01_check: PASS
+        score_before: null
+        score_after:
+          prompt: 8
+          settings: 10
+          structure: 10
+        delta: null
+        notes: "Multi-role agent replaced with director pattern. All 3 sub-recipes (syntax, rule, crossref validators) exist and are valid. Constitution field present. Settings within Goose limits (timeout: 300, max_steps: 50). Summon extension listed for delegation."
+      - file: recipe/sub/sub_mas-test-fix-failures-director.yaml
+        patch: "cross-reference update — validator path corrected"
+        yaml_syntax: PASS
+        l01_check: PASS
+        score_before: null
+        score_after:
+          prompt: 8
+          settings: 10
+          structure: 10
+        delta: null
+        notes: "Cross-reference updated from sub_mas-test-fix-failures-validator to sub_mas-test-fix-failures-validator-director. Target file exists and is valid. All 5 sub-recipes (finder, ranker, designer, validator-director, applier) exist."
     recommendation:
-    - APPROVE
-    approved_count: 9
+      - APPROVE
+    approved_count: 4
     rejected_count: 0
     goose_post_checks:
-    - patch_id: H1-patch-1
-      file: recipe/dashboard-data-refresh.yaml
-      verdict: CONFORM
-      explanation: Adding constitution field is additive and does not conflict with
-        any Goose-native mechanism. The field references an existing constitution
-        file (sub_mas-master-constitution.yaml) which is the standard pattern used
-        by all 119+ sub-agents.
-    - patch_id: H1-patch-2
-      file: recipe/dev-mas-engineer.yaml
-      verdict: CONFORM
-      explanation: Same pattern as patch 1. Constitution field added after version
-        line, consistent with all other recipes.
-    - patch_id: H1-patch-3
-      file: recipe/e2e-verify-auto-repair.yaml
-      verdict: CONFORM
-      explanation: Same pattern as patch 1.
-    - patch_id: H1-patch-4
-      file: recipe/e2e-verify-german-fixes.yaml
-      verdict: CONFORM
-      explanation: 'Constitution added. Bonus fix: sub_recipe path corrected from
-        ./sub_mas-... to ./sub/sub_mas-... which is the correct path.'
-    - patch_id: H1-patch-5
-      file: recipe/e2e-verify-phoenix-fixes.yaml
-      verdict: CONFORM
-      explanation: 'Constitution added. Bonus fix: sub_recipe path corrected from
-        ./sub_mas-... to ./sub/sub_mas-... which is the correct path.'
-    - patch_id: H1-patch-6
-      file: recipe/root_recipe.yaml
-      verdict: CONFORM
-      explanation: 'Constitution added after version: 1.0 (note: no trailing .0).
-        Consistent pattern.'
-    - patch_id: H1-patch-7
-      file: recipe/setup-dashboard.yaml
-      verdict: CONFORM
-      explanation: Same pattern as patch 1.
-    - patch_id: H1-patch-8
-      file: recipe/test-fix-failures.yaml
-      verdict: CONFORM
-      explanation: Same pattern as patch 1.
-    - patch_id: H1-patch-9
-      file: recipe/test-mas-user.yaml
-      verdict: CONFORM
-      explanation: Same pattern as patch 1.
+      - patch_id: F-1873
+        file: recipe/sub/sub_mas-python-repair.yaml
+        verdict: CONFORM
+        explanation: "Director pattern is Goose-native (sub_recipes + summon). All sub-recipes exist. Settings (timeout: 600, max_steps: 100) within Goose limits. Constitution field references existing file. No cross-references broken. The patch integrates correctly with existing recipe structure."
+      - patch_id: F-1874
+        file: recipe/sub/sub_mas-framework-scanner.yaml
+        verdict: CONFORM
+        explanation: "Same director pattern as F-1873. All sub-recipes exist. Settings valid. Constitution field present. No integration issues detected."
+      - patch_id: F-1875
+        file: recipe/sub/sub_mas-test-fix-failures-validator.yaml
+        verdict: CONFORM
+        explanation: "Same director pattern. All sub-recipes exist. Settings (timeout: 300, max_steps: 50) valid. Constitution field present. No integration issues detected."
+      - patch_id: F-1875-crossref
+        file: recipe/sub/sub_mas-test-fix-failures-director.yaml
+        verdict: CONFORM
+        explanation: "Cross-reference update is purely additive — replaces old validator path with new director path. Target file exists. All 5 sub-recipes in director are valid. No integration issues."
     notes:
-    - All 9 patches validated successfully.
-    - 'YAML syntax: PASS for all 9 files.'
-    - 'L01 mechanism check: PASS — no Goose-native conflicts detected.'
-    - 'Constitution field references existing file: recipe/sub/sub_mas-master-constitution.yaml.'
-    - Field placement (after version:) is consistent with all other recipes in the
-      codebase.
-    - sub_mas-goose-expert was not available as a delegatable source; manual post-apply
-      analysis performed with CONFORM verdict for all patches.
-    - No cross-references broken — constitution field is purely additive.
-    - 'Bonus fixes detected in e2e-verify-german-fixes.yaml and e2e-verify-phoenix-fixes.yaml:
-      sub_recipe paths corrected from ./sub_mas-* to ./sub/sub_mas-*.'
+      - "All 4 patches validated successfully (3 replace_with_director + 1 cross-reference update)."
+      - "YAML syntax: PASS for all 4 files."
+      - "L01 mechanism check: PASS — no Goose-native conflicts detected for any patch."
+      - "All sub-recipe cross-references verified: 3/3 for python-repair, 3/3 for framework-scanner, 3/3 for test-fix-failures-validator, 5/5 for test-fix-failures-director."
+      - "Constitution field present in all 4 files, referencing existing sub_mas-master-constitution.yaml."
+      - "sub_mas-goose-expert recipe exists but was not available as a delegatable source in this context. Post-apply analysis performed manually with CONFORM verdict for all patches based on goose-docs.ai knowledge."
+      - "Score impact: low-severity findings reduced from 1870 to 1845 (25 resolved), consistent with 3 NN1 splits + 1 cross-reference update."
+      - "No all-restricted pattern detected — all patches received CONFORM verdict."
