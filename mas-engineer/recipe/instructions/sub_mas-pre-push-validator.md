@@ -26,6 +26,81 @@ everything is healthy.
 Run the following 8 checks IN ORDER. Stop at the first failure if a hard
 block is detected, but always collect all warnings.
 
+### Check 1.5: Last commit title matches repo convention (NEW v2.0.0)
+**Why:** R36 anti-pattern — invented `🪤 TRAP` and `🛡️ PUSH` titles that
+broke the repo's visual commit-history rhythm. Last-minute guard.
+```bash
+cd $WORKSPACE
+python3 - <<'PYEOF'
+import subprocess, re
+
+# 1. Get last commit title
+last_title = subprocess.run(
+    ['git', 'log', '-1', '--pretty=format:%s'],
+    capture_output=True, text=True
+).stdout.strip()
+
+# 2. Get ALL commit titles (sample for emoji census)
+history = subprocess.run(
+    ['git', 'log', '-50', '--pretty=format:%s'],
+    capture_output=True, text=True
+).stdout.split('\n')
+
+# 2b. Allowed emojis (HARDCODED from repo history, NOT learned from last-50)
+# R36 lesson: if we learn allowed emojis from history, we perpetuate anti-patterns
+# (e.g. 🪤 TRAP, 🛡️ PUSH made it into history → would be allowed forever).
+# Only the 4 emojis that existed in 5eb67fe era (long before R36) are allowed.
+ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊'}
+
+# 3. Build set of historically-used emojis (for diagnostics only)
+EMOJI_RE = re.compile(r'[\U0001F000-\U0001FFFF\U00002600-\U000027BF]')
+history = subprocess.run(
+    ['git', 'log', '-50', '--pretty=format:%s'],
+    capture_output=True, text=True
+).stdout.split('\n')
+used_emojis = set()
+for t in history:
+    for m in EMOJI_RE.findall(t):
+        used_emojis.add(m)
+
+# 4. Check last title
+allowed_patterns = [
+    r'^(fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:',  # conventional commits
+    r'^mas\(round-\d+\):',  # MAS self-improve rounds
+]
+# Conventional commits with allowed emojis (the 4 in repo history)
+for allowed in ALLOWED_EMOJIS:
+    allowed_patterns.append(f'^{re.escape(allowed)} (FIX|DOCS|STATE|TEST|FEAT|CHORE|ARCH) — ')
+
+# 5. Check 5a: title matches a known pattern
+ok = any(re.match(p, last_title) for p in allowed_patterns)
+if not ok:
+    print(f"  ❌ Last commit title doesn't match repo convention:")
+    print(f"     {last_title!r}")
+    print(f"     Allowed patterns: type(scope): desc | mas(round-NN): | 🔧|📝|📚|📊 <TYPE> — desc")
+    print(f"     Run `git log --oneline -20` to see the dominant style.")
+    exit(1)
+
+# 6. Check 5b: any emoji in last title that's NOT in HARDCODED allowed set?
+unknown_emojis = [m for m in EMOJI_RE.findall(last_title) if m not in ALLOWED_EMOJIS]
+if unknown_emojis:
+    print(f"  ❌ Last commit title uses NON-ALLOWED emoji(s):")
+    for e in unknown_emojis:
+        print(f"     {e!r} (allowed: {sorted(ALLOWED_EMOJIS)})")
+    print(f"     If you need a new emoji, add it to ALLOWED_EMOJIS in this check + justify.")
+    print(f"     Anti-patterns: R36 used 🪤 TRAP, 🛡️ PUSH (not in repo history → blocked).")
+    exit(1)
+
+print(f"  ✓ Last commit title follows repo convention")
+print(f"     {last_title!r}")
+print(f"     (precedent emojis in last 50 commits: {sorted(used_emojis) or 'none'})")
+exit(0)
+PYEOF
+```
+**Block if:** last commit title doesn't match `type(scope): desc`, `type: desc`,
+`mas(round-NN):`, or one of the 4 known emoji prefixes (`🔧`, `📝`, `📚`, `📊`).
+**Block if:** last commit title uses an emoji NOT in the precedent set (anti-pattern: R36 🪤 TRAP, 🛡️ PUSH).
+
 ### Check 1: P1 (high-severity) findings = 0
 ```bash
 cd $WORKSPACE
@@ -107,6 +182,39 @@ cd $WORKSPACE
 git status --porcelain | head -20
 ```
 **Warning if:** uncommitted changes (push might miss them, but not blocked).
+
+### Check 7.5: No backup files in commits (NEW v2.0.0 — R36 bug guard)
+**Why:** R36 had a bug where `git add -A` accidentally committed 27k lines of
+backup files (`.backups/20260724_*/`, `.state/pipeline/backup-*/`).
+This check prevents that class of bug from ever reaching master again.
+```bash
+cd $WORKSPACE
+# Scan the last 5 commits for accidentally-committed backup files
+python3 - <<'PYEOF'
+import subprocess, re
+backup_patterns = [
+    r'\.backups/',
+    r'\.state/pipeline/backup-',
+    r'\.bak\.',
+    r'backup-pre-r\d+/',
+]
+# Get list of files changed in last 5 commits
+result = subprocess.run(
+    ['git', 'log', '-5', '--name-only', '--pretty=format:'],
+    capture_output=True, text=True
+)
+files = [f for f in result.stdout.split('\n') if f]
+polluted = [f for f in files if any(re.search(p, f) for p in backup_patterns)]
+if polluted:
+    print(f"  ❌ {len(polluted)} backup file(s) in last 5 commits:")
+    for f in set(polluted):
+        print(f"     {f}")
+    exit(1)
+print(f"  ✓ No backup files in last 5 commits (checked {len(files)} file-paths)")
+exit(0)
+PYEOF
+```
+**Block if:** any backup file appears in the last 5 commits.
 
 ### Check 8: No "missing Goose mechanism" anti-pattern (L01 from lessons-learned.md)
 Catches the class of bug where im-designer proposes reimplementing a native
