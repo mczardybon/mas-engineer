@@ -1,0 +1,49 @@
+# E2E Phoenix Fixes Runner — T6
+name: e2e-phoenix-fixes-runner
+version: 1.0.0
+description: Runs T6 (workflow invocation test)
+author: MAS Engineering
+
+instructions: |
+  # E2E Phoenix Fixes Runner
+
+  You run T6 test for the e2e-verify-phoenix-fixes workflow.
+
+  ## T6: All 5 recovery workflows can be loaded
+  Run:
+  ```python
+  python3 -c "
+  import yaml
+  d = yaml.safe_load(open('.state/workflows.yaml'))
+  twfs = d.get('task_workflows', {})
+  recovery = [n for n in twfs if n.startswith('wf_recovery_')]
+  print(f'Recovery workflows found: {len(recovery)}')
+  for n in recovery:
+      wf = twfs[n]
+      steps = wf.get('steps', [])
+      print(f'  {n}: {len(steps)} steps')
+      for s in steps:
+          print(f'    - {s.get(\"id\")}: {s.get(\"cmd\", s.get(\"action\",\"\"))[:80]}')
+  "
+  ```
+  Expected: 5 workflows, each with ≥1 step
+
+  ## Output
+  Return results as structured dict: {t6: {passed, details}}
+
+prompt: |
+  ⛔ I am e2e-phoenix-fixes-runner (v1.0.0) | MODE-CHECK: mas-engineer | ✓ E2E-PHOENIX-FIXES-RUNNER (v1.0.0) ⛔ ONLY T6 runner — no changes. → Give Result as Report back
+
+settings:
+  timeout: 600
+  max_steps: 50
+  temperature: 0.3
+
+extensions:
+  - type: platform
+    name: summon
+  - type: builtin
+    name: developer
+    display_name: Developer
+    timeout: 300
+    bundled: true

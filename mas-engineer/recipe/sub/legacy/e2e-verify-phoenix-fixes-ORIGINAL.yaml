@@ -1,0 +1,84 @@
+name: e2e-verify-phoenix-fixes
+version: 1.0.0
+title: ✓ E2E-VERIFY-PHOENIX-FIXES — 8 fixes validation
+description: |
+  v1.0.0 | Verify the 8 phoenix-recovery fixes from commit 4ebd18e.
+  Agent-driven e2e test, NOT a file-level grep.
+  Tests:
+  1. wf_recovery_immune + 4 new workflows parse + dispatch
+  2. 5 recovery-templates render correctly
+  3. checkpoint .label + recipe/dev-mas-engineer.yaml exist
+  4. timeout=600 in 3 sub-recipes
+  5. No German words in MAS files
+  6. Workflows can be invoked via sub-agents
+  Writes report to e2e-results/2026-07-22-verify-phoenix-fixes/
+
+instructions: |
+  # E2E Verify Phoenix Fixes
+
+  You are a verification agent. You run actual commands, not file-only greps.
+  Test each of the 8 fixes and write a final report.
+
+  ## TESTS
+
+  ### T1: 4 recovery-workflows in workflows.yaml
+  Run: `python3 -c "import yaml; data = yaml.safe_load(open('.state/workflows.yaml')); recovery = [k for k in data.get('task_workflows', {}).keys() if k.startswith('wf_recovery_')]; print(len(recovery), recovery)"`
+  Expected: 5 (immune + 4 new)
+  Note: count includes wf_recovery_immune which already existed.
+
+  ### T2: 5 templates in template/recovery/
+  Run: `ls template/recovery/`
+  Expected: 5 .md files: checkpoint.md defib.md immune.md safezone.md timeline.md
+
+  ### T3: Checkpoint 20260722_185346 has .label + dev-mas-engineer
+  Run: `cat .state/checkpoints/20260722_185346/.label`
+  Expected: "Phoenix Recovery E2E 2026-07-22"
+  Run: `test -f .state/checkpoints/20260722_185346/recipe/dev-mas-engineer.yaml && echo YES || echo NO`
+  Expected: YES
+  Note: this checkpoint is in .gitignore but should still exist locally.
+
+  ### T4: timeout=600 in 3 sub-recipes
+  Run: `grep -l 'timeout: 600' recipe/sub/sub_mas-recovery-defib.yaml recipe/sub/sub_mas-recovery-timeline.yaml recipe/sub/sub_mas-recovery-checkpoint.yaml | wc -l`
+  Expected: 3
+  Run: `grep -c 'timeout: 120' recipe/sub/sub_mas-recovery-defib.yaml recipe/sub/sub_mas-recovery-timeline.yaml recipe/sub/sub_mas-recovery-checkpoint.yaml`
+  Expected: 0 0 0
+
+  ### T5: No German in MAS files
+  Run: `grep -rE '\b(Schritt|Inhalt|Prüfung|validierung|Erstellen)\b' .state/workflows.yaml template/recovery/ || echo "NO GERMAN"`
+  Expected: NO GERMAN
+
+  ### T6: Workflows can be invoked (real test)
+  Pick ONE workflow (wf_recovery_checkpoint) and try to invoke it:
+  `python3 tools/dev_workflow_runner.py --workflow wf_recovery_checkpoint 2>&1 | head -10`
+  Capture stdout/stderr. Mark PASS if it executes without crashing.
+
+  ### T7: YAML files parse end-to-end
+  Run: `python3 -c "import yaml, glob; [yaml.safe_load(open(f)) for f in glob.glob('.state/workflows.yaml', 'recipe/sub/*.yaml', recursive=True)]; print('ALL VALID')"`
+  Expected: ALL VALID
+
+  ## REPORT
+  Write to e2e-results/2026-07-22-verify-phoenix-fixes/REPORT.md with:
+  - Each test number, pass/fail, actual output
+  - Final summary: 7/7 PASS or list of failures
+  - Any unexpected findings
+
+prompt: |
+  Run the 7 tests listed in instructions. Test results, write a final report.
+
+  You are running REAL e2e. Execute each command and report actual output.
+  Do NOT just describe what should happen.
+
+settings:
+  timeout: 300
+  max_steps: 50
+  goose_provider: openai
+  goose_model: deepseek-chat
+  temperature: 0.3
+extensions:
+- type: platform
+  name: summon
+- type: builtin
+  name: developer
+  display_name: Developer
+  timeout: 300
+  bundled: true

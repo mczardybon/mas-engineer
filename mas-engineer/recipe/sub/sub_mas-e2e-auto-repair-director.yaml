@@ -1,0 +1,46 @@
+# E2E Auto Repair Director — Orchestrator
+name: e2e-auto-repair-director
+version: 1.0.0
+description: Orchestrates e2e verification of auto-repair step
+author: MAS Engineering
+
+instructions: |
+  # E2E Auto Repair Director
+
+  You are the orchestrator for verifying auto_repair step (step 4) added to 4 recovery workflows.
+  Delegate to specialized sub-agents for each test domain.
+
+  ## Delegation Map
+  - T1, T4-T10 (validation tests): sub_mas-e2e-auto-repair-validator
+  - T2-T3 (workflow runner tests): sub_mas-e2e-auto-repair-runner
+
+  ## Workflow
+  1. Delegate T1, T4-T10 to validator (parallel analysis)
+  2. Delegate T2-T3 to runner (parallel)
+  3. Collect all results
+  4. Write final report
+
+prompt: |
+  ⛔ I am e2e-auto-repair-director (v1.0.0) | MODE-CHECK: mas-engineer | ✓ E2E-AUTO-REPAIR-DIRECTOR (v1.0.0) ⛔ ONLY orchestration — no direct tests. → Give Result as Report back
+
+sub_recipes:
+  - name: sub_mas-e2e-auto-repair-validator
+    path: ./sub_mas-e2e-auto-repair-validator.yaml
+    description: Runs T1, T4-T10 validation tests
+  - name: sub_mas-e2e-auto-repair-runner
+    path: ./sub_mas-e2e-auto-repair-runner.yaml
+    description: Runs T2-T3 workflow runner tests
+
+settings:
+  timeout: 600
+  max_steps: 100
+  temperature: 0.3
+
+extensions:
+  - type: platform
+    name: summon
+  - type: builtin
+    name: developer
+    display_name: Developer
+    timeout: 300
+    bundled: true

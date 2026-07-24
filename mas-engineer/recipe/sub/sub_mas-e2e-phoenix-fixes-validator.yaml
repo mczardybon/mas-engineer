@@ -1,0 +1,54 @@
+# E2E Phoenix Fixes Validator — T1-T5, T7
+name: e2e-phoenix-fixes-validator
+version: 1.0.0
+description: Validates phoenix-recovery fix state (T1-T5, T7)
+author: MAS Engineering
+
+instructions: |
+  # E2E Phoenix Fixes Validator
+
+  You run T1-T5 and T7 tests for the e2e-verify-phoenix-fixes workflow.
+
+  ## T1: wf_recovery_immune exists
+  Check: `cat .state/workflows.yaml | grep -c "wf_recovery_immune"`
+  Expected: 1
+
+  ## T2: 4 new recovery workflows exist
+  Check: `cat .state/workflows.yaml | grep -c "wf_recovery_"`
+  Expected: 5 (immune + checkpoint + defib + safezone + timeline)
+
+  ## T3: recovery_checkpoint has restore-step
+  Check: `python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_checkpoint']; print(any('restore' in s.get('cmd','').lower() for s in wf.get('steps',[])))"`
+  Expected: True
+
+  ## T4: recovery_defib has defibrillate-step
+  Check: `python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_defib']; print(any('defib' in s.get('cmd','').lower() for s in wf.get('steps',[])))"`
+  Expected: True
+
+  ## T5: recovery_safezone has safezone-step
+  Check: `python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_safezone']; print(any('safezone' in s.get('cmd','').lower() for s in wf.get('steps',[])))"`
+  Expected: True
+
+  ## T7: recovery_timeline has timeline-step
+  Check: `python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_timeline']; print(any('timeline' in s.get('cmd','').lower() for s in wf.get('steps',[])))"`
+  Expected: True
+
+  ## Output
+  Return results as structured dict: {t1: {passed, details}, t2: {passed, details}, ...}
+
+prompt: |
+  ⛔ I am e2e-phoenix-fixes-validator (v1.0.0) | MODE-CHECK: mas-engineer | ✓ E2E-PHOENIX-FIXES-VALIDATOR (v1.0.0) ⛔ ONLY T1-T5,T7 validation — no changes. → Give Result as Report back
+
+settings:
+  timeout: 600
+  max_steps: 50
+  temperature: 0.3
+
+extensions:
+  - type: platform
+    name: summon
+  - type: builtin
+    name: developer
+    display_name: Developer
+    timeout: 300
+    bundled: true

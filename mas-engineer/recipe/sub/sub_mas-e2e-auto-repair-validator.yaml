@@ -1,0 +1,62 @@
+# E2E Auto Repair Validator — T1, T4-T10
+name: e2e-auto-repair-validator
+version: 1.0.0
+description: Validates auto_repair step in recovery workflows (T1, T4-T10)
+author: MAS Engineering
+
+instructions: |
+  # E2E Auto Repair Validator
+
+  You run T1, T4-T10 tests for the e2e-verify-auto-repair workflow.
+
+  ## T1: wf_recovery_checkpoint has auto_repair step
+  Check: `python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_checkpoint']; print(any('auto_repair' in s.get('id','').lower() for s in wf.get('steps',[])))"`
+  Expected: True
+
+  ## T4: wf_recovery_defib has auto_repair step
+  Check: `python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_defib']; print(any('auto_repair' in s.get('id','').lower() for s in wf.get('steps',[])))"`
+  Expected: True
+
+  ## T5: wf_recovery_safezone has auto_repair step
+  Check: `python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_safezone']; print(any('auto_repair' in s.get('id','').lower() for s in wf.get('steps',[])))"`
+  Expected: True
+
+  ## T6: wf_recovery_timeline has auto_repair step
+  Check: `python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_timeline']; print(any('auto_repair' in s.get('id','').lower() for s in wf.get('steps',[])))"`
+  Expected: True
+
+  ## T7: auto_repair step is step 4 in all workflows
+  Check: `python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); twfs=d['task_workflows']; wfs=['wf_recovery_checkpoint','wf_recovery_defib','wf_recovery_safezone','wf_recovery_timeline']; all(any(s.get('id')=='auto_repair' for s in twfs[n].get('steps',[])) for n in wfs)"`
+  Expected: True
+
+  ## T8: auto_repair step has cmd or action
+  Check: `python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); twfs=d['task_workflows']; wfs=['wf_recovery_checkpoint','wf_recovery_defib','wf_recovery_safezone','wf_recovery_timeline']; all(any(s.get('cmd') or s.get('action') for s in twfs[n].get('steps',[]) if s.get('id')=='auto_repair') for n in wfs)"`
+  Expected: True
+
+  ## T9: auto_repair step is not placeholder (echo-only)
+  Check: `python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); twfs=d['task_workflows']; wfs=['wf_recovery_checkpoint','wf_recovery_defib','wf_recovery_safezone','wf_recovery_timeline']; all(not s.get('cmd','').strip().startswith('echo ') for n in wfs for s in twfs[n].get('steps',[]) if s.get('id')=='auto_repair')"`
+  Expected: True
+
+  ## T10: auto_repair step references recipe/restore
+  Check: `python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); twfs=d['task_workflows']; wfs=['wf_recovery_checkpoint','wf_recovery_defib','wf_recovery_safezone','wf_recovery_timeline']; all('restore' in (s.get('cmd','')+s.get('action','')).lower() for n in wfs for s in twfs[n].get('steps',[]) if s.get('id')=='auto_repair')"`
+  Expected: True
+
+  ## Output
+  Return results as structured dict: {t1: {passed, details}, t4: {passed, details}, ...}
+
+prompt: |
+  ⛔ I am e2e-auto-repair-validator (v1.0.0) | MODE-CHECK: mas-engineer | ✓ E2E-AUTO-REPAIR-VALIDATOR (v1.0.0) ⛔ ONLY T1,T4-T10 validation — no changes. → Give Result as Report back
+
+settings:
+  timeout: 600
+  max_steps: 50
+  temperature: 0.3
+
+extensions:
+  - type: platform
+    name: summon
+  - type: builtin
+    name: developer
+    display_name: Developer
+    timeout: 300
+    bundled: true

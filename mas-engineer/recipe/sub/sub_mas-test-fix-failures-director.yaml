@@ -1,0 +1,60 @@
+# Test Fix Failures Director — Orchestrator
+name: test-fix-failures-director
+version: 1.0.0
+description: Orchestrates fixing 2 e2e test failures
+author: MAS Engineering
+
+instructions: |
+  # Test Fix Failures Director
+
+  You are the orchestrator for fixing 2 e2e test failures.
+  Delegate to specialized sub-agents for each stage.
+
+  ## Delegation Map
+  - Finding detection: sub_mas-test-fix-failures-finder
+  - Priority ranking: sub_mas-test-fix-failures-ranker
+  - Patch design: sub_mas-test-fix-failures-designer
+  - Validation: sub_mas-test-fix-failures-validator
+  - Application: sub_mas-test-fix-failures-applier
+
+  ## Workflow
+  1. Delegate to finder to detect failures
+  2. Delegate to ranker to prioritize
+  3. Delegate to designer to create patches
+  4. Delegate to validator to check patches
+  5. Delegate to applier to apply approved patches
+  6. Collect all results and report
+
+prompt: |
+  ⛔ I am test-fix-failures-director (v1.0.0) | MODE-CHECK: mas-engineer | ✓ TEST-FIX-FAILURES-DIRECTOR (v1.0.0) ⛔ ONLY orchestration — no direct fixes. → Give Result as Report back
+
+sub_recipes:
+  - name: sub_mas-test-fix-failures-finder
+    path: ./sub_mas-test-fix-failures-finder.yaml
+    description: Detects e2e test failures
+  - name: sub_mas-test-fix-failures-ranker
+    path: ./sub_mas-test-fix-failures-ranker.yaml
+    description: Ranks failures by priority
+  - name: sub_mas-test-fix-failures-designer
+    path: ./sub_mas-test-fix-failures-designer.yaml
+    description: Designs patches for failures
+  - name: sub_mas-test-fix-failures-validator
+    path: ./sub_mas-test-fix-failures-validator.yaml
+    description: Validates patches
+  - name: sub_mas-test-fix-failures-applier
+    path: ./sub_mas-test-fix-failures-applier.yaml
+    description: Applies approved patches
+
+settings:
+  timeout: 600
+  max_steps: 100
+  temperature: 0.3
+
+extensions:
+  - type: platform
+    name: summon
+  - type: builtin
+    name: developer
+    display_name: Developer
+    timeout: 300
+    bundled: true

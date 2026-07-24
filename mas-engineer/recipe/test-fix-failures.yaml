@@ -1,238 +1,38 @@
 name: test-fix-failures
 version: 1.0.0
-title: Test fix 2 e2e failures
-description: 'Real user test: fix 2 e2e failures via general-improver'
-instructions: '# ════════════════════════════════════════════ # DEV-MAS-ENGINEER v1.0.0 # Behavioral Guidelines # ════════════════════════════════════════════
+title: ✓ TEST-FIX-FAILURES — delegator
+description: Thin delegator that routes to sub_mas-test-fix-failures-director
+instructions: |
+  # TEST-FIX-FAILURES — Thin Delegator
 
-  ## IDENTITY You are DEV-MAS-ENGINEER. Your only context: Multi-Agent Systems. You develop, improve, monitor, and operate
-  them for the User. ALL your answers exclusively relate to MAS context. For questions outside MAS, you politely refer to
-  your boundaries.
+  ## IDENTITY
+  You are a thin delegator. Your sole purpose is to delegate to the
+  sub_mas-test-fix-failures-director sub-agent.
 
-  ## LANGUAGE DETECT the language of the first User message. Always respond IN the same language. Only switch if the User
-  changes language.
+  ## WORKFLOW
+  1. Receive the user query.
+  2. Delegate to sub_mas-test-fix-failures-director with the full user query.
+  3. Return the result from the director to the user.
 
-  ## TONE - Friendly, helpful, professional — like an experienced colleague - Clear and to the point. No unnecessary small
-  talk. - Show options instead of making the User guess - Explain WHAT you do BEFORE you do it (R01) - When unsure: ask instead
-  of guessing
-
-  ## RULES (always active, in background) - R01: No changes without User confirmation - R18: Delegate to specialized sub-agents
-  - R20: No direct write access — via Gatekeeper - R21: Every action is logged - R09: Strict domain separation (MAS ≠ Framework)
-  All rules: .state/workflows.yaml → configs.mas-self
-
-  ## WHAT YOU CAN DO (via delegated sub-agents — R18) - delegate(generic-init)       → Create new frameworks (lightweight,
-  symlink) - delegate(bootstrap)         → Deploy MAS-Engineer standalone (52 sub-agents + 45 tools) - delegate(framework-scanner)  →
-  Analyze, scan, harden systems - delegate(general-improver)   → Automatic improvement (6 im-* agents) - delegate(agent-guardian)     →
-  Monitor agent health - delegate(monitor-*)          → Framework monitoring - delegate(recovery-*)         → 5-stage recovery
-  - delegate(web-researcher)     → 🔍 Web research (up-to-date techniques) - delegate(generic-init,PUSH)  → Copy knowledge
-  to projects - delegate(recipe-designer)    → Design new sub-agents - delegate(demo-runner)        → Build the research-team
-  demo (5 agents + dashboard) — see docs/DEMO-RESEARCH-TEAM.md
-
-  ## STAYING UP-TO-DATE When creating a new framework, proactively have web-researcher search for current techniques (R18).
-  Present findings, User decides, integrate.
-
-  ## SOURCES System knowledge: sub_mas-system-knowledge (auto-loaded) 52 sub-agents: recipe/sub/sub_mas-*.yaml 45 tools: tools/dev_*.py
-  SOT: .state/workflows.yaml'
-prompt: 'I am test-fix-failures. MODE-CHECK: user-test | Run the full IM-pipeline via dev-mas-engineer to fix 2 e2e test failures
-  from .state/guardian.yaml:
-
-
-  1. sales/medium — timeout 603s, LEAD-DONE not found (CURL-loop exhaustion)
-
-  2. marketing/hard — timeout 83s, GTM-DONE not found (1-of-5 specialist dispatch)
-
-
-  Steps: im-finder (find root causes) → im-rank (priority) → im-designer (design patches) → im-validator (validate) → general-improver
-  (apply). Delegate to sub_mas-general-improver.
-
-
-  After applying patches, list ALL files you modified and end your response with PATCHES-APPLIED on its own line.'
+  ## RULES
+  - R18: Always delegate — do NOT attempt to solve the task yourself.
+  - R01: No changes without user confirmation.
+  - R09: Stay within the target workspace.
+prompt: |
+  I am test-fix-failures (delegator). Delegating to sub_mas-test-fix-failures-director.
+  Please handle the user's request.
 settings:
-  activities:
-  - description: 🔍 What's new in the MAS world?
-    message: Research current techniques for our framework via sub_mas-web-researcher.
-    name: web_research
-  - description: 💡 What can MAS do for me?
-    message: What can you do? Please explain all MAS-Engineer functions.
-    name: capabilities
-  - description: 📊 Update dashboard
-    message: refresh
-    name: dashboard
-  - description: ℹ️ Show MAS status
-    message: /status
-    name: status
-  - description: 🔍 Scan framework
-    message: /develop --scan
-    name: scan
-  - description: 🩺 Self-check (Guardian)
-    message: check all agents for health
-    name: self_check
-  - description: 🦆 Setup dashboard (1×)
-    message: Set up the Framework Dashboard using the setup recipe
-    name: setup_dashboard
   goose_model: deepseek-chat
   goose_provider: openai
-  max_steps: 300
-  timeout: 1800
+  max_steps: 50
+  timeout: 300
   temperature: 0.3
 extensions:
-- name: summon
-  type: platform
-- name: developer
-  type: platform
+  - name: summon
+    type: platform
+  - name: developer
+    type: platform
 sub_recipes:
-- description: 📚 Complete system knowledge (Architecture, Communication, Installation, Recovery, Rules, Tools, Agents, Build)
-  name: sub_mas-system-knowledge
-  path: ./sub/sub_mas-system-knowledge.yaml
-- description: 🧠 Framework concepts & blueprints
-  name: sub_mas-framework-knowledge
-  path: ./sub/sub_mas-framework-knowledge.yaml
-- description: 🔍 Framework analysis
-  name: sub_mas-framework-scanner
-  path: ./sub/sub_mas-framework-scanner.yaml
-- description: 📊 Session correlation & anomalies
-  name: sub_mas-session-analyst
-  path: ./sub/sub_mas-session-analyst.yaml
-- description: 📐 Config consistency check (16 checks)
-  name: sub_mas-config-auditor
-  path: ./sub/sub_mas-config-auditor.yaml
-- description: 🦆 Goose rule compliance check
-  name: sub_mas-goose-expert
-  path: ./sub/sub_mas-goose-expert.yaml
-- description: 🎯 Prompt quality check & optimize
-  name: sub_mas-prompt-engineer
-  path: ./sub/sub_mas-prompt-engineer.yaml
-- description: 🧪 Test execution & regression detection
-  name: sub_mas-test-runner
-  path: ./sub/sub_mas-test-runner.yaml
-- description: 🛡️ Agent monitoring (death/drift/loop)
-  name: sub_mas-agent-guardian
-  path: ./sub/sub_mas-agent-guardian.yaml
-- description: 📝 Docs currency check & diff generation
-  name: sub_mas-doc-generator
-  path: ./sub/sub_mas-doc-generator.yaml
-- description: 🔄 Framework migration planning & execution
-  name: sub_mas-migration-helper
-  path: ./sub/sub_mas-migration-helper.yaml
-- description: 📊 Session-Database read (for Improvement-Pipeline)
-  name: sub_mas-im-session-reader
-  path: ./sub/sub_mas-im-session-reader.yaml
-- description: 🔍 Optimization potential detection (37 feature types)
-  name: sub_mas-im-finder
-  path: ./sub/sub_mas-im-finder.yaml
-- description: 📊 Prioritize & filter findings
-  name: sub_mas-im-rank
-  path: ./sub/sub_mas-im-rank.yaml
-- description: 🛠️ Design patches from findings
-  name: sub_mas-im-designer
-  path: ./sub/sub_mas-im-designer.yaml
-- description: ✅ Changes validation & rollback recommendation
-  name: sub_mas-im-validator
-  path: ./sub/sub_mas-im-validator.yaml
-- description: 🔬 Analyze own sessions & optimize
-  name: sub_mas-general-improver
-  path: ./sub/sub_mas-general-improver.yaml
-- description: 🖥️ Goose-Components manage
-  name: sub_mas-goose-admin
-  path: ./sub/sub_mas-goose-admin.yaml
-- description: 📦 Recipes manage
-  name: sub_mas-recipe-manager
-  path: ./sub/sub_mas-recipe-manager.yaml
-- description: ✏️ Safe YAML editing
-  name: sub_mas-yaml-editor
-  path: ./sub/sub_mas-yaml-editor.yaml
-- description: 🛡️ YAML Prevention
-  name: sub_mas-recovery-immune
-  path: ./sub/sub_mas-recovery-immune.yaml
-- description: 📸 Git-similar Snapshots
-  name: sub_mas-recovery-checkpoint
-  path: ./sub/sub_mas-recovery-checkpoint.yaml
-- description: 🔒 Parallel workspace (fork)
-  name: sub_mas-recovery-safezone
-  path: ./sub/sub_mas-recovery-safezone.yaml
-- description: ⏳ Automatic best point search
-  name: sub_mas-recovery-timeline
-  path: ./sub/sub_mas-recovery-timeline.yaml
-- description: ⚡ Emergency-Resuscitation
-  name: sub_mas-recovery-defib
-  path: ./sub/sub_mas-recovery-defib.yaml
-- description: 🌍 Generic improver initialization
-  name: sub_mas-generic-init
-  path: ./sub/sub_mas-generic-init.yaml
-- description: 🚀 MAS-Engineer Bootstrap (standalone deploy)
-  name: sub_mas-bootstrap
-  path: ./sub/sub_mas-bootstrap.yaml
-- description: 🩺 YAML-Config-Health Monitor
-  name: sub_mas-monitor-health
-  path: ./sub/sub_mas-monitor-health.yaml
-- description: ⏱ Runtime token monitor
-  name: sub_mas-monitor-runtime
-  path: ./sub/sub_mas-monitor-runtime.yaml
-- description: 🔄 Checkpoint-Recovery-Monitor
-  name: sub_mas-monitor-recovery
-  path: ./sub/sub_mas-monitor-recovery.yaml
-- description: 📊 Session status monitor
-  name: sub_mas-monitor-session
-  path: ./sub/sub_mas-monitor-session.yaml
-- description: 🔄 MAS-Controller (Scheduler 15min)
-  name: sub_mas-mas-controller
-  path: ./sub/sub_mas-mas-controller.yaml
-- description: ⚖️ MAS constitution (autonomous)
-  name: sub_mas-master-constitution
-  path: ./sub/sub_mas-master-constitution.yaml
-- description: 🌲 Git worktree manager (MAS-internal, autonomous)
-  name: sub_mas-worktree-manager
-  path: ./sub/sub_mas-worktree-manager.yaml
-- description: ✅ Result check (MAS-internal, autonomous)
-  name: sub_mas-verification-runner
-  path: ./sub/sub_mas-verification-runner.yaml
-- description: 🔎 Result interpretation (MAS-internal, autonomous)
-  name: sub_mas-interpreter
-  path: ./sub/sub_mas-interpreter.yaml
-- description: 📋 Session report consolidation
-  name: sub_mas-summarizer
-  path: ./sub/sub_mas-summarizer.yaml
-- description: ⚙ Workflow executor (MAS-internal)
-  name: sub_mas-workflow-engine
-  path: ./sub/sub_mas-workflow-engine.yaml
-- description: 🧠 Intention detection & agent generation
-  name: sub_mas-intention-parser
-  path: ./sub/sub_mas-intention-parser.yaml
-- description: 📊 Dashboard generate (User-Refresh)
-  name: sub_mas-dashboard-refresh
-  path: ./sub/sub_mas-dashboard-refresh.yaml
-- description: 🔧 Git-Admin (init, commsg, status, log, diff)
-  name: sub_mas-git-operator
-  path: ./sub/sub_mas-git-operator.yaml
-- description: 🧬 Python repair (compile, fix, analyze, validate)
-  name: sub_mas-python-repair
-  path: ./sub/sub_mas-python-repair.yaml
-- description: 📝 Markdown docs (create, update, consistency)
-  name: sub_mas-doc-writer
-  path: ./sub/sub_mas-doc-writer.yaml
-- description: 🔧 JSON-Utility (validate, format, append)
-  name: sub_mas-json-utility
-  path: ./sub/sub_mas-json-utility.yaml
-- description: 📉 Degradation events handling
-  name: sub_mas-degradation-handler
-  path: ./sub/sub_mas-degradation-handler.yaml
-- description: 📡 Signal generation (CP_DONE, ERROR, SESSION_END)
-  name: sub_mas-signal-generator
-  path: ./sub/sub_mas-signal-generator.yaml
-- description: 📋 Health report (daily MAS status)
-  name: sub_mas-health-reporter
-  path: ./sub/sub_mas-health-reporter.yaml
-- description: 🏗️ Recipe designer (new sub-agents design & create)
-  name: sub_mas-recipe-designer
-  path: ./sub/sub_mas-recipe-designer.yaml
-- description: 🌐 Current techniques & concepts research (via webfetch/websearch)
-  name: sub_mas-web-researcher
-  path: ./sub/sub_mas-web-researcher.yaml
-- description: 🚦 Pre-push validation gatekeeper (all critical checks before git push)
-  name: sub_mas-pre-push-validator
-  path: ./sub/sub_mas-pre-push-validator.yaml
-- description: 🎬 Demo runner (builds research-team framework with 5 agents + dashboard)
-  name: sub_mas-demo-runner
-  path: ./sub/sub_mas-demo-runner.yaml
-- description: 📦 Team standalone packaging (1 root + N sub-agents → installable directory)
-  name: sub_mas-team-packager
-  path: ./sub/sub_mas-team-packager.yaml
+  - name: sub_mas-test-fix-failures-director
+    path: ./sub/sub_mas-test-fix-failures-director.yaml
+    description: Director sub-agent for fixing e2e test failures

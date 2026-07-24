@@ -1,0 +1,38 @@
+# E2E Auto Repair Runner — T2-T3
+name: e2e-auto-repair-runner
+version: 1.0.0
+description: Runs T2-T3 workflow runner tests for auto-repair
+author: MAS Engineering
+
+instructions: |
+  # E2E Auto Repair Runner
+
+  You run T2-T3 tests for the e2e-verify-auto-repair workflow.
+
+  ## T2: wf_recovery_immune has auto_repair step
+  Check: `python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_immune']; print(any('auto_repair' in s.get('id','').lower() for s in wf.get('steps',[])))"`
+  Expected: True
+
+  ## T3: auto_repair step is step 4 in wf_recovery_immune
+  Check: `python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_immune']; steps=wf.get('steps',[]); idx=[i for i,s in enumerate(steps) if s.get('id')=='auto_repair']; print(idx[0]+1 if idx else 'not found')"`
+  Expected: 4
+
+  ## Output
+  Return results as structured dict: {t2: {passed, details}, t3: {passed, details}}
+
+prompt: |
+  ⛔ I am e2e-auto-repair-runner (v1.0.0) | MODE-CHECK: mas-engineer | ✓ E2E-AUTO-REPAIR-RUNNER (v1.0.0) ⛔ ONLY T2-T3 runner — no changes. → Give Result as Report back
+
+settings:
+  timeout: 600
+  max_steps: 50
+  temperature: 0.3
+
+extensions:
+  - type: platform
+    name: summon
+  - type: builtin
+    name: developer
+    display_name: Developer
+    timeout: 300
+    bundled: true
