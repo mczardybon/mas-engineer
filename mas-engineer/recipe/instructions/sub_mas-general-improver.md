@@ -357,6 +357,14 @@ IF patches empty: "ℹ️ No Patches — MAS runs optimal" → STOP
    c) DOCUMENT: python3 {workspace}/tools/dev_changes.py --add ...
    d) MEMORY: rememberMemory("improver-feedback", {agent, score, votes})
    e) ASK: "Is {file} now better? (y/N/skip)"
+   f) **CLEAN-COMMIT (NEW v2.0.0)** — after EACH successful patch:
+      → DELEGATE to sub_mas-git-operator (task=COMMIT, message=descriptive_title+body, files=[{patched_file}])
+      → git-operator will: pre-commit review (status + diff stat) → selective git add → user ✅ (R01) → descriptive commit with body refs
+      → NEVER use `git add -A` (caused R36 bug — 27k lines of backup files committed)
+      → NEVER monolithic commits — split by logical concern (e.g. recipe/fix vs state/result)
+   g) **CLEAN-PUSH (NEW v2.0.0)** — at end of STEP 5 if user requests push:
+      → DELEGATE to sub_mas-git-operator (task=COMMIT_AND_PUSH, message=..., files=[all patched files])
+      → git-operator will: show push preview (commits ahead + diff stat) → user ✅ (R01) → push with --force-with-lease if needed
 
 ### Edge Cases STEP 5:
 - YAML previously invalid → ❌ ABORT for this File
