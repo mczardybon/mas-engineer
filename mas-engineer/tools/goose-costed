@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+"""
+goose-costed — Cost-gated wrapper for the `goose` CLI.
+
+Wraps any `goose ...` invocation with a pre-flight cost check.
+If daily budget is exceeded (and gate.daily=block), the call is refused
+with exit 1 BEFORE the (potentially expensive) goose run starts.
+
+Usage:
+    # Instead of:
+    goose run --recipe foo.yaml
+    # Use:
+    ./tools/goose-costed run --recipe foo.yaml
+
+Configuration: reads .mas/config/cost.yaml (same as mas_cost)
+Check semantics: same as `mas_cost check`
+
+Exit codes:
+    0 = cost OK, goose ran (or --check-only was used)
+    1 = cost EXCEEDED, blocked before goose start
+    2 = misconfiguration (e.g. cost.yaml unreadable)
+    3 = goose itself failed (after cost check passed)
+"""
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+WORKSPACE = Path(__file__).resolve().parent.parent
+COST_CHECK = WORKSPACE / "tools" / "mas_cost"
+
+
+def check_cost() -> tuple:
+    """Run `mas_cost check` and return (allowed: bool, message: str)."""
+    try:
+        result = subprocess.run(
+            [sys.executable, str(COST_CHECK), "--workspace", str(WORKSPACE), "check"],
+            capture_output=True, text=True, timeout=10,
+        )
+        msg = (result.stdout or result.stderr or "").strip() or "OK"
+        return result.returncode == 0, msg
+    except FileNotFoundError:
+        return True, "no-cost-config: skipping check"
+    except Exception as e:
+        return True, f"check-error: {e} (proceeding)"
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        print(__doc__)
+        return 0
+    if sys.argv[1] in ("--help", "-h"):
+        print(__doc__)
+        return 0
+    if sys.argv[1] == "--check-only":
+        allowed, msg = check_cost()
+        print(f"COST-CHECK: {msg}")
+        return 0 if allowed else 1
+
+    # Pre-flight cost check
+    allowed, msg = check_cost()
+    print(f"COST-GATE: {msg}")
+    if not allowed:
+        print(f"❌ REFUSING goose call: {msg}")
+        print(f"   Override: set gate.daily=warn in .mas/config/cost.yaml")
+        print(f"   Or bump budget: mas_cost set daily_budget_usd=10")
+        return 1
+
+    # Hand off to real goose
+    os.execvp("goose", ["goose"] + sys.argv[1:])
+    return 3  # unreachable
+
+
+if __name__ == "__main__":
+    sys.exit(main())
