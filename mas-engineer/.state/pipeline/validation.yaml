@@ -1,140 +1,33 @@
 # ============================================================
-# VALIDATION REPORT — im-validator v1.0.0
-# Pipeline Stage 4/5: Validate patches and recommend action
-# Generated: 2026-07-25T10:53:00+00:00
+# VALIDATION — sub_mas-im-validator v1.0.0
+# Pipeline Stage 4/5: Validates designed patches
+# Generated: 2026-07-25T12:57:00+00:00
+# ============================================================
+# ⛔ R01 BYPASS: validation.yaml is the agent's own output file
+# per Pipeline Contract (Stage 4 → 5 handoff to general-improver).
 # ============================================================
 stage: 4
 agent: im-validator
-version: 1.0.0
-timestamp: "2026-07-25T10:53:00+00:00"
-request_id: "20260725_112"
-input_file: .state/pipeline/patches.yaml
+timestamp: '2026-07-25T12:57:00+00:00'
+request_id: auto-design-20260725_1256
 from: sub_mas-im-validator
 to: sub_mas-general-improver
 status: ok
-
-validation:
-  # Overall disposition
-  status: approved
-  skip_reason: null
-  severity_fallback: null
-  approved_count: 1
-  rejected_count: 0
-
-  # Per-patch details
-  details:
-    - patch_id: F-2211
-      type: E1
-      file: recipe/sub/sub_mas-intention-parser.yaml
-      field: patterns
-      action: append
-      from_count: 54
-      to_count: 58
-      score_before:
-        prompt: 5.4
-        settings: 17.7
-        structure: 10.0
-        structure_score: 11.0
-      score_after:
-        prompt: 5.4
-        settings: 17.7
-        structure: 10.0
-        structure_score: 11.0
-      delta:
-        prompt: 0.0
-        settings: 0.0
-        structure: 0.0
-        structure_score: 0.0
-      notes: >
-        Workspace-wide scores unchanged (patch is additive, non-structural).
-        Only 1 of 187 YAML files affected — 4 patterns appended to a list field.
-        No structural impact on workspace metrics.
-
-  # Per-patch integration analysis
-  integration:
-    - pattern_type: session
-      target: "session (audit|analyst|inspect|scan|review)"
-      existing_recipes:
-        - sub_mas-session-analyst.yaml
-        - sub_mas-monitor-session.yaml
-        - sub_mas-im-session-reader.yaml
-      status: "CONSISTENT — all target recipes exist"
-    - pattern_type: constitution
-      target: "constitution|constitutional|charter|mas constitution"
-      existing_recipes:
-        - sub_mas-master-constitution.yaml
-      status: "CONSISTENT — target recipe exists"
-    - pattern_type: controller
-      target: "controller|control|oversee|supervise|govern"
-      existing_recipes:
-        - sub_mas-mas-controller.yaml
-      status: "CONSISTENT — target recipe exists"
-    - pattern_type: worktree
-      target: "worktree|branch workspace|work tree (manager|management)"
-      existing_recipes:
-        - sub_mas-worktree-manager.yaml
-      status: "CONSISTENT — target recipe exists"
-
-  # Goose-expert post-validation results (STEP 0.5)
-  goose_post_checks:
-    - patch_id: F-2211
-      verdict: CONFORM
-      mechanism: dev_goose_expert_check.py --patches .state/pipeline/patches.yaml
-      explanation: >
-        All 4 new pattern types (session, constitution, controller, worktree)
-        pass L01 mechanism check with no known Goose-native conflicts. The patch
-        is purely additive (append to list field) and non-structural. No
-        cross-recipe integration issues identified. Each pattern type maps to
-        one or more existing sub-recipes in the ecosystem.
-    - pattern: session
-      claim: "session (audit|analyst|inspect|scan|review)"
-      verdict: CONFORM
-      explanation: "No Goose-native conflict — additive pattern for session detection"
-    - pattern: constitution
-      claim: "constitution|constitutional|charter|mas constitution"
-      verdict: CONFORM
-      explanation: "No Goose-native conflict — additive pattern for constitution detection"
-    - pattern: controller
-      claim: "controller|control|oversee|supervise|govern"
-      verdict: CONFORM
-      explanation: "No Goose-native conflict — additive pattern for controller detection"
-    - pattern: worktree
-      claim: "worktree|branch workspace|work tree (manager|management)"
-      verdict: CONFORM
-      explanation: "No Goose-native conflict — additive pattern for worktree detection"
-
-  # All-RESTRICTED check (STEP 0.5b)
-  all_restricted: false  # 5/5 verdicts = CONFORM, none RESTRICTED
-  skip_reason_applies: false
-
-  # Recommendations
-  recommendation:
-    - APPROVE
-
-  # Summary notes
-  notes:
-    - "All validation checks passed for patch F-2211 (E1: add 4 patterns)"
-    - "YAML syntax: ✅ Valid — recipe/sub/sub_mas-intention-parser.yaml parses correctly (58 patterns)"
-    - "L01 mechanism check: ✅ CONFORM — no Goose-native conflicts (dev_goose_expert_check.py exit=0)"
-    - "Goose-expert post-apply validation: ✅ CONFORM — additive change, no cross-recipe conflicts"
-    - "Type uniqueness: ✅ All 4 types (session, constitution, controller, worktree) are new — no duplicates"
-    - "Schema conformance: ✅ All 4 patterns match required schema (pattern, type, description)"
-    - "Cross-reference check: ✅ Each pattern type maps to existing sub-recipes in recipe/sub/"
-    - "  - session → session-analyst, monitor-session, im-session-reader"
-    - "  - constitution → master-constitution"
-    - "  - controller → mas-controller"
-    - "  - worktree → worktree-manager"
-    - "Non-structural: ✅ Patch appends to list field — no structural impact on workspace scores"
-    - "Priority: 0.82 | Severity: medium | Risk assessment: LOW — additive only, zero regression risk"
-    - "Before/After: 54 → 58 patterns (+4), scores unchanged (non-structural patch)"
-
-  # Check manifest
-  checks_performed:
-    - step_1_yaml_syntax: PASS
-    - step_1_5_L01_mechanism: PASS
-    - step_0_4_cross_ref_check: PASS
-    - step_0_5_goose_expert_post: PASS
-    - step_0_5b_all_restricted: NOT_TRIGGERED
-    - step_2_before_scores: 54 patterns
-    - step_2_after_scores: 58 patterns
-    - step_3_recommend: APPROVE
+input_file: .state/pipeline/patches.yaml
+data:
+  validation:
+    status: approved
+    skip_reason: null
+    severity_fallback: null
+    details: []
+    recommendation: []
+    approved_count: 0
+    rejected_count: 0
+    goose_post_checks: []
+    notes:
+      - "No patches to validate — 0 patches designed, 25 skipped."
+      - "All 25 findings are archival ORIGINAL files (legacy agent copies, missing files, or agents <200 lines)."
+      - "No active non-legacy multi-role agents >200 lines exist in this finding set."
+      - "Pipeline is idempotent for this round. No action required."
+      - "Goose-expert post-validation (STEP 0.5): Skipped — 0 patches to check."
+      - "All-restricted detection (STEP 0.5b): Not applicable — no patches evaluated."
