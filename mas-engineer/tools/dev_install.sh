@@ -45,7 +45,7 @@ mkdir -p "$(dirname "$GOOSE_CONFIG")"
 if [ -n "$DEEPSEEK_API_KEY" ] || [ -n "$OPENAI_API_KEY" ]; then
     EFFECTIVE_KEY="${DEEPSEEK_API_KEY:-$OPENAI_API_KEY}"
     PROVIDER="${GOOSE_PROVIDER:-openai}"
-    MODEL="${GOOSE_MODEL:-deepseek-chat}"
+    MODEL="${GOOSE_MODEL:-deepseek-v4-flash}"
     HOST="${OPENAI_HOST:-https://api.deepseek.com}"
     cat > "$GOOSE_CONFIG" <<EOF
 GOOSE_PROVIDER: $PROVIDER

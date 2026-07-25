@@ -47,7 +47,7 @@ SOT_RESTRICTION_KEYS = [
 DEFAULT_TIMEOUT = 600    # BP-S-001: Sweet-Spot
 DEFAULT_MAX_STEPS = 100  # BP-S-002: 20-80% Auslastung
 DEFAULT_PROVIDER = "openai"
-DEFAULT_MODEL = "filtered/deepseek/deepseek-chat"
+DEFAULT_MODEL = "filtered/deepseek/deepseek-v4-flash"
 
 # ──────────────────────────────────────────────
 # QUELLEN-LADER
@@ -321,7 +321,7 @@ settings:
   timeout: 600
   max_steps: 100
   goose_provider: openai
-  goose_model: filtered/deepseek/deepseek-chat"""
+  goose_model: filtered/deepseek/deepseek-v4-flash"""
 
     titel = f"sub_mas-{name} — {_shorten(task, 60)}"
     

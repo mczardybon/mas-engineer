@@ -127,7 +127,7 @@ Dispatch Tree (toggle with ▶/▼):
 PANEL 4 - FRAMEWORK (col 2, row 2):
 Title: "⚙ framework & Config"
 KPI: Recipes: {fw["recipes"]["total"]} | Specialists: {fw["recipes"]["specialists"]} | Sub: {fw["recipes"]["subs"]} | Core: {fw["recipes"]["core"]}
-Config: Provider={fw["config"]["provider"]}, Model=deepseek-chat, Extensions={len(fw["config"]["extensions"])}
+Config: Provider={fw["config"]["provider"]}, Model=deepseek-v4-flash, Extensions={len(fw["config"]["extensions"])}
 
 PANEL 5 - USER (col 3, row 2):
 Title: "👤 User-framework"

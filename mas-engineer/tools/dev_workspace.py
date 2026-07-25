@@ -883,7 +883,7 @@ settings:
   timeout: 600
   max_steps: 100
   provider: openai
-  model: filtered/deepseek/deepseek-chat
+  model: filtered/deepseek/deepseek-v4-flash
 """
         dst.write_text(content)
 

@@ -328,7 +328,7 @@ def build_wrapper_recipe(team, level, case, team_recipe_path):
             "max_steps": 30,
             "max_turns": 25,
             "goose_provider": "openai",
-            "goose_model": "deepseek-chat",
+            "goose_model": "deepseek-v4-flash",
         }
     }
     return yaml.dump(wrapper, default_flow_style=False, sort_keys=False,

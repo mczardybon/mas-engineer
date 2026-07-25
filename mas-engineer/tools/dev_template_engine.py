@@ -10,7 +10,7 @@ DEFAULT_SETTINGS = {
     'timeout': 600,
     'max_steps': 100,
     'goose_provider': 'openai',
-    'goose_model': 'filtered/deepseek/deepseek-chat'
+    'goose_model': 'filtered/deepseek/deepseek-v4-flash'
 }
 
 def load_best_practices(path):
