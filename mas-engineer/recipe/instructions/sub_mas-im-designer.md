@@ -262,6 +262,13 @@ Any conflict = the patch is REWRITTEN to use the native Goose mechanism
 - NN4: flagged_for_split → TRIGGER NN1/NN2/NN3 based on flag metadata
 
 **Split-Design Procedure (NN-pattern)**
+
+**PRECONDITIONS (added R52, 2026-07-25)** — skip NN1 split if any of these fail:
+- **Line threshold:** agent YAML instruction section must be >= 200 lines (avoid micro-splits)
+- **Recency guard:** agent must NOT appear in `.state/pipeline/skip_recently_split.yaml` with ts < 5 rounds ago
+- **Im-finder flag:** agent must have `flagged_by: intention-parser` OR `already_split: false` in `.state/pipeline/findings.yaml`
+
+If all 3 preconditions pass, proceed:
 1. For each NN-type finding, EXTRACT from agent YAML:
    - Agent name + description
    - All roles (parse prompt for verbs + domains)

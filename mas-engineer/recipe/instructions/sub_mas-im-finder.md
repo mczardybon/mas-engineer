@@ -396,6 +396,9 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
 **NN — Agent Architecture (Split-Detection) (4 types)**
 - NN1: **multi_role_agent** — agent prompt lists 3+ distinct roles/tasks with different tools
   - Detection: parse prompt for verbs + tool references, count distinct role clusters
+  - **R52 (2026-07-25) Skip-if-recently-split:** if target agent has sub_mas-{name}-director.yaml
+    AND its name is in `.state/pipeline/skip_recently_split.yaml` with `round_count - last_split_round < 5`,
+    tag finding with `already_split: true` and skip NN1 application
   - Severity: high (impacts maintainability, testability, single-responsibility)
   - Fix: split into orchestrator + N sub-agents, generate pipeline config
   - Source: `flagged_by: intention-parser` in `.state/pipeline/findings.yaml`
