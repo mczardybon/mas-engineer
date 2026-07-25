@@ -23,7 +23,7 @@ everything is healthy.
 
 ## Procedure VALIDATE
 
-Run the following 8 checks IN ORDER. Stop at the first failure if a hard
+Run the following 14 checks IN ORDER. Stop at the first failure if a hard
 block is detected, but always collect all warnings.
 
 ### Check 1.5: Last commit title matches repo convention (NEW v2.0.0)
@@ -470,6 +470,86 @@ data:
   checks_failed: <int>
   timestamp: <ISO-8601>
 ```
+
+### Check 14: Multi-dim sub-agent coverage (NEW v2.0.0)
+**Why:** R73 — R72 struktur-check finds yaml-schema bugs but not behavior bugs.
+A sub-recipe with valid yaml can still fail at runtime (wrong sub_recipes ref,
+missing external instructions, bad goose provider settings). Add behavior
+coverage as a pre-push gate.
+
+**What it does:**
+Runs `tools/coverage_test --framework-only --mode=explain` (no LLM, ~1s)
+and `tools/test_subagents --all --summary` (yaml schema). Both must pass.
+
+```bash
+cd $WORKSPACE
+python3 - <<'PYEOF'
+import subprocess, json
+from pathlib import Path
+
+W = Path("/workspace/mas-engineer-src/mas-engineer")
+
+# 1. Behavior coverage (no LLM, fast)
+r1 = subprocess.run(
+    ["python3", str(W / "tools/coverage_test"),
+     "--all", "--framework-only", "--mode=explain", "--timeout=10"],
+    capture_output=True, text=True, timeout=120, cwd=str(W),
+)
+# Parse the saved JSON
+coverage_dir = W / ".state" / "coverage"
+latest = max(coverage_dir.glob("coverage-*.json"), key=lambda p: p.stat().st_mtime, default=None)
+if latest:
+    cov = json.loads(latest.read_text())
+    behavior_pass = cov.get("passed", 0)
+    behavior_total = cov.get("total", 0)
+else:
+    behavior_pass, behavior_total = 0, 0
+
+# 2. Structure coverage (R72)
+r2 = subprocess.run(
+    ["python3", str(W / "tools/test_subagents"), "--all"],
+    capture_output=True, text=True, timeout=60, cwd=str(W),
+)
+# Parse: "Total: N | PASS: N | FAIL: N | WARN: N"
+import re
+m = re.search(r"Total: (\d+) \| PASS: (\d+) \| FAIL: (\d+)", r2.stdout)
+if m:
+    struct_total = int(m.group(1))
+    struct_pass = int(m.group(2))
+    struct_fail = int(m.group(3))
+else:
+    struct_total, struct_pass, struct_fail = 0, 0, 999
+
+# Pass criteria:
+# - behavior: 100% (--explain mode = $0, so we expect all green)
+# - structure: 100% PASS (WARN is ok, FAIL is not)
+ok = (behavior_pass == behavior_total and behavior_total > 0 and struct_fail == 0)
+print(f"  Behavior coverage: {behavior_pass}/{behavior_total}")
+print(f"  Structure coverage: {struct_pass}/{struct_total} (FAIL={struct_fail})")
+if not ok:
+    reasons = []
+    if behavior_pass != behavior_total:
+        reasons.append(f"behavior-fail: {behavior_total - behavior_pass} recipes")
+    if struct_fail > 0:
+        reasons.append(f"structure-fail: {struct_fail} recipes")
+    print(f"  ❌ Multi-dim coverage FAILED: {', '.join(reasons)}")
+else:
+    print(f"  ✅ Multi-dim coverage PASS ({behavior_pass} behavior + {struct_pass} structure)")
+
+# Export for aggregator
+print("CHECK14_RESULT:", json.dumps({
+    "ok": ok,
+    "behavior_pass": behavior_pass, "behavior_total": behavior_total,
+    "struct_pass": struct_pass, "struct_total": struct_total, "struct_fail": struct_fail,
+}))
+PYEOF
+```
+
+**Result aggregation:**
+- ✅ PASS: behavior 100% AND structure 100% (FAIL=0)
+- ❌ BLOCK: any behavior fail OR any structure fail
+- WARN: structure has warnings (informational only)
+
 
 ## Boundaries
 
