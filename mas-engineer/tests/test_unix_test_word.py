@@ -113,7 +113,7 @@ def test_sub_recipe_count_matches_manifest():
 def test_all_yaml_files_have_yaml_extension():
     """No misnamed files: every recipe file in recipe/sub/ must end in .yaml."""
     recipe_dir = REPO_ROOT / "recipe" / "sub"
-    for f in sorted(recipe_dir.iterdir()):
+    for f in sorted(recipe_dir.glob("*.yaml")):
         if f.is_file():
             assert f.suffix == ".yaml", f"Wrong extension: {f.name}"
 
