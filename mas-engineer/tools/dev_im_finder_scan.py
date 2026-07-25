@@ -445,6 +445,16 @@ for yp in ALL_YAMLS:
             _round_count = int(os.environ.get('IM_ROUND_COUNT', '99'))
             if _round_count - _skip_round < 5:
                 continue  # recently split, skip
+    # R98 fix (IM-007): skip micro-agents (<60 lines) — they are split sub-agents
+    # by design. NN1's "5+ role-verbs" pattern is normal for small focused agents
+    # that handle a few related operations. Only flag actual orchestrators that
+    # haven't been split. Filtered 23/31 false positives in R98 analysis.
+    try:
+        _line_count = sum(1 for _ in open(yp))
+    except Exception:
+        _line_count = 999
+    if _line_count < 60:
+        continue
     if len(found_roles) >= 5:
         add_finding('NN1', 'medium', yp,
                     f'multi_role_agent: {len(found_roles)} distinct roles ({found_roles[:5]})',
