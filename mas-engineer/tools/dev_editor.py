@@ -139,9 +139,40 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
     }
     
     full_path = AGENT_DIR / rel_path
-    
+
     # ─── step 1: VALIDATE (BEFORE) ───
     print(f"\n🔍 Check: {rel_path}")
+
+    # ─── R55 ENFORCEMENT (R57 user-correction 2026-07-25) ───
+    # R55 IM_TOP_N: blocks if session patches_applied < IM_TOP_N
+    # Session counter lives at hardcoded MAS_ENGINEER_ROOT
+    try:
+        import os as _r55_os
+        IM_TOP_N = int(_r55_os.environ.get('IM_TOP_N', '100'))
+        if IM_TOP_N < 1: IM_TOP_N = 100
+        if IM_TOP_N > 500: IM_TOP_N = 500
+        # Hardcoded to mas-engineer-src (R55 fix)
+        MAS_ROOT = Path("/workspace/mas-engineer-src/mas-engineer")
+        counter_path = MAS_ROOT / ".state" / "pipeline" / "r55_session_count.yaml"
+        counter_path.parent.mkdir(parents=True, exist_ok=True)
+        session_count = 0
+        if counter_path.exists():
+            try:
+                cd = yaml.safe_load(counter_path.read_text()) or {}
+                session_count = int(cd.get("data", {}).get("applied_count", 0))
+            except Exception:
+                session_count = 0
+        # Enforce: if session_count < IM_TOP_N, block this patch
+        if session_count < IM_TOP_N:
+            result["status"] = "blocked"
+            err_msg = f"R55: session has {session_count} applied < IM_TOP_N={IM_TOP_N}. Apply {IM_TOP_N - session_count} more patches first."
+            result["error"].append(err_msg)
+            error(f"R55 BLOCKED: {err_msg}")
+            return result
+        else:
+            ok(f"R55: OK (session {session_count} >= {IM_TOP_N})")
+    except Exception as e:
+        warn(f"R55 check failed (non-blocking): {e}")
     
     if not full_path.exists():
         result["status"] = "failed"
@@ -240,6 +271,31 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
     
     # ─── step 5: DOKUMENTIEREN ───
     result["status"] = "success"
+
+    # ─── R55 COUNTER INCREMENT (R57 user-correction 2026-07-25) ───
+    try:
+        import os as _r55c_os
+        IM_TOP_N = int(_r55c_os.environ.get('IM_TOP_N', '100'))
+        if IM_TOP_N < 1: IM_TOP_N = 100
+        if IM_TOP_N > 500: IM_TOP_N = 500
+        MAS_ROOT = Path("/workspace/mas-engineer-src/mas-engineer")
+        counter_path = MAS_ROOT / ".state" / "pipeline" / "r55_session_count.yaml"
+        counter_path.parent.mkdir(parents=True, exist_ok=True)
+        cd = {}
+        if counter_path.exists():
+            try:
+                cd = yaml.safe_load(counter_path.read_text()) or {}
+            except Exception:
+                cd = {}
+        if "data" not in cd:
+            cd["data"] = {}
+        cd["data"]["applied_count"] = cd["data"].get("applied_count", 0) + 1
+        cd["data"]["IM_TOP_N"] = IM_TOP_N
+        cd["data"]["last_patch"] = rel_path
+        counter_path.write_text(yaml.safe_dump(cd, default_flow_style=False, sort_keys=False))
+        ok(f"R55 counter incremented: {cd['data']['applied_count']}/{IM_TOP_N}")
+    except Exception as e:
+        warn(f"R55 counter increment failed (non-blocking): {e}")
     
     # dev_changes.py benachrichtigen
     change_data = json.dumps({
