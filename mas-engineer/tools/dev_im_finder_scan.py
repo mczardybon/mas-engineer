@@ -11,11 +11,12 @@ import yaml, os, glob, re, json, sys, argparse
 from pathlib import Path
 from collections import Counter
 
-# --- SEVERITY FILTER (R28 fix) ---
-# Default: report all severities. Set SEVERITY_FILTER=medium,high
-# (or pass --severity-filter=medium,high) to suppress low-severity
-# style findings and only show actionable issues.
-SEVERITY_FILTER = {'low', 'medium', 'high'}
+# --- SEVERITY FILTER (R28 + R97 fix) ---
+# Default (R97): ONLY medium,high — suppress low-severity style findings
+# (e.g. "session cleanup missing", "no retry logic" — best-practice opinions,
+# not bugs). Set SEVERITY_FILTER=low,medium,high (or pass
+# --severity-filter=low,medium,high) to see all findings.
+SEVERITY_FILTER = {'medium', 'high'}
 for _a in sys.argv[1:]:
     if _a.startswith('--severity-filter='):
         SEVERITY_FILTER = {s.strip() for s in _a.split('=', 1)[1].split(',') if s.strip()}
@@ -60,11 +61,15 @@ EXCLUDED_DIR_NAMES = {
     'demo-team',         # R84 fix: on-demand demo-team recipes (varianz, nicht framework-bug)
 }
 # Path patterns to skip (substring match on full path)
-# NOTE: When --scope is explicitly passed, /.config/goose/recipes/ exclusion is skipped
-# so user can scan external recipes (e.g. marketing, sales, translator).
+# R97 fix: external scope (/.config/goose/recipes/ — marketing/sales/translator
+# demo teams) is HARD-EXCLUDED by default. These are on-demand generated demo
+# teams with known generation variance — scanning them adds 277+ findings of
+# noise. To scan them, pass --include-external-recipes (or set
+# MAS_INCLUDE_EXTERNAL_RECIPES=1). --scope alone is NOT enough.
+_INCLUDE_EXTERNAL = '--include-external-recipes' in sys.argv or os.environ.get('MAS_INCLUDE_EXTERNAL_RECIPES', '').lower() in ('1', 'true', 'yes')
 _USER_EXPLICIT_SCOPE = len(SCAN_DIRS) > 1 or (len(SCAN_DIRS) == 1 and SCAN_DIRS[0] != 'recipe')
 EXCLUDED_PATH_PATTERNS = [
-    '/.config/goose/recipes/',  # excluded by default; skipped if _USER_EXPLICIT_SCOPE is True
+    '/.config/goose/recipes/',  # external demo teams (R97: hard-excluded by default)
     '/.config/goose/sessions/', # goose runtime session data
     '/.config/goose/memory/',   # goose memory
     '/.config/goose/workspace/',# goose workspace
@@ -77,8 +82,8 @@ def _is_path_excluded(path):
     """Check if a path matches any exclusion pattern."""
     for pat in EXCLUDED_PATH_PATTERNS:
         if pat in path:
-            # When --scope is explicitly passed, allow scanning external recipes
-            if pat == '/.config/goose/recipes/' and _USER_EXPLICIT_SCOPE:
+            # R97: external recipes only included with --include-external-recipes
+            if pat == '/.config/goose/recipes/' and _INCLUDE_EXTERNAL:
                 continue
             return True
     return False
