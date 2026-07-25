@@ -69,7 +69,7 @@ agent_intake:
      * timeout: 60-300
      * max_steps: 15-30
      * goose_provider: deepseek
-     * goose_model: deepseek-chat
+     * goose_model: deepseek-v4-flash
 3. write(recipe/sub/sub_{project}-{name}.yaml, yaml_content)
 4. python3 -c "import yaml; yaml.safe_load(open('recipe/sub/sub_{project}-{name}.yaml'))" → validate
 5. FAIL → correct + re-validate (max 3 attempts)
