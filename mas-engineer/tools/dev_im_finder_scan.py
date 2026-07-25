@@ -8,6 +8,7 @@ RECIPE_DIR='recipe' which meant user-installed demo teams in
 Default behavior is unchanged (backward-compatible).
 """
 import yaml, os, glob, re, json, sys, argparse
+from pathlib import Path
 from collections import Counter
 
 # --- SEVERITY FILTER (R28 fix) ---
@@ -59,8 +60,11 @@ EXCLUDED_DIR_NAMES = {
     'demo-team',         # R84 fix: on-demand demo-team recipes (varianz, nicht framework-bug)
 }
 # Path patterns to skip (substring match on full path)
+# NOTE: When --scope is explicitly passed, /.config/goose/recipes/ exclusion is skipped
+# so user can scan external recipes (e.g. marketing, sales, translator).
+_USER_EXPLICIT_SCOPE = len(SCAN_DIRS) > 1 or (len(SCAN_DIRS) == 1 and SCAN_DIRS[0] != 'recipe')
 EXCLUDED_PATH_PATTERNS = [
-    '/.config/goose/recipes/',  # external marketing recipes (not mas-engineer)
+    '/.config/goose/recipes/',  # excluded by default; skipped if _USER_EXPLICIT_SCOPE is True
     '/.config/goose/sessions/', # goose runtime session data
     '/.config/goose/memory/',   # goose memory
     '/.config/goose/workspace/',# goose workspace
@@ -73,6 +77,9 @@ def _is_path_excluded(path):
     """Check if a path matches any exclusion pattern."""
     for pat in EXCLUDED_PATH_PATTERNS:
         if pat in path:
+            # When --scope is explicitly passed, allow scanning external recipes
+            if pat == '/.config/goose/recipes/' and _USER_EXPLICIT_SCOPE:
+                continue
             return True
     return False
 
@@ -421,6 +428,18 @@ for yp in ALL_YAMLS:
                   'find', 'read', 'write', 'edit', 'deploy', 'test', 'build',
                   'configure', 'manage']
     found_roles = [v for v in role_verbs if v in combined.lower()]
+    # Skip if already split (check skip_recently_split.yaml)
+    _skip_path = Path('.state/pipeline/skip_recently_split.yaml')
+    if _skip_path.exists():
+        with open(_skip_path) as _sf:
+            _skip_data = yaml.safe_load(_sf) or {}
+        _skip_list = _skip_data.get('skip_list', {})
+        _agent_name = Path(yp).stem  # e.g. sub_mas-foo
+        if _agent_name in _skip_list:
+            _skip_round = _skip_list[_agent_name].get('last_split_round', 0)
+            _round_count = int(os.environ.get('IM_ROUND_COUNT', '99'))
+            if _round_count - _skip_round < 5:
+                continue  # recently split, skip
     if len(found_roles) >= 5:
         add_finding('NN1', 'medium', yp,
                     f'multi_role_agent: {len(found_roles)} distinct roles ({found_roles[:5]})',
