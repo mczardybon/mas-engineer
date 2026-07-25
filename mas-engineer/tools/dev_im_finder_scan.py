@@ -55,6 +55,8 @@ EXCLUDED_DIR_NAMES = {
     '.git',              # version control
     'node_modules',      # dependencies
     '__pycache__',       # python bytecode
+    'legacy',            # R84 fix: archived ORIGINAL files (20+ stale findings per scan)
+    'demo-team',         # R84 fix: on-demand demo-team recipes (varianz, nicht framework-bug)
 }
 # Path patterns to skip (substring match on full path)
 EXCLUDED_PATH_PATTERNS = [
@@ -63,6 +65,8 @@ EXCLUDED_PATH_PATTERNS = [
     '/.config/goose/memory/',   # goose memory
     '/.config/goose/workspace/',# goose workspace
     '/.local/share/goose/',     # goose internal storage
+    '-ORIGINAL.yaml',           # R84 fix: archival copies of split agents
+    '.bak',                     # R80 fix: stale backup files
 ]
 
 def _is_path_excluded(path):
