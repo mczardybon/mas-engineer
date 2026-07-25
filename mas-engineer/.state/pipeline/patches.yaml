@@ -1,48 +1,81 @@
 stage: 3
 agent: im-designer
-timestamp: '2026-07-25T08:45:18.809442+00:00'
-request_id: im-designer-r53-001
+timestamp: '2026-07-25T09:34:00.342794'
+request_id: IM-RANK-20260725-093000
 from: im-designer
 to: sub_mas-im-validator
 status: success
 input_file: .state/pipeline/ranked_findings.yaml
 data:
-  patches: []
+  patches:
+  - id: F-2211
+    type: E1
+    file: recipe/sub/sub_mas-intention-parser.yaml
+    field: patterns
+    from: 46 existing patterns (sub, full, internal, refresh, refresh_all, dry_run,
+      diff, team, deploy, rollback, monitor, test, repair, document, audit, migrate,
+      improve, optimize, orchestrate, validate, backup, restore, upgrade, list, status,
+      dashboard, signal, health, rank, fork, review, recover, assign, delete, info,
+      architect, package, ...)
+    to: Add 5 new patterns (summarizer, interpreter, yaml-editor, web-researcher,
+      prompt-engineer) → 51 patterns total
+    reason: 'Why: F-2211 — missing pattern in intention-parser. The parser lacks patterns
+      for key agent types (summarizer, interpreter, yaml-editor, web-researcher, prompt-engineer)
+      that exist as sub-recipes. Goose-expert not required: E1 is not in mandatory
+      consultation prefix list (A/B/D/MM/JJ/S/HH/LL).'
+    priority: 0.66
+    severity: medium
+    current_chars: 46
+    target_chars: 51
+    change:
+      action: append
+      patterns:
+      - pattern: summarize|summary (the )?(agent|text|report|log|session|conversation)
+        type: summarize
+        description: Summarize text, report, log, session, or conversation
+      - pattern: interpret|understand|explain (the )?(intent|meaning|code|error|output|result)
+        type: interpret
+        description: Interpret or explain intent, code, error, or output
+      - pattern: (edit|update|modify) (the )?(yaml|config|recipe|agent|workflow)
+        type: edit_yaml
+        description: Edit or update YAML config, recipe, agent, or workflow
+      - pattern: research|search|find|look up (information|data|docs|documentation|reference)
+        type: research
+        description: Research, search, or look up information and documentation
+      - pattern: (engineer|design|create|improve) (a )?(prompt|instruction|system
+          prompt)
+        type: prompt_engineer
+        description: Engineer, design, or improve prompts and system instructions
   skipped:
-  - id: F-2188
+  - id: F-2212
     file: recipe/sub/sub_mas-test-director.yaml
     type: NN1
-    why_skipped: "PRECONDITION 1 FAILED: instruction section is ~15 lines (total file\
-      \ 60 lines). Agent is already an orchestrator delegating to 4 sub-agents. Line\
-      \ threshold (>=200) not met \u2014 micro-split would be counterproductive."
-    detail: 'Already split in previous rounds (4 subs: executor, reporter, scanner,
-      validator)'
-  - id: F-2189
+    why_skipped: 'PRECONDITION 1 FAILED: total file is 60 lines, instructions section
+      ~22 lines. Agent is already an orchestrator delegating to 4 sub-agents (executor,
+      reporter, scanner, validator). Line threshold (>=200) not met — micro-split
+      would be counterproductive.'
+    detail: Already split in previous rounds (4 subs). Finding is stale — agent already
+      follows orchestration pattern.
+  - id: F-2213
     file: recipe/sub/security-scanner.yaml
     type: NN1
-    why_skipped: 'PRECONDITION 1 FAILED: instruction section is ~17 lines (total file
-      60 lines). Agent is already an orchestrator delegating to 4 security scanners.
-      Line threshold (>=200) not met.'
+    why_skipped: 'PRECONDITION 1 FAILED: total file is 60 lines, instructions section
+      ~22 lines. Agent is already an orchestrator delegating to 4 security scanners
+      (sqli, secrets, deserialize, cmd-injection). Line threshold (>=200) not met.'
     detail: 'Already split in previous rounds (4 subs: sqli, secrets, deserialize,
-      cmd-injection)'
-  - id: F-2190
+      cmd-injection). Finding is stale.'
+  - id: F-2214
     file: recipe/sub/sub_mas-degradation-planner.yaml
     type: NN1
-    why_skipped: "PRECONDITION 1 FAILED: total file is 39 lines, instruction section\
-      \ ~16 lines. Single-role micro-agent (\"treatment planning\"). Line threshold\
-      \ (>=200) not met \u2014 no split needed."
-    detail: "Already a focused single-role agent \u2014 violates no SRP"
-  - id: F-2192
-    file: recipe/sub/sub_mas-signal-generator.yaml
+    why_skipped: 'PRECONDITION 1 FAILED: total file is 39 lines, instructions section
+      ~5 lines. Single-role micro-agent (''treatment planning''). Line threshold (>=200)
+      not met — no split needed.'
+    detail: Already a focused single-role agent — violates no SRP.
+  - id: F-2215
+    file: recipe/sub/sub_mas-degradation-handler.yaml
     type: NN1
-    why_skipped: "PRECONDITION 1 FAILED: total file is 59 lines, instruction section\
-      \ ~15 lines. Single-role micro-agent (\"signal generation\"). Line threshold\
-      \ (>=200) not met \u2014 no split needed."
-    detail: "Already a focused single-role agent \u2014 violates no SRP"
-  - id: F-2193
-    file: recipe/sub/sub_mas-test-scanner.yaml
-    type: NN1
-    why_skipped: "PRECONDITION 1 FAILED: total file is 40 lines, instruction section\
-      \ ~12 lines. Single-role micro-agent (\"scanning & monitoring\"). Line threshold\
-      \ (>=200) not met \u2014 no split needed."
-    detail: "Already a focused single-role agent \u2014 violates no SRP"
+    why_skipped: 'PRECONDITION 1 FAILED: total file is 63 lines, instructions section
+      ~6 lines. Line threshold (>=200) not met. PRECONDITION 2 FAILED: agent is in
+      skip_recently_split.yaml (last_split_round=49, not yet expired).'
+    detail: 'Already split in R49 (3 subs: analyzer, planner, reporter). Recently
+      split — skip per recency guard.'
