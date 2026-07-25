@@ -3,13 +3,12 @@
 A Multi-Agent System for **developing, improving, monitoring, and operating
 Multi-Agent Systems (MAS)** for the User.
 
-MAS-Engineer itself is a MAS: 96 sub-agents and 57 tools that work together
-to build other MAS frameworks.
+MAS-Engineer itself is a MAS: 117 sub-agents (recipe/sub/sub_mas-*.yaml; 170 including demo-team examples) and 65 tools (57 Python, 7 Shell, 1 YAML) that work together to build other MAS frameworks.
 
 ## What you get
 
-- 96 specialized sub-agents (designer, finder, rank, validator, health-reporter, ...)
-- 57 tools (50 Python, 6 Shell, 1 YAML)
+- 117 specialized sub-agents (designer, finder, rank, validator, health-reporter, ...; 170 with demo-team examples)
+- 65 tools (57 Python, 7 Shell, 1 YAML)
 - A complete dashboard (MCP server + 2 HTML webapps — note: requires `npm install` to start; not run during e2e tests)
 - Full audit trail in `.state/`
 - Single-source-of-truth workflows in `.state/workflows.yaml`
@@ -109,7 +108,7 @@ dev-mas-engineer  (root orchestrator)
   +-- delegate(generic-init)   create new framework skeleton
   +-- delegate(demo-runner)    run the research-team demo
   +-- delegate(pre-push-validator)  block bad pushes
-  +-- ... 96 sub-agents
+  +-- ... 117 sub-agents (170 with demo-team)
 ```
 
 ## Documentation
@@ -133,11 +132,11 @@ dev-mas-engineer  (root orchestrator)
 mas-engineer/
   recipe/
     dev-mas-engineer.yaml       # root orchestrator
-    sub/                        # 96 sub-agent recipes
+    sub/                        # 117 sub-agent recipes (170 with demo-team)
     instructions/               # detailed instructions per agent
     setup-dashboard.yaml        # dashboard setup
     dashboard-data-refresh.yaml # data.json refresher
-    tools/                        # 57 tools (50 Python, 6 Shell, 1 YAML)
+    tools/                        # 65 tools (57 Python, 7 Shell, 1 YAML)
   .mas/mcp/                     # MCP dashboard server
   .state/                       # SOT, audit trail, findings
   docs/                         # documentation
