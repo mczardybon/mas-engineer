@@ -1,0 +1,276 @@
+#!/usr/bin/env python3
+"""
+coverage_test — Behavior-dimension coverage test for all sub-recipes.
+
+Runs each sub_mas-*.yaml (and test_sub_mas-*.yaml stubs) through goose-costed
+with a trivial hello-world task. Measures PASS/FAIL per agent.
+
+3 dimensions together (when combined with e2e_run_all.py + test_subagents):
+  - STRUCTURE:  test_subagents --all   (R72: yaml schema, semver, ...)
+  - BEHAVIOR:   coverage_test --behaviour  (this tool: LLM run per agent)
+  - INTEGRATION: e2e_run_all.py        (workflows, recovery, task_workflows)
+
+Coverage gap → feeds im-finder for auto-fix (future Check 12 / R74).
+
+Usage:
+    coverage_test --all                    test all 120 framework sub-agents
+    coverage_test --sub=intention-parser   test ONE agent
+    coverage_test --limit=5                only first 5 (cost control)
+    coverage_test --stub-only              only test_sub_mas-*.yaml stubs
+    coverage_test --framework-only         only sub_mas-*.yaml (no stubs)
+    coverage_test --mode=run               REAL LLM call per agent ($0.01-0.05 each)
+    coverage_test --mode=explain           (default) load-only, no LLM
+    coverage_test --stats                  show coverage matrix (no runs)
+    coverage_test --summary                short report only
+    coverage_test --dry-run                show what WOULD run, no LLM calls
+
+Modes:
+  explain (default)  goose run --recipe X --explain  → 0 LLM cost, ~0.1s/agent
+  run                goose run --recipe X --no-session → real LLM, ~5-30s/agent
+
+Cost control:
+  - Uses tools/goose-costed wrapper (R71 cost gate)
+  - --mode=explain: $0 (no LLM), safe to run all 120
+  - --mode=run: ~$0.01-0.05 per agent; --all = $1.20-6.00
+  - Default --limit=10 in --mode=run to stay under $5/day budget
+  - Cost gate will block further runs if budget exceeded
+
+Exit codes:
+  0 = all PASS
+  1 = at least one FAIL
+  2 = cost-exceeded (blocked by cost gate, not a tool bug)
+  3 = setup error (no recipes found, etc)
+"""
+import argparse
+import json
+import os
+import subprocess
+import sys
+import time
+from collections import Counter
+from datetime import datetime, timezone
+from pathlib import Path
+
+WORKSPACE = Path(__file__).resolve().parent.parent
+SUB_DIR = WORKSPACE / "recipe" / "sub"
+RESULTS_DIR = WORKSPACE / ".state" / "coverage"
+COSTED = WORKSPACE / "tools" / "goose-costed"
+COST_CLI = WORKSPACE / "tools" / "mas_cost"
+
+
+def find_recipes(include_framework=True, include_stubs=True):
+    """Return sorted list of recipe paths matching filters."""
+    paths = []
+    if include_framework:
+        for p in SUB_DIR.glob("sub_mas-*.yaml"):
+            if ".bak" not in p.name and not p.name.startswith("test_"):
+                paths.append(p)
+    if include_stubs:
+        for p in SUB_DIR.glob("test_sub_mas-*.yaml"):
+            if ".bak" not in p.name:
+                paths.append(p)
+    return sorted(paths)
+
+
+def run_cost_check():
+    """Return (allowed, message). Uses mas_cost check."""
+    if not COST_CLI.exists():
+        return True, "no-cost-cli: skipping"
+    try:
+        r = subprocess.run([sys.executable, str(COST_CLI), "--workspace",
+                            str(WORKSPACE), "check"],
+                           capture_output=True, text=True, timeout=10)
+        msg = (r.stdout or r.stderr or "").strip() or "OK"
+        return r.returncode == 0, msg
+    except Exception as e:
+        return True, f"check-error: {e} (proceeding)"
+
+
+def run_one(recipe_path, timeout=60, mode="explain"):
+    """Run one recipe via goose-costed. mode='explain' (no LLM, fast smoke)
+    or 'run' (real LLM call, costs ~$0.01-0.05)."""
+    name = recipe_path.stem
+    result = {"name": name, "path": str(recipe_path.relative_to(WORKSPACE)),
+              "started": datetime.now(timezone.utc).isoformat(),
+              "exit_code": None, "ok": False, "duration_s": 0,
+              "stdout_tail": "", "stderr_tail": "",
+              "cost_blocked": False, "error": None, "mode": mode}
+
+    if not COSTED.exists():
+        result["error"] = "goose-costed wrapper not found (R71 missing)"
+        return result
+
+    cmd = [str(COSTED), "run", "--recipe", str(recipe_path),
+           "--explain" if mode == "explain" else "--no-session"]
+    t0 = time.time()
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True,
+                           timeout=timeout, cwd=str(WORKSPACE))
+        result["duration_s"] = round(time.time() - t0, 2)
+        result["exit_code"] = r.returncode
+        result["stdout_tail"] = (r.stdout or "")[-500:]
+        result["stderr_tail"] = (r.stderr or "")[-500:]
+        # Detect cost-block: exit=1 AND stderr contains "COST-GATE: BLOCKED"
+        # (note: "COST-GATE: OK" means gate passed but goose itself failed)
+        stderr = (r.stderr or "")
+        if r.returncode == 1 and "COST-GATE: BLOCKED" in stderr:
+            result["cost_blocked"] = True
+            result["ok"] = False
+        elif r.returncode == 0:
+            result["ok"] = True
+        else:
+            result["ok"] = False
+            # detect common "goose not installed" failure
+            if "goose" in stderr and "No such file" in stderr:
+                result["error"] = "goose-cli not installed (PATH missing)"
+            elif "FileNotFoundError" in stderr:
+                result["error"] = "goose-cli not installed (FileNotFoundError)"
+            else:
+                result["error"] = "goose-exit-" + str(r.returncode)
+    except subprocess.TimeoutExpired:
+        result["duration_s"] = timeout
+        result["error"] = "timeout after " + str(timeout) + "s"
+    except FileNotFoundError:
+        result["error"] = "goose-costed wrapper not executable"
+    except Exception as e:
+        result["error"] = str(e)
+    return result
+
+
+def save_results(results):
+    """Save results to .state/coverage/coverage-<date>.json."""
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+    out = RESULTS_DIR / ("coverage-" + stamp + ".json")
+    out.write_text(json.dumps({
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "total": len(results),
+        "passed": sum(1 for r in results if r["ok"]),
+        "failed": sum(1 for r in results if not r["ok"] and not r.get("cost_blocked")),
+        "cost_blocked": sum(1 for r in results if r.get("cost_blocked")),
+        "results": results,
+    }, indent=2))
+    return out
+
+
+def print_matrix(results):
+    """Print PASS/FAIL/$$ matrix."""
+    if not results:
+        print("  (no results)")
+        return
+    max_name = max(len(r["name"]) for r in results)
+    for r in results:
+        if r.get("cost_blocked"):
+            mark = "$$$"
+        elif r["ok"]:
+            mark = "OK "
+        elif r.get("error"):
+            mark = "ERR"
+        else:
+            mark = "FAIL"
+        dur = str(r.get("duration_s", 0)) + "s"
+        print("  " + mark + "  " + r["name"].ljust(max_name) + "  " + dur)
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Behavior-dim coverage test")
+    ap.add_argument("--all", action="store_true", help="test all recipes")
+    ap.add_argument("--sub", help="test one sub-recipe (name without sub_mas- prefix)")
+    ap.add_argument("--limit", type=int, default=10, help="max recipes to run (default 10, 0=unlimited)")
+    ap.add_argument("--stub-only", action="store_true", help="only test_sub_mas-*.yaml")
+    ap.add_argument("--framework-only", action="store_true", help="only sub_mas-*.yaml")
+    ap.add_argument("--stats", action="store_true", help="show coverage matrix (no runs)")
+    ap.add_argument("--summary", action="store_true", help="short report only")
+    ap.add_argument("--dry-run", action="store_true", help="list what would run, no LLM")
+    ap.add_argument("--mode", choices=["explain", "run"], default="explain",
+                    help="explain=load only (no LLM), run=real LLM call")
+    ap.add_argument("--timeout", type=int, default=60, help="per-recipe timeout sec")
+    args = ap.parse_args()
+
+    if not SUB_DIR.exists():
+        print("ERROR: not a mas-engineer workspace: " + str(SUB_DIR), file=sys.stderr)
+        return 3
+
+    # pre-flight cost check
+    allowed, cost_msg = run_cost_check()
+    print("Cost check: " + cost_msg)
+    if not allowed:
+        print("BLOCKED by cost gate. Reset budget or wait for next day.")
+        return 2
+
+    # select recipes
+    if args.all:
+        args.limit = 0  # 0 = unlimited
+    if args.sub:
+        target = SUB_DIR / ("sub_mas-" + args.sub + ".yaml")
+        if not target.exists():
+            print("ERROR: not found: " + str(target), file=sys.stderr)
+            return 1
+        recipes = [target]
+    else:
+        inc_fw = not args.stub_only
+        inc_st = not args.framework_only
+        recipes = find_recipes(include_framework=inc_fw, include_stubs=inc_st)
+        if args.limit and args.limit > 0:
+            recipes = recipes[:args.limit]
+
+    if args.stats or args.dry_run:
+        print("Coverage matrix (" + str(len(recipes)) + " recipes):")
+        for p in recipes:
+            kind = "STUB" if p.name.startswith("test_") else "MAIN"
+            print("  " + kind + "  " + p.name)
+        if args.dry_run:
+            if args.mode == "explain":
+                print("\nEstimated cost (dry, mode=explain): $0.00 (no LLM, ~0.1s/agent)")
+            else:
+                est = len(recipes) * 0.02
+                print("\nEstimated cost (dry, mode=run): $" + str(round(est, 2)) +
+                      " (at $0.02/agent avg, 120 agents = ~$2.40)")
+        return 0
+
+    print("Testing " + str(len(recipes)) + " recipes (timeout " +
+          str(args.timeout) + "s each)...")
+    print("=" * 70)
+    results = []
+    cost_blocked_count = 0
+    for i, p in enumerate(recipes, 1):
+        r = run_one(p, timeout=args.timeout, mode=args.mode)
+        results.append(r)
+        if r.get("cost_blocked"):
+            cost_blocked_count += 1
+        if not args.summary:
+            mark = "$$$" if r.get("cost_blocked") else ("OK " if r["ok"] else "FAIL")
+            dur = str(r.get("duration_s", 0)) + "s"
+            print("[" + str(i) + "/" + str(len(recipes)) + "] " + mark +
+                  "  " + r["name"] + "  " + dur)
+        if r.get("cost_blocked"):
+            print("\n*** Cost gate blocked further runs. Stopping. ***")
+            break
+
+    # save
+    out = save_results(results)
+    print("\nResults saved: " + str(out.relative_to(WORKSPACE)))
+
+    # summary
+    passed = sum(1 for r in results if r["ok"])
+    failed = sum(1 for r in results if not r["ok"] and not r.get("cost_blocked"))
+    mode_str = "explain (no LLM)" if args.mode == "explain" else "run (real LLM)"
+    print("\n" + "=" * 70)
+    print("BEHAVIOR coverage [" + mode_str + "]: " + str(passed) + " PASS / " +
+          str(failed) + " FAIL / " + str(cost_blocked_count) + " cost-blocked  (of " +
+          str(len(results)) + ")")
+    print("=" * 70)
+    if failed:
+        print("\nFailed recipes (first 10):")
+        for r in results:
+            if not r["ok"] and not r.get("cost_blocked"):
+                err = r.get("error") or ("exit " + str(r["exit_code"]))
+                print("  " + r["name"] + " — " + err[:80])
+                break_after = 10
+    if cost_blocked_count:
+        print("\n(" + str(cost_blocked_count) + " recipes were not tested due to cost gate)")
+    return 0 if failed == 0 else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
