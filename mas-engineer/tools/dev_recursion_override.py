@@ -27,6 +27,69 @@ except ImportError:
     sys.exit(2)
 
 
+DEFAULT_COST_CONFIG = {
+    "daily_budget_usd": 5.00,
+    "per_run_max_usd": 1.00,
+    "per_session_max_usd": 0.50,
+    "gate": {"daily": "block", "per_run": "block", "per_session": "warn"},
+    "cost_source": {
+        "db_path": "mas-engineer/.mas/data/goose/sessions.db",
+        "table": "sessions",
+        "cost_column": "accumulated_cost",
+        "timestamp_column": "created_at",
+    },
+}
+
+
+def load_cost_config(workspace: Path) -> dict:
+    """Load cost-control config from .mas/config/cost.yaml. Falls back to defaults."""
+    cfg_path = workspace / ".mas" / "config" / "cost.yaml"
+    if not cfg_path.exists():
+        return DEFAULT_COST_CONFIG
+    try:
+        loaded = yaml.safe_load(cfg_path.read_text()) or {}
+        # Shallow merge with defaults so missing keys still resolve
+        merged = {**DEFAULT_COST_CONFIG, **loaded}
+        if "gate" in loaded:
+            merged["gate"] = {**DEFAULT_COST_CONFIG["gate"], **loaded["gate"]}
+        if "cost_source" in loaded:
+            merged["cost_source"] = {**DEFAULT_COST_CONFIG["cost_source"], **loaded["cost_source"]}
+        return merged
+    except Exception as e:
+        print(f"WARN: cost.yaml unreadable ({e}); using defaults", file=sys.stderr)
+        return DEFAULT_COST_CONFIG
+
+
+def check_cost_gate(workspace: Path, config: dict) -> tuple:
+    """Check cost gate. Returns (allowed: bool, reason: str, cost_today: float, budget: float)."""
+    import sqlite3 as sqlite
+    src = config.get("cost_source", {})
+    db_path = workspace / src.get("db_path", "mas-engineer/.mas/data/goose/sessions.db")
+    if not db_path.exists():
+        return True, "no_db", 0.0, config.get("daily_budget_usd", 5.00)
+    try:
+        con = sqlite.connect(str(db_path))
+        cur = con.cursor()
+        cur.execute(
+            f"SELECT COALESCE(SUM({src.get('cost_column', 'accumulated_cost')}), 0.0) "
+            f"FROM {src.get('table', 'sessions')} "
+            f"WHERE {src.get('timestamp_column', 'created_at')} >= datetime('now', '-24 hours')"
+        )
+        cost_today = float(cur.fetchone()[0] or 0.0)
+        con.close()
+    except Exception as e:
+        return True, f"db_error: {e}", 0.0, config.get("daily_budget_usd", 5.00)
+    budget = float(config.get("daily_budget_usd", 5.00))
+    gate_mode = config.get("gate", {}).get("daily", "block")
+    if cost_today >= budget:
+        if gate_mode == "block":
+            return False, f"daily_budget_exceeded: ${cost_today:.2f}/${budget:.2f}", cost_today, budget
+        else:
+            print(f"⚠ COST-WARN: daily_budget_exceeded ${cost_today:.2f}/${budget:.2f} (gate={gate_mode})", file=sys.stderr)
+            return True, f"warn_only: {cost_today:.2f}/{budget:.2f}", cost_today, budget
+    return True, "ok", cost_today, budget
+
+
 def load_validation(workspace: Path) -> list:
     """Load validation details from .state/pipeline/validation.yaml.
 
@@ -122,6 +185,15 @@ def main() -> int:
     ws = Path(args.workspace).resolve()
     if not ws.exists():
         print(f"ERROR: workspace not found: {ws}", file=sys.stderr)
+        return 1
+    # === COST-GATE (R70 hermes hot-fix) — central cost enforcement ===
+    cost_cfg = load_cost_config(ws)
+    allowed, reason, cost_today, budget = check_cost_gate(ws, cost_cfg)
+    print(f"COST-GATE: ${cost_today:.2f}/${budget:.2f} daily ({len(ws.name)} chars workspace)")
+    if not allowed:
+        print(f"❌ COST-GATE BLOCKED: {reason}")
+        print(f"   Adjust limit: edit {ws}/.mas/config/cost.yaml")
+        print(f"   Or set gate.daily: warn in cost.yaml to allow with warning")
         return 1
     details = load_validation(ws)
     if not details:
