@@ -164,3 +164,23 @@ E2E logs:
 Note: This E2E was done against INSTALLED recipes (in `~/.config/goose/recipes/`)
 which are copies. The source recipes in `mas-engineer/recipe/` should be checked
 and patched if they still have `deepseek-chat`.
+
+
+---
+
+## Post-Flight Audit (R89)
+
+Per `mas-push-post-flight-audit` skill, run after every push.
+
+| Metric | Value |
+|--------|-------|
+| Commit | e49e04d7f4b2c207833e4c0e1e5eee638e653fbf |
+| Sub-agent YAMLs scanned | 119 |
+| sub_recipe refs found | 76 |
+| Broken refs | 0 |
+| Coverage | 100.0% |
+
+**Verdict: PASS.** All 76 sub_recipe references resolve to existing files. No
+R45-class regression (5 missing sub_recipes).
+
+Evidence JSON: `e2e-evidence-gen2/post-flight-audit-R89.json`
