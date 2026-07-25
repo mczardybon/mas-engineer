@@ -357,6 +357,105 @@ def check_rule(rule_id, action=""):
                             "action": "BLOCKED"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
 
+        if rule_id == "R56":
+            """EDIT_SPIN-LOOP (R91 2026-07-25):
+
+            Detects placeholder-edit patterns that indicate an LLM spin-loop.
+
+            Triggers:
+            1. action string contains 'before:' followed by placeholder patterns
+               (NONEXISTENT_TEXT, XYZ, PLACEHOLDER, TODO_FILL, BLOCKED, MARKER, KEEP, dummy)
+               AND contains 'after:' with the same placeholder (no-op edit)
+            2. consecutive edit failures in current session (tracked in .state/pipeline/r56_edit_history.yaml)
+               if 3+ failures in last 60s, BLOCK subsequent edits
+
+            The spin-loop pattern observed in R90 (subagent-184):
+              22+ edits with `before: NONEXISTENT_TEXT_XYZ` `after: NONEXISTENT_TEXT_XYZ`
+              on already-existing files. Each edit returns "no match", LLM retries with
+              different placeholder string. Result: 0 progress, 6 min wasted, $0.04 cost.
+
+            Per R57 user-correction: erzwungene Regeln funktionieren, instruction-edits nicht.
+            This is a HARD RULE (block: true, hardness: 5).
+            """
+            import os as _os56, re as _re56, time as _t56
+            akt = action.lower()
+
+            # State file for tracking consecutive edit failures
+            MAS_ROOT = "/workspace/mas-engineer-src/mas-engineer"
+            history_path = f"{MAS_ROOT}/.state/pipeline/r56_edit_history.yaml"
+
+            # Load history
+            history = []
+            if _os56.path.exists(history_path):
+                try:
+                    import yaml as _y56
+                    hd = _y56.safe_load(open(history_path)) or {}
+                    history = hd.get("edits", [])
+                except:
+                    history = []
+
+            # Clean old entries (>120s)
+            now = _t56.time()
+            history = [e for e in history if now - e.get("ts", 0) < 120]
+
+            # Check 1: placeholder pattern in current action
+            placeholder_patterns = [
+                r"before:\s*(?:NONEXISTENT_TEXT|TODO_FILL|BLOCKED|PLACEHOLDER|MARKER|DUMMY|XYZ|REPLACE_ME|FIXME_FILL)",
+                r"before:\s*[A-Z_]+(?:_XYZ|_PLACEHOLDER|_FILL|_DUMMY|_MARKER|_KEEP|_TBD)",
+            ]
+            has_placeholder = any(_re56.search(p, action, _re56.IGNORECASE) for p in placeholder_patterns)
+
+            # Check 2: no-op edit (before == after, both placeholders)
+            no_op = False
+            m_before = _re56.search(r"before:\s*([^\n]+)", action)
+            m_after = _re56.search(r"after:\s*([^\n]+)", action)
+            if m_before and m_after:
+                if m_before.group(1).strip() == m_after.group(1).strip():
+                    no_op = True
+
+            # Check 3: edit on file that already exists with no read first
+            # (action contains "edit {path}" but not "load {path}" / "cat {path}" / "read {path}")
+            # This is heuristic — we just track the failures over time
+
+            # Log this attempt
+            history.append({
+                "ts": now,
+                "has_placeholder": has_placeholder,
+                "no_op": no_op,
+                "action_preview": action[:200],
+            })
+
+            # Count recent placeholder/no-op attempts in last 60s
+            recent_failures = sum(1 for e in history if now - e["ts"] < 60 and (e["has_placeholder"] or e["no_op"]))
+
+            # Save history
+            try:
+                import yaml as _y56s
+                with open(history_path, "w") as f:
+                    _y56s.safe_dump({"edits": history, "last_check": now, "recent_failures_60s": recent_failures}, f)
+            except:
+                pass
+
+            # BLOCK on current placeholder attempt
+            if has_placeholder:
+                return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"EDIT-SPIN-LOOP: 'before' contains placeholder pattern (NONEXISTENT_TEXT, XYZ, PLACEHOLDER etc.). READ THE FILE FIRST, then use the EXACT existing text as 'before'. R90-Root-Cause 2026-07-25.",
+                        "action": "BLOCKED"}
+
+            if no_op:
+                return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"EDIT-SPIN-LOOP: no-op edit (before == after). Edit tool is for changing text. Use 'write' to overwrite a file.",
+                        "action": "BLOCKED"}
+
+            # BLOCK on accumulated spin-loop pattern
+            if recent_failures >= 3:
+                return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"EDIT-SPIN-LOOP: {recent_failures} placeholder/no-op edits in last 60s. STOP editing. Use 'write' for new content, or 'load' + exact text match for edits.",
+                        "action": "BLOCKED"}
+
+            return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
+
+
         if rule_id == "R12":
             """WORK_MAS_DECOUPLING: MAS lebt in ~/.config/goose/.state/mas/"""
             akt = action.lower()
