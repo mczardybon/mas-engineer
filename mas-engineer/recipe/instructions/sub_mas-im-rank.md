@@ -108,9 +108,9 @@ Take the top N Findings by rank_score.
 
 ```python
 import os
-N = int(os.environ.get('IM_TOP_N', '5'))  # default 5
-if N < 1: N = 5
-if N > 50: N = 50  # hard cap for cost-safety
+N = int(os.environ.get('IM_TOP_N', '100'))  # R57 user-correction: default 100
+if N < 1: N = 100
+if N > 500: N = 500  # hard cap for cost-safety
 top_N = sorted_findings[:N]
 print(f"[im-rank] IM_TOP_N={N} → selecting top {N} of {len(sorted_findings)} findings")
 ```

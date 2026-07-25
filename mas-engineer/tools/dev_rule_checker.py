@@ -311,20 +311,23 @@ def check_rule(rule_id, action=""):
             if is_rank_write or is_patch_apply:
                 # Read IM_TOP_N
                 try:
-                    N = int(_os.environ.get('IM_TOP_N', '5'))
+                    N = int(_os.environ.get('IM_TOP_N', '100'))
                 except ValueError:
-                    N = 5
-                if N < 1: N = 5
-                if N > 50: N = 50
+                    N = 100
+                if N < 1: N = 100
+                if N > 500: N = 500  # R57 user: default 100, max 500
+                # Also cap the "found" value to 500
                 # Find number in action (e.g. "top_N: 20" or "patches_applied: 20")
                 import re
-                m = re.search(r'top_N[:\s]+(\d+)|patches_applied[:\s]+(\d+)', akt)
+                m = re.search(r'top_n[:\s]+(\d+)|patches_applied[:\s]+(\d+)|top[_\s]?N[:\s]+(\d+)', akt, re.IGNORECASE)
                 if m:
-                    found = int(m.group(1) or m.group(2))
-                    if found < N:
-                        return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
-                                "detail": f"top_N={found} < IM_TOP_N={N} (env var). R55 enforces >= {N} patches per run.",
-                                "action": "BLOCKED"}
+                    found_str = m.group(1) or m.group(2) or m.group(3)
+                    if found_str:
+                        found = int(found_str)
+                        if found < N:
+                            return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
+                                    "detail": f"top_N={found} < IM_TOP_N={N} (env var). R55 enforces >= {N} patches per run.",
+                                    "action": "BLOCKED"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
 
         if rule_id == "R12":
