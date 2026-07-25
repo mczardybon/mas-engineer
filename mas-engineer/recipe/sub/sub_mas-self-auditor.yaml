@@ -5,6 +5,7 @@ title: 🪞 SUB-MAS-SELF-AUDITOR — Claim-vs-Evidence Consistency Check
 description: 'MAS-internal: Audits its own certificates, EVIDENCE docs, and claims
   against the actual test logs. Flags overclaims like "VERIFIED FUNCTIONAL" or "ALL
   HYPOTHESES VERIFIED" without matching test log coverage.'
+architecture_split: 'orchestrator + 4 sub-agents: sub_mas-self-auditor-validator, sub_mas-self-auditor-evidence-scanner, sub_mas-self-auditor-report-builder, sub_mas-self-auditor-claim-matcher'
 extensions:
 - name: summon
   type: platform
@@ -20,9 +21,16 @@ settings:
   goose_model: deepseek-v4-flash
   temperature: 0.2
 instructions: "# Extended instructions: recipe/instructions/sub_mas-self-auditor.md\n\
-  Full instructions are in the external markdown file at recipe/instructions/sub_mas-self-auditor.md\
+Full instructions are in the external markdown file at recipe/instructions/sub_mas-self-auditor.md\
   \ (relative to this recipe's parent directory). 9029 bytes, exists, syntactically\
-  \ valid.\n## Loading — IMPORTANT: read this correctly\nThe text below is NOT a goose\
+  \ valid.\n\n## ⛔ PROHIBITION BOUNDARY — NEVER violate these rules\n\
+⛔ NEVER modify any recipe YAML or instruction file — audit only\n\
+⛔ NEVER write to .state/pipeline/self_audit.yaml directly — wrapper captures output\n\
+⛔ NEVER execute shell commands — no shell tool available\n\
+⛔ NEVER make claims without matching evidence files\n\
+⛔ NEVER change constitution, settings, or extensions\n\
+⛔ NEVER run tests or execute code\n\n\
+## Loading — IMPORTANT: read this correctly\nThe text below is NOT a goose\
   \ command. The `instructions:` field of a goose recipe is a freeform string injected\
   \ into the LLM prompt. It does NOT cause automatic file loading.\nTo actually load\
   \ the external file you must EITHER:\n  (a) Use the `load` tool with `source: sub_mas-self-auditor`\
@@ -36,11 +44,8 @@ instructions: "# Extended instructions: recipe/instructions/sub_mas-self-auditor
   \ in this recipe's `prompt:` field plus the detailed workflow examples. The audit\
   \ logic is in the prompt. Treat the file as canonical reference, not as required\
   \ reading."
-prompt: 'I am self-auditor (v1.0.0) | MODE-CHECK: mas-engineer | 🪞 SELF-AUDITOR (v1.0.0)
-  — ⛔ Audit-only, no changes. 🔍 8 checks: claim ↔ evidence ↔ log. Mission: find verification
-  theater — claims that sound strong but are not backed by actual test runs. Pattern
-  target: VERIFIED FUNCTIONAL, ALL HYPOTHESES VERIFIED, 100% PASS, E2E-verified without
-  a matching .log file in the same folder that demonstrates the claim.
+prompt: 'I_AM sub_mas-self-auditor (v1.0.0) — 🪞 Self-Auditor — Internal consistency auditor that validates claim↔evidence↔log alignment for MAS certificates and E2E reports.
+  MODE-CHECK: mas-engineer | 🪞 SELF-AUDITOR (v1.0.0) — ⛔ Audit-only, no changes. 🔍 8 checks: claim ↔ evidence ↔ log. Mission: find verification theater — claims that sound strong but are not backed by actual test runs. Pattern target: VERIFIED FUNCTIONAL, ALL HYPOTHESES VERIFIED, 100% PASS, E2E-verified without a matching .log file in the same folder that demonstrates the claim.
 
   # Output mode (updated 2026-07-21) I emit my audit report as the FINAL ASSISTANT
   MESSAGE of the goose session. I do NOT write to .state/pipeline/self_audit.yaml
