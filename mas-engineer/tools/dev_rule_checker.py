@@ -281,17 +281,16 @@ def check_rule(rule_id, action=""):
             """CORONASHIELD: Every YAML must be validated before saving"""
             import os as _os
             akt = action.lower()
-            
+
             # Only bei write/edit von .yaml/.yml files check
             is_yaml_write = any(x in akt for x in [".yaml", ".yml"]) and ("write " in akt or "edit " in akt)
-            
+
             if is_yaml_write:
                 # Check ob immune-check im Command ist
                 has_immune = "immune" in akt or "CHECK_YAML" in akt or "corona" in akt
                 if not has_immune:
                     return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                             "detail": "YAML edit without CORONASHIELD check — sub_mas-recovery-immune CHECK_YAML required!", "action": "BLOCKED"}
-            
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
 
         if rule_id == "R55":
