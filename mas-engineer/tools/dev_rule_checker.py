@@ -294,6 +294,39 @@ def check_rule(rule_id, action=""):
             
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
 
+        if rule_id == "R55":
+            """IM_TOP_N_ENFORCEMENT (R57 user-request 2026-07-25):
+            Code-enforced top-N selection for im-rank step. Mas-LLM tends to
+            ignore instruction-only IM_TOP_N env var (R57a/b/c evidence). This
+            rule enforces N patches must be selected by reading the env var
+            at code-level, bypassing LLM interpretation.
+            
+            Triggered when im-rank writes top_N: to state YAML.
+            Validation: top_N.length MUST equal IM_TOP_N (or default 5)."""
+            import os as _os
+            akt = action.lower()
+            # Trigger: write to ranked_findings.yaml
+            is_rank_write = "ranked_findings" in akt and "write" in akt
+            is_patch_apply = "apply patches" in akt or "patches_applied" in akt
+            if is_rank_write or is_patch_apply:
+                # Read IM_TOP_N
+                try:
+                    N = int(_os.environ.get('IM_TOP_N', '5'))
+                except ValueError:
+                    N = 5
+                if N < 1: N = 5
+                if N > 50: N = 50
+                # Find number in action (e.g. "top_N: 20" or "patches_applied: 20")
+                import re
+                m = re.search(r'top_N[:\s]+(\d+)|patches_applied[:\s]+(\d+)', akt)
+                if m:
+                    found = int(m.group(1) or m.group(2))
+                    if found < N:
+                        return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
+                                "detail": f"top_N={found} < IM_TOP_N={N} (env var). R55 enforces >= {N} patches per run.",
+                                "action": "BLOCKED"}
+            return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
+
         if rule_id == "R12":
             """WORK_MAS_DECOUPLING: MAS lebt in ~/.config/goose/.state/mas/"""
             akt = action.lower()
