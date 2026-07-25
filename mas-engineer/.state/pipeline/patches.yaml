@@ -1,94 +1,58 @@
 stage: 3
 agent: im-designer
-timestamp: '2026-07-25T10:32:00+00:00'
-request_id: IM-RANK-20260725-102900
+timestamp: '2026-07-25T10:50:00+00:00'
+request_id: '20260725_112'
 from: im-designer
 to: sub_mas-im-validator
 status: success
 input_file: .state/pipeline/ranked_findings.yaml
 data:
   patches:
-  - id: F-2211
+  - finding_id: F-2211
     type: E1
     file: recipe/sub/sub_mas-intention-parser.yaml
     field: patterns
-    from: 51 patterns (12 field-type, 44 typed types)
-    to: Add 3 new patterns (verify, security, bootstrap/init) → 54 patterns total
-    reason: |
-      Why: F-2211 — intention-parser still missing patterns for commonly
-      requestable agent types. 92 sub-recipes exist but only 44 pattern types.
-      Critical gaps identified:
-      1. "verify|verify that|confirm|check" → type: verify — user says "verify
-         the workflow/recipe/yaml" (26 verification-related sub-recipes exist)
-      2. "security|vulnerability|secure|protect" → type: security — user says
-         "run a security scan" (5 security-scanner sub-recipes exist)
-      3. "init|initialize|setup|bootstrap|prepare" → type: init — user says
-         "initialize a new project/setup" (bootstrap + generic-init exist)
-      Goose-expert: NOT REQUIRED — E1 is not in mandatory consultation prefix
-      list (A/B/D/MM/JJ/S/HH/LL). E1 pattern append is purely additive,
-      non-structural — verified by prior L01 precedent (F-2187, F-2211 prev).
     priority: 0.82
-    severity: medium
-    current_chars: 51
-    target_chars: 54
-    change:
-      action: append
-      patterns:
-      - pattern: "verify|verify that|confirm|check|assert"
-        type: verify
-        description: Verify agent, recipe, workflow, or configuration correctness
-      - pattern: "security|vulnerability|secure|protect|harden"
-        type: security
-        description: Run security scan, vulnerability check, or harden agent
-      - pattern: "init|initialize|setup|bootstrap|prepare (a|the|new)"
-        type: init
-        description: Initialize, bootstrap, or set up a new agent or project
-
+    from: '48 existing patterns (last: init pattern at line 212)'
+    to: "52 patterns \u2014 add 4 new: session, constitution, controller, worktree"
+    reason: 'Why: Generic missing-pattern finding. Already has 48 patterns (8 added
+      in last 2 runs). Adding 4 more for workflows.yaml agents without explicit coverage:
+      (1) session for session-analyst, (2) constitution for master-constitution, (3)
+      controller for mas-controller, (4) worktree for worktree-manager. These correspond
+      to actual sub-recipes in the ecosystem.'
+    goose_verdict: 'NOT_REQUIRED (E1 type not in mandatory consultation table: A1-A5/B1-B4/D1-D4/MM1-MM9/JJ1-JJ4/S1-S3/HH1-HH4/LL1-LL5)'
+    patch_detail: "Insert after last pattern (init, line 212) before sub_recipes:\n\
+      \  - pattern: session (audit|analyst|inspect|scan|review)\n    type: session\n\
+      \    description: Audit, inspect, or analyze session logs and conversation history\n\
+      \  - pattern: constitution|constitutional|charter|mas constitution\n    type:\
+      \ constitution\n    description: Manage, review, or enforce MAS constitution\
+      \ rules\n  - pattern: controller|control|oversee|supervise|govern\n    type:\
+      \ controller\n    description: Control, oversee, or govern agent operations\
+      \ and lifecycle\n  - pattern: worktree|branch workspace|work tree (manager|management)\n\
+      \    type: worktree\n    description: Manage git worktrees, branches, or workspace\
+      \ isolation"
+    current_chars: 5210
+    target_chars: 5580
   skipped:
-  - id: F-2260
-    file: recipe/sub/legacy/e2e-verify-auto-repair-ORIGINAL.yaml
+  - finding_id: F-2270
     type: NN3
-    why_skipped: |
-      PRECONDITION 1 FAILED — total file 183 lines, instructions section ~45
-      lines. Line threshold (>=200) not met — micro-split would be
-      counterproductive.
-      PRECONDITION NOTE: File is in legacy/ (archived backup copy). No active
-      recipe exists at recipe/sub/e2e-verify-auto-repair.yaml. Scope bloat
-      affects an archived/original file that is descriptive by nature
-      (describes 4 recovery workflows). Not worth NN3 split.
-    detail: Legacy backup — no active recipe to split. Finding is stale.
-
-  - id: F-2270
     file: recipe/sub/legacy/e2e-verify-phoenix-fixes-ORIGINAL.yaml
+    why_skipped: "STALE \u2014 agent already split into active sub-agents (director\
+      \ + runner + validator) in run 20260724_143. Legacy file is archive only."
+  - finding_id: F-2260
     type: NN3
-    why_skipped: |
-      PRECONDITION 1 FAILED — total file 84 lines, instructions section ~35
-      lines. Line threshold (>=200) not met.
-      PRECONDITION NOTE: File is in legacy/ (archived backup). No active recipe.
-      7 tests are tightly coupled (all phoenix-fix related) — splitting by
-      domain would create 7 single-test sub-agents, which adds orchestration
-      overhead without benefit.
-    detail: Legacy backup — no active recipe. Tightly coupled test suite.
-
-  - id: F-2275
+    file: recipe/sub/legacy/e2e-verify-auto-repair-ORIGINAL.yaml
+    why_skipped: "STALE \u2014 agent already split into active sub-agents (director\
+      \ + runner + validator) in run 20260724_143. Legacy file is archive only."
+  - finding_id: F-2275
+    type: NN3
     file: recipe/sub/legacy/e2e-verify-german-fixes-ORIGINAL.yaml
-    type: NN3
-    why_skipped: |
-      PRECONDITION 1 FAILED — total file 113 lines, instructions section ~40
-      lines. Line threshold (>=200) not met.
-      PRECONDITION NOTE: File is in legacy/ (archived backup). No active recipe.
-      2 test domains (German descs + placeholder steps) are tightly coupled
-      to the same fix session — splitting would create overhead.
-    detail: Legacy backup — no active recipe. Tightly coupled test domains.
-
-  - id: F-2212
-    file: recipe/sub/sub_mas-test-director.yaml
+    why_skipped: "STALE \u2014 agent already split into active sub-agents (director\
+      \ + checker + runner + validator) in run 20260724_143. Legacy file is archive\
+      \ only."
+  - finding_id: F-2262
     type: NN1
-    why_skipped: |
-      PRECONDITION 1 FAILED — total file 60 lines, instructions section ~22
-      lines. Line threshold (>=200) not met.
-      PRECONDITION 3 FAILED — agent already IS an orchestrator delegating to 4
-      sub-agents (sub_mas-test-executor, -reporter, -scanner, -validator).
-      Title says "(NN1 Enhanced)". Finding is stale — the NN1 split was already
-      performed in a previous round.
-    detail: Already split into orchestrator + 4 subs. Finding is stale.
+    file: recipe/sub/legacy/dev-mas-engineer-ORIGINAL.yaml
+    why_skipped: "STALE \u2014 agent already split into active sub-agents (director\
+      \ + analyzer + builder + observer + tester). Split completed in prior rounds.\
+      \ Legacy file is archive only."

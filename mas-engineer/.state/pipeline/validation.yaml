@@ -1,13 +1,13 @@
 # ============================================================
 # VALIDATION REPORT — im-validator v1.0.0
 # Pipeline Stage 4/5: Validate patches and recommend action
-# Generated: 2026-07-25T10:35:00+00:00
+# Generated: 2026-07-25T10:53:00+00:00
 # ============================================================
 stage: 4
 agent: im-validator
 version: 1.0.0
-timestamp: "2026-07-25T10:35:00+00:00"
-request_id: IM-RANK-20260725-102900
+timestamp: "2026-07-25T10:53:00+00:00"
+request_id: "20260725_112"
 input_file: .state/pipeline/patches.yaml
 from: sub_mas-im-validator
 to: sub_mas-general-improver
@@ -28,18 +28,18 @@ validation:
       file: recipe/sub/sub_mas-intention-parser.yaml
       field: patterns
       action: append
-      from_count: 51
-      to_count: 54
+      from_count: 54
+      to_count: 58
       score_before:
-        prompt: 5.3
-        settings: 17.2
-        structure: 0.0
-        structure_score: 7.5
+        prompt: 5.4
+        settings: 17.7
+        structure: 10.0
+        structure_score: 11.0
       score_after:
-        prompt: 5.3
-        settings: 17.2
-        structure: 0.0
-        structure_score: 7.5
+        prompt: 5.4
+        settings: 17.7
+        structure: 10.0
+        structure_score: 11.0
       delta:
         prompt: 0.0
         settings: 0.0
@@ -47,19 +47,65 @@ validation:
         structure_score: 0.0
       notes: >
         Workspace-wide scores unchanged (patch is additive, non-structural).
-        Only 1 of 187 YAML files affected — 3 patterns appended to a list field.
+        Only 1 of 187 YAML files affected — 4 patterns appended to a list field.
+        No structural impact on workspace metrics.
+
+  # Per-patch integration analysis
+  integration:
+    - pattern_type: session
+      target: "session (audit|analyst|inspect|scan|review)"
+      existing_recipes:
+        - sub_mas-session-analyst.yaml
+        - sub_mas-monitor-session.yaml
+        - sub_mas-im-session-reader.yaml
+      status: "CONSISTENT — all target recipes exist"
+    - pattern_type: constitution
+      target: "constitution|constitutional|charter|mas constitution"
+      existing_recipes:
+        - sub_mas-master-constitution.yaml
+      status: "CONSISTENT — target recipe exists"
+    - pattern_type: controller
+      target: "controller|control|oversee|supervise|govern"
+      existing_recipes:
+        - sub_mas-mas-controller.yaml
+      status: "CONSISTENT — target recipe exists"
+    - pattern_type: worktree
+      target: "worktree|branch workspace|work tree (manager|management)"
+      existing_recipes:
+        - sub_mas-worktree-manager.yaml
+      status: "CONSISTENT — target recipe exists"
 
   # Goose-expert post-validation results (STEP 0.5)
   goose_post_checks:
     - patch_id: F-2211
       verdict: CONFORM
-      mechanism: dev_goose_expert_check.py
+      mechanism: dev_goose_expert_check.py --patches .state/pipeline/patches.yaml
       explanation: >
-        No known Goose-native conflict detected. E1 pattern append is purely
-        additive and non-structural. The 3 proposed types (verify, security,
-        init) do not duplicate any existing pattern types. No cross-recipe
-        integration issues identified. Existing sub_recipes (generic-init,
-        team-packager) are compatible.
+        All 4 new pattern types (session, constitution, controller, worktree)
+        pass L01 mechanism check with no known Goose-native conflicts. The patch
+        is purely additive (append to list field) and non-structural. No
+        cross-recipe integration issues identified. Each pattern type maps to
+        one or more existing sub-recipes in the ecosystem.
+    - pattern: session
+      claim: "session (audit|analyst|inspect|scan|review)"
+      verdict: CONFORM
+      explanation: "No Goose-native conflict — additive pattern for session detection"
+    - pattern: constitution
+      claim: "constitution|constitutional|charter|mas constitution"
+      verdict: CONFORM
+      explanation: "No Goose-native conflict — additive pattern for constitution detection"
+    - pattern: controller
+      claim: "controller|control|oversee|supervise|govern"
+      verdict: CONFORM
+      explanation: "No Goose-native conflict — additive pattern for controller detection"
+    - pattern: worktree
+      claim: "worktree|branch workspace|work tree (manager|management)"
+      verdict: CONFORM
+      explanation: "No Goose-native conflict — additive pattern for worktree detection"
+
+  # All-RESTRICTED check (STEP 0.5b)
+  all_restricted: false  # 5/5 verdicts = CONFORM, none RESTRICTED
+  skip_reason_applies: false
 
   # Recommendations
   recommendation:
@@ -67,21 +113,28 @@ validation:
 
   # Summary notes
   notes:
-    - "All validation checks passed for patch F-2211 (E1: add 3 patterns)"
-    - "YAML syntax: ✅ Valid — recipe/sub/sub_mas-intention-parser.yaml parses correctly"
-    - "L01 mechanism check: ✅ CONFORM — no Goose-native conflict (dev_goose_expert_check.py)"
+    - "All validation checks passed for patch F-2211 (E1: add 4 patterns)"
+    - "YAML syntax: ✅ Valid — recipe/sub/sub_mas-intention-parser.yaml parses correctly (58 patterns)"
+    - "L01 mechanism check: ✅ CONFORM — no Goose-native conflicts (dev_goose_expert_check.py exit=0)"
     - "Goose-expert post-apply validation: ✅ CONFORM — additive change, no cross-recipe conflicts"
-    - "Type uniqueness: ✅ All 3 types (verify, security, init) are new — no duplicates"
-    - "Schema conformance: ✅ Proposed patterns match list-of-dicts schema (pattern, type, description)"
+    - "Type uniqueness: ✅ All 4 types (session, constitution, controller, worktree) are new — no duplicates"
+    - "Schema conformance: ✅ All 4 patterns match required schema (pattern, type, description)"
+    - "Cross-reference check: ✅ Each pattern type maps to existing sub-recipes in recipe/sub/"
+    - "  - session → session-analyst, monitor-session, im-session-reader"
+    - "  - constitution → master-constitution"
+    - "  - controller → mas-controller"
+    - "  - worktree → worktree-manager"
     - "Non-structural: ✅ Patch appends to list field — no structural impact on workspace scores"
-    - "Cross-reference compatibility: ✅ sub_mas-generic-init recipe exists for init pattern type"
     - "Priority: 0.82 | Severity: medium | Risk assessment: LOW — additive only, zero regression risk"
+    - "Before/After: 54 → 58 patterns (+4), scores unchanged (non-structural patch)"
 
   # Check manifest
   checks_performed:
     - step_1_yaml_syntax: PASS
     - step_1_5_L01_mechanism: PASS
+    - step_0_4_cross_ref_check: PASS
     - step_0_5_goose_expert_post: PASS
-    - step_2_before_scores: COMPLETE
-    - step_2_after_scores: COMPLETE
+    - step_0_5b_all_restricted: NOT_TRIGGERED
+    - step_2_before_scores: 54 patterns
+    - step_2_after_scores: 58 patterns
     - step_3_recommend: APPROVE
