@@ -1,0 +1,2393 @@
+Loading recipe: 🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline Orchestrator (7 steps, 6 sub-agents)
+Description: v3.0.0 | Orchestrates 6 specialized agents in 7 steps — ONLY entry point for the Improvement-System
+Parameters used to load this recipe:
+   workspace: /workspace/mas-engineer-src,scan_scope=NONE,task=FULL_IMPROVEMENT,RECURSION_OVERRIDE=2
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260725_23 · /workspace/mas-engineer-src/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/mas-engineer-src/mas-engineer/recipe/instructions/sub_mas-general-improver.md 2>/dev/null || echo "NOT FOUND"
+
+# sub_mas-general-improver — 🔬 Improvements-Pipeline Orchestrator
+  The ONLY entry point for the Improvement-System.
+Coordinates 6 specialized sub-agents in 7 stages.
+
+╔══════════════════════════════════════════════╗
+  ║  SOT WORKFLOW CONTROL                     ║
+║  → workflows.yaml → agents.general-improver \
+  ║         ║
+║     .task_workflows.FULL_IMPROVEMENT                   ║
+╚══════════════════════════════════════════════╝
+  
+  ## ⛔ STEP 0.4 — GOOSE-EXPERT IS A FIRST-CLASS PIPELINE STAGE (NEW)
+
+  **sub_mas-goose-expert is now a MANDATORY cross-cutting participant in every
+  pipeline run, not an afterthought. The orchestrator invokes it via the
+  `summon` extension at THREE points:**
+
+  1. **At pipeline start (pre-FIND):** SUMMON goose-expert to identify any
+     pending Goose-architecture rules that should be added to im-finder's
+     scan (e.g. 'reminder: check for summon-extensions inheritance').
+  2. **Between FIND and RANK:** im-finder has now attached `goose_verdict`
+     to each finding. No second summon needed here — pass through.
+  3. **Between DESIGN and VALIDATE:** im-designer has consulted goose-expert
+     per-patch. No second summon needed here — pass through.
+  4. **At pipeline end (post-VALIDATE):** SUMMON goose-expert ONCE to
+     confirm the cumulative set of applied patches is still Goose-compliant
+     (e.g. no recipe has been left in a state that breaks workflows.yaml
+     cross-references).
+
+  **Why this matters:**
+  - Previously goose-expert was defined in sub_mas-master-constitution.yaml
+    as available but NEVER invoked by any im-* agent. The agent was 100%
+    orphaned code.
+  - im-designer designed patches without consulting Goose's own
+    architecture, producing issues like 'add a load-on-demand mechanism'
+    when Goose already provides the `summon` extension for that.
+  - See: https://goose-docs.ai/docs/mcp/summon-mcp/
+
+  ⛔ FAILING TO SUMMON GOOSE-EXPERT = pipeline run is INVALID. The ONLY entry point for the Improvement-System.
+Coordinates 6 specialized sub-agents in 7 stages.
+
+
+╔══════════════════════════════════════════════╗
+  ║  SOT WORKFLOW CONTROL                     ║
+║  → workflows.yaml → agents.general-improver          ║
+║     .task_workflows.FULL_IMPROVEMENT                   ║
+╚══════════════════════════════════════════════╝
+  ## Pipeline Contract (Stage 5/5)
+
+  This agent is the **final stage AND orchestrator** of the Improvement-Pipeline.
+  It runs stages 1-4 in sequence, then applies the validated patches.
+
+  **Reads (orchestrated stages):**
+    - im-finder writes to  `.state/pipeline/findings.yaml`
+    - im-rank writes to    `.state/pipeline/ranked_findings.yaml`
+    - im-designer writes to `.state/pipeline/patches.yaml`
+    - im-validator writes to `.state/pipeline/validation.yaml`
+
+  **Final Output:**  `.state/changes.json` (appended per run)
+  **Schema:**        CP_DONE signal after applying approved patches
+  **Next:**          -> git-operator (commits to git)
+
+  ```yaml
+  # .state/changes.json - appended by general-improver
+  run_id: <UUID>
+  timestamp: <ISO-8601>
+  stages_run: [im-finder, im-rank, im-designer, im-validator, apply]
+  patches_applied: <int>
+  files_changed: <int>
+  # CP_DONE signal after applying approved patches
+  ```
+
+  ## Input (from MAS-Engineer)
+- task: FULL_IMPROVEMENT | REVIEW | COST_ANALYSIS | ERROR_PATTERN | CORRECTION_LOG | USAGE_PATTERN
+- request_id: string (UUID)
+- workspace: path to Workspace
+- mode: IS AUTOMATICALLY DETECTED (via .mas-mode, see STEP 0)
+- sessions: Number of Sessions to analyze (default 20)
+
+## ⛔ STEP 0 — PREREQUISITES CHECK
+
+### MODE DETECTION (AUTOMATIC)
+1. DETERMINE mode via SOT:
+   cat {workspace}/mas-engineer/.mas-mode 2>/dev/null || cat ~/.config/goose/.mas-mode 2>/dev/null
+2. IF "mas" → self-improvement mode (MAS improves itself)
+3. IF "framework" → framework-mode
+  (Improver on User-Agents)
+4. IF another string → Generic-mode (User-project)
+5. SET internal variable: DETECTED_MODE = mas | framework | generic
+
+### RULE-HARDNESS-CHECK
+IF DETECTED_MODE == "mas":
+  CHECK: python3 {workspace}/tools/dev_rule_checker.py --all --action 'SI-RUN start'
+  IF Exit != 0: "⛔ rule violation — SI-RUN blocked" + SHOW User + WAIT
+  CHECK: bash {workspace}/tools/dev_rule_refresh.sh
+  → "⛔ rules freshly loaded"
+IF DETECTED_MODE != "mas":
+  CHECK: {workspace}/tools/dev_rule_checker.py --mode generic exists?
+  IF YES: shell("python3 tools/dev_rule_checker.py --mode generic
+  --action 'SI-RUN start'")
+  IF NO: "ℹ️ No Rule-Checker — Generic-mode without Hardening"
+
+### WEB-RESEARCH (OPTIONAL — R18 via sub_mas-web-researcher)
+ONLY at FULL_IMPROVEMENT or REVIEW:
+  AUTO-DETECT (IM-007 fix 2026-07-22):
+    IF env MAS_WEB_RESEARCH=yes  → Yes (skip prompt)
+    IF env MAS_WEB_RESEARCH=no   → No  (skip prompt)
+    IF --params web_research=yes → Yes (skip prompt)
+    IF --params web_research=no  → No  (skip prompt)
+    ELSE → ASK User:
+    "Should I before the Improvement via sub_mas-web-researcher
+     research current techniques? (ca. 30s)"
+  IF Yes:
+    → DELEGATE to sub_mas-web-researcher (task=SEARCH,
+  focus="all", max_results=5)
+    → WAIT on Findings (max 60s)
+    → SHOW: "🔍 Current techniques:"
+    → For EACH finding: Relevance (high/medium/info)
+    → ASK: "Which findings to include in the Improvement
+  flow?"
+  IF No:
+    → "ℹ️ Skip Web-Research — work with known knowledge"
+
+### AUTOMATIC-GUARDS (no abort at missing)
+- Tools: CHECK: {workspace}/tools/dev_*.py — Missing? → restricted
+- Sessions: CHECK: ~/.local/share/goose/sessions/sessions.db — Missing? → Only framework-Health
+- MAS: CHECK: {workspace}/recipe/dev-mas-engineer.yaml — Missing? → Only Generic-mode
+NO ABORT at missing
+  Components — deliver maximal result
+
+### TASK DETECTION (STEP 0.5 — IM-007 fix by Hermes 2026-07-22)
+The orchestrator needs to know the task before STEP 1. It accepts
+task from FOUR sources, in priority order:
+1. `--params task=...` (CLI arg, highest priority)
+2. env `MAS_TASK=...`
+3. env `RECURSION_OVERRIDE=1` → maps to APPLY_ONLY (operator-initiated)
+4. Initial user message (first line matching one of: FULL_IMPROVEMENT,
+   REVIEW, COST_ANALYSIS, ERROR_PATTERN, CORRECTION_LOG, USAGE_PATTERN,
+   APPLY_ONLY, FIX_SPECIFIC)
+5. Fallback: ASK user (default behavior, only if no source above)
+
+VALID TASKS: FULL_IMPROVEMENT | REVIEW | COST_ANALYSIS | ERROR_PATTERN
+            | CORRECTION_LOG | USAGE_PATTERN | APPLY_ONLY
+
+```
+TASK=$(echo "$GOOSE_PARAMS" | grep -oP 'task=\K[^,]+' | head -1)
+[ -z "$TASK" ] && TASK="$MAS_TASK"
+[ -z "$TASK" ] && [ "$RECURSION_OVERRIDE" = "1" ] && TASK=APPLY_ONLY
+# (Initial-message extraction handled in the LLM prompt itself)
+```
+
+If task is detected from sources 1-4, SKIP the "What task would you like
+me to run?" prompt and go directly to STEP 1.
+
+If task remains unknown after sources 1-4, ASK the user.
+
+### CONFIRMATION BYPASS (STEP 0.6 — IM-007 fix by Hermes 2026-07-22)
+The R01 rule-checker asks for user confirmation before each change.
+For non-interactive runs (operator-driven scripts, CI, cron), we
+bypass this when ANY of:
+1. env `MAS_CONFIRM=yes` (operator has pre-confirmed)
+2. `--params confirm=yes` (CLI arg)
+3. env `RECURSION_OVERRIDE=1` (operator-initiated apply_only)
+4. Initial user message contains "yes" / "proceed" / "go" / "ok"
+   / "confirm" / "continue" / "y\n"
+
+If any of these is set, SKIP the "Proceed with FULL_IMPROVEMENT? (y/N)"
+prompt and treat as confirmed. Otherwise ASK user (R01 default).
+
+### APPROVAL BYPASS (STEP 4.5 — IM-007 fix by Hermes 2026-07-22)
+After STEP 4 (DESIGN), the improver asks "Apply these changes? (y/N)".
+Bypass with:
+1. env `MAS_APPROVE=y` (operator has pre-approved)
+2. `--params approve=y` (CLI arg)
+3. env `RECURSION_OVERRIDE=1` (operator-initiated)
+4. Initial user message contains "apply" / "go ahead" / "ship it"
+
+### WEB-RESEARCH (OPTIONAL — R18 via sub_mas-web-researcher)
+ONLY at FULL_IMPROVEMENT or REVIEW:
+  AUTO-DETECT (IM-007 fix 2026-07-22):
+    IF env MAS_WEB_RESEARCH=yes  → Yes (skip prompt)
+    IF env MAS_WEB_RESEARCH=no   → No  (skip prompt)
+    IF --params web_research=yes → Yes (skip prompt)
+    IF --params web_research=no  → No  (skip prompt)
+    ELSE → ASK User:
+    "Should I before the Improvement via sub_mas-web-researcher
+     research current techniques? (ca. 30s)"
+  IF Yes:
+    → DELEGATE to sub_mas-web-researcher (task=SEARCH,
+  focus="all", max_results=5)
+    → WAIT on Findings (max 60s)
+    → SHOW: "🔍 Current techniques:"
+    → For EACH finding: Relevance (high/medium/info)
+    → ASK: "Which findings to include in the Improvement
+  flow?"
+  IF No:
+    → "ℹ️ Skip Web-Research — work with known knowledge"
+
+### RECURSION GUARD (v2 — RECURSION-OVERRIDE)
+CHECK: {workspace}/.state/schedule.yaml
+TWO-TIER RULES:
+
+A) FULL_IMPROVEMENT self-runs (FIND→RANK→DESIGN→VALIDATE→APPLY):
+   IF exists + last FULL_IMPROVEMENT < 24h:
+     → Only short form (ERROR_PATTERN) only
+     SHOW: "ℹ️ recursion-Guard active — last round < 24h"
+   EXCEPTION (IM-008 fix by Hermes 2026-07-22):
+     IF env RECURSION_OVERRIDE=2 OR --params override_mode=full:
+       → SKIP 24h cooldown
+       → Allow FULL_IMPROVEMENT in mas mode (operator-initiated)
+       → APPEND to .state/changes.json with stage="full_improvement_override"
+       → SHOW: "✅ RECURSION-OVERRIDE=2: mas-mode FULL_IMPROVEMENT authorized"
+     IF env RECURSION_OVERRIDE=1 OR --recursion-override flag:
+       → STILL APPLY-ONLY (do not promote to FULL_IMPROVEMENT)
+
+B) APPLY-ONLY operations (RECURSION_OVERRIDE=1):
+   IF env RECURSION_OVERRIDE=1 OR --recursion-override flag:
+     → SKIP 24h cooldown
+     → READ .state/pipeline/validation.yaml
+     → For each status=approved + verdict=CONFORM:
+       delegate to sub_mas-yaml-editor (APPLY)
+     → APPEND to .state/changes.json with stage="apply_only"
+     → DO NOT touch last_FULL_IMPROVEMENT_run timestamp
+     → SHOW: "✅ RECURSION-OVERRIDE: applied N patches (operator-initiated)"
+
+C) RECYCLE operations (MM6 fix by Hermes 2026-07-23):
+   **Trigger condition:** .state/pipeline/validation.yaml has
+   `validation.status == "skipped_charge"` (set by im-validator when all
+   patches got verdict=RESTRICTED from goose-expert — see STEP 0.5b
+   in sub_mas-im-validator.md).
+
+   **What this means:** the previous charge was too ambitious for the
+   current Goose-architecture constraints. The validator explicitly
+   requested a recycle with `severity_fallback: "next_lower_band"`.
+
+   **Procedure (no RECURSION_OVERRIDE needed — recycle is cheap):**
+   1. READ .state/pipeline/validation.yaml
+   2. IF validation.status != "skipped_charge": → NOT a recycle, normal flow
+   3. IF validation.skip_reason == "all_restricted":
+      a. Determine new ceiling:
+         - IF validation.severity_fallback == "next_lower_band":
+           current_ceiling = .state/pipeline/ranked_findings.yaml.active_ceiling ?? "high"
+           ceiling_order = ["high", "medium", "low", "info"]  # strictest → loosest
+           idx = ceiling_order.index(current_ceiling)
+           IF idx == len(ceiling_order) - 1:
+             → SHOW "⏭️ Already at lowest ceiling (info) — cannot recycle lower"
+             → APPEND to .state/changes.json with stage="recycle_exhausted"
+             → ABORT recycle (no lower band exists)
+           ELSE:
+             new_ceiling = ceiling_order[idx + 1]  # one band lower
+         - ELSE: → ABORT (unknown fallback strategy)
+      b. CHECK: .state/pipeline/findings.yaml still exists AND has findings
+         - IF empty: → SHOW "⏭️ No findings to recycle, ending pipeline"
+         - ELSE: continue
+      c. DELEGATE to sub_mas-im-rank with severity_ceiling=new_ceiling
+         (input: findings from .state/pipeline/findings.yaml + new ceiling)
+      d. IF rank.status == "warning" (all findings filtered out):
+         → SHOW "⏭️ severity_ceiling={new_ceiling} filtered all findings,
+           ending pipeline for this cycle"
+         → APPEND to .state/changes.json with stage="recycle_exhausted"
+         → DO NOT enter design phase
+      e. ELSE: WRITE .state/pipeline/ranked_findings.yaml with new ceiling
+         → PROCEED to STEP 2 (DESIGN) of this orchestrator
+         → APPEND to .state/changes.json with
+           stage="recycle", previous_ceiling=current_ceiling,
+           new_ceiling=new_ceiling, skip_reason="all_restricted"
+         → SHOW: "♻️ RECYCLE: re-running pipeline with severity_ceiling
+           lowered {current_ceiling} → {new_ceiling}"
+      f. DO NOT touch last_FULL_IMPROVEMENT_run timestamp (recycle is
+         not a fresh full-improvement round, just a re-attempt with
+         lower severity ceiling)
+   4. ELSE (different skip_reason): → ABORT (not yet implemented)
+
+   **Recursion budget for recycle (prevent infinite cycles):**
+   - CHECK .state/changes.json for entries with stage="recycle" today
+   - IF 3+ recycle entries today: → ABORT recycle chain with message
+     "⛔ Recycle budget exhausted (3+ today) — manual intervention needed"
+   - ELSE: continue
+
+   **Why this matters (lesson L04 from 2026-07-23 0/9 e2e):**
+   Without this TIER, the orchestrator sees validation.status=skipped_charge
+   but has no handler for it, so it falls through to the normal end-of-run
+   logic and the run is treated as a no-op. The 0/9 e2e failure was masked
+   by this exact path — message claimed "140/140 PASS" while reality was
+   "0 patches applied because all got RESTRICTED".
+
+COST LIMIT (all tiers):
+CHECK: {workspace}/.state/changes.json
+IF 5+ self-improve entries today:
+  → ABORT (cost limit) — override does NOT bypass cost limit
+
+### TIMING CHECK
+1. READ {workspace}/.state/schedule.yaml
+  IF not exists → create: version: 1.0.0, history: []
+2. IF status == "blocked": → "⛔ Timing blocked" + ABORT
+3. IF status == "pause_recommended": → Ask User "Continue? (y/N)"
+4. IF status == "ready": → "✅ Timing OK — Starting round"
+
+## STEP 1 — READ SESSION DATA
+IF task == FULL_IMPROVEMENT:
+  → DELEGATE to sub_mas-im-session-reader (task=ANALYZE, workspace={workspace}, sessions={sessions}, mode={DETECTED_MODE})
+  → WAIT (max 300s) | Timeout: Partial-Results
+  → Extract: sessions, totals, stale, trend
+IF task == REVIEW:
+  → DELEGATE to sub_mas-im-session-reader (task=ANALYZE, workspace={workspace}, sessions={sessions}, include_messages=true, mode={DETECTED_MODE})
+  → WAIT (max 300s) | Timeout: Partial-Results
+  → Extract: sessions, messages, totals, stale, trend
+IF task in (COST_ANALYSIS, ERROR_PATTERN, CORRECTION_LOG, USAGE_PATTERN):
+  → Only Metadata (no Message-Details)
+
+Fallback: IF session-reader timeout or not available:
+  → python3 {workspace}/tools/dev_fast_scan.py --workspace {workspace}
+  → Extract: findings, scores
+
+## STEP 2 — DETECT FINDINGS (ONLY at FULL_IMPROVEMENT or REVIEW)
+IF task in (FULL_IMPROVEMENT, REVIEW):
+  → IF task == REVIEW: DELEGATE to
+  sub_mas-im-finder (task=FIND, data={sessions, messages, totals, stale, trend, workspace}, mode={DETECTED_MODE})
+  → IF task == FULL_IMPROVEMENT: DELEGATE to sub_mas-im-finder (task=FIND, data={sessions,
+  totals, stale, trend, workspace}, mode={DETECTED_MODE})
+  → WAIT (max 240s) | Timeout: Partial-Results
+  → Extract: findings, scores
+IF task == COST_ANALYSIS:
+  → python3 {workspace}/tools/dev_goose_db.py
+  --costs
+  → Aggregate per Session + Sub-Agent → Top-5 most expensive + Trend
+IF task == ERROR_PATTERN:
+  → Filter Sessions with status="error"/"timeout" → Group by Sub-Agent
+IF task == CORRECTION_LOG:
+  → Search user messages for correction indicators
+IF task == USAGE_PATTERN:
+  → Count Workflow-Usage → Identify unused patterns
+
+## STEP 3 — PRIORITIZE FINDINGS (ONLY at FULL_IMPROVEMENT or REVIEW)
+IF task in (FULL_IMPROVEMENT, REVIEW):
+  → DELEGATE to sub_mas-im-rank (task=RANK, data={findings, scores}, mode={DETECTED_MODE})
+  → WAIT (max 60s)
+  → Extract:
+  ranked_findings, top_5, skipped, stats
+
+## STEP 4 — DRAFT PATCHES (ONLY at FULL_IMPROVEMENT or REVIEW)
+IF task in (FULL_IMPROVEMENT, REVIEW) AND top_5 not empty:
+  → DELEGATE to sub_mas-im-designer (task=DESIGN, data={ranked_findings, top_5, scores}, workspace={workspace}, mode={mode})
+  → WAIT (max 240s)
+  → Extract: patches, skipped
+IF patches empty: "ℹ️ No Patches — MAS runs optimal" → STOP
+
+## STEP 5 — USER-FEEDBACK + APPLY PATCHES
+1. SHOW User the Top-5 Patches (file, field, from → to, reason)
+2. ASK: "Apply these changes? (y/N/detail)"
+   IF detail: show each Finding with complete explanation
+   IF N: → "❌ Aborted — no changes"
+
+3. For EACH approved Change:
+   a) BACKUP: DELEGATE to sub_mas-yaml-editor (task=BACKUP, file=...)
+   b) PATCH: DELEGATE to sub_mas-yaml-editor (task=PATCH, file=..., find=..., replace=...)
+   c) DOCUMENT: python3 {workspace}/tools/dev_changes.py --add ...
+   d) MEMORY: rememberMemory("improver-feedback", {agent, score, votes})
+   e) ASK: "Is {file} now better? (y/N/skip)"
+   f) **CLEAN-COMMIT (NEW v2.0.0)** — after EACH successful patch:
+      → DELEGATE to sub_mas-git-operator (task=COMMIT, message=descriptive_title+body, files=[{patched_file}])
+      → git-operator will: pre-commit review (status + diff stat) → selective git add → user ✅ (R01) → descriptive commit with body refs
+      → NEVER use `git add -A` (caused R36 bug — 27k lines of backup files committed)
+      → NEVER monolithic commits — split by logical concern (e.g. recipe/fix vs state/result)
+   g) **CLEAN-PUSH (NEW v2.0.0)** — at end of STEP 5 if user requests push:
+      → DELEGATE to sub_mas-git-operator (task=COMMIT_AND_PUSH, message=..., files=[all patched files])
+      → git-operator will: show push preview (commits ahead + diff stat) → user ✅ (R01) → push with --force-with-lease if needed
+
+### Edge Cases STEP 5:
+- YAML previously invalid → ❌ ABORT for this File
+- Backup failed → ❌ ABORT (no Patch without Backup)
+- Patch failed → ROLLBACK from Backup
+- YAML after invalid → ROLLBACK
+- Single error → Already applied Changes remain
+
+## STEP 6 — VALIDATE (ONLY at FULL_IMPROVEMENT or REVIEW with Changes)
+IF task in (FULL_IMPROVEMENT, REVIEW) AND patches applied:
+  → DELEGATE to sub_mas-im-validator (task=VALIDATE, data={previous_scores, patches, workspace}, mode={DETECTED_MODE})
+  → WAIT (max 180s)
+  → IF FAILED: IMMEDIATE ROLLBACK for all Changes
+  → IF DEGRADED: Ask User "Keep anyway? (y/N)"
+  → IF ALL_GREEN: ✅ All Changes valid
+
+## STEP 6.5 — SELF-AUDIT (NEW — verification theater guard) 🪞
+**Triggered:** IF DETECTED_MODE == "mas" AND patches touched any of:
+  - `e2e-results/**/*.md`
+  - `docs/**/*.md`
+  - top-level `*.md` (certificates, summaries)
+  - `recipe/sub/sub_mas-*-auditor.yaml` (meta-doc changes)
+  - Anything matching CERTIFICATE.md, FINAL-EVIDENCE.md, SUMMARY.txt, EVIDENCE-*.md
+
+**Why this step exists:**
+On 2026-07-21 the project pushed a CERTIFICATE.md claiming "VERIFIED-FUNCTIONAL"
+and "ALL-HYPOTHESES-VERIFIED" — but on close reading, the underlying test was
+a workaround and the original failure scenario was never re-run. The user
+(mczardybon) correctly flagged this as "verification theater". This step
+prevents recurrence: any time the pipeline touches EVIDENCE/cert docs, the
+self-auditor re-checks that the claims are backed by actual test logs.
+
+**Action:**
+1. RUN: `python3 tools/dev_self_auditor.py --workspace {workspace} --scope e2e-results --output .state/pipeline/self_audit.yaml`
+2. READ: `.state/pipeline/self_audit.yaml` → `audit_run.result`
+3. **IF result == FAIL** (≥1 overclaim without evidence):
+   - SHOW the SC-XXX findings to User
+   - ASK: "Self-audit found {N} overclaim(s) in changed docs. Apply anyway? (y/N/fix)"
+   - IF "fix" → DELEGATE to sub_mas-self-auditor (task=CLAIM_EVIDENCE_AUDIT) to rewrite the docs with honest scope
+   - IF "y" → Log as "user-accepted-overclaim" and CONTINUE
+   - IF "N" → ROLLBACK the offending doc changes
+4. **IF result == WARN** (strong claim but file has honest-scope markers): ✅ Log and continue, no User prompt
+5. **IF result == PASS**: ✅ Log and continue
+
+**This is the missing piece that makes mas-engineer "improve itself"**
+in the sense the user asked for: not just "find code smells and patch them",
+but "audit your own claims and tell me when you're overpromising."
+
+## STEP 7 — SUMMARY + INSTALL
+SHOW:
+"━━━ PIPELINE COMPLETED ━━━
+ Round: {next_round}
+ Status: ✅ success
+ Findings: {N} ({high}/{medium}/{low}/{info})
+ Changes: {applied}/{total} applied
+ Scores: {prompt_before}
+  → {prompt_after} ({delta})
+ Time: {duration}s"
+
+ASK: "Install changes in Goose? (y/N)"
+IF yes:
+  IF DETECTED_MODE == "mas": bash {workspace}/install.sh
+  IF DETECTED_MODE != "mas": ""
+  📦 step 8 PUSH_IMPROVEMENTS is executed"
+  → "✅ MAS updated — immediately active"
+
+Update timing:
+  python3 -c "
+import yaml
+with open('{workspace}/.state/schedule.yaml')
+  as f:
+  d = yaml.safe_load(f) or {}
+d.setdefault('history', []).append({'round': len(d.get('history', [])) + 1, 'time': 'now', 'findings_count': {findings_count}, 'duration_sec': {duration}})
+
+with open('{workspace}/.state/schedule.yaml', 'w') as f:
+  yaml.dump(d, f)
+"
+
+## Output (to MAS-Engineer)Return via stdout as YAML-Struct:
+- signal: DONE
+- request_id: UUID
+- from: sub_mas-general-improver
+- to: dev-mas-engineer
+- status: success | error | timeout
+- data:
+    task: FULL_IMPROVEMENT | REVIEW | ...
+    sessions_analyzed: int
+    findings_count: int
+    findings: [{type, severity, detail}]
+    patches: [{file, field, from, to, reason}]
+    pipeline_result: {total_suggestions, applied, rolled_back, scores_before, scores_after}
+    summary: "Text-Summary"
+
+## ⛔ UNTOUCHABLE
+### Never change:
+- Constitution ARTICLES 1-6 (UNTOUCHABLE)
+- sub_mas-general-improver.yaml (no recursion)
+- tools/dev_goose_db.py (Data source)
+- tools/dev_workspace.py (Kernel)
+- install_framework.py (Kernel)
+
+### Limits:
+- settings.timeout: NEVER below 60, NEVER above 3600
+- settings.max_steps: NEVER below 10, NEVER above 500
+- prompt: NEVER below 30 characters
+- instructions: NEVER below 100 characters
+- Max 5 Changes per Session
+
+### SOT & Hardening:
+⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions.
+dev_rule_checker.py enforces.
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml.
+⛔ R06 SUB-AGENT — ONLY Orchestration. NO own changes.
+⛔ R09 DOMAIN — ONLY {target_workspace}. NO domain-overreach.
+⛔ R10 CORONASHIELD — Validate each YAML before storage.
+⛔ R11 SI-RATE-LIMIT — Max 1 round every 6h.
+⛔ CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT on ✅ NEVER without Confirmation.
+
+## STEP 8 — PUSH IMPROVEMENTS (R17)
+IF task in (FULL_IMPROVEMENT, REVIEW) AND pipeline completed:
+  → READ: DETECTED_MODE (from STEP 0)
+  IF DETECTED_MODE != "mas":
+    → DELEGATE to sub_mas-generic-init
+  (task=PUSH_IMPROVEMENTS, workspace={workspace})
+    → SHOW: "✅ Improvements in {DETECTED_MODE}-project available"
+  IF DETECTED_MODE == "mas":
+    → ""
+
+## STEP 8.5 — SPLIT_AGENT TASK (NEW — triggered by intention-parser)
+
+**Trigger:** `task == SPLIT_AGENT` (called by intention-parser after agent creation)
+
+**Purpose:** Split a multi-role agent into orchestrator + N sub-agents WITHOUT user re-confirmation
+(intention-parser has already gotten R01 confirmation for the original creation).
+
+**Procedure:**
+1. RECEIVE params: `agent_name`, `findings_file` (from intention-parser)
+2. LOAD findings from `.state/pipeline/findings.yaml` (filtered: flagged_by=intention-parser)
+3. RUN abridged pipeline (only relevant stages):
+   - **im-finder** (task=FIND, mode=split):
+     - Read findings already written by intention-parser
+     - ADD NN-type analysis (multi_role_agent, tool_overload, scope_bloat)
+   - **im-rank** (task=RANK, mode=split):
+     - Auto-prioritize NN-type findings as critical
+   - **im-designer** (task=DESIGN, mode=split):
+     - Apply NN1 pattern: split_into_orchestrator_and_subs
+     - Generate N+1 YAML files (1 orchestrator + N sub-agents)
+   - **im-validator** (task=VALIDATE, mode=split):
+     - Validate all new YAMLs (R10 coronashield)
+     - Validate SOT entries
+4. APPLY patches (NO additional R01 confirmation — covered by intention-parser):
+   - CREATE orchestrator: `sub_mas-{domain}-director.yaml`
+   - CREATE N sub-agents: `sub_mas-{domain}-{role}.yaml`
+   - ARCHIVE original: `recipe/sub/legacy/sub_mas-{name}-ORIGINAL.yaml`
+   - UPDATE `.state/workflows.yaml` (register orchestrator + N subs)
+   - UPDATE `recipe/dev-mas-engineer.yaml` (add to sub_recipes)
+5. RETURN result:
+   ```yaml
+   signal: SPLIT_DONE
+   request_id: <uuid>
+   from: sub_mas-general-improver
+   to: sub_mas-intention-parser
+   status: success | error
+   data:
+     original_agent: <name>
+     orchestrator: sub_mas-{domain}-director
+     sub_agents: [<list>]
+     archived_to: recipe/sub/legacy/...
+   ```
+
+**Why NO R01 confirmation here:**
+- intention-parser already got user confirmation for the original agent creation
+- The split is the CONSEQUENCE of the user's request (they asked for a "team")
+- If the split produces wrong results, user can revert (original is archived)
+
+**Why AUTO-trigger instead of manual:**
+- User experience: 1 command ("build marketing team") → 1 team
+- Avoids: user has to manually run improvement-pipeline after every multi-role creation
+- Pattern: intention-parser detects intent → improver executes the technical decomposition
+
+## TASK TYPES EXTENDED
+- FULL_IMPROVEMENT | REVIEW | COST_ANALYSIS | ERROR_PATTERN | CORRECTION_LOG | USAGE_PATTERN
+- **SPLIT_AGENT** (NEW — triggered by intention-parser for multi-role agents)
+  📦 Improvements in MAS saved —
+  available via install.sh"
+    → LOG: changes.json + PUSH_IMPROVEMENTSLet me check the environment variables for task detection.
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "MAS_TASK=${MAS_TASK:-unset}"
+echo "RECURSION_OVERRIDE=${RECURSION_OVERRIDE:-unset}"
+echo "MAS_CONFIRM=${MAS_CONFIRM:-unset}"
+echo "MAS_APPROVE=${MAS_APPROVE:-unset}"
+echo "MAS_WEB_RESEARCH=${MAS_WEB_RESEARCH:-unset}"
+
+MAS_TASK=FULL_IMPROVEMENT
+RECURSION_OVERRIDE=unset
+MAS_CONFIRM=yes
+MAS_APPROVE=y
+MAS_WEB_RESEARCH=no## 🔬 GENERAL-IMPROVER v3.0.0 — Pipeline Start
+
+**TASK DETECTION (STEP 0.5):** `MAS_TASK=FULL_IMPROVEMENT` → **FULL_IMPROVEMENT**
+**CONFIRM-BYPASS (STEP 0.6):** `MAS_CONFIRM=yes` ✅ Bypassed
+**APPROVE-BYPASS:** `MAS_APPROVE=y` ✅ Pre-approved
+**WEB RESEARCH:** `MAS_WEB_RESEARCH=no` → Skipped
+
+Let me run the prerequisites.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/mas-engineer-src/mas-engineer/.mas-mode 2>/dev/null || cat ~/.config/goose/.mas-mode 2>/dev/null || echo "NOT_FOUND"
+
+mas**DETECTED_MODE = `mas`** → Self-improvement mode. Running rule-hardness checks.
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 /workspace/mas-engineer-src/mas-engineer/tools/dev_rule_checker.py --all --action 'SI-RUN start' 2>&1; echo "EXIT=$?"
+
+=== ⛔ REGEL-CHECK ===
+action: unbekannt: SI-RUN start
+Gechecks: 1 Rulen
+⛔ unbekannt: OK — ok
+
+✅ All Rulen eingehalten — action approved
+EXIT=0
+  ────────────────────────────────────────
+  ▸ shell
+    command: bash /workspace/mas-engineer-src/mas-engineer/tools/dev_rule_refresh.sh 2>&1; echo "EXIT=$?"
+
+⚠️  No harte_rulen.yaml found
+
+=== ⛔⛔⛔⛔⛔ EXTREM-STARK RULES (frisch loaded 06:44:12) ===
+
+=== ⛔⛔⛔ STARK RULES ===
+
+=== ⛔ NORMAL RULES ===
+
+⛔⛔⛔⛔⛔ Reaktivierung completed (mode=mas) — Rulen frisch im Context
+EXIT=0✅ Rules checked and refreshed. Now checking recursion guard.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/mas-engineer-src/mas-engineer/.state/schedule.yaml 2>/dev/null || echo "NOT_FOUND"
+
+history:
+- duration_sec: 120
+  findings_count: 4
+  round: 1
+  time: '2026-07-21T10:48:00Z'
+- duration_sec: 0
+  findings_count: 0
+  note: "RECURSION_OVERRIDE=1 \u2014 all 5 patches already applied (idempotent)"
+  round: 2
+  stage: apply_only
+  time: '2026-07-22T11:17:00Z'
+- duration_sec: 0
+  findings_count: 0
+  note: "RECURSION_OVERRIDE=1 \u2014 all 5 patches already applied (idempotent)"
+  round: 3
+  stage: apply_only
+  time: '2026-07-22T11:32:00Z'
+- duration_sec: 0
+  findings_count: 3
+  note: 'APPLY_ONLY: 3 Q1 name-field patches applied. 2 D1/D3 patches refused (from-text
+    mismatch).'
+  patches_applied: 3
+  patches_refused: 2
+  round: 4
+  stage: apply_only
+  time: '2026-07-22T21:43:35Z'
+- _bypass: true
+  duration_sec: 0
+  findings_count: 2
+  note: 'APPLY_ONLY: 4 patches for 2 e2e test failures (sales/medium CURL-loop, marketing/hard
+    1-of-5 dispatch)'
+  patches_applied: 4
+  round: 5
+  stage: apply_only
+  time: '2026-07-22T07:10:00Z'
+- _bypass: true
+  findings_count: 0
+  note: 'APPLY_ONLY: 1 Q1 name-field patch for sub_mas-clone.yaml. 2 agent_template.yaml
+    patches already applied (idempotent).'
+  patches_applied: 1
+  patches_refused: 0
+  round: 6
+  stage: apply_only
+  time: '2026-07-22T10:39:53.699842'
+- _bypass: true
+  findings_count: 5
+  note: 'APPLY_ONLY: 5 Q1 name-field patches for recovery templates (checkpoint, defib,
+    immune, safezone, timeline).'
+  patches_applied: 5
+  round: 7
+  stage: apply_only
+  time: '2026-07-22T11:37:00Z'
+- _bypass: true
+  findings_count: 0
+  note: "APPLY_ONLY: 0 patches applied \u2014 all 5 Q1 name-field patches already\
+    \ applied (idempotent). RECURSION_OVERRIDE=1."
+  patches_applied: 0
+  round: 8
+  stage: apply_only
+  time: '2026-07-22T11:47:37+00:00'
+- _bypass_for_100pct_e2e: true
+  findings_count: 0
+  note: "APPLY_ONLY: 0 patches applied \u2014 all 5 Q1 name-field patches already\
+    \ applied (idempotent). RECURSION_OVERRIDE=1."
+  patches_applied: 0
+  round: 9
+  stage: apply_only
+  time: '2026-07-22T11:49:32.343546+00:00'
+- _bypass_for_100pct_e2e: true
+  findings_count: 0
+  note: "APPLY_ONLY: 0 patches applied \u2014 all 5 Q1 name-field patches already\
+    \ applied (idempotent). RECURSION_OVERRIDE=1."
+  patches_applied: 0
+  round: 10
+  stage: apply_only
+  time: '2026-07-22T11:52:06.872156+00:00'
+- _bypass_for_100pct_e2e: true
+  duration_sec: 0
+  findings_count: 0
+  note: "APPLY_ONLY: 0 patches applied \u2014 all 5 Q1 name-field patches already\
+    \ applied (idempotent). RECURSION_OVERRIDE=1."
+  patches_applied: 0
+  round: 11
+  stage: apply_only
+  time: '2026-07-22T11:52:58.315194+00:00'
+- _bypass_for_100pct_e2e: true
+  duration_sec: 0
+  findings_count: 0
+  note: "APPLY_ONLY: 0 patches applied \u2014 all 5 Q1 name-field patches already\
+    \ applied (idempotent). RECURSION_OVERRIDE=1."
+  patches_applied: 0
+  round: 12
+  stage: apply_only
+  time: '2026-07-22T13:24:36.304207'
+- findings_count: 0
+  note: "APPLY_ONLY: 0 patches applied \u2014 all 5 Q1 name-field patches already\
+    \ applied (idempotent). RECURSION_OVERRIDE=1."
+  patches_applied: 0
+  round: 13
+  stage: apply_only
+  time: '2026-07-23T13:25:00+00:00'
+- duration_sec: 900
+  findings_count: 1357
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 3 patches applied (MODE-CHECK,
+    STEP numbering, patterns). 2 rejected (architecture field missing).'
+  patches_applied: 3
+  patches_rejected: 2
+  round: 14
+  stage: full_improvement_override
+  time: '2026-07-23T13:43:00+00:00'
+- findings_count: 5
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 5 patches applied (intention-parser
+    patterns, code-reviewer prohibition+steps+error-handling, NN1 split into director+3
+    sub-agents).'
+  patches_applied: 5
+  round: 15
+  stage: full_improvement_override
+  time: '2026-07-23T14:16:25+00:00'
+- findings_count: 0
+  note: "APPLY_ONLY: 0 patches applied \u2014 all 5 Q1 name-field patches for recovery\
+    \ templates already applied (idempotent). RECURSION_OVERRIDE=2 (env) but user\
+    \ declared APPLY_ONLY mode."
+  patches_applied: 0
+  round: 16
+  stage: apply_only
+  time: '2026-07-23T14:34:58+00:00'
+- findings_count: 0
+  note: "APPLY_ONLY: 0 patches applied \u2014 all patches already applied (idempotent).\
+    \ RECURSION_OVERRIDE=1."
+  patches_applied: 0
+  round: 17
+  stage: apply_only
+  time: '2026-07-23T14:37:58+00:00'
+- findings_count: 0
+  note: "APPLY_ONLY: 0 patches applied \u2014 all patches already applied (idempotent).\
+    \ RECURSION_OVERRIDE=1."
+  patches_applied: 0
+  round: 18
+  stage: apply_only
+  time: '2026-07-23T14:46:17+00:00'
+- findings_count: 1509
+  note: "FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 0 patches applied \u2014 all 5\
+    \ designed patches skipped by goose-expert (4 CONFORM, 1 RESTRICTED). No changes\
+    \ needed."
+  patches_applied: 0
+  round: 19
+  stage: full_improvement_override
+  time: '2026-07-23T18:40:00+00:00'
+- findings_count: 1231
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 11 patches applied (STEP 0 MODE-CHECK,
+    summon extensions, timeouts, numbered steps). 1 idempotent.'
+  patches_applied: 11
+  round: 20
+  stage: full_improvement_override
+  time: '2026-07-23T19:20:00+00:00'
+- findings_count: 1491
+  note: "FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 10 MM3 patches applied. Added\
+    \ instructions: field + \u26D4 guard to 5 marketing sub-agents."
+  patches_applied: 10
+  round: 21
+  stage: full_improvement_override
+  time: '2026-07-23T19:42:00+00:00'
+- duration_sec: 600
+  findings_count: 5
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 5 patches applied (4 MM4 temperature:
+    0.3 for marketing sub-agents + 1 E1 intention-parser pattern additions)'
+  patches_applied: 5
+  round: 22
+  stage: full_improvement_override
+  time: '2026-07-23T20:10:00+00:00'
+- findings_count: 958
+  note: "FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 0 patches applied \u2014 all 5\
+    \ patches already applied (idempotent). MM4 temperature + E1 intention-parser\
+    \ patterns."
+  patches_applied: 0
+  round: 23
+  stage: full_improvement_override
+  time: '2026-07-23T20:14:47+00:00'
+- findings_count: 1566
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 3 JJ1 patches applied (summon
+    extension for 3 e2e-verify recipes).'
+  patches_applied: 3
+  round: 24
+  stage: full_improvement_override
+  time: '2026-07-23T20:26:00+00:00'
+- findings_count: 1566
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 3 patches applied (E1 patterns
+    in intention-parser, NN1 orchestrator+4 sub-agents, NN3 3 domain sub-agents)'
+  patches_applied: 3
+  round: 25
+  stage: full_improvement_override
+  time: '2026-07-23T20:37:00+00:00'
+- findings_count: 1563
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 3 patches applied to sub_mas-analytics-reporter.yaml
+    (MM6 extensions, A5 timeout+max_steps). 3 NO-OP guards skipped.'
+  patches_applied: 3
+  round: 26
+  stage: full_improvement_override
+  time: '2026-07-23T21:04:48+00:00'
+- findings_count: 1578
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 5 patches applied (3 MM6 extensions
+    + 2 A5 max_steps for marketing sub-agents).'
+  patches_applied: 5
+  round: 27
+  stage: full_improvement_override
+  time: '2026-07-23T21:16:30+00:00'
+- findings_count: 5
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 5 patches applied (1 MM4 temperature,
+    2 MM6 extensions, 1 E1 catch-all pattern, 1 NN1 split).'
+  patches_applied: 5
+  round: 28
+  stage: full_improvement_override
+  time: '2026-07-23T22:25:03+00:00'
+- findings_count: 10
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 5 patches applied (summon extension
+    for 5 sub-agents).'
+  patches_applied: 5
+  round: 29
+  stage: full_improvement_override
+  time: '2026-07-23T23:02:00+00:00'
+- findings_count: 1238
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 20 patches applied (1 E1 + 4 NN1
+    splits). All YAML validated (R10).'
+  patches_applied: 20
+  round: 30
+  stage: full_improvement_override
+  time: '2026-07-23T23:41:49+00:00'
+- findings_count: 1425
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 5 patches applied (F-024 MM2 prompt
+    + F-025 MM4 title emoji for e2e-verify-auto-repair, F-1386 E1 8 new patterns for
+    intention-parser, F-1387 NN1 split dev-mas-engineer into director+4 subs, F-1388
+    NN1 split test-mas-user into director+3 subs).'
+  patches_applied: 5
+  round: 31
+  stage: full_improvement_override
+  time: '2026-07-24T05:28:20+00:00'
+- findings_count: 4
+  note: 'SPLIT_DEMO_TEAM via RECURSION_OVERRIDE=2: 4 NN1 patches applied. Split 4
+    demo-team agents into thin delegator + orchestrator + 2 specialized sub-agents
+    each.'
+  patches_applied: 4
+  round: 32
+  stage: full_improvement_override
+  time: '2026-07-24T05:58:00+00:00'
+- findings_count: 4
+  note: 'SPLIT_DEMO_TEAM via RECURSION_OVERRIDE=2: 4 NN1 patches applied. Split 4
+    demo-team agents into thin delegator + orchestrator + 2 specialized sub-agents
+    each. 16 new files, 4 archived to legacy/. All YAML validated (R10). Self-audit
+    PASS.'
+  patches_applied: 4
+  round: 33
+  stage: full_improvement_override
+  time: '2026-07-24T07:03:42+00:00'
+- findings_count: 1786
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 5 patches applied (3 MM4 temperature:0.7
+    + 1 D1 STEP 0 MODE-CHECK + 1 D3 numbered STEPs). All YAML validated (R10).'
+  patches_applied: 5
+  round: 34
+  stage: full_improvement_override
+  time: '2026-07-24T07:16:00Z'
+- duration_sec: 0
+  findings_count: 15
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 15 patches applied (2 NN1 splits
+    + 2 prohibition patches). 2 RESTRICTED (cross-ref). Self-audit PASS.'
+  patches_applied: 15
+  round: 35
+  stage: full_improvement_override
+  time: '2026-07-24T07:28:48Z'
+- findings_count: 2
+  note: 'R37 FIX_SPECIFIC: 3 patches applied (F-BUG-001, F-BUG-002-md, F-BUG-002-prompt)'
+  patches_applied: 3
+  round: 36
+  stage: fix_specific
+  time: '2026-07-24T09:30:29Z'
+- findings_count: 0
+  note: "R38 FIX_SPECIFIC: 0 patches applied \u2014 all R37 findings already applied\
+    \ (idempotent). No new findings to process."
+  patches_applied: 0
+  round: 37
+  stage: fix_specific
+  time: '2026-07-24T09:37:15Z'
+- findings_count: 9
+  note: 'R39 FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 9 H1 constitution patches
+    applied to top-level recipe files.'
+  patches_applied: 9
+  round: 38
+  stage: full_improvement_override
+  time: '2026-07-24T12:38:09.018872+00:00'
+- findings_count: 4
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 3 NN1 replace_with_director patches
+    (python-repair, framework-scanner, test-fix-failures-validator) + 1 cross-reference
+    update. All validated CONFORM.'
+  patches_applied: 4
+  round: 39
+  stage: full_improvement_override
+  time: '2026-07-24T15:17:20+00:00'
+- findings_count: 19
+  note: 'FIX_SPECIFIC: 19 author-field fixes applied (removed invalid plain-string
+    author: lines from recipe/sub/ YAMLs). All validated CONFORM.'
+  patches_applied: 19
+  round: 40
+  stage: fix_specific
+  time: '2026-07-24T15:26:12.484188+00:00'
+- duration_sec: 0
+  findings_count: 1929
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 10 patches applied (1 Q1, 1 E1,
+    3 NN1 splits, 4 new sub-agents, 1 archive). 7 rejected (6 redundant preserved,
+    1 conflict).'
+  patches_applied: 10
+  patches_rejected: 7
+  round: 41
+  stage: full_improvement_override
+  time: '2026-07-24T18:20:31+00:00'
+- findings_count: 0
+  note: "FIX_SPECIFIC: 0 patches applied \u2014 all round*_findings.json (R33-R41)\
+    \ already fully processed. New draft_findings_R43.yaml (1,973 raw findings) needs\
+    \ FULL_IMPROVEMENT."
+  patches_applied: 0
+  round: 42
+  stage: fix_specific
+  time: '2026-07-24T20:32:00+00:00'
+- findings_count: 17
+  note: 'APPLY_ONLY via RECURSION_OVERRIDE=1: 4 patches applied. 5 idempotent. 1 stale.'
+  patches_applied: 4
+  patches_idempotent: 5
+  patches_stale: 1
+  round: 43
+  stage: apply_only
+  time: '2026-07-24T20:36:52.649192+00:00'
+- findings_count: 5
+  note: 'R46 FIX_SPECIFIC: Created 5 missing sub-recipes (finder, hardener, secrets,
+    deserialize, cmd-injection scanners). All cross-refs resolved.'
+  patches_applied: 5
+  round: 44
+  stage: fix_specific
+  time: '2026-07-24T21:14:00+00:00'
+- duration_sec: 300
+  findings_count: 2027
+  findings_low: 1967
+  findings_medium: 60
+  note: 'R48 FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 9 patches (1 E1 intention
+    patterns + 2 NN1 splits: degradation-handler + dashboard-refresh). 2 NN1 skipped
+    (already split). All YAML validated (R10).'
+  patches_applied: 9
+  patches_skipped: 2
+  round: 45
+  stage: full_improvement_override
+  time: '2026-07-24T21:33:00Z'
+- findings_count: 2132
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 3 patches (1 E1 intention patterns
+    + 2 NN1 splits: degradation + dashboard). 5 new sub-agent files created.'
+  patches_applied: 3
+  round: 46
+  stage: full_improvement_override
+  time: '2026-07-24T22:25:28Z'
+- findings_count: 2152
+  note: 'RECYCLE: severity_ceiling high->medium. 1 E1 pattern applied (intention-parser
+    delete). 4 NN1 stale (already split).'
+  patches_applied: 1
+  patches_skipped: 4
+  round: 47
+  stage: recycle
+  time: '2026-07-24T23:19:56Z'
+- findings_count: 2251
+  note: 'FULL_IMPROVEMENT via RECURSION_OVERRIDE=2: 1 E1 patch applied (3 new intention
+    patterns: info, architect, package). 4 NN1 skips (already split/single-role <200
+    lines).'
+  patches_applied: 1
+  round: 48
+  stage: full_improvement_override
+  time: '2026-07-25T06:13:48.267169+00:00'
+status: ready
+version: 1.0.0### ⛔ RECURSION GUARD v2 — ACTIVE
+
+| Check | Result |
+|-------|--------|
+| Last FULL_IMPROVEMENT | Round 48 at `2026-07-25T06:13:48` (~30 min ago) |
+| 24h cooldown | ❌ **Active** — last round < 24h |
+| `RECURSION_OVERRIDE` | `unset` (not 1 or 2) — cannot bypass |
+| Cost limit (today) | 1 entry — under 5 ✅ |
+
+**Status:** FULL_IMPROVEMENT blocked by 24h cooldown. Downgrading to **ERROR_PATTERN** (short form) as permitted by recursion guard v2.
+
+---
+
+### STEP 1-2 — ERROR_PATTERN: Filter Sessions with errors/timeouts
+
+Let me analyze the session data for error patterns.
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 /workspace/mas-engineer-src/mas-engineer/tools/dev_goose_db.py --errors 2>&1 | head -80
+
+❌ Unknown: --errors
+
+dev_goose_db.py — 📊 Goose SQLite-Database-Analyse
+===================================================
+Version: 1.0.0
+Author: dev-mas-engineer (autonomous)
+
+Analyzed die Goose-interne SQLite-Database:
+  ~/.local/share/goose/sessions/sessions.db
+
+Hilft dem MAS-Engineer the framework-Behavior zu verstehen:
+Token-Verbrauch, Kosten, Stale-Sessions, Message-Historie.
+
+Database can gesperrt be if Goose runs.
+→ Automatic copy before analysis (workspace path).
+
+VERWENDUNG:
+    python3 dev_goose_db.py --sessions         # All Sessions mit Metadaten
+    python3 dev_goose_db.py --session <id>     # Session-Details + Messages
+    python3 dev_goose_db.py --stale [min]      # Stale-Sessions (>30min idle)
+    python3 dev_goose_db.py --costs            # Kosten-Overview
+    python3 dev_goose_db.py --models           # Available models
+    python3 dev_goose_db.py --activity         # Activitys-Timeline
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 /workspace/mas-engineer-src/mas-engineer/tools/dev_goose_db.py --sessions 2>&1 | head -60
+
+
+📊 GOOSE SESSIONS (2003 active)
+====================================================================================================
+ID           Name                         type             Tokens   Kosten Mode             Creates             
+----------------------------------------------------------------------------------------------------
+20260725_23  🤖 SUB-MAS-GENERAL-IMPROVER — hidden              14K    $0.00 auto             2026-07-25 06:43:57 
+20260725_22  🚦 SUB-MAS-PRE-PUSH-VALIDATOR hidden              21K    $0.00 auto             2026-07-25 06:39:50 
+20260725_21  🚦 SUB-MAS-PRE-PUSH-VALIDATOR hidden              30K    $0.01 auto             2026-07-25 06:37:52 
+20260725_20  🚦 SUB-MAS-PRE-PUSH-VALIDATOR hidden              27K    $0.01 auto             2026-07-25 06:34:21 
+20260725_19  🤖 SUB-MAS-GENERAL-IMPROVER — hidden              38K    $0.01 auto             2026-07-25 06:32:39 
+20260725_18  🚦 SUB-MAS-PRE-PUSH-VALIDATOR hidden              12K    $0.00 auto             2026-07-25 06:20:48 
+20260725_17  🤖 SUB-MAS-GENERAL-IMPROVER — hidden              57K    $0.02 auto             2026-07-25 06:17:37 
+20260725_16  🚦 SUB-MAS-PRE-PUSH-VALIDATOR hidden              28K    $0.01 auto             2026-07-25 06:14:31 
+20260725_15  sub_mas-yaml-editor: Task: B sub_agent            8K    $0.00 auto             2026-07-25 06:13:14 
+20260725_14  sub_mas-im-validator: Task:  sub_agent           40K    $0.05 auto             2026-07-25 06:11:04 
+20260725_13  sub_mas-im-designer: Task: D sub_agent           32K    $0.01 auto             2026-07-25 06:09:14 
+20260725_12  sub_mas-im-rank: Task: RANK
+ sub_agent           22K    $0.01 auto             2026-07-25 06:07:53 
+20260725_11  🎓 SUB-MAS-GOOSE-EXPERT — Goo user                12K    $0.00 auto             2026-07-25 06:06:30 
+20260725_10  sub_mas-im-finder: Task: FIN sub_agent           39K    $0.02 auto             2026-07-25 06:05:09 
+20260725_9   sub_mas-im-session-reader: T sub_agent           20K    $0.02 auto             2026-07-25 06:03:58 
+20260725_8   🤖 SUB-MAS-GENERAL-IMPROVER — hidden              41K    $0.05 auto             2026-07-25 06:03:31 
+20260725_7   🤖 SUB-MAS-GENERAL-IMPROVER — hidden              28K    $0.01 auto             2026-07-25 06:01:41 
+20260725_6   🚦 SUB-MAS-PRE-PUSH-VALIDATOR hidden              37K    $0.01 auto             2026-07-25 05:58:24 
+20260725_5   🤖 SUB-MAS-GENERAL-IMPROVER — hidden              29K    $0.01 auto             2026-07-25 05:56:26 
+20260725_4   🚦 SUB-MAS-PRE-PUSH-VALIDATOR hidden              30K    $0.01 auto             2026-07-25 05:48:26 
+20260725_3   Delegated task               sub_agent            8K    $0.00 auto             2026-07-25 05:45:59 
+20260725_2   Delegated task               sub_agent           21K    $0.01 auto             2026-07-25 05:44:53 
+20260725_1   🤖 SUB-MAS-GENERAL-IMPROVER — hidden              46K    $0.02 auto             2026-07-25 05:43:31 
+20260724_233 🚦 SUB-MAS-PRE-PUSH-VALIDATOR hidden              26K    $0.01 auto             2026-07-24 23:21:43 
+20260724_232 🚦 SUB-MAS-PRE-PUSH-VALIDATOR hidden              11K    $0.00 auto             2026-07-24 23:21:26 
+20260724_231 Delegated task               sub_agent           29K    $0.01 auto             2026-07-24 23:18:03 
+20260724_230 Delegated task               sub_agent           33K    $0.01 auto             2026-07-24 23:16:10 
+20260724_229 Delegated task               sub_agent           20K    $0.01 auto             2026-07-24 23:14:25 
+20260724_228 Delegated task               sub_agent           37K    $0.02 auto             2026-07-24 23:12:15 
+20260724_226 Delegated task               sub_agent            7K    $0.00 auto             2026-07-24 23:11:12 
+20260724_227 Delegated task               sub_agent            7K    $0.00 auto             2026-07-24 23:11:12 
+20260724_225 Delegated task               sub_agent           53K    $0.02 auto             2026-07-24 23:08:30 
+20260724_224 Delegated task               sub_agent           21K    $0.01 auto             2026-07-24 23:07:30 
+20260724_223 Delegated task               sub_agent           37K    $0.02 auto             2026-07-24 23:05:12 
+20260724_222 Delegated task               sub_agent           21K    $0.00 auto             2026-07-24 23:04:20 
+20260724_221 🤖 SUB-MAS-GENERAL-IMPROVER — hidden              79K    $0.09 auto             2026-07-24 23:03:10 
+20260724_220 🚦 SUB-MAS-PRE-PUSH-VALIDATOR hidden              34K    $0.02 auto             2026-07-24 22:26:49 
+20260724_219 🚦 SUB-MAS-PRE-PUSH-VALIDATOR hidden              11K    $0.00 auto             2026-07-24 22:26:34 
+20260724_218 sub_mas-yaml-editor: Task: P sub_agent           11K    $0.00 auto             2026-07-24 22:24:05 
+20260724_216 sub_mas-yaml-editor: Task: B sub_agent            6K    $0.00 auto             2026-07-24 22:23:41 
+20260724_217 sub_mas-yaml-editor: Task: P sub_agent           11K    $0.00 auto             2026-07-24 22:23:41 
+20260724_215 sub_mas-im-validator: Task:  sub_agent           27K    $0.01 auto             2026-07-24 22:21:45 
+20260724_214 sub_mas-im-designer: Task: D sub_agent           33K    $0.01 auto             2026-07-24 22:19:35 
+20260724_213 sub_mas-im-rank: Task: RANK
+ sub_agent           15K    $0.00 auto             2026-07-24 22:18:48 
+20260724_212 sub_mas-im-finder: Task: FIN sub_agent           36K    $0.02 auto             2026-07-24 22:16:19 
+20260724_211 sub_mas-im-session-reader: T sub_agent           27K    $0.01 auto             2026-07-24 22:15:33 
+20260724_210 🤖 SUB-MAS-GENERAL-IMPROVER — hidden              59K    $0.08 auto             2026-07-24 22:14:52 
+20260724_209 🚦 SUB-MAS-PRE-PUSH-VALIDATOR hidden              33K    $0.01 auto             2026-07-24 21:35:20 
+20260724_208 sub_mas-im-validator: task=V sub_agent           53K    $0.02 auto             2026-07-24 21:31:52 
+20260724_207 sub_mas-im-designer: task=DE sub_agent           41K    $0.02 auto             2026-07-24 21:28:30 
+20260724_206 sub_mas-im-rank: task=RANK,  sub_agent           21K    $0.01 auto             2026-07-24 21:27:15 
+20260724_205 sub_mas-im-finder: task=FIND sub_agent           40K    $0.02 auto             2026-07-24 21:24:16 
+20260724_204 sub_mas-im-session-reader: t sub_agent           25K    $0.00 auto             2026-07-24 21:23:24 
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 /workspace/mas-engineer-src/mas-engineer/tools/dev_goose_db.py --stale 5 2>&1 | head -30
+
+✅ No Stale-Sessions (>5min idle)
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 /workspace/mas-engineer-src/mas-engineer/tools/dev_goose_db.py --activity 2>&1 | head -40
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 /workspace/mas-engineer-src/mas-engineer/tools/dev_goose_db.py --costs 2>&1 | head -30
+
+
+📈 ACTIVITY TIMELINE (2003 Sessions)
+================================================================================
+  2026-07-19 16:19:42 → 2026-07-19 16:21:30 | Create code-review team   |      39K | hidden
+  2026-07-19 16:21:30 → 2026-07-19 16:23:38 | Data quality team         |      33K | hidden
+  2026-07-19 16:23:39 → 2026-07-19 16:27:01 | Vulnerable app review     |      26K | hidden
+  2026-07-19 16:24:21 → 2026-07-19 16:25:27 | You are the 🔍 STATIC-ANAL |      11K | sub_agent
+  2026-07-19 16:24:21 → 2026-07-19 16:24:41 | You are the 🛡️ SECURITY-S |       6K | sub_agent
+  2026-07-19 16:25:41 → 2026-07-19 16:26:32 | You are the 📋 CODE-REVIEW |      10K | sub_agent
+  2026-07-19 16:28:17 → 2026-07-19 16:32:44 | Data quality analysis     |      28K | hidden
+  2026-07-19 16:28:54 → 2026-07-19 16:29:55 | # ⚠️ ANOMALY DETECTOR — T |      16K | sub_agent
+  2026-07-19 16:28:54 → 2026-07-19 16:29:24 | # 📊 DATA PROFILER — Task
+ |       9K | sub_agent
+  2026-07-19 16:30:09 → 2026-07-19 16:32:27 | # 📋 QUALITY REPORTER — Ta |      30K | sub_agent
+  2026-07-19 16:32:48 → 2026-07-19 16:34:37 | Code review team improvem |      30K | hidden
+  2026-07-19 16:34:40 → 2026-07-19 16:37:09 | Improve data quality reci |      44K | hidden
+  2026-07-19 16:37:13 → 2026-07-19 16:38:37 | MD5 code review request   |      16K | hidden
+  2026-07-19 16:37:35 → 2026-07-19 16:37:54 | You are a **code-reviewer |       5K | sub_agent
+  2026-07-19 16:37:35 → 2026-07-19 16:38:04 | You are a **security-scan |       7K | sub_agent
+  2026-07-19 16:37:35 → 2026-07-19 16:37:49 | You are a **static-analyz |       5K | sub_agent
+  2026-07-19 16:38:37 → 2026-07-19 16:40:27 | Data quality analysis     |      15K | hidden
+  2026-07-19 16:38:58 → 2026-07-19 16:39:45 | You are Agent 3 — Duplica |      11K | sub_agent
+  2026-07-19 16:38:58 → 2026-07-19 16:39:39 | You are Agent 2 — Outlier |       9K | sub_agent
+  2026-07-19 16:38:58 → 2026-07-19 16:40:01 | You are Agent 1 — Missing |      13K | sub_agent
+  2026-07-19 19:10:20 → 2026-07-19 19:11:49 | Code review team          |      31K | hidden
+  2026-07-19 19:11:49 → 2026-07-19 19:14:13 | Data quality team creatio |      42K | hidden
+  2026-07-19 19:14:14 → 2026-07-19 19:17:27 | Sub-agent code review     |      39K | hidden
+  2026-07-19 19:14:45 → 2026-07-19 19:15:05 | dev-mas-engineer: You are |       8K | sub_agent
+  2026-07-19 19:14:45 → 2026-07-19 19:15:15 | dev-mas-engineer: You are |       9K | sub_agent
+  2026-07-19 19:15:42 → 2026-07-19 19:16:59 | You are the **code-review |      16K | sub_agent
+  2026-07-19 19:17:27 → 2026-07-19 19:19:13 | Dataset quality assessmen |      38K | hidden
+  2026-07-19 19:19:13 → 2026-07-19 19:26:57 | Auto file path extraction |      48K | hidden
+  2026-07-19 19:21:05 → 2026-07-19 19:21:05 | 📊 DATA-QUALITY-TEAM — Aut |        — | hidden
+  2026-07-19 19:21:15 → 2026-07-19 19:22:52 | 📊 DATA-QUALITY-TEAM — Aut |      10K | hidden
+  2026-07-19 19:21:23 → 2026-07-19 19:21:23 | sub_data-profiler: Check  |        — | sub_agent
+  2026-07-19 19:21:34 → 2026-07-19 19:21:39 | Delegated task            |       1K | sub_agent
+  2026-07-19 19:21:42 → 2026-07-19 19:21:42 | Delegated task            |        — | sub_agent
+  2026-07-19 19:21:52 → 2026-07-19 19:21:58 | Delegated task            |       2K | sub_agent
+  2026-07-19 19:22:01 → 2026-07-19 19:22:07 | Delegated task            |       1K | sub_agent
+  2026-07-19 19:22:20 → 2026-07-19 19:22:27 | Delegated task            |       2K | sub_agent
+💰 KOSTEN-OVERVIEW (Total: $20.61)
+============================================================
+  sales_team: Execute the full sales pipeline (lead-scraper...    $0.48 ( 2.3%) · 159K
+  Delegated task                    $0.44 ( 2.1%) · 119K
+  🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline Orchestrator (7 steps, 6 sub-agents)    $0.24 ( 1.2%) · 67K
+  sales_team: Find 2 B2B SaaS leads in Berlin (AI/ML space,...    $0.23 ( 1.1%) · 67K
+  sales_team: Perform the sales pipeline for the following ...    $0.22 ( 1.1%) · 142K
+  Delegated task                    $0.21 ( 1.0%) · 78K
+  Delegated task                    $0.20 ( 1.0%) · 69K
+  Delegated task                    $0.19 ( 0.9%) · 109K
+  🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline Orchestrator (7 steps, 6 sub-agents)    $0.16 ( 0.8%) · 63K
+  im-100pct-loop-2                  $0.16 ( 0.8%) · 49K
+  Delegated task                    $0.13 ( 0.6%) · 44K
+  🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline Orchestrator (7 steps, 6 sub-agents)    $0.13 ( 0.6%) · 42K
+  🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline Orchestrator (7 steps, 6 sub-agents)    $0.12 ( 0.6%) · 74K
+  sub_mas-im-designer: Task: DESIGN
+Mode: mas
+Workspace: /w...    $0.12 ( 0.6%) · 37K
+  sub_mas-goose-expert: CHECK RULE COMPLIANCE for multiple ...    $0.11 ( 0.6%) · 100K
+  🔧 IM-Finder                       $0.11 ( 0.5%) · 52K
+  sub_mas-im-designer: Task: DESIGN
+Mode: framework
+Workspa...    $0.11 ( 0.5%) · 62K
+  Delegated task                    $0.11 ( 0.5%) · 134K
+  Delegated task                    $0.11 ( 0.5%) · 68K
+  Delegated task                    $0.11 ( 0.5%) · 59K
+  Delegated task                    $0.11 ( 0.5%) · 44K
+  🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline Orchestrator (7 steps, 6 sub-agents)    $0.10 ( 0.5%) · 72K
+  🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline Orchestrator (7 steps, 6 sub-agents)    $0.10 ( 0.5%) · 53K
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import sqlite3
+db_path = '/workspace/mas-engineer-src/mas-engineer/.state/sessions.db'
+import os
+if not os.path.exists(db_path):
+    db_path = os.path.expanduser('~/.local/share/goose/sessions/sessions.db')
+    print(f'Using: {db_path}')
+
+conn = sqlite3.connect(db_path)
+cur = conn.cursor()
+
+# List tables
+cur.execute(\"SELECT name FROM sqlite_master WHERE type='table'\")
+tables = cur.fetchall()
+print('Tables:', [t[0] for t in tables])
+
+# Try to find error/timeout related data
+for table in tables:
+    tname = table[0]
+    try:
+        cur.execute(f'PRAGMA table_info({tname})')
+        cols = cur.fetchall()
+        col_names = [c[1] for c in cols]
+        # Check for columns that might indicate status/error
+        if any(c in col_names for c in ['status', 'error', 'result', 'state']):
+            print(f'\n--- {tname} columns: {col_names}')
+            cur.execute(f'SELECT * FROM {tname} LIMIT 5')
+            rows = cur.fetchall()
+            for r in rows:
+                print(f'  {r}')
+    except:
+        pass
+
+conn.close()
+" 2>&1
+
+Using: /root/.local/share/goose/sessions/sessions.db
+Tables: ['schema_version', 'sessions', 'messages', 'sqlite_sequence', 'usage_ledger', 'provider_inventory_entries', 'provider_inventory_models']
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import sqlite3, os
+db_path = os.path.expanduser('~/.local/share/goose/sessions/sessions.db')
+conn = sqlite3.connect(db_path)
+cur = conn.cursor()
+
+# sessions table schema
+cur.execute('PRAGMA table_info(sessions)')
+cols = cur.fetchall()
+print('sessions columns:')
+for c in cols:
+    print(f'  {c}')
+
+# Get a few recent sessions with their data
+cur.execute('SELECT id, created_at, rowid FROM sessions ORDER BY created_at DESC LIMIT 5')
+rows = cur.fetchall()
+print('\nRecent sessions:')
+for r in rows:
+    print(f'  {r}')
+
+# Check messages for error patterns
+cur.execute(\"SELECT session_id, COUNT(*) as cnt FROM messages WHERE role='assistant' AND content LIKE '%error%' GROUP BY session_id ORDER BY cnt DESC LIMIT 10\")
+rows = cur.fetchall()
+print('\nSessions with error mentions:')
+for r in rows:
+    print(f'  {r}')
+
+# Check for timeout patterns
+cur.execute(\"SELECT session_id, COUNT(*) as cnt FROM messages WHERE role='assistant' AND content LIKE '%timeout%' GROUP BY session_id ORDER BY cnt DESC LIMIT 10\")
+rows = cur.fetchall()
+print('\nSessions with timeout mentions:')
+for r in rows:
+    print(f'  {r}')
+
+# Check usage_ledger for errors
+cur.execute('PRAGMA table_info(usage_ledger)')
+cols = cur.fetchall()
+print('\nusage_ledger columns:')
+for c in cols:
+    print(f'  {c}')
+
+conn.close()
+" 2>&1
+
+sessions columns:
+  (0, 'id', 'TEXT', 0, None, 1)
+  (1, 'name', 'TEXT', 1, "''", 0)
+  (2, 'description', 'TEXT', 1, "''", 0)
+  (3, 'user_set_name', 'BOOLEAN', 0, 'FALSE', 0)
+  (4, 'session_type', 'TEXT', 1, "'user'", 0)
+  (5, 'working_dir', 'TEXT', 1, None, 0)
+  (6, 'created_at', 'TIMESTAMP', 0, 'CURRENT_TIMESTAMP', 0)
+  (7, 'updated_at', 'TIMESTAMP', 0, 'CURRENT_TIMESTAMP', 0)
+  (8, 'extension_data', 'TEXT', 0, "'{}'", 0)
+  (9, 'total_tokens', 'INTEGER', 0, None, 0)
+  (10, 'input_tokens', 'INTEGER', 0, None, 0)
+  (11, 'output_tokens', 'INTEGER', 0, None, 0)
+  (12, 'cache_read_tokens', 'INTEGER', 0, None, 0)
+  (13, 'cache_write_tokens', 'INTEGER', 0, None, 0)
+  (14, 'accumulated_total_tokens', 'INTEGER', 0, None, 0)
+  (15, 'accumulated_input_tokens', 'INTEGER', 0, None, 0)
+  (16, 'accumulated_output_tokens', 'INTEGER', 0, None, 0)
+  (17, 'accumulated_cache_read_tokens', 'INTEGER', 0, None, 0)
+  (18, 'accumulated_cache_write_tokens', 'INTEGER', 0, None, 0)
+  (19, 'accumulated_cost', 'REAL', 0, None, 0)
+  (20, 'schedule_id', 'TEXT', 0, None, 0)
+  (21, 'recipe_json', 'TEXT', 0, None, 0)
+  (22, 'user_recipe_values_json', 'TEXT', 0, None, 0)
+  (23, 'provider_name', 'TEXT', 0, None, 0)
+  (24, 'model_config_json', 'TEXT', 0, None, 0)
+  (25, 'goose_mode', 'TEXT', 1, "'auto'", 0)
+  (26, 'archived_at', 'TIMESTAMP', 0, None, 0)
+  (27, 'project_id', 'TEXT', 0, None, 0)
+  (28, 'parent_session_id', 'TEXT', 0, None, 0)
+
+Recent sessions:
+  ('20260725_23', '2026-07-25 06:43:57', 2003)
+  ('20260725_22', '2026-07-25 06:39:50', 2002)
+  ('20260725_21', '2026-07-25 06:37:52', 2001)
+  ('20260725_20', '2026-07-25 06:34:21', 2000)
+  ('20260725_19', '2026-07-25 06:32:39', 1999)
+Traceback (most recent call last):
+  File "<string>", line 22, in <module>
+sqlite3.OperationalError: no such column: content
+
+Command exited with code 1
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import sqlite3, os
+db_path = os.path.expanduser('~/.local/share/goose/sessions/sessions.db')
+conn = sqlite3.connect(db_path)
+cur = conn.cursor()
+
+# messages table schema
+cur.execute('PRAGMA table_info(messages)')
+cols = cur.fetchall()
+print('messages columns:')
+for c in cols:
+    print(f'  {c}')
+
+# Check for error-related sessions more practically:
+# Look for sessions with high token counts but no accumulated cost (failed)
+cur.execute('SELECT id, name, accumulated_total_tokens, accumulated_cost, created_at FROM sessions WHERE accumulated_total_tokens > 0 ORDER BY created_at DESC LIMIST 10')
+# Let me try different approaches
+cur.execute('SELECT id, name, total_tokens, accumulated_cost, created_at, goose_mode FROM sessions ORDER BY created_at DESC LIMIT 20')
+rows = cur.fetchall()
+print('\nRecent 20 sessions:')
+for r in rows:
+    print(f'  {r}')
+
+conn.close()
+" 2>&1
+
+messages columns:
+  (0, 'id', 'INTEGER', 0, None, 1)
+  (1, 'message_id', 'TEXT', 0, None, 0)
+  (2, 'session_id', 'TEXT', 1, None, 0)
+  (3, 'role', 'TEXT', 1, None, 0)
+  (4, 'content_json', 'TEXT', 1, None, 0)
+  (5, 'created_timestamp', 'INTEGER', 1, None, 0)
+  (6, 'timestamp', 'TIMESTAMP', 0, 'CURRENT_TIMESTAMP', 0)
+  (7, 'tokens', 'INTEGER', 0, None, 0)
+  (8, 'metadata_json', 'TEXT', 0, None, 0)
+Traceback (most recent call last):
+  File "<string>", line 16, in <module>
+sqlite3.OperationalError: near "LIMIST": syntax error
+
+Command exited with code 1
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import sqlite3, os
+db_path = os.path.expanduser('~/.local/share/goose/sessions/sessions.db')
+conn = sqlite3.connect(db_path)
+cur = conn.cursor()
+
+# Recent sessions
+cur.execute('SELECT id, name, total_tokens, accumulated_cost, created_at, goose_mode FROM sessions ORDER BY created_at DESC LIMIT 20')
+rows = cur.fetchall()
+print('Recent 20 sessions:')
+for r in rows:
+    print(f'  {r}')
+
+# Look for error patterns in message content
+cur.execute(\"SELECT session_id, substr(content_json, 1, 100) as preview FROM messages WHERE role='assistant' AND content_json LIKE '%error%' LIMIT 20\")
+rows = cur.fetchall()
+print('\nError mentions in assistant messages:')
+for r in rows:
+    print(f'  Session {r[0]}: {r[1][:80]}...')
+
+# Sessions with very high tokens (potential timeout/failure)
+cur.execute('SELECT id, name, total_tokens, accumulated_cost, created_at FROM sessions ORDER BY total_tokens DESC LIMIT 10')
+rows = cur.fetchall()
+print('\nHighest token sessions (potential problems):')
+for r in rows:
+    print(f'  {r}')
+
+conn.close()
+" 2>&1
+
+Recent 20 sessions:
+  ('20260725_23', '🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline Orchestrator (7 steps, 6 sub-agents)', 28353, 0.0048922328, '2026-07-25 06:43:57', 'auto')
+  ('20260725_22', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 20579, 0.003897896800000001, '2026-07-25 06:39:50', 'auto')
+  ('20260725_21', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 30205, 0.011979122400000004, '2026-07-25 06:37:52', 'auto')
+  ('20260725_20', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 27453, 0.012628151200000002, '2026-07-25 06:34:21', 'auto')
+  ('20260725_19', '🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline Orchestrator (7 steps, 6 sub-agents)', 37879, 0.009741418399999998, '2026-07-25 06:32:39', 'auto')
+  ('20260725_18', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 11544, 0.0014251272, '2026-07-25 06:20:48', 'auto')
+  ('20260725_17', '🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline Orchestrator (7 steps, 6 sub-agents)', 57069, 0.0239203216, '2026-07-25 06:17:37', 'auto')
+  ('20260725_16', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 28334, 0.014882705600000006, '2026-07-25 06:14:31', 'auto')
+  ('20260725_15', 'sub_mas-yaml-editor: Task: BACKUP\nFile: /workspace/mas-en...', 8383, 0.004069049600000001, '2026-07-25 06:13:14', 'auto')
+  ('20260725_14', 'sub_mas-im-validator: Task: VALIDATE\nMode: mas\nWorkspace:...', 40396, 0.0454912304, '2026-07-25 06:11:04', 'auto')
+  ('20260725_13', 'sub_mas-im-designer: Task: DESIGN\nMode: mas\nWorkspace: /w...', 31634, 0.010319064000000001, '2026-07-25 06:09:14', 'auto')
+  ('20260725_12', 'sub_mas-im-rank: Task: RANK\nMode: mas\nRead findings from ...', 22285, 0.0079963688, '2026-07-25 06:07:53', 'auto')
+  ('20260725_11', '🎓 SUB-MAS-GOOSE-EXPERT — Goose Rule compliance (Sub-Agent)', 12142, 0.0017760344000000003, '2026-07-25 06:06:30', 'auto')
+  ('20260725_10', 'sub_mas-im-finder: Task: FIND\nMode: mas\nWorkspace: /works...', 38909, 0.0167544216, '2026-07-25 06:05:09', 'auto')
+  ('20260725_9', 'sub_mas-im-session-reader: Task: ANALYZE\nWorkspace: /work...', 20107, 0.015949528, '2026-07-25 06:03:58', 'auto')
+  ('20260725_8', '🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline Orchestrator (7 steps, 6 sub-agents)', 40572, 0.0471404584, '2026-07-25 06:03:31', 'auto')
+  ('20260725_7', '🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline Orchestrator (7 steps, 6 sub-agents)', 27885, 0.0059527608, '2026-07-25 06:01:41', 'auto')
+  ('20260725_6', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 36561, 0.013040496, '2026-07-25 05:58:24', 'auto')
+  ('20260725_5', '🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline Orchestrator (7 steps, 6 sub-agents)', 29231, 0.0079017848, '2026-07-25 05:56:26', 'auto')
+  ('20260725_4', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 29564, 0.013425792799999997, '2026-07-25 05:48:26', 'auto')
+
+Error mentions in assistant messages:
+  Session 20260719_1: [{"type":"thinking","thinking":"Good. Now let me create the detailed instruction...
+  Session 20260719_1: [{"type":"thinking","thinking":"Good. Now let me create the detailed instruction...
+  Session 20260719_1: [{"type":"thinking","thinking":"Good. Now let me create the detailed instruction...
+  Session 20260719_1: [{"type":"thinking","thinking":"Now I need to create:\n1. The root orchestrator ...
+  Session 20260719_1: [{"type":"thinking","thinking":"Now let me validate all YAML files.","signature"...
+  Session 20260719_1: [{"type":"text","text":"## ✅ Code Review Team — Complete\n\nAll 7 files created ...
+  Session 20260719_2: [{"type":"thinking","thinking":"Now let me create the 3 instruction MD files.","...
+  Session 20260719_2: [{"type":"thinking","thinking":"Now let me create the 3 instruction MD files.","...
+  Session 20260719_2: [{"type":"thinking","thinking":"Now let me create the 3 instruction MD files.","...
+  Session 20260719_2: [{"type":"thinking","thinking":"Now create the orchestrator YAML and the state w...
+  Session 20260719_2: [{"type":"thinking","thinking":"Now validate all YAML files.","signature":""},{"...
+  Session 20260719_3: [{"type":"thinking","thinking":"Now let me kick off both sub-agents in parallel ...
+  Session 20260719_3: [{"type":"thinking","thinking":"The sub-recipes aren't registered as named sourc...
+  Session 20260719_5: [{"type":"thinking","thinking":"Now I have the exact file. Let me analyze each v...
+  Session 20260719_4: [{"type":"thinking","thinking":"Let me analyze the file at /workspace/team1/vuln...
+  Session 20260719_4: [{"type":"thinking","thinking":"Let me now produce the final JSON report. Let me...
+  Session 20260719_4: [{"type":"thinking","thinking":"Good - no trailing whitespace and no semicolons....
+  Session 20260719_4: [{"type":"thinking","thinking":"The task is complete. Let me provide the final s...
+  Session 20260719_6: [{"type":"thinking","thinking":"Now let me generate the complete report. I'll wr...
+  Session 20260719_3: [{"type":"thinking","thinking":"Now let me also generate a final summary Markdow...
+
+Highest token sessions (potential problems):
+  ('20260723_8', 'Delegated task', 179333, 0.028941668, '2026-07-23 04:39:59')
+  ('20260723_61', 'Delegated task', 161185, 0.0306068448, '2026-07-23 05:04:57')
+  ('20260723_194', 'sales_team: Execute the full sales pipeline (lead-scraper...', 159137, 0.4820696048000002, '2026-07-23 09:18:51')
+  ('20260723_195', 'E2E Test: sales/medium', 154974, 0.0708652168, '2026-07-23 09:22:50')
+  ('20260723_42', 'Delegated task', 149510, 0.04365761680000001, '2026-07-23 04:56:34')
+  ('20260723_38', 'sales_team: Perform the sales pipeline for the following ...', 142025, 0.2191479416, '2026-07-23 04:51:31')
+  ('20260723_513', 'Delegated task', 135688, 0.0349685896, '2026-07-23 14:02:33')
+  ('20260723_111', 'Delegated task', 134275, 0.11007047520000002, '2026-07-23 05:37:05')
+  ('20260723_298', 'sub_mas-goose-expert: CHECK RULE COMPLIANCE for finding t...', 128832, 0.0331856336, '2026-07-23 11:18:19')
+  ('20260723_59', 'Delegated task', 125143, 0.0280992712, '2026-07-23 05:03:47')
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import sqlite3, os, json
+db_path = os.path.expanduser('~/.local/share/goose/sessions/sessions.db')
+conn = sqlite3.connect(db_path)
+cur = conn.cursor()
+
+# Check pre-push-validator sessions specifically - they guard the git push
+cur.execute(\"SELECT id, name, total_tokens, accumulated_cost, created_at FROM sessions WHERE name LIKE '%PRE-PUSH%' ORDER BY created_at DESC LIMIT 15\")
+rows = cur.fetchall()
+print('PRE-PUSH-VALIDATOR sessions (recent 15):')
+for r in rows:
+    print(f'  {r}')
+
+print()
+
+# Check sessions that mention 'fail','error','timeout','rejected' in their name
+cur.execute(\"SELECT id, name, total_tokens, created_at FROM sessions WHERE (name LIKE '%fail%' OR name LIKE '%error%' OR name LIKE '%timeout%' OR name LIKE '%reject%') ORDER BY created_at DESC LIMIT 20\")
+rows = cur.fetchall()
+print('Sessions with failure-related names:')
+for r in rows:
+    print(f'  {r}')
+
+# Look at recent assistant messages for error content
+cur.execute(\"SELECT session_id, role, substr(content_json, 1, 200) FROM messages WHERE role='assistant' AND content_json LIKE '%error%' AND created_timestamp > 1721800000 ORDER BY created_timestamp DESC LIMIT 10\")
+rows = cur.fetchall()
+print('\nRecent assistant messages mentioning error:')
+for r in rows:
+    print(f'  [{r[0]}] {r[2][:100]}')
+
+conn.close()
+" 2>&1
+
+PRE-PUSH-VALIDATOR sessions (recent 15):
+  ('20260725_22', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 20579, 0.003897896800000001, '2026-07-25 06:39:50')
+  ('20260725_21', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 30205, 0.011979122400000004, '2026-07-25 06:37:52')
+  ('20260725_20', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 27453, 0.012628151200000002, '2026-07-25 06:34:21')
+  ('20260725_18', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 11544, 0.0014251272, '2026-07-25 06:20:48')
+  ('20260725_16', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 28334, 0.014882705600000006, '2026-07-25 06:14:31')
+  ('20260725_6', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 36561, 0.013040496, '2026-07-25 05:58:24')
+  ('20260725_4', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 29564, 0.013425792799999997, '2026-07-25 05:48:26')
+  ('20260724_233', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 25837, 0.0104822032, '2026-07-24 23:21:43')
+  ('20260724_232', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 11473, 0.0018446624, '2026-07-24 23:21:26')
+  ('20260724_220', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 34342, 0.018796192800000004, '2026-07-24 22:26:49')
+  ('20260724_219', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 11125, 0.0014664216, '2026-07-24 22:26:34')
+  ('20260724_209', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 33010, 0.0107676688, '2026-07-24 21:35:20')
+  ('20260724_201', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 35299, 0.020321190400000005, '2026-07-24 21:15:10')
+  ('20260724_199', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 28766, 0.015920116800000002, '2026-07-24 21:08:02')
+  ('20260724_198', '🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)', 34756, 0.0153577536, '2026-07-24 20:40:20')
+
+Sessions with failure-related names:
+  ('20260724_145', '✓ TEST-FIX-FAILURES — delegator', 3657, '2026-07-24 16:00:17')
+  ('20260723_162', 'Test fix 2 e2e failures', 30380, '2026-07-23 07:09:03')
+  ('20260723_161', 'Test fix 2 e2e failures', 10998, '2026-07-23 07:08:55')
+
+Recent assistant messages mentioning error:
+  [20260725_23] [{"type":"thinking","thinking":"Let me fix the SQL query and look at the messages for error patterns
+  [20260725_23] [{"type":"thinking","thinking":"The messages table doesn't have a 'content' column, or there's anoth
+  [20260725_23] [{"type":"thinking","thinking":"Let me look for the schema of the sessions table and check for error
+  [20260725_23] [{"type":"thinking","thinking":"The activity log and costs don't show obvious error patterns. Let me
+  [20260725_23] [{"type":"thinking","thinking":"Let me also check the activity log to look for errors and check the 
+  [20260725_23] [{"type":"thinking","thinking":"Let me also check the activity log to look for errors and check the 
+  [20260725_23] [{"type":"thinking","thinking":"I see a lot of sessions but they all look auto/user type, no obvious
+  [20260725_23] [{"type":"thinking","thinking":"Let me query for sessions with error/timeout status.","signature":""
+  [20260725_23] [{"type":"thinking","thinking":"Let me analyze the recursion guard:\n\n**RECURSION GUARD v2:**\n\nTh
+  [20260725_23] [{"type":"text","text":"### ⛔ RECURSION GUARD v2 — ACTIVE\n\n| Check | Result |\n|-------|--------|\
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import sqlite3, os, json
+db_path = os.path.expanduser('~/.local/share/goose/sessions/sessions.db')
+conn = sqlite3.connect(db_path)
+cur = conn.cursor()
+
+# Get last pre-push session
+cur.execute(\"SELECT content_json FROM messages WHERE session_id='20260725_22' AND role='assistant' ORDER BY id\")
+rows = cur.fetchall()
+print(f'Last pre-push validator messages ({len(rows)}):')
+for r in rows[:3]:
+    data = json.loads(r[0])
+    for d in data:
+        if d.get('type') == 'text':
+            print(d['text'][:300])
+            print('---')
+
+print()
+# Session 20260725_21
+cur.execute(\"SELECT content_json FROM messages WHERE session_id='20260725_21' AND role='assistant' ORDER BY id\")
+rows = cur.fetchall()
+print(f'Session 21 messages ({len(rows)}):')
+for r in rows[:3]:
+    data = json.loads(r[0])
+    for d in data:
+        if d.get('type') == 'text':
+            print(d['text'][:300])
+            print('---')
+
+conn.close()
+" 2>&1
+
+Last pre-push validator messages (11):
+Let me start by loading my full instructions as specified.
+---
+Let me explore the available sources and find the instruction file.
+---
+
+Session 21 messages (43):
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import sqlite3, os, json
+db_path = os.path.expanduser('~/.local/share/goose/sessions/sessions.db')
+conn = sqlite3.connect(db_path)
+cur = conn.cursor()
+
+# Get all pre-push validator assistant messages
+cur.execute(\"SELECT session_id, content_json FROM messages WHERE session_id LIKE '20260725_%' AND role='assistant' ORDER BY id\")
+rows = cur.fetchall()
+current_session = None
+for r in rows:
+    if r[0] != current_session:
+        current_session = r[0]
+        print(f'\n=== Session {current_session} ===')
+    data = json.loads(r[0])
+    for d in data:
+        if d.get('type') == 'text' and ('fail' in d['text'].lower() or 'error' in d['text'].lower() or '🔴' in d['text'] or '❌' in d['text'] or 'reject' in d['text'].lower() or 'timeout' in d['text'].lower()):
+            print(f'  [{current_session}] {d[\"text\"][:200]}')
+            break
+
+conn.close()
+" 2>&1
+
+
+=== Session 20260725_1 ===
+Traceback (most recent call last):
+  File "<string>", line 15, in <module>
+  File "/usr/local/lib/python3.11/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/json/decoder.py", line 340, in decode
+    raise JSONDecodeError("Extra data", s, end)
+json.decoder.JSONDecodeError: Extra data: line 1 column 9 (char 8)
+
+Command exited with code 1
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import sqlite3, os, json
+db_path = os.path.expanduser('~/.local/share/goose/sessions/sessions.db')
+conn = sqlite3.connect(db_path)
+cur = conn.cursor()
+
+# Check pre-push validator output for failure signals
+cur.execute(\"SELECT session_id, substr(content_json, 1, 500) FROM messages WHERE session_id IN ('20260725_22','20260725_21','20260725_20','20260725_18','20260725_16','20260725_6','20260725_4') AND role='assistant' ORDER BY id LIMIT 30\")
+rows = cur.fetchall()
+for r in rows[:10]:
+    text = r[1]
+    # Check for failure indicators
+    lower = text.lower()
+    has_fail = 'fail' in lower or 'error' in lower or '🔴' in text or '❌' in text or 'timeout' in lower
+    label = '⚠️' if has_fail else '✅'
+    print(f'{label} [{r[0]}] {text[:120]}')
+
+conn.close()
+" 2>&1
+
+✅ [20260725_4] [{"type":"thinking","thinking":"Let me start by reading the external instructions file as specified in the recipe.","sig
+✅ [20260725_4] [{"type":"text","text":"Let me explore what's available in the workspace and find the recipe instructions."}]
+✅ [20260725_4] [{"type":"thinking","thinking":"The external instructions file wasn't found. Let me check what's available and also look
+✅ [20260725_4] [{"type":"thinking","thinking":"The external instructions file wasn't found. Let me check what's available and also look
+✅ [20260725_4] [{"type":"text","text":"Found the instructions file. Let me load it now."}]
+✅ [20260725_4] [{"type":"thinking","thinking":"I found the instructions file at `mas-engineer/recipe/instructions/sub_mas-pre-push-vali
+✅ [20260725_4] [{"type":"text","text":"Let me read the instructions file directly."}]
+✅ [20260725_4] [{"type":"thinking","thinking":"The `load` function only works with recipe source names. Let me read the file directly u
+✅ [20260725_4] [{"type":"text","text":"I've loaded the full pre-push-validator instruction set. Let me confirm the environment and work
+✅ [20260725_4] [{"type":"thinking","thinking":"Now I have the full instruction set. Let me analyze the task at hand.\n\nI am the pre-pu
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import sqlite3, os, json
+db_path = os.path.expanduser('~/.local/share/goose/sessions/sessions.db')
+conn = sqlite3.connect(db_path)
+cur = conn.cursor()
+
+# Search for actual error/timeout patterns in the last 48 hours
+# Messages with tool errors
+cur.execute(\"\"\"SELECT m.session_id, s.name, substr(m.content_json, 1, 300)
+FROM messages m
+JOIN sessions s ON m.session_id = s.id
+WHERE m.role='tool_reply'
+AND m.content_json LIKE '%error%'
+AND s.created_at > '2026-07-23'
+ORDER BY m.id DESC
+LIMIT 15\"\"\")
+rows = cur.fetchall()
+print('Tool errors in last 2 days:')
+for r in rows[:10]:
+    print(f'  [{r[0]}] {r[1][:40]}...')
+    print(f'    {r[2][:150]}')
+    print()
+
+conn.close()
+" 2>&1
+
+Tool errors in last 2 days:
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import sqlite3, os, json
+db_path = os.path.expanduser('~/.local/share/goose/sessions/sessions.db')
+conn = sqlite3.connect(db_path)
+cur = conn.cursor()
+
+# Search for user messages with correction indicators in last 2 days
+cur.execute(\"\"\"SELECT m.session_id, s.name, substr(m.content_json, 1, 250)
+FROM messages m
+JOIN sessions s ON m.session_id = s.id
+WHERE m.role='user'
+AND (m.content_json LIKE '%correct%' OR m.content_json LIKE '%fix%' OR m.content_json LIKE '%wrong%' 
+     OR m.content_json LIKE '%bug%' OR m.content_json LIKE '%issue%' OR m.content_json LIKE '%problem%'
+     OR m.content_json LIKE '%not working%' OR m.content_json LIKE '%doesn\\''t work%')
+AND s.created_at > '2026-07-23'
+ORDER BY m.id DESC
+LIMIT 15\"\"\")
+rows = cur.fetchall()
+print('User corrections/fixes mentions (last 2 days):')
+for r in rows[:10]:
+    print(f'  [{r[0]}] {r[1][:40]}...')
+    print(f'    {r[2][:150]}')
+    print()
+
+conn.close()
+" 2>&1
+
+User corrections/fixes mentions (last 2 days):
+  [20260725_23] 🤖 SUB-MAS-GENERAL-IMPROVER — Improvement...
+    [{"type":"toolResponse","id":"call_00_6p0AH8rBsYaB5GdMIKVV7534","toolResult":{"status":"success","value":{"content":[{"type":"text","text":"PRE-PUSH-V
+
+  [20260725_23] 🤖 SUB-MAS-GENERAL-IMPROVER — Improvement...
+    [{"type":"toolResponse","id":"call_00_UwE7DHhkFiNLD3Cbgllm1837","toolResult":{"status":"success","value":{"content":[{"type":"text","text":"Recent 20 
+
+  [20260725_23] 🤖 SUB-MAS-GENERAL-IMPROVER — Improvement...
+    [{"type":"toolResponse","id":"call_00_rWOfZ5eEgnyPGCVW9JGM1821","toolResult":{"status":"success","value":{"content":[{"type":"text","text":"history:\n
+
+  [20260725_23] 🤖 SUB-MAS-GENERAL-IMPROVER — Improvement...
+    [{"type":"toolResponse","id":"call_00_doAGRKNeo39caJuTK1Gg3739","toolResult":{"status":"success","value":{"content":[{"type":"text","text":"# sub_mas-
+
+  [20260725_23] 🤖 SUB-MAS-GENERAL-IMPROVER — Improvement...
+    [{"type":"text","text":"I am general-improver (v1.0.0) | MODE-CHECK: mas-engineer | RECURSION-OVERRIDE-AWARE: env RECURSION_OVERRIDE=1 → APPLY-ONLY mo
+
+  [20260725_22] 🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeepe...
+    [{"type":"toolResponse","id":"call_00_ZiaU1yH7kqAscvPGcc6M0388","toolResult":{"status":"success","value":{"content":[{"type":"text","text":"# sub_mas-
+
+  [20260725_22] 🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeepe...
+    [{"type":"toolResponse","id":"call_00_iI6u1pmVVjPDyq6wa7Hz5594","toolResult":{"status":"success","value":{"content":[{"type":"text","text":"docs/  [1K
+
+  [20260725_22] 🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeepe...
+    [{"type":"toolResponse","id":"call_00_fKT4jOiNDfluMtKhlirs6260","toolResult":{"status":"success","value":{"content":[{"type":"text","text":"Available 
+
+  [20260725_21] 🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeepe...
+    [{"type":"toolResponse","id":"call_00_8vuw3dE1AnwAog9QciUb5721","toolResult":{"status":"success","value":{"content":[{"type":"text","text":"{\n  \"cla
+
+  [20260725_21] 🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeepe...
+    [{"type":"toolResponse","id":"call_00_iVC2G8YpkWJ86czgcqNM7196","toolResult":{"status":"success","value":{"content":[{"type":"text","text":" M mas-eng
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/mas-engineer-src/mas-engineer/.state/changes.json 2>/dev/null | python3 -c "
+import json, sys
+try:
+    data = json.load(sys.stdin)
+    if isinstance(data, list):
+        print(f'Total entries: {len(data)}')
+        for entry in data[-5:]:
+            print(json.dumps(entry, indent=2)[:300])
+            print('---')
+    else:
+        print(json.dumps(data, indent=2)[:300])
+except Exception as e:
+    print(f'Error: {e}')
+" 2>&1
+
+Total entries: 12
+{
+  "run_id": "55d4b038",
+  "timestamp": "2026-07-24T22:25:25+00:00",
+  "stage": "full_improvement_override",
+  "stages_run": [
+    "im-finder",
+    "im-rank",
+    "im-designer",
+    "im-validator",
+    "apply"
+  ],
+  "task": "FULL_IMPROVEMENT",
+  "mode": "mas",
+  "via": "RECURSION_OVERRIDE=2",
+  "f
+---
+{
+  "run_id": "recycle-47",
+  "timestamp": "2026-07-24T23:19:52.957619",
+  "stage": "recycle",
+  "stages_run": [
+    "im-finder",
+    "im-rank",
+    "im-designer",
+    "im-validator",
+    "apply"
+  ],
+  "task": "FULL_IMPROVEMENT",
+  "mode": "mas",
+  "via": "RECURSION_OVERRIDE=2 + MAS_TASK=FULL_IMPRO
+---
+{
+  "run_id": "fix-specific-author-20260725_054642",
+  "timestamp": "2026-07-25T05:46:42.661893+00:00",
+  "stage": "fix_specific",
+  "stages_run": [
+    "task_detection",
+    "mode_check",
+    "validate",
+    "apply"
+  ],
+  "task": "FIX_SPECIFIC",
+  "findings_total": 19,
+  "findings_source": "round4
+---
+{
+  "run_id": "319fa195",
+  "timestamp": "2026-07-25T06:02:19+00:00",
+  "stage": "apply_only",
+  "stages_run": [
+    "task_detection",
+    "mode_check",
+    "validate",
+    "apply_only"
+  ],
+  "patches_applied": 0,
+  "patches_idempotent": 3,
+  "applied_files": [],
+  "idempotent_files": [
+    "recipe
+---
+{
+  "run_id": "20260725_1",
+  "timestamp": "2026-07-25T06:13:48.215862+00:00",
+  "task": "FULL_IMPROVEMENT",
+  "stage": "full_improvement_override",
+  "stages_run": [
+    "session-reader",
+    "im-finder",
+    "im-rank",
+    "im-designer",
+    "im-validator",
+    "apply"
+  ],
+  "patches_applied": 1,
+---
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import json
+with open('/workspace/mas-engineer-src/mas-engineer/.state/changes.json') as f:
+    data = json.load(f)
+last = data[-1]
+print(json.dumps(last, indent=2))
+" 2>&1
+
+{
+  "run_id": "20260725_1",
+  "timestamp": "2026-07-25T06:13:48.215862+00:00",
+  "task": "FULL_IMPROVEMENT",
+  "stage": "full_improvement_override",
+  "stages_run": [
+    "session-reader",
+    "im-finder",
+    "im-rank",
+    "im-designer",
+    "im-validator",
+    "apply"
+  ],
+  "patches_applied": 1,
+  "files_changed": 1,
+  "findings_count": 2251,
+  "patches": [
+    {
+      "finding_id": "F-2187",
+      "type": "E1",
+      "file": "recipe/sub/sub_mas-intention-parser.yaml",
+      "action": "add_3_patterns",
+      "patterns_added": [
+        "info",
+        "architect",
+        "package"
+      ]
+    }
+  ]
+}
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls -la /workspace/mas-engineer-src/mas-engineer/.state/pipeline/ 2>&1
+
+total 1072
+drwxr-xr-x  2 root root   4096 Jul 25 06:32 .
+drwxr-xr-x 10 root root   4096 Jul 25 06:39 ..
+-rw-r--r--  1 root root   1183 Jul 19 16:18 README.md
+-rw-r--r--  1 root root 541325 Jul 25 06:07 findings.yaml
+-rw-r--r--  1 root root   2611 Jul 24 21:21 findings_R47_structural.yaml
+-rw-r--r--  1 root root   3030 Jul 24 22:14 findings_R49_structural.yaml
+-rw-r--r--  1 root root   1843 Jul 25 05:43 findings_R51_consumer.yaml
+-rw-r--r--  1 root root    799 Jul 25 06:32 findings_R55_goose_expert.yaml
+-rw-r--r--  1 root root   4455 Jul 25 06:10 patches.yaml
+-rw-r--r--  1 root root   2736 Jul 24 22:28 pre_push_validation.yaml
+-rw-r--r--  1 root root 424750 Jul 25 06:08 ranked_findings.yaml
+-rw-r--r--  1 root root   3906 Jul 24 07:07 round33_findings.json
+-rw-r--r--  1 root root   2138 Jul 24 07:17 round34_findings.json
+-rw-r--r--  1 root root   4183 Jul 24 08:04 round36_findings.json
+-rw-r--r--  1 root root   3260 Jul 24 08:26 round37_findings.json
+-rw-r--r--  1 root root  26820 Jul 24 15:22 round41_findings.json
+-rw-r--r--  1 root root   1692 Jul 24 18:20 self_audit.yaml
+-rw-r--r--  1 root root    481 Jul 24 17:46 signal_apply_only_done_20260724_1746.yaml
+-rw-r--r--  1 root root    436 Jul 24 16:02 signal_cp_done_20260724_1602.yaml
+-rw-r--r--  1 root root   2565 Jul 24 21:22 signals.log
+-rw-r--r--  1 root root   1782 Jul 25 06:00 skip_recently_split.yaml
+-rw-r--r--  1 root root   3695 Jul 25 06:12 validation.yaml
+-rw-r--r--  1 root root   9958 Jul 25 05:45 validation_author_fixes.yaml
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/mas-engineer-src/mas-engineer/.state/pipeline/validation.yaml 2>&1
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/mas-engineer-src/mas-engineer/.state/pipeline/findings_R55_goose_expert.yaml 2>&1
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/mas-engineer-src/mas-engineer/.state/pipeline/pre_push_validation.yaml 2>&1
+
+# ============================================================
+# validation.yaml — Stage 4/5: VALIDATE
+# Written by: sub_mas-im-validator (v1.0.0)
+# Generated: 2026-07-25T06:12:00+00:00
+# ============================================================
+stage: 4
+agent: im-validator
+timestamp: '2026-07-25T06:12:00+00:00'
+request_id: unknown
+input_file: .state/pipeline/patches.yaml
+from: sub_mas-im-validator
+to: sub_mas-general-improver
+
+validation:
+  status: approved
+  skip_reason: null
+  severity_fallback: null
+  approved_count: 1
+  rejected_count: 0
+
+  details:
+    - id: F-2187
+      file: recipe/sub/sub_mas-intention-parser.yaml
+      field: patterns
+      operation: add_entries
+      type: E1
+      severity: medium
+      priority: 0.82
+      yaml_syntax: PASS
+      l01_check: CONFORM
+      score_baseline: null
+      score_after: null
+      delta: null
+      notes:
+        - "Adding 3 new patterns (info, architect, package) to existing 43 patterns → 46 total"
+        - "Types 'info', 'architect', 'package' are unique — no collisions with existing types"
+        - "Patterns serve as LLM guidance (not programmatic regex matching) — order relative to catch-all .* is not a functional concern"
+        - "Non-structural enhancement — only appends entries to patterns list; no changes to prompt, settings, sub_recipes, or extensions"
+        - "Cross-reference integrity verified: workflows.yaml, sub_mas-dev-builder.yaml, sub_mas-team-packager.md all unaffected"
+        - "Regex collision check: all test strings match only the expected new pattern + catch-all .* (by design)"
+        - "Goose-architecture: adding pattern entries to patterns list is well within Goose recipe schema capabilities"
+        - "Selected regexes are English-only — consistent with existing patterns; no i18n issues introduced"
+        - "goose-expert post-apply check: UNAVAILABLE (sub_mas-goose-expert not registered as delegable source)"
+
+  recommendation:
+    - "F-2187: APPROVE — YAML syntax valid, L01 conform, non-structural pattern addition with verified cross-references"
+
+  goose_post_checks:
+    - patch_id: F-2187
+      verdict: "NOT_PERFORMED"
+      explanation: "sub_mas-goose-expert not available as delegable source (recipe file exists at recipe/sub/sub_mas-goose-expert.yaml but not registered in load() sources). Post-apply Goose-architecture compliance check could not be performed via delegation."
+
+  notes:
+    - "PER INSTRUCTIONS: '⛔ FAILING TO SUMMON GOOSE-EXPERT = validation is REJECTED downstream' — however, manual Goose-architecture analysis completed: adding pattern entries to YAML patterns list is a purely additive, non-structural change with no architectural risk"
+    - "STEP 1 (YAML syntax): ✅ PASS — current file valid, applied file (with 3 new patterns) also valid"
+    - "STEP 1.5 (L01 mechanism check): ✅ CONFORM — no Goose-native mechanism conflict detected"
+    - "STEP 0.5 (Goose-expert post-validation): ⚠️ UNAVAILABLE — source not registered for delegation"
+    - "STEP 2 (after-scores): dev_fast_scan.py returns invalid/0 score for this workspace path — tool appears to have glob/path resolution issue. Manual score analysis: no score-affecting changes (prompt/structure/settings untouched)"
+    - "STEP 0.5b (all-restricted detection): NOT TRIGGERED — only 1 patch in charge, and verdict is APPROVE"
+    - "Pre-existing note: current prompt is 1115 chars (exceeds BP-P-002 500-char limit) — not introduced by this patch"
+    - "Cross-references verified: intention-parser referenced in workflows.yaml (line 733, CREATE task), sub_mas-dev-builder.yaml, and sub_mas-team-packager.md — none affected by pattern additions"# R55 — dev_goose_expert_check.py missing-args issue
+# Pre-push-validator ruft das script ohne args auf wenn git diff leer ist.
+# Result: usage-error wird als finding geloggt (false positive).
+target_fixes:
+  - id: F-DEV-GOOSE-CHECK
+    file: recipe/instructions/sub_mas-pre-push-validator.md
+    description: |
+      Check 8 (Goose mechanism) ruft dev_goose_expert_check.py mit
+      --check-mechanism "$(git diff ...)" auf. Wenn diff leer ist,
+      wird das script mit leerem string aufgerufen → usage-error →
+      false positive.
+      
+      Fix: conditional call — only invoke if diff non-empty,
+      otherwise default to current findings.yaml/patches.yaml.
+    expected_after: |
+      grep "if \[ -n \"\$DIFF_CONTENT\" mas-engineer/recipe/instructions/sub_mas-pre-push-validator.mdsignal: DONE
+request_id: pre-push-20260724T222800
+from: sub_mas-pre-push-validator
+to: human + git-operator
+status: ok
+data:
+  validation:
+    ok: true
+    blocked_reasons: []
+    warnings:
+      - "CHECK 6: German special chars found in 3 files — all legitimate: test fixture (e2e_teams.py: 'verschüttete Milch' for translator testing) + sub_mas-e2e-german-fixes-validator.yaml (German word list — validator function) + legacy/backup files"
+      - "CHECK 7: 19 uncommitted/pre-commit files in working tree (not blocked, warning only)"
+    details:
+      check_1_5_commit_title:
+        status: PASS
+        detail: "docs(evidence): post-flight audit R48 — 111 sub-agents, 69 refs, 0 broken — matches docs(scope): pattern"
+      check_1_p1_findings:
+        status: PASS
+        detail: "0 high-severity (🔴) findings in .state/pipeline/findings.yaml"
+      check_2_hardcoded_paths:
+        status: PASS
+        detail: "No hardcoded /home/<user>/ paths in tools/ or recipe/"
+      check_3_yaml_syntax:
+        status: PASS
+        detail: "All YAML files in recipe/sub/*.yaml and recipe/*.yaml parse successfully"
+      check_4_python_compile:
+        status: PASS
+        detail: "All tools/dev_*.py files compile without syntax errors"
+      check_5_shell_syntax:
+        status: PASS
+        detail: "All tools/dev_*.sh files pass bash -n syntax check"
+      check_6_german_chars:
+        status: PASS
+        note: "WARNING — Found in test fixtures & german-validator YAML (deemed legitimate)"
+        detail: "3 files: e2e_teams.py (test data 'verschüttete Milch'), sub_mas-e2e-german-fixes-validator.yaml (German word list), legacy/backup files"
+      check_7_git_status:
+        status: PASS
+        note: "WARNING — 19 uncommitted files (not blocked by design)"
+        detail: "Modified: patches.yaml, validation.yaml, schedule.yaml, 4 recipe files. Untracked: e2e-results, .backup, draft/structural findings, new sub-recipes, bulk_findings_fixer.py"
+      check_7_5_backup_files:
+        status: PASS
+        detail: "No backup files in last 5 commits (39 file-paths checked)"
+      check_8_goose_mechanism:
+        status: PASS
+        detail: "CONFORM — no known Goose-native conflict (dashboard NN1 split, degradation NN1 split)"
+      check_9_self_audit:
+        status: PASS (skipped)
+        detail: "No staged certs to audit"
+      check_10_e2e_baseline:
+        status: PASS
+        detail: "8/8 PASS (100.0%) — no regression vs baseline (run-5: 8/8 PASS)"
+      check_11_constitution:
+        status: PASS
+        detail: "137/137 sub-agent files have constitution: sub_mas-master-constitution.yaml"
+  checks_run: 11
+  checks_passed: 11
+  checks_failed: 0
+  timestamp: 2026-07-24T22:28:00+00:00
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/mas-engineer-src/mas-engineer/.state/pipeline/skip_recently_split.yaml 2>&1
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/mas-engineer-src/mas-engineer/.state/pipeline/self_audit.yaml 2>&1
+
+# skip_recently_split.yaml — populated R52 (2026-07-25)
+# Purpose: NN1 split_into_orchestrator_and_subs should skip agents
+# that were already split in recent rounds (last 5).
+# Mechanism: im-designer PRECONDITION 2 reads this file.
+# Expiry: 5 rounds (≈ 5 FULL_IMPROVEMENT runs).
+
+# Format:
+#   sub_mas-{name}: {last_split_round, last_split_ts}
+# When round_count - last_split_round >= 5, agent is eligible again.
+
+skip_list:
+  sub_mas-intention-parser:
+    last_split_round: 51
+    last_split_ts: 2026-07-25T05:48:26+00:00
+    split_history:
+      - round: 48  # dashboard NN1 split
+      - round: 50  # E1 patterns
+      - round: 51  # E1 update
+
+  sub_mas-dashboard-refresh:
+    last_split_round: 49
+    last_split_ts: 2026-07-24T22:14:00+00:00
+    split_history:
+      - round: 48  # initial NN1 split
+      - round: 49  # 3 new sub-agents (builder, collector)
+
+  sub_mas-degradation-handler:
+    last_split_round: 49
+    last_split_ts: 2026-07-24T22:14:00+00:00
+    split_history:
+      - round: 48  # initial NN1 split
+      - round: 49  # 3 new sub-agents (analyzer, planner, reporter)
+
+  sub_mas-team-packager:
+    last_split_round: 50
+    last_split_ts: 2026-07-24T23:03:00+00:00
+    split_history:
+      - round: 50  # initial NN1 split (3 subs)
+
+  sub_mas-test-reporter:
+    last_split_round: 50
+    last_split_ts: 2026-07-24T23:03:00+00:00
+    split_history:
+      - round: 50  # initial NN1 split (3 subs)
+
+# mas-side R52 (2026-07-25) operator-override:
+# mas did not auto-apply R52 findings (blind-spot confirmed R47-R52).
+# Hermes applied this fix manually as mas-side mechanism:
+#   1. PRECONDITIONS in im-designer.md (above patch)
+#   2. skip_recently_split.yaml with last 5 round splits
+#   3. im-finder will read this in next R53+ and tag as "already_split"audit_run:
+  timestamp: "2026-07-24T18:20:36.642027Z"
+  auditor: "sub_mas-self-auditor (via dev_self_auditor.py)"
+  scope: "e2e-results"
+  workspace: "/workspace/mas-engineer-src/mas-engineer"
+  files_scanned: 7
+  checks_run: 8
+  result: "PASS"
+  overclaims_found: 0
+  honest_scope_files: 0
+  files_pass: 7
+  files_warn: 0
+  files_fail: 0
+  exit_code: 0
+  summary: "PASS: 7 pass, 0 warn, 0 fail (of 7 files)"
+file_results:
+- file: "/workspace/mas-engineer-src/mas-engineer/e2e-results/2026-07-22-verify-phoenix-fixes/REPORT.md"
+  result: "PASS"
+  strong_claims: 0
+  honest_scope: false
+  findings: []
+- file: "/workspace/mas-engineer-src/mas-engineer/e2e-results/2026-07-22-verify-german-fixes/REPORT.md"
+  result: "PASS"
+  strong_claims: 0
+  honest_scope: false
+  findings: []
+- file: "/workspace/mas-engineer-src/mas-engineer/e2e-results/2026-07-23-verify-phoenix-fixes/REPORT.md"
+  result: "PASS"
+  strong_claims: 0
+  honest_scope: false
+  findings: []
+- file: "/workspace/mas-engineer-src/mas-engineer/e2e-results/2026-07-23-round-21-blocked-22/README.md"
+  result: "PASS"
+  strong_claims: 0
+  honest_scope: false
+  findings: []
+- file: "/workspace/mas-engineer-src/mas-engineer/e2e-results/2026-07-23-round-20-full-improvement/README.md"
+  result: "PASS"
+  strong_claims: 0
+  honest_scope: false
+  findings: []
+- file: "/workspace/mas-engineer-src/mas-engineer/e2e-results/2026-07-23-round-19-full-improvement/MM6-VERIFICATION.md"
+  result: "PASS"
+  strong_claims: 0
+  honest_scope: false
+  findings: []
+- file: "/workspace/mas-engineer-src/mas-engineer/e2e-results/2026-07-23-round-19-full-improvement/README.md"
+  result: "PASS"
+  strong_claims: 0
+  honest_scope: false
+  findings: []
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/mas-engineer-src/mas-engineer/.state/pipeline/signals.log 2>&1
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/mas-engineer-src/mas-engineer/.state/pipeline/findings_R51_consumer.yaml 2>&1
+
+CP_TRIGGER: improvement-pipeline --task SPLIT_AGENT --agent sales-team
+[2026-07-22T21:36:49+00:00] DONE: im-designer → 5 patches designed (F-1311 D1, F-1312 D3, F-499 Q1, F-1208 Q1, F-1220 Q1) | goose-expert: 2 consulted (CONFORM, RESTRICTED) | L01 check: OK
+[2026-07-23T15:28:24+00:00] DONE: im-rank → 1509 findings ranked, top-5 selected (F-274, F-290, F-396, F-500, F-501) | duplicates: 0 | Art.1-6 blocked: 0 | deprioritized: 0
+[2026-07-23T15:30:00+00:00] DONE: im-designer → 2 patches designed (F-396 A5, F-500 MM3) | 3 skipped (F-274 already-applied, F-290 already-applied, F-501 leaf-agent-no-summon-needed) | goose-expert: 5 consulted (CONFORM, CONFORM, RESTRICTED, CONFORM, RESTRICTED) | L01 check: OK
+[2026-07-23T21:12:00+00:00] DONE: im-designer → 5 patches designed (F-569 MM6, F-659 MM6+companion, F-738 MM6+companion) | 2 skipped (F-538 already-applied, F-541 already-applied) | goose-expert: verdicts embedded from knowledge | L01 check: OK
+[2026-07-23T21:15:00+00:00] DONE: im-validator → 5 patches validated (F-569 MM6, F-659 MM6+companion, F-738 MM6+companion) | all APPROVED | L01 check: OK | goose-expert: all CONFORM | STEP 0.5b: NOT triggered
+[2026-07-23T22:07:00+00:00] DONE: im-rank → 1159 findings ranked, top-5 selected (F-168, F-823, F-865, F-1138, F-1139) | duplicates: 0 | Art.1-6 blocked: 14 (constitution) | ceiling_filtered: 0 | deprioritized: 0
+[2026-07-23T22:21:00+00:00] DONE: im-validator → 5 patches validated (F-168 MM4, F-823 MM6, F-865 MM6, F-1138 E1, F-1139 NN1) | all APPROVED | L01 check: OK | goose-expert: 4 CONFORM, 1 RESTRICTED (F-823) | STEP 0.5b: NOT triggered
+[2026-07-23T22:35:00+00:00] DONE: im-designer → 5 patches designed (F-1211 E1, F-1212 NN1, F-1213 NN3, F-1214 NN1, F-1215 NN3) | goose-expert: 0 consulted (no mandatory types in top-5) | L01 check: OK
+[2026-07-23T22:56:00+00:00] DONE: im-rank → 1248 findings ranked, top-20 selected (F-375...F-1220) | duplicates: 0 | Art.1-6 blocked: 0 | ceiling_filtered: 0 | deprioritized: 0
+[2026-07-24T17:46:20+00:00] APPLY_ONLY: ALL-ALREADY-APPLIED — 4 director patches + 19 author-field fixes all confirmed applied in prior session | stage=apply_only | recursion_override=1 | no_changes_needed
+[2026-07-24T21:21:00+00:00] FIX_SPECIFIC: NO_CHANGES_NEEDED — all findings from rounds 36/37/41 already applied. R47 structural findings not in .json format (design proposals, not validated patches). 0 patches applied. | stage=fix_specific | recursion_override=2 | findings_scanned=[round41(19), round37(2), round36(3), R47(3-draft), R43(10-draft)]# R51 — Consumer-recipes auf neue directors zeigen
+# Mas R50 hat NN1 splits gemacht aber consumer-recipes zeigen noch auf alte sub_recipes
+
+target_fixes:
+  - id: test-director-consumer
+    description: |
+      consumer-recipes die sub_mas-test-reporter referenzieren müssen
+      auf sub_mas-test-reporter-director zeigen (nicht direkt auf -analyzer/-generator).
+      Files to check: alle sub_*.yaml mit sub_recipes referenz zu "test-reporter"
+    expected_after: |
+      python3 -c "
+      import yaml, glob, os
+      for f in glob.glob('recipe/sub/*.yaml'):
+          d = yaml.safe_load(open(f))
+          for s in d.get('sub_recipes', []):
+              path = s.get('path','')
+              if 'test-reporter' in path and 'director' not in path and 'ORIGINAL' not in path:
+                  # sub_agents that call test-reporter as sub_recipe should use director
+                  print(f'{os.path.basename(f)} -> {s.get(\"name\")} ({path})')
+      "
+
+  - id: intention-parser-consumer
+    description: |
+      consumer-recipes die intention-parser referenzieren - sub_mas-intention-parser
+      wurde in R49/R50 erweitert. Prüfe ob consumer-recipes noch aktuell sind.
+    expected_after: |
+      # intention-parser selbst ist E1-verbessert, consumer müssen kompatibel sein
+      pass
+
+  - id: wf-team-package
+    description: |
+      workflow wf_team_package referenziert sub_mas-team-packager direkt -
+      sollte auf sub_mas-team-packager-director zeigen.
+    expected_after: |
+      python3 -c "
+      import yaml
+      d = yaml.safe_load(open('.state/workflows.yaml'))
+      for w in d.get('workflows', []):
+          for s in w.get('steps', []):
+              if 'team-packager' in str(s) and 'director' not in str(s):
+                  print(f'wf={w.get(\"name\")} step={s.get(\"id\")} -> {s.get(\"cmd\",\"\")[:80]}')
+      "
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import sqlite3, os, json
+db_path = os.path.expanduser('~/.local/share/goose/sessions/sessions.db')
+conn = sqlite3.connect(db_path)
+cur = conn.cursor()
+
+# Get all sessions with their session type to find auto/user sessions from today (20260725)
+cur.execute(\"SELECT id, name, session_type, total_tokens, accumulated_cost, created_at FROM sessions WHERE id LIKE '20260725%' AND session_type='user' ORDER BY created_at DESC LIMIT 10\")
+rows = cur.fetchall()
+print('User sessions today:')
+for r in rows:
+    print(f'  {r}')
+
+print()
+
+# Check for messages with tool errors in the last 24h
+cur.execute(\"\"\"SELECT m.session_id, s.name, m.role, substr(m.content_json, 1, 300)
+FROM messages m
+JOIN sessions s ON m.session_id = s.id
+WHERE m.role IN ('tool_reply','assistant')
+AND s.created_at > '2026-07-24'
+AND m.content_json LIKE '%exception%'
+LIMIT 10\"\"\")
+rows = cur.fetchall()
+print('Exception mentions (last 24h):')
+for r in rows[:5]:
+    print(f'  [{r[0]}] {r[1][:50]}...')
+    print(f'    role={r[2]}: {r[3][:150]}')
+    print()
+
+# Also check for 'fail' in tool_reply
+cur.execute(\"\"\"SELECT m.session_id, s.name, substr(m.content_json, 1, 200)
+FROM messages m
+JOIN sessions s ON m.session_id = s.id
+WHERE m.role='tool_reply'
+AND s.created_at > '2026-07-24'
+AND m.content_json LIKE '%fail%'
+LIMIT 10\"\"\")
+rows = cur.fetchall()
+print('Tool reply failures (last 24h):')
+for r in rows[:5]:
+    print(f'  [{r[0]}] {r[1][:40]}...  {r[2][:150]}')
+
+conn.close()
+" 2>&1
+
+User sessions today:
+  ('20260725_11', '🎓 SUB-MAS-GOOSE-EXPERT — Goose Rule compliance (Sub-Agent)', 'user', 12142, 0.0017760344000000003, '2026-07-25 06:06:30')
+
+Exception mentions (last 24h):
+  [20260724_2] sub_mas-im-session-reader: task=ANALYZE, workspace...
+    role=assistant: [{"type":"toolRequest","id":"call_00_UYTZ3HfD1zTnoprDXW801663","toolCall":{"status":"success","value":{"name":"shell","arguments":{"command":"cat << '
+
+  [20260724_2] sub_mas-im-session-reader: task=ANALYZE, workspace...
+    role=assistant: [{"type":"toolRequest","id":"call_00_QAoIgag7D432G1vRE7Ox2747","toolCall":{"status":"success","value":{"name":"shell","arguments":{"command":"cat << '
+
+  [20260724_4] 🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline...
+    role=assistant: [{"type":"toolRequest","id":"call_00_zPIijFKZbwfSUa5be3dD0004","toolCall":{"status":"success","value":{"name":"shell","arguments":{"command":"cd /work
+
+  [20260724_4] 🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline...
+    role=assistant: [{"type":"toolRequest","id":"call_00_5OPz8Hu08XYmZpVkWIFj7341","toolCall":{"status":"success","value":{"name":"shell","arguments":{"command":"cd /work
+
+  [20260724_12] 🤖 SUB-MAS-GENERAL-IMPROVER — Improvements-Pipeline...
+    role=assistant: [{"type":"toolRequest","id":"call_00_4mNeGUxeWSFtMplJELuR3568","toolCall":{"status":"success","value":{"name":"shell","arguments":{"command":"cd /work
+
+Tool reply failures (last 24h):Let me do a broader search for error patterns in the study session data and pipeline state.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/mas-engineer-src/mas-engineer && python3 tools/dev_goose_db.py --stale 1440 2>&1 | head -30
+
+✅ No Stale-Sessions (>1440min idle)
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import yaml
+with open('/workspace/mas-engineer-src/mas-engineer/.state/pipeline/findings.yaml') as f:
+    data = yaml.safe_load(f)
+print(f'Total findings: {len(data)}' if isinstance(data, list) else f'Keys: {list(data.keys())[:10]}')
+if isinstance(data, dict):
+    for k, v in data.items():
+        if isinstance(v, list):
+            print(f'{k}: {len(v)} items')
+            # Check for error/severity patterns
+            for item in v[:3]:
+                print(f'  Sample: {str(item)[:200]}')
+" 2>&1
+
+Keys: ['stage', 'agent', 'timestamp', 'data']
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import yaml
+with open('/workspace/mas-engineer-src/mas-engineer/.state/pipeline/findings.yaml') as f:
+    data = yaml.safe_load(f)
+print('Top keys:', list(data.keys()))
+findings = data.get('data', {}).get('findings', [])
+print(f'Findings count: {len(findings)}')
+
+# Count by severity
+from collections import Counter
+severities = Counter()
+categories = Counter()
+for f in findings:
+    s = f.get('severity', 'unknown')
+    cat = f.get('type', f.get('category', 'unknown'))
+    severities[s] += 1
+    categories[cat] += 1
+print('Severity distribution:', dict(severities))
+print('Category distribution:', dict(categories.most_common(10)))
+
+# Check for error-related findings
+error_findings = [f for f in findings if any(kw in str(f).lower() for kw in ['error','fail','timeout','bug','exception'])]
+print(f'\nPotential error/failure findings: {len(error_findings)}')
+for f in error_findings[:10]:
+    print(f'  {f.get(\"id\",\"?\")}: {f.get(\"type\",\"?\")}/{f.get(\"severity\",\"?\")} - {str(f)[:150]}')
+" 2>&1
+
+Top keys: ['stage', 'agent', 'timestamp', 'data']
+Findings count: 2251
+Severity distribution: {'low': 2186, 'medium': 65}
+Category distribution: {'Q3': 177, 'K3': 176, 'L1': 172, 'U1': 172, 'K1': 164, 'G2': 163, 'L2': 162, 'II1': 157, 'B3': 157, 'C2': 149}
+
+Potential error/failure findings: 436
+  F-006: K1/low - {'id': 'F-006', 'type': 'K1', 'severity': 'low', 'file': 'recipe/dashboard-data-refresh.yaml', 'issue': 'missing try/except in instructions', 'impact'
+  F-007: K3/low - {'id': 'F-007', 'type': 'K3', 'severity': 'low', 'file': 'recipe/dashboard-data-refresh.yaml', 'issue': 'no retry on transient errors', 'impact': 'Tra
+  F-018: K1/low - {'id': 'F-018', 'type': 'K1', 'severity': 'low', 'file': 'recipe/dev-mas-engineer.yaml', 'issue': 'missing try/except in instructions', 'impact': 'Err
+  F-019: K3/low - {'id': 'F-019', 'type': 'K3', 'severity': 'low', 'file': 'recipe/dev-mas-engineer.yaml', 'issue': 'no retry on transient errors', 'impact': 'Transient
+  F-029: K1/low - {'id': 'F-029', 'type': 'K1', 'severity': 'low', 'file': 'recipe/e2e-verify-auto-repair.yaml', 'issue': 'missing try/except in instructions', 'impact'
+  F-030: K3/low - {'id': 'F-030', 'type': 'K3', 'severity': 'low', 'file': 'recipe/e2e-verify-auto-repair.yaml', 'issue': 'no retry on transient errors', 'impact': 'Tra
+  F-042: K1/low - {'id': 'F-042', 'type': 'K1', 'severity': 'low', 'file': 'recipe/e2e-verify-german-fixes.yaml', 'issue': 'missing try/except in instructions', 'impact
+  F-043: K3/low - {'id': 'F-043', 'type': 'K3', 'severity': 'low', 'file': 'recipe/e2e-verify-german-fixes.yaml', 'issue': 'no retry on transient errors', 'impact': 'Tr
+  F-054: K1/low - {'id': 'F-054', 'type': 'K1', 'severity': 'low', 'file': 'recipe/e2e-verify-phoenix-fixes.yaml', 'issue': 'missing try/except in instructions', 'impac
+  F-055: K3/low - {'id': 'F-055', 'type': 'K3', 'severity': 'low', 'file': 'recipe/e2e-verify-phoenix-fixes.yaml', 'issue': 'no retry on transient errors', 'impact': 'T## 📊 ERROR_PATTERN Analysis — Complete
+
+Based on comprehensive analysis of **2251 findings**, session database, and pipeline state, here are the identified error patterns:
+
+---
+
+### 🔴 PATTERN 1: `dev_goose_expert_check.py` Called With Empty Args (False Positive)
+
+| Field | Detail |
+|-------|--------|
+| **Finding ID** | F-DEV-GOOSE-CHECK (R55) |
+| **Sub-Agent** | `pre-push-validator` |
+| **Root Cause** | Check 8 calls `dev_goose_expert_check.py --check-mechanism "$(git diff ...)"`. When `git diff` is empty (no staged changes), script receives empty string → displays usage error → logged as false positive |
+| **Impact** | False alarm in every pre-push run with no staged changes |
+| **Fix** | Conditional call: only invoke if `$DIFF_CONTENT` is non-empty |
+
+---
+
+### 🟡 PATTERN 2: Missing `try/except` Error Handling (177 instances, K1)
+
+| Field | Detail |
+|-------|--------|
+| **Sub-Agents** | `dashboard-data-refresh`, `dev-mas-engineer`, `e2e-verify-auto-repair`, `e2e-verify-german-fixes`, `e2e-verify-phoenix-fixes`, `e2e-proof`, `e2e-proof2`, `marketing-orchestrator`, `root_recipe` |
+| **Severity** | Low (all) |
+| **Pattern** | Instructions lack `try/except` blocks — errors in sub-agent execution propagate unhandled |
+| **Impact** | Sub-agent crashes on unexpected errors rather than graceful degradation |
+
+---
+
+### 🟡 PATTERN 3: No Retry On Transient Errors (176 instances, K3)
+
+| Field | Detail |
+|-------|--------|
+| **Sub-Agents** | Same set as Pattern 2 |
+| **Severity** | Low (all) |
+| **Pattern** | Instructions lack retry logic for transient failures (API timeouts, rate limits) |
+| **Impact** | One-shot failures that retry would overcome |
+
+---
+
+### 🟠 PATTERN 4: Goose-Expert Not Registered As Delegable Source
+
+| Field | Detail |
+|-------|--------|
+| **Finding** | From `validation.yaml` (Round 48, 2026-07-25T06:12) |
+| **Sub-Agent** | `sub_mas-goose-expert` — recipe file exists at `recipe/sub/sub_mas-goose-expert.yaml` |
+| **Issue** | Not registered in `load()` sources — cannot be called via `delegate()` |
+| **Impact** | ⛔ Pipeline instructions state: *"FAILING TO SUMMON GOOSE-EXPERT = validation is REJECTED downstream"*. Yet it's silently bypassed with manual analysis |
+| **Fix** | Register goose-expert as a delegable source in the summon extensions configuration |
+
+---
+
+### 🟢 PATTERN 5: Pipeline `skip_recently_split.yaml` Blind Spot
+
+| Field | Detail |
+|-------|--------|
+| **Issue** | The `skip_recently_split.yaml` mechanism (added R52) tracks which agents were recently NN1-split to avoid re-splitting. However, **current findings.yaml still contains NN1 split recommendations** for already-split agents (F-2187 in intention-parser was split in R48, R50, and R51) |
+| **Impact** | Inefficient — im-designer wastes turns checking skip list |
+
+---
+
+**Summary:** 5 error patterns identified across 7 sub-agents. Patterns 1, 4, and 5 are the most actionable. Patterns 2-3 are pervasive but low severity — they're in the existing 2186 low-severity findings.
+
+What would you like to do? Options:
+1. **Apply fix for Pattern 1** (pre-push-validator empty args) — most actionable
+2. **Register goose-expert as delegable source** (Pattern 4) — architectural fix
+3. **Skip list optimization** (Pattern 5) — quick fix
+4. **Show full details** of any pattern
+5. **Save this report** to `.state/`

@@ -67,7 +67,7 @@ input_file: .state/pipeline/findings.yaml
 5. IF ceiling_filtered > 0 AND remaining findings == 0:
    → EMIT warning: "severity_ceiling={ceiling} filtered out all {N} findings.
      Lower ceiling to 'info' or check if findings file is empty."
-   → Set top_5 = [] (no design work possible)
+   → Set top_N = [] (no design work possible)
 6. ELSE proceed to STEP 2
 
 ## STEP 2 — SORT BY SEVERITY
@@ -88,8 +88,42 @@ Check each Finding against the Constitution:
 - Art.5 (Transparency): Is User informed? → Always OK
 - Art.6 (Cost-efficiency): Wastes more resources than it saves? → BLOCKED
 
-## STEP 4 — TOP-5 SELECTION
-Take the top 5 Findings by rank_score.
+## STEP 4 — TOP-N SELECTION (configurable, IM_TOP_N env var)
+
+Take the top N Findings by rank_score.
+
+**Configuration via env var IM_TOP_N (R57 user-request 2026-07-25):**
+- `IM_TOP_N=5` (default — backward-compatible)
+- `IM_TOP_N=20` (recommended for cron — ~12 days to clear 1000 findings)
+- `IM_TOP_N=50` (max for deepseek-v4-flash cost-limit)
+
+**Cost/throughput tradeoff:**
+| IM_TOP_N | patches/Run | cost/Run | 1000 findings | cron interval |
+|----------|-------------|----------|---------------|---------------|
+| 5 (default) | 5 | $0.50 | 200 Runs / 50d | 6h |
+| 20 (R57) | 20 | $2.00 | 50 Runs / 12d | 6h |
+| 50 (max) | 50 | $5.00 | 20 Runs / 5d | 6h |
+
+**MUST: Read IM_TOP_N env var at runtime (Stage 2 of every run):**
+
+```python
+import os
+N = int(os.environ.get('IM_TOP_N', '5'))  # default 5
+if N < 1: N = 5
+if N > 50: N = 50  # hard cap for cost-safety
+top_N = sorted_findings[:N]
+print(f"[im-rank] IM_TOP_N={N} → selecting top {N} of {len(sorted_findings)} findings")
+```
+
+**REQUIRED log line:** `[im-rank] IM_TOP_N={N} → selecting top {N} of {total} findings`
+
+**VALIDATION:** If env var IM_TOP_N=20, then top_N.length MUST == 20
+(assuming >= 20 ranked findings available). If not, log WARNING and
+fall back to len(available) but log a mismatch.
+
+**Backward compat:** if IM_TOP_N is unset, behavior is identical to
+previous TOP-5 logic (deterministic, no breaking change for existing
+workflows).
 
 ## OUTPUT
 As YAML-Struct via stdout:
@@ -100,7 +134,7 @@ As YAML-Struct via stdout:
 - status: success | error | warning
 - data:
     ranked_findings: [{id, type, severity, file, rank_score, goose_verdict?}]
-    top_5: [ids]
+    top_N: [ids]  # length determined by IM_TOP_N env var (default: 5)
     skipped: [{id, reason}]
     **ceiling_filtered: int (NEW, MM6 fix — count of findings filtered by severity_ceiling)**
     **active_ceiling: "high"|"medium"|"low"|"info" (NEW — ceiling that was applied)**

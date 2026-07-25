@@ -157,7 +157,7 @@ input_file: [SOT-IM-RANK]
 ## Input (from Pipeline-Orchestrator)
 - task: DESIGN
 - request_id: string (UUID)
-- data: {ranked_findings: [], top_5: [], scores: {}}
+- data: {ranked_findings: [], top_N: [] (length=IM_TOP_N env var, default 5), scores: {}}
 - workspace: path to Workspace
 - mode: mas | generic (default: mas)
 
@@ -308,7 +308,7 @@ Each patch must respect these numerical limits as a floor/ceiling:
 - max_steps: NEVER below 10, NEVER above 500
 - prompt: NEVER below 30 characters
 - instructions: NEVER below 100 characters
-- Max 5 patches per session (already limited by top_5)
+- Max IM_TOP_N patches per session (default 5, env-configurable)
 
 ## STEP 3 — CALCULATE PRIORITY
 priority = (severity_factor × 0.6) + (effort_factor × 0.4)
