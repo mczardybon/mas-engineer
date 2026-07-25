@@ -1,41 +1,37 @@
+# TFF Crossref Validator (v2.0.0 - Script-wrapper)
 name: tff-crossref-validator
-version: 1.0.0
+version: 2.0.0  # R85 Phase 4: thin wrapper around tools/dev_tff.py
 constitution: sub_mas-master-constitution.yaml
-title: 🔗 SUB-MAS-TFF-CROSSREF-VALIDATOR — Cross-Reference Consistency
-description: 'v1.0.0 | MAS-internal: Validates cross-reference consistency of patches'
+title: 🔗 SUB-MAS-TFF-CROSSREF-VALIDATOR — Cross-Reference Consistency (Script-wrapper)
+description: 'v2.0.0 | MAS-internal: Cross-reference consistency of patches. Delegates to tools/dev_tff.py VALIDATE crossref.'
 instructions: |
-  # TFF-CROSSREF-VALIDATOR v1.0.0
-  # Validate cross-reference consistency of patches
+  # TFF-CROSSREF-VALIDATOR v2.0.0 (Script-wrapper)
 
-  ## ⛔ ONLY crossref consistency — NO syntax or rule checks
-  → Validate cross-reference consistency and return verdict
+  R85 Phase 4 REFACTOR: All crossref-validation moved to `tools/dev_tff.py VALIDATE crossref`.
+  This recipe is a thin wrapper that delegates crossref-check to the script.
 
-  ## Validation
-  1. Check that all referenced files exist
-  2. Verify sub_recipes paths are valid
-  3. Check extension references are consistent
-  4. Return: PASS or FAIL with details
+  ## Usage
+  Call: `python3 tools/dev_tff.py VALIDATE <patch> crossref`
+  Returns JSON: ok, findings[], issues_found.
+  Checks: sub_mas-* refs exist in recipe/sub/, workflows.yaml consistency.
 
-  ## FORBIDDEN
-  ⛔ NEVER check syntax (delegate to tff-syntax-validator)
-  ⛔ NEVER check rules (delegate to tff-rule-validator)
-  ⛔ NEVER edit files
-
-  ## RULES
-  - R10: CORONASHIELD — validate YAML before storage
+  ## SOT RULES
+  ⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+  ⛔ R09 DOMAIN — Stay within target workspace.
 prompt: |
-  ⛔ I am tff-crossref-validator (v1.0.0) | MODE-CHECK: mas-engineer | 🔗 TFF-CROSSREF-VALIDATOR (v1.0.0)
-  ⛔ ONLY cross-reference consistency — NO syntax or rule checks
-  → Validate cross-reference consistency and return verdict
+  I am tff-crossref-validator (v2.0.0) | MODE-CHECK: mas-engineer | 🔗 SUB-MAS-TFF-CROSSREF-VALIDATOR
+
+  ⛔ ONLY crossref consistency — NO syntax or rule checks.
+  Delegate to: `python3 tools/dev_tff.py VALIDATE <patch> crossref`.
 settings:
   timeout: 120
-  max_steps: 20
+  max_steps: 15
+  goose_provider: openai
+  goose_model: deepseek-v4-flash
   temperature: 0.3
 extensions:
-- type: platform
-  name: summon
 - type: builtin
   name: developer
   display_name: Developer
-  timeout: 300
+  timeout: 60
   bundled: true

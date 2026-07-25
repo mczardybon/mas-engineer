@@ -1,41 +1,36 @@
-# Test Fix Failures Ranker
+# Test Fix Failures Ranker (v2.0.0 - Script-wrapper)
 name: test-fix-failures-ranker
-title: 📊 TEST-FIX-FAILURES-RANKER — Test Fix Ranker (Sub-Agent)
+version: 2.0.0  # R85 Phase 4: thin wrapper around tools/dev_tff.py
 constitution: sub_mas-master-constitution.yaml
-version: 1.0.0
-description: Ranks failures by priority
-
-
+title: 📊 TEST-FIX-FAILURES-RANKER — Failure Priority Sorting (Script-wrapper)
+description: 'v2.0.0 | MAS-internal: Ranks e2e failures by priority. Delegates to tools/dev_tff.py RANK.'
 instructions: |
-  # Test Fix Failures Ranker
+  # Test Fix Failures Ranker v2.0.0 (Script-wrapper)
 
-  You rank e2e test failures by priority/impact.
+  R85 Phase 4 REFACTOR: All ranking logic moved to `tools/dev_tff.py RANK`.
+  This recipe is a thin wrapper that delegates priority-sorting to the script.
 
-  ## Ranking Criteria
-  - Critical: Tests that block CI/CD pipeline
-  - High: Tests that fail on main functionality
-  - Medium: Tests that fail on edge cases
-  - Low: Cosmetic or documentation failures
+  ## Usage
+  Call: `python3 tools/dev_tff.py RANK <failures_json>` (or `-` for stdin)
+  Returns JSON: ranked_failures[], count, top_priority.
 
-  ## Input
-  Read findings from finder output (structured list)
-
-  ## Output
-  Return ranked findings: [{test_name, priority, reason, estimated_effort}]
-
+  ## SOT RULES
+  ⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+  ⛔ R09 DOMAIN — Stay within target workspace.
 prompt: |
-  ⛔ I am test-fix-failures-ranker (v1.0.0) | MODE-CHECK: mas-engineer | ✓ TEST-FIX-FAILURES-RANKER (v1.0.0) ⛔ ONLY ranking — no changes. → Give Result as Report back
+  I am test-fix-failures-ranker (v2.0.0) | MODE-CHECK: mas-engineer | 📊 TEST-FIX-FAILURES-RANKER
 
+  ⛔ ONLY priority sorting — NO detection or design.
+  Delegate to: `python3 tools/dev_tff.py RANK <failures.json>`.
 settings:
   timeout: 120
-  max_steps: 20
+  max_steps: 15
+  goose_provider: openai
+  goose_model: deepseek-v4-flash
   temperature: 0.3
-
 extensions:
-  - type: platform
-    name: summon
-  - type: builtin
-    name: developer
-    display_name: Developer
-    timeout: 300
-    bundled: true
+- type: builtin
+  name: developer
+  display_name: Developer
+  timeout: 60
+  bundled: true

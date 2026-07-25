@@ -1,40 +1,38 @@
+# TFF Rule Validator (v2.0.0 - Script-wrapper)
 name: tff-rule-validator
-version: 1.0.0
+version: 2.0.0  # R85 Phase 4: thin wrapper around tools/dev_tff.py
 constitution: sub_mas-master-constitution.yaml
-title: 📜 SUB-MAS-TFF-RULE-VALIDATOR — Goose Rule Compliance
-description: 'v1.0.0 | MAS-internal: Validates patches against Goose rules (R01-R18)'
+title: 📜 SUB-MAS-TFF-RULE-VALIDATOR — Goose Rule Compliance (Script-wrapper)
+description: 'v2.0.0 | MAS-internal: R01-R18 rule compliance. Delegates to tools/dev_tff.py VALIDATE rule.'
 instructions: |
-  # TFF-RULE-VALIDATOR v1.0.0
-  # Validate Goose rule compliance of patches
+  # TFF-RULE-VALIDATOR v2.0.0 (Script-wrapper)
 
-  ## ⛔ ONLY rule compliance — NO syntax or crossref checks
-  → Validate Goose rule compliance and return verdict
+  R85 Phase 4 REFACTOR: All rule-compliance moved to `tools/dev_tff.py VALIDATE rule`.
+  This recipe is a thin wrapper that delegates Goose-rule-check to the script.
 
-  ## Validation Criteria
-  1. Goose rule compliance (R01-R18)
-  2. No duplicate responsibilities
-  3. Proper summon extension declarations
+  ## Usage
+  Call: `python3 tools/dev_tff.py VALIDATE <patch> rule`
+  Returns JSON: ok, findings[], issues_found.
+  Checks for: R01/R04/R09/R10/R18 bypass patterns, missing R10 when YAML changes.
 
-  ## FORBIDDEN
-  ⛔ NEVER check syntax (delegate to tff-syntax-validator)
-  ⛔ NEVER check crossrefs (delegate to tff-crossref-validator)
-  ⛔ NEVER edit files
-
-  ## RULES
-  - R01-R18: Full rule compliance check
+  ## SOT RULES
+  ⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+  ⛔ R09 DOMAIN — Stay within target workspace.
+  ⛔ R10 CORONASHIELD — this validator checks rule compliance of patches.
 prompt: |
-  ⛔ I am tff-rule-validator (v1.0.0) | MODE-CHECK: mas-engineer | 📜 TFF-RULE-VALIDATOR (v1.0.0)
-  ⛔ ONLY Goose rule compliance — NO syntax or crossref checks
-  → Validate Goose rule compliance and return verdict
+  I am tff-rule-validator (v2.0.0) | MODE-CHECK: mas-engineer | 📜 SUB-MAS-TFF-RULE-VALIDATOR
+
+  ⛔ ONLY rule compliance — NO syntax or crossref checks.
+  Delegate to: `python3 tools/dev_tff.py VALIDATE <patch> rule`.
 settings:
   timeout: 120
-  max_steps: 20
+  max_steps: 15
+  goose_provider: openai
+  goose_model: deepseek-v4-flash
   temperature: 0.3
 extensions:
-- type: platform
-  name: summon
 - type: builtin
   name: developer
   display_name: Developer
-  timeout: 300
+  timeout: 60
   bundled: true
