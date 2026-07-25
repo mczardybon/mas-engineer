@@ -295,29 +295,38 @@ def check_rule(rule_id, action=""):
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
 
         if rule_id == "R55":
-            """IM_TOP_N_ENFORCEMENT (R57 user-request 2026-07-25):
-            Code-enforced top-N selection for im-rank step. Mas-LLM tends to
-            ignore instruction-only IM_TOP_N env var (R57a/b/c evidence). This
-            rule enforces N patches must be selected by reading the env var
-            at code-level, bypassing LLM interpretation.
-            
-            Triggered when im-rank writes top_N: to state YAML.
-            Validation: top_N.length MUST equal IM_TOP_N (or default 5)."""
+            """IM_TOP_N_ENFORCEMENT (R57 user-request 2026-07-25, R58 multiplier fix):
+
+            Code-enforced top-N selection + end-of-run target check.
+
+            Modes:
+            1. WRITE ranked_findings.yaml / apply patches: top_N.length must equal IM_TOP_N
+            2. WRITE signal_*_done.yaml (end-of-run): session counter must be >= target
+               where target = IM_TOP_N * IM_TOP_N_MULTIPLIER (default 5*3=15)
+
+            R58 rationale: mas generates 0-9 patches/run realistically, but R57's hard
+            100-patch target was impossible. Multiplier makes target realistic:
+            IM_TOP_N=5 * 3 = 15 patches/run. Run #1: 5 patches, #2: 10, #3: 15 (target met)."""
             import os as _os
             akt = action.lower()
-            # Trigger: write to ranked_findings.yaml
+            # Read IM_TOP_N + MULTIPLIER
+            try:
+                N = int(_os.environ.get('IM_TOP_N', '5'))
+            except ValueError:
+                N = 5
+            if N < 1: N = 5
+            if N > 500: N = 500
+            try:
+                M = int(_os.environ.get('IM_TOP_N_MULTIPLIER', '3'))
+            except ValueError:
+                M = 3
+            if M < 1: M = 1
+            if M > 100: M = 100
+            target = N * M
+            # Mode 1: WRITE ranked_findings / APPLY patches — enforce top_N == IM_TOP_N
             is_rank_write = "ranked_findings" in akt and "write" in akt
             is_patch_apply = "apply patches" in akt or "patches_applied" in akt
             if is_rank_write or is_patch_apply:
-                # Read IM_TOP_N
-                try:
-                    N = int(_os.environ.get('IM_TOP_N', '100'))
-                except ValueError:
-                    N = 100
-                if N < 1: N = 100
-                if N > 500: N = 500  # R57 user: default 100, max 500
-                # Also cap the "found" value to 500
-                # Find number in action (e.g. "top_N: 20" or "patches_applied: 20")
                 import re
                 m = re.search(r'top_n[:\s]+(\d+)|patches_applied[:\s]+(\d+)|top[_\s]?N[:\s]+(\d+)', akt, re.IGNORECASE)
                 if m:
@@ -326,8 +335,27 @@ def check_rule(rule_id, action=""):
                         found = int(found_str)
                         if found < N:
                             return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
-                                    "detail": f"top_N={found} < IM_TOP_N={N} (env var). R55 enforces >= {N} patches per run.",
+                                    "detail": f"top_N={found} < IM_TOP_N={N} (env var). R55 enforces >= {N} patches in selection.",
                                     "action": "BLOCKED"}
+            # Mode 2: WRITE signal_*_done.yaml — enforce counter >= target
+            is_signal_done = any(s in akt for s in ["signal_apply_only_done", "signal_general_improver_done",
+                                                     "signal_full_improvement_done", "signal_"]) and "done" in akt
+            if is_signal_done:
+                # Read session counter
+                import yaml as _yaml
+                MAS_ROOT = "/workspace/mas-engineer-src/mas-engineer"
+                counter_path = f"{MAS_ROOT}/.state/pipeline/r55_session_count.yaml"
+                session_count = 0
+                if _os.path.exists(counter_path):
+                    try:
+                        cd = _yaml.safe_load(open(counter_path)) or {}
+                        session_count = int(cd.get("data", {}).get("applied_count", 0))
+                    except Exception:
+                        session_count = 0
+                if session_count < target:
+                    return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
+                            "detail": f"R55: session {session_count}/{target} patches applied (IM_TOP_N={N} × {M}). {target - session_count} more patches needed before 'done' can be signaled.",
+                            "action": "BLOCKED"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
 
         if rule_id == "R12":

@@ -143,14 +143,22 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
     # ─── step 1: VALIDATE (BEFORE) ───
     print(f"\n🔍 Check: {rel_path}")
 
-    # ─── R55 ENFORCEMENT (R57 user-correction 2026-07-25) ───
-    # R55 IM_TOP_N: blocks if session patches_applied < IM_TOP_N
-    # Session counter lives at hardcoded MAS_ENGINEER_ROOT
+    # ─── R55 ENFORCEMENT (R57 user-correction 2026-07-25, R58 multiplier fix) ───
+    # R55 IM_TOP_N: session target = IM_TOP_N * IM_TOP_N_MULTIPLIER
+    # - IM_TOP_N = minimum patches target (default 5)
+    # - IM_TOP_N_MULTIPLIER = multiplier for realistic target (default 3)
+    # - Patches are NOT blocked at do_patch time (would deadlock mas)
+    # - Counter increments at every successful patch
+    # - End-of-run R55 check (in dev_rule_checker.py) blocks signal_*_done if counter < target
     try:
         import os as _r55_os
-        IM_TOP_N = int(_r55_os.environ.get('IM_TOP_N', '100'))
-        if IM_TOP_N < 1: IM_TOP_N = 100
+        IM_TOP_N = int(_r55_os.environ.get('IM_TOP_N', '5'))
+        if IM_TOP_N < 1: IM_TOP_N = 5
         if IM_TOP_N > 500: IM_TOP_N = 500
+        IM_MULT = int(_r55_os.environ.get('IM_TOP_N_MULTIPLIER', '3'))
+        if IM_MULT < 1: IM_MULT = 1
+        if IM_MULT > 100: IM_MULT = 100
+        target = IM_TOP_N * IM_MULT
         # Hardcoded to mas-engineer-src (R55 fix)
         MAS_ROOT = Path("/workspace/mas-engineer-src/mas-engineer")
         counter_path = MAS_ROOT / ".state" / "pipeline" / "r55_session_count.yaml"
@@ -162,15 +170,12 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
                 session_count = int(cd.get("data", {}).get("applied_count", 0))
             except Exception:
                 session_count = 0
-        # Enforce: if session_count < IM_TOP_N, block this patch
-        if session_count < IM_TOP_N:
-            result["status"] = "blocked"
-            err_msg = f"R55: session has {session_count} applied < IM_TOP_N={IM_TOP_N}. Apply {IM_TOP_N - session_count} more patches first."
-            result["error"].append(err_msg)
-            error(f"R55 BLOCKED: {err_msg}")
-            return result
+        # Do NOT block patches at do_patch time (R58 fix).
+        # Just log current state for visibility.
+        if session_count < target:
+            warn(f"R55: session {session_count}/{target} patches applied (IM_TOP_N={IM_TOP_N} × {IM_MULT}). {target - session_count} more to reach target.")
         else:
-            ok(f"R55: OK (session {session_count} >= {IM_TOP_N})")
+            ok(f"R55: session {session_count}/{target} ✓ (target reached)")
     except Exception as e:
         warn(f"R55 check failed (non-blocking): {e}")
     
