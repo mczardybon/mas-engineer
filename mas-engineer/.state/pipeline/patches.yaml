@@ -1,59 +1,76 @@
 stage: 3
 agent: im-designer
-timestamp: '2026-07-24T23:17:35Z'
-request_id: im-designer-20260724_2317
+timestamp: 2026-07-25T06:10:00+00:00
+request_id: unknown
 from: im-designer
 to: sub_mas-im-validator
 status: success
 input_file: .state/pipeline/ranked_findings.yaml
 data:
   patches:
-  - finding_id: F-2091
-    type: E1
-    file: recipe/sub/sub_mas-intention-parser.yaml
-    field: patterns
-    from: (current patterns — no delete/remove/cleanup entry)
-    to: "- pattern: \"delete|remove|cleanup|purge|clear (the )?(agent|recipe|config|data|state|log|backup)\"\
-      \n  type: delete\n  description: Delete or remove agents, recipes, configurations,\
-      \ or data"
-    reason: 'Why: Missing pattern for deletion/removal operations — common user request
-      type not currently detected. Goose does not natively provide intention pattern
-      matching (MAS convention). E1 not in goose-expert consultation table, so no
-      consultation needed.'
-    priority: 0.82
-    severity: medium
-    current_chars: 7848
-    target_chars: 7960
-    goose_verdict: NOT REQUIRED — type E1 not in consultation table
+    - file: recipe/sub/sub_mas-intention-parser.yaml
+      field: patterns
+      type: E1
+      priority: 0.82
+      from: |
+        Current patterns list (29 entries) covering standard MAS operations:
+        agent creation, team creation, deploy, rollback, monitor, test, fix,
+        document, audit, migrate, improve, optimize, orchestrate, validate,
+        backup, restore, upgrade, list, status, dashboard, signal, health,
+        rank, fork, review, recover, assign, delete + catch-all ".*"
+      to: |
+        Add 3 new patterns to enhance MAS-Engineer-specific intent detection:
+
+        # New pattern 1: Help/Info/FAQ intent
+        - pattern: "(help|info|information|what can you do|capabilities|commands)"
+          type: info
+          description: Show help, info, or system capabilities
+
+        # New pattern 2: Architecture/restructure intent
+        - pattern: "(architect|restructure|redesign|reorganize|refactor) (the )?(agent|recipe|system|workflow|pipeline)"
+          type: architect
+          description: Restructure or redesign agent architecture
+
+        # New pattern 3: Package intent (for team-packager integration)
+        - pattern: "package (the )?(agent|recipe|team|workflow|system) (for|as|into)"
+          type: package
+          description: Package an agent, team, or workflow for distribution
+      current_chars: 3650
+      target_chars: 3950
+      reason: |
+        Why: Add 3 missing patterns to intention-parser's detection capability:
+        (1) info/help queries — previously only caught by catch-all ".*" as generic "sub" type
+        (2) architecture/restructure — enables explicit detection of restructuring intents
+        (3) package — enables integration with sub_mas-team-packager for team distribution
+
+        Goose-expert verdict: NOT REQUIRED (E1 is not in mandatory consultation table
+        A1-A5/B1-B4/D1-D4/MM1-MM9/JJ1-JJ4/S1-S3/HH1-HH4/LL1-LL5).
+
+        Validation: Each pattern has unique regex, type, and description.
+        No overlap with existing patterns (verified via regex collision check).
+        Types 'info', 'architect', 'package' are new — no conflicts.
+
   skipped:
-  - finding_id: F-2092
-    type: NN1
-    file: recipe/sub/sub_mas-test-director.yaml
-    reason: 'Why: Finding is stale — NN1 split already applied. File has 4 sub_recipes
-      (executor, reporter, scanner, validator), delegation map, and ''⛔ ONLY orchestration''
-      prompt. Title states ''NN1 Enhanced''. Split was completed in a prior session.
-      No goose-expert consultation needed (NN1 not in consultation table).'
-  - finding_id: F-2093
-    type: NN1
-    file: recipe/sub/security-scanner.yaml
-    reason: 'Why: Finding is stale — NN1 split already applied. File has 4 sub_recipes
-      (sqli-scanner, secrets-scanner, deserialize-scanner, cmd-injection-scanner),
-      clear delegation map, and ''⛔ ONLY orchestration'' prompt. Split was completed
-      in a prior session. No goose-expert consultation needed (NN1 not in consultation
-      table).'
-  - finding_id: F-2094
-    type: NN1
-    file: recipe/sub/sub_mas-degradation-planner.yaml
-    reason: 'Why: Finding is stale — NN1 split already applied. File is already a
-      single-role agent (''Single role: Design treatment plans'') with clear prohibitions
-      against analysis/reporting. Original monolithic handler was split into analyzer/planner/reporter
-      (verified via legacy/ archive). No goose-expert consultation needed (NN1 not
-      in consultation table).'
-  - finding_id: F-2095
-    type: NN1
-    file: recipe/sub/sub_mas-degradation-handler.yaml
-    reason: 'Why: Finding is stale — NN1 split already applied. File is already an
-      orchestrator with 3 sub_recipes (degradation-analyzer, degradation-planner,
-      degradation-reporter) and ''⛔ ONLY orchestration'' prompt. Original archived
-      at legacy/sub_mas-degradation-handler-ORIGINAL.yaml. No goose-expert consultation
-      needed (NN1 not in consultation table).'
+    - finding_id: F-2188
+      type: NN1
+      file: recipe/sub/sub_mas-test-director.yaml
+      reason: "PRECONDITION FAILED (line threshold): agent YAML is 60 lines (<200 minimum). File is already a split orchestrator with 4 sub_recipes (executor, reporter, scanner, validator) and delegation map. No monolithic multi-role agent to split."
+      why_skipped: "NN1 precondition 1 (line threshold >=200): 60 lines < 200"
+
+    - finding_id: F-2189
+      type: NN1
+      file: recipe/sub/security-scanner.yaml
+      reason: "PRECONDITION FAILED (line threshold): agent YAML is 60 lines (<200 minimum). File is already a split security orchestrator with 4 specialized sub_recipes (sqli-scanner, secrets-scanner, deserialize-scanner, cmd-injection-scanner) and delegation map. Not a monolithic multi-role agent."
+      why_skipped: "NN1 precondition 1 (line threshold >=200): 60 lines < 200"
+
+    - finding_id: F-2190
+      type: NN1
+      file: recipe/sub/sub_mas-degradation-planner.yaml
+      reason: "PRECONDITION FAILED (line threshold + already single-role): agent YAML is 39 lines (<200 minimum). File explicitly states 'Single role: Design treatment plans' and '⛔ ONLY treatment planning — NO analysis or report writing'. This is already a focused single-role sub-agent within the degradation-handler ecosystem. Not a multi-role agent needing split."
+      why_skipped: "NN1 precondition 1 (line threshold >=200): 39 lines < 200; Already single-role sub-agent"
+
+    - finding_id: F-2191
+      type: NN1
+      file: recipe/sub/sub_mas-degradation-handler.yaml
+      reason: "PRECONDITION FAILED (line threshold + already split + recency guard): agent YAML is 63 lines (<200 minimum). File is already an NN1-split orchestrator (title states 'NN1 split') with delegation map and 3 sub_recipes (analyzer, planner, reporter). Additionally, agent appears in skip_recently_split.yaml with last_split_round=49."
+      why_skipped: "NN1 precondition 1 (line threshold >=200): 63 lines < 200; NN1 precondition 2 (recency guard): last split R49; Already split orchestrator with delegation map"
