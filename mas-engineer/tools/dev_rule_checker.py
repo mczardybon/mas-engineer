@@ -358,9 +358,12 @@ def check_rule(rule_id, action=""):
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
 
         if rule_id == "R56":
-            """EDIT_SPIN-LOOP (R91 2026-07-25):
+            """EDIT_SPIN-LOOP (R91 2026-07-25, patched 2026-07-25):
 
             Detects placeholder-edit patterns that indicate an LLM spin-loop.
+
+            Scope: ONLY applies to 'edit' actions. Write/shell/delegate are exempt.
+            The "3+ failures in 60s" BLOCK only blocks subsequent EDITS, not other actions.
 
             Triggers:
             1. action string contains 'before:' followed by placeholder patterns
@@ -398,6 +401,9 @@ def check_rule(rule_id, action=""):
             now = _t56.time()
             history = [e for e in history if now - e.get("ts", 0) < 120]
 
+            # SCOPE CHECK: only block edit-actions
+            is_edit_action = akt.startswith("edit ") or "edit " in akt.split("\n")[0]
+
             # Check 1: placeholder pattern in current action
             placeholder_patterns = [
                 r"before:\s*(?:NONEXISTENT_TEXT|TODO_FILL|BLOCKED|PLACEHOLDER|MARKER|DUMMY|XYZ|REPLACE_ME|FIXME_FILL)",
@@ -413,20 +419,20 @@ def check_rule(rule_id, action=""):
                 if m_before.group(1).strip() == m_after.group(1).strip():
                     no_op = True
 
-            # Check 3: edit on file that already exists with no read first
-            # (action contains "edit {path}" but not "load {path}" / "cat {path}" / "read {path}")
-            # This is heuristic — we just track the failures over time
-
             # Log this attempt
             history.append({
                 "ts": now,
                 "has_placeholder": has_placeholder,
                 "no_op": no_op,
+                "is_edit": is_edit_action,
                 "action_preview": action[:200],
             })
 
-            # Count recent placeholder/no-op attempts in last 60s
-            recent_failures = sum(1 for e in history if now - e["ts"] < 60 and (e["has_placeholder"] or e["no_op"]))
+            # Count recent placeholder/no-op EDITS in last 60s
+            recent_failures = sum(1 for e in history
+                                  if now - e["ts"] < 60
+                                  and e.get("is_edit", False)
+                                  and (e["has_placeholder"] or e["no_op"]))
 
             # Save history
             try:
@@ -436,7 +442,11 @@ def check_rule(rule_id, action=""):
             except:
                 pass
 
-            # BLOCK on current placeholder attempt
+            # NON-EDIT actions (write/shell/delegate): just log, never block
+            if not is_edit_action:
+                return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
+
+            # BLOCK on current placeholder attempt (edit-only)
             if has_placeholder:
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": f"EDIT-SPIN-LOOP: 'before' contains placeholder pattern (NONEXISTENT_TEXT, XYZ, PLACEHOLDER etc.). READ THE FILE FIRST, then use the EXACT existing text as 'before'. R90-Root-Cause 2026-07-25.",
@@ -447,7 +457,7 @@ def check_rule(rule_id, action=""):
                         "detail": f"EDIT-SPIN-LOOP: no-op edit (before == after). Edit tool is for changing text. Use 'write' to overwrite a file.",
                         "action": "BLOCKED"}
 
-            # BLOCK on accumulated spin-loop pattern
+            # BLOCK on accumulated spin-loop pattern (edit-only)
             if recent_failures >= 3:
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": f"EDIT-SPIN-LOOP: {recent_failures} placeholder/no-op edits in last 60s. STOP editing. Use 'write' for new content, or 'load' + exact text match for edits.",
