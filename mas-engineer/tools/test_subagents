@@ -1,0 +1,288 @@
+#!/usr/bin/env python3
+"""
+test_subagents - Auto-Unit-Test-Generator for all sub-recipes.
+
+Scans recipe/sub/sub_mas-*.yaml, validates required fields, syntax,
+optional patterns / sub_recipes consistency, generates test stubs.
+
+Usage:
+    test_subagents --all                      validate all sub-recipes
+    test_subagents --sub=intention-parser     validate ONE sub-recipe
+    test_subagents --generate-stubs           create test_*.yaml for any missing
+    test_subagents --stats                    just report counts
+    test_subagents --strict                   fail on warnings too
+
+Validation checks per recipe:
+    1. yaml.safe_load succeeds
+    2. All 9 required fields present
+    3. version is semver-shaped
+    4. settings.goose_provider non-empty
+    5. constitution file exists
+    6. instructions file (if external) exists
+    7. sub_recipes paths resolve to existing files
+    8. patterns (if present) have pattern+type fields
+
+Exit codes: 0 = all pass, 1 = at least one FAIL, 2 = parse error.
+"""
+import argparse
+import re
+import sys
+from collections import Counter
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError:
+    print("ERROR: PyYAML required. pip install pyyaml", file=sys.stderr)
+    sys.exit(2)
+
+WORKSPACE = Path(__file__).resolve().parent.parent
+SUB_DIR = WORKSPACE / "recipe" / "sub"
+CONSTITUTION_NAME = "sub_mas-master-constitution.yaml"
+CONSTITUTION_PATH = SUB_DIR / CONSTITUTION_NAME
+
+REQUIRED_FIELDS = (
+    "name", "version", "constitution", "title", "description",
+    "instructions", "prompt", "settings", "extensions",
+)
+SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+$")
+
+
+def find_recipes():
+    """Return sorted list of sub_mas-*.yaml paths (skip .bak)."""
+    paths = []
+    for p in SUB_DIR.glob("sub_mas-*.yaml"):
+        if p.suffix == ".yaml" and ".bak" not in p.name:
+            paths.append(p)
+    return sorted(paths)
+
+
+def validate_recipe(path):
+    """Run all checks on one recipe. Returns result dict."""
+    result = {"path": str(path.relative_to(WORKSPACE)),
+              "errors": [], "warnings": [], "ok": True}
+
+    # 1. yaml parse
+    try:
+        data = yaml.safe_load(path.read_text())
+    except yaml.YAMLError as e:
+        result["errors"].append("YAML parse error: " + str(e))
+        result["ok"] = False
+        return result
+    if not isinstance(data, dict):
+        result["errors"].append("Top-level not a mapping")
+        result["ok"] = False
+        return result
+
+    # 2. required fields
+    for field in REQUIRED_FIELDS:
+        if field not in data:
+            result["errors"].append("missing required field: " + field)
+            result["ok"] = False
+
+    # 3. version semver
+    v = data.get("version", "")
+    if v and not SEMVER_RE.match(str(v)):
+        result["warnings"].append("version not semver: " + repr(v))
+
+    # 4. settings.goose_provider
+    settings = data.get("settings", {})
+    if not isinstance(settings, dict):
+        result["errors"].append("settings not a mapping")
+        result["ok"] = False
+    elif not settings.get("goose_provider"):
+        result["warnings"].append("settings.goose_provider missing")
+
+    # 5. constitution
+    constitution = data.get("constitution", "")
+    if constitution:
+        const_path = SUB_DIR / constitution
+        if not const_path.exists():
+            result["errors"].append("constitution not found: " + constitution)
+            result["ok"] = False
+    else:
+        result["warnings"].append("no constitution referenced")
+
+    # 6. instructions (external?)
+    instructions = data.get("instructions", "")
+    if isinstance(instructions, str) and instructions.startswith("# Extended instructions: "):
+        m = re.search(r"(recipe/instructions/\S+\.md)", instructions)
+        if m:
+            ext_path = WORKSPACE / m.group(1)
+            if not ext_path.exists():
+                result["errors"].append("external instructions not found: " + m.group(1))
+                result["ok"] = False
+
+    # 7. sub_recipes
+    subs = data.get("sub_recipes", [])
+    if isinstance(subs, list):
+        for sub in subs:
+            if not isinstance(sub, dict):
+                result["errors"].append("sub_recipe entry not a dict: " + repr(sub))
+                result["ok"] = False
+                continue
+            sub_path = sub.get("path", "")
+            if sub_path:
+                resolved = SUB_DIR / sub_path.lstrip("./")
+                if not resolved.exists():
+                    result["errors"].append("sub_recipe path not found: " + sub_path)
+                    result["ok"] = False
+
+    # 8. patterns
+    patterns = data.get("patterns", [])
+    if isinstance(patterns, list):
+        for i, p in enumerate(patterns):
+            if not isinstance(p, dict):
+                result["errors"].append("pattern[" + str(i) + "] not a dict")
+                result["ok"] = False
+                continue
+            if "pattern" not in p:
+                result["errors"].append("pattern[" + str(i) + "] missing 'pattern' field")
+                result["ok"] = False
+            if "type" not in p:
+                result["warnings"].append("pattern[" + str(i) + "] missing 'type' field")
+
+    return result
+
+
+def generate_stub(path):
+    """Generate test_<name>.yaml stub for the given recipe."""
+    test_path = SUB_DIR / ("test_" + path.stem + ".yaml")
+    if test_path.exists():
+        return test_path
+    try:
+        data = yaml.safe_load(path.read_text())
+    except Exception:
+        data = {}
+    agent_name = data.get("name", path.stem) if isinstance(data, dict) else path.stem
+    sub_short = path.stem.replace("sub_mas-", "")
+    instructions_text = (
+        "# Test stub for " + path.name + "\n\n"
+        "## What this tests\n"
+        "- yaml parse OK\n"
+        "- required fields present\n"
+        "- settings.goose_provider set\n"
+        "- constitution exists\n\n"
+        "## Run\n"
+        "```\n"
+        "python3 tools/test_subagents --sub=" + sub_short + "\n"
+        "```\n"
+    )
+    stub = {
+        "name": "Test stub for " + str(agent_name),
+        "version": "1.0.0",
+        "constitution": CONSTITUTION_NAME,
+        "title": "[TEST] " + path.stem,
+        "description": "Auto-generated unit-test stub for " + path.name,
+        "instructions": instructions_text,
+        "prompt": "I am a test stub. Loaded " + path.name + " successfully if you see this.",
+        "settings": {
+            "goose_provider": "openai",
+            "goose_model": "deepseek-v4-flash",
+            "max_steps": 5,
+            "temperature": 0.0,
+            "timeout": 30,
+        },
+        "extensions": [
+            {"type": "builtin", "name": "developer",
+             "display_name": "Developer", "timeout": 30, "bundled": True}
+        ],
+        "_test_target": path.name,
+        "_test_type": "unit",
+    }
+    test_path.write_text(yaml.safe_dump(stub, sort_keys=False))
+    return test_path
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Auto-Unit-Test-Generator for sub-recipes")
+    ap.add_argument("--all", action="store_true", help="validate all sub-recipes")
+    ap.add_argument("--sub", help="validate one sub-recipe (name without sub_mas- prefix)")
+    ap.add_argument("--generate-stubs", action="store_true", help="create test_*.yaml for any missing")
+    ap.add_argument("--stats", action="store_true", help="just show counts")
+    ap.add_argument("--strict", action="store_true", help="fail on warnings too")
+    ap.add_argument("--quiet", action="store_true", help="only show failures + summary")
+    args = ap.parse_args()
+
+    if not SUB_DIR.exists():
+        print("ERROR: not a mas-engineer workspace: " + str(SUB_DIR) + " missing",
+              file=sys.stderr)
+        return 2
+
+    recipes = find_recipes()
+
+    if args.stats:
+        print("Total sub-recipes: " + str(len(recipes)))
+        cats = Counter()
+        for p in recipes:
+            cat = p.stem.replace("sub_mas-", "").split("-")[0]
+            cats[cat] += 1
+        print("\nTop categories:")
+        for k, v in cats.most_common(15):
+            print("  " + k.ljust(25) + " " + str(v))
+        return 0
+
+    if args.sub:
+        target = SUB_DIR / ("sub_mas-" + args.sub + ".yaml")
+        if not target.exists():
+            print("ERROR: not found: " + str(target), file=sys.stderr)
+            return 1
+        recipes = [target]
+
+    if args.generate_stubs:
+        created, existed = 0, 0
+        for p in recipes:
+            test_path = SUB_DIR / ("test_" + p.stem + ".yaml")
+            if test_path.exists():
+                existed += 1
+            else:
+                generate_stub(p)
+                print("+ Created: test_" + p.stem + ".yaml")
+                created += 1
+        print("\n" + str(created) + " new stubs, " + str(existed) + " already existed.")
+        return 0
+
+    # default: validate
+    passed, failed, warned = 0, 0, 0
+    failures = []
+    for p in recipes:
+        r = validate_recipe(p)
+        if r["ok"]:
+            passed += 1
+            if r["warnings"]:
+                warned += 1
+                if not args.quiet:
+                    print("WARN " + r["path"] + " (" + str(len(r["warnings"])) + ")")
+                    for w in r["warnings"]:
+                        print("    " + w)
+            elif not args.quiet:
+                print("OK   " + r["path"])
+        else:
+            failed += 1
+            failures.append(r)
+            print("\nFAIL " + r["path"] + ":")
+            for e in r["errors"]:
+                print("   ERROR: " + e)
+            for w in r["warnings"]:
+                print("   WARN:  " + w)
+
+    total = len(recipes)
+    print("\n" + "=" * 60)
+    print("Total: " + str(total) + " | PASS: " + str(passed) +
+          " | FAIL: " + str(failed) + " | WARN: " + str(warned))
+    print("=" * 60)
+    if failures:
+        print("\nTop issues across " + str(len(failures)) + " failing recipes:")
+        issue_counter = Counter()
+        for r in failures:
+            for e in r["errors"]:
+                issue_counter[e.split(":")[0]] += 1
+        for issue, n in issue_counter.most_common(5):
+            print("  " + str(n) + "x " + issue)
+    if args.strict and warned and not failed:
+        return 1
+    return 0 if failed == 0 else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
