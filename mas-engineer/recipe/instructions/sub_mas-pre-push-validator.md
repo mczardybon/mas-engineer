@@ -222,7 +222,15 @@ Goose mechanism (e.g. "add load on demand" when summon extension exists).
 ```bash
 cd $WORKSPACE
 # Scan uncommitted/pushed changes for "missing mechanism" claims
-python3 tools/dev_goose_expert_check.py --check-mechanism "$(git diff HEAD~1 -- recipe/ tools/ 2>/dev/null | head -200)"
+# R55 fix (2026-07-25): only call if diff non-empty + auto-default to findings.yaml
+DIFF_CONTENT="$(git diff HEAD~1 -- recipe/ tools/ 2>/dev/null | head -200)"
+if [ -n "$DIFF_CONTENT" ]; then
+  python3 tools/dev_goose_expert_check.py --check-mechanism "$DIFF_CONTENT"
+else
+  # No recent changes — check current SOT findings/patches instead
+  python3 tools/dev_goose_expert_check.py --findings .state/pipeline/findings.yaml 2>/dev/null || true
+  python3 tools/dev_goose_expert_check.py --patches .state/pipeline/patches.yaml 2>/dev/null || true
+fi
 ```
 **Block if:** any "missing Goose mechanism" pattern found in uncommitted
 or recently-pushed code/docs. See `docs/lessons-learned.md` L01.
