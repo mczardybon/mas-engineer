@@ -1,0 +1,42 @@
+# R51 — Consumer-recipes auf neue directors zeigen
+# Mas R50 hat NN1 splits gemacht aber consumer-recipes zeigen noch auf alte sub_recipes
+
+target_fixes:
+  - id: test-director-consumer
+    description: |
+      consumer-recipes die sub_mas-test-reporter referenzieren müssen
+      auf sub_mas-test-reporter-director zeigen (nicht direkt auf -analyzer/-generator).
+      Files to check: alle sub_*.yaml mit sub_recipes referenz zu "test-reporter"
+    expected_after: |
+      python3 -c "
+      import yaml, glob, os
+      for f in glob.glob('recipe/sub/*.yaml'):
+          d = yaml.safe_load(open(f))
+          for s in d.get('sub_recipes', []):
+              path = s.get('path','')
+              if 'test-reporter' in path and 'director' not in path and 'ORIGINAL' not in path:
+                  # sub_agents that call test-reporter as sub_recipe should use director
+                  print(f'{os.path.basename(f)} -> {s.get(\"name\")} ({path})')
+      "
+
+  - id: intention-parser-consumer
+    description: |
+      consumer-recipes die intention-parser referenzieren - sub_mas-intention-parser
+      wurde in R49/R50 erweitert. Prüfe ob consumer-recipes noch aktuell sind.
+    expected_after: |
+      # intention-parser selbst ist E1-verbessert, consumer müssen kompatibel sein
+      pass
+
+  - id: wf-team-package
+    description: |
+      workflow wf_team_package referenziert sub_mas-team-packager direkt -
+      sollte auf sub_mas-team-packager-director zeigen.
+    expected_after: |
+      python3 -c "
+      import yaml
+      d = yaml.safe_load(open('.state/workflows.yaml'))
+      for w in d.get('workflows', []):
+          for s in w.get('steps', []):
+              if 'team-packager' in str(s) and 'director' not in str(s):
+                  print(f'wf={w.get(\"name\")} step={s.get(\"id\")} -> {s.get(\"cmd\",\"\")[:80]}')
+      "
