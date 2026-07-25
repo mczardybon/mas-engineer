@@ -1,50 +1,27 @@
 name: MAS Monitor Health
-version: 1.0.0
+version: 2.0.0  # R85 Phase 2: replaced inline logic with tools/dev_health_monitor.py
 constitution: sub_mas-master-constitution.yaml
-title: ⛔ FW-MONITOR-HEALTH — Framework Integrity (Sub-Agent)
-description: 'v1.0.0 | CONTROLLER-internal: YAML, Configuration, Tier, Phantom, Invariants'
-instructions: '# Extended instructions: recipe/instructions/sub_mas-monitor-health.md
+title: 💚 FW-MONITOR-HEALTH — Framework Health Check (Script-wrapper)
+description: 'v2.0.0 | CONTROLLER-internal: YAML-Integrity, Invariants, Governance, Structure. Delegates to tools/dev_health_monitor.py CHECK_HEALTH.'
+instructions: |
+  # MONITOR-HEALTH v2.0.0 (Script-wrapper)
 
+  R85 Phase 2 REFACTOR: All logic moved to `tools/dev_health_monitor.py`.
+  This recipe is a thin wrapper — it delegates health-checks to the script.
 
-  Full instructions outsourced to external file for maintainability.
+  ## Usage
+  Call `tools/dev_health_monitor.py CHECK_HEALTH [recipes_dir]`.
+  Returns JSON: checks_total/passed, findings[], structure counts, signal.
 
-
-  ## Loading
-
-  All detailed workflows, examples, and rules are in the external file. This recipe
-  contains only the role, prompt, and configuration.
-
-
-  ## Read external file FIRST
-
-  Before any action, read: `recipe/instructions/sub_mas-monitor-health.md`
-
-  '
-prompt: 'I am monitor-health (v1.0.0) | MODE-CHECK: mas-engineer | 🩺 FW-MONITOR-HEALTH
-  — Framework Integrity (Sub-Agent)
-
-
-  🩺 MONITOR-HEALTH (v1.0.0) ⛔ ONLY framework-Health check — NO changes
-
-  Check framework-Integrity. target_repo=TARGET-REPO.
-
-  Load SOT-rules, check YAMLs, Configuration, Invariants and Governance.
-
-  Give Result as YAML back.
-
-
-
-  # ⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml -> configs.mas-self.restrictions.
-
-  dev_rule_checker.py enforces.
-
-
-
-  # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune).
-  NO YAML-Save without vorherige Syntax-Check.'
+  ## SOT RULES
+  ⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+  ⛔ R10 CORONASHIELD — YAML-validate each sample before storage.
+prompt: |
+  I am monitor-health (v2.0.0) | MODE-CHECK: mas-engineer | 💚 FW-MONITOR-HEALTH
+  ⛔ ONLY Static-File-Analysis — NO changes. Use tools/dev_health_monitor.py CHECK_HEALTH.
 settings:
-  timeout: 600
-  max_steps: 100
+  timeout: 180
+  max_steps: 25
   goose_provider: openai
   goose_model: deepseek-v4-flash
   temperature: 0.3
@@ -54,5 +31,5 @@ extensions:
 - type: builtin
   name: developer
   display_name: Developer
-  timeout: 300
+  timeout: 60
   bundled: true

@@ -1,40 +1,27 @@
 name: MAS Monitor Runtime
-version: 1.0.0
+version: 2.0.0  # R85 Phase 2: replaced inline logic with tools/dev_health_monitor.py
 constitution: sub_mas-master-constitution.yaml
-title: 📦 FW-MONITOR-RUNTIME — Runtime Status (Sub-Agent)
-description: 'v1.0.0 | CONTROLLER-intern: Sessions, Stale, Crash, Arch violations'
-instructions: "# sub_fw-monitor-runtime — Runtime Status\nChecks the Runtime-Status\
-  \ of the frameworks. Sessions, Stale-Detection, Crash-Recovery, Architektur-Verletzungen.\n\
-  May Agents neustart (max 3 attempts) — after Eskalation an PLANNER. May NICHT Code\
-  \ editieren, Plans change or Scope erweitern. Only Analysis + Recovery — no Configurationuration\
-  \ changes. Architektur-Verletzungen are ALWAYS CRITICAL — nie ignorieren.\n╔══════════════════════════════════════════════╗\
-  \ ║  SOT WORKFLOW CONTROL                     ║ ║  → workflows.yaml → agents.monitor-runtime\
-  \  ║ ║     .task_workflows.CHECK_RUNTIME           ║ ╚══════════════════════════════════════════════╝\n\
-  \n\n## ⛔ STEP 0 — MODE-DETECTION (AUTOMATIC)\n1. DETERMINE DETECTED_MODE via SOT:\n\
-  \   cat {workspace}/mas-engineer/.mas-mode 2>/dev/null || cat ~/.config/goose/.mas-mode\
-  \ 2>/dev/null\n2. IF \"mas\" → MAS-mode (target = {workspace}/mas-engineer/)\n3.\
-  \ IF \"framework\" → framework-mode (target = {workspace}/)\n4. IF another string\
-  \ → Generic-mode (target = {workspace}/)\n5. SET target_workspace = {workspace}\n\
-  6. ALL Monitoring-actions use {target_workspace} for paths\n\nCONFIRMATION REQUIREMENT\
-  \ (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN\
-  \ COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other\
-  \ domain OK."
-prompt: 'I am monitor-runtime (v1.0.0) | MODE-CHECK: mas-engineer | 📦 FW-MONITOR-RUNTIME
-  — Runtime Status (Sub-Agent)
+title: 🔍 FW-MONITOR-RUNTIME — Active Session Check (Script-wrapper)
+description: 'v2.0.0 | CONTROLLER-internal: Detects active/stale sessions, crashes, arch violations. Delegates to tools/dev_health_monitor.py CHECK_RUNTIME.'
+instructions: |
+  # MONITOR-RUNTIME v2.0.0 (Script-wrapper)
 
-  ⏱ MONITOR-RUNTIME (v1.0.0) ⛔ ONLY Runtime-Check — NO changes Check Runtime-Status.
-  codebase_path={{{codebase_path}}}. Sessions, Stale-Detection, Crash-Recovery, Architektur-Verletzungen.
-  Gib Result as YAML back.
+  R85 Phase 2 REFACTOR: All logic moved to `tools/dev_health_monitor.py`.
+  This recipe is a thin wrapper — it delegates runtime-checks to the script.
 
+  ## Usage
+  Call `tools/dev_health_monitor.py CHECK_RUNTIME [state_dir]`.
+  Returns JSON: active_sessions, stale_sessions, crashes, arch_violations, signal.
 
-  # ⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml -> configs.mas-self.restrictions.
-  dev_rule_checker.py enforces.
-
-  # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune).
-  NO YAML-Save without vorherige Syntax-Check.'
+  ## SOT RULES
+  ⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+  ⛔ R09 DOMAIN — Read-only check within target workspace.
+prompt: |
+  I am monitor-runtime (v2.0.0) | MODE-CHECK: mas-engineer | 🔍 FW-MONITOR-RUNTIME
+  ⛔ ONLY Runtime-Check — NO changes. Use tools/dev_health_monitor.py CHECK_RUNTIME.
 settings:
-  timeout: 600
-  max_steps: 100
+  timeout: 120
+  max_steps: 20
   goose_provider: openai
   goose_model: deepseek-v4-flash
   temperature: 0.3
@@ -44,5 +31,5 @@ extensions:
 - type: builtin
   name: developer
   display_name: Developer
-  timeout: 300
+  timeout: 60
   bundled: true

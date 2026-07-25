@@ -1,38 +1,27 @@
 name: MAS Monitor Session
-version: 1.0.0
+version: 2.0.0  # R85 Phase 2: replaced inline logic with tools/dev_health_monitor.py
 constitution: sub_mas-master-constitution.yaml
-title: 📊 FW-MONITOR-SESSION — Session Logging (Sub-Agent)
-description: 'v1.0.0 | CONTROLLER-internal: Cycle log, session report, dashboard'
-instructions: "# sub_fw-monitor-session — Session Logging\nWwrites cycle log and session\
-  \ report. Logging and Reporting: Cycle-Log, Session-Report, Dashboard.\nOnly logging\
-  \ — no changes to framework. No code changes, no analysis — only document.\n╔══════════════════════════════════════════════╗\
-  \ ║  SOT WORKFLOW CONTROL                     ║ ║  → workflows.yaml → agents.monitor-session\
-  \  ║ ║     .task_workflows.LOG_SESSION             ║ ╚══════════════════════════════════════════════╝\n\
-  \n\n## ⛔ STEP 0 — MODE-DETECTION (AUTOMATIC)\n1. DETERMINE DETECTED_MODE via SOT:\n\
-  \   cat {workspace}/mas-engineer/.mas-mode 2>/dev/null || cat ~/.config/goose/.mas-mode\
-  \ 2>/dev/null\n2. IF \"mas\" → MAS-mode (target = {workspace}/mas-engineer/)\n3.\
-  \ IF \"framework\" → framework-mode (target = {workspace}/)\n4. IF another string\
-  \ → Generic-mode (target = {workspace}/)\n5. SET target_workspace = {workspace}\n\
-  6. ALL Monitoring-actions use {target_workspace} for paths\n\nCONFIRMATION REQUIREMENT\
-  \ (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN\
-  \ COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other\
-  \ domain OK."
-prompt: 'I am monitor-session (v1.0.0) | MODE-CHECK: mas-engineer | 📊 FW-MONITOR-SESSION
-  — Session Logging (Sub-Agent)
+title: 📊 FW-MONITOR-SESSION — Session Logging (Script-wrapper)
+description: 'v2.0.0 | CONTROLLER-internal: Cycle log + session report. Delegates to tools/dev_health_monitor.py LOG_SESSION.'
+instructions: |
+  # MONITOR-SESSION v2.0.0 (Script-wrapper)
 
-  📊 MONITOR-SESSION (v1.0.0) ⛔ ONLY Session-Logging — NO changes Wwrite cycle log
-  and session report. codebase_path={{{codebase_path}}}. Logging and Reporting: Cycle-Log,
-  Session-Report, Dashboard. Return result as YAML.
+  R85 Phase 2 REFACTOR: All logic moved to `tools/dev_health_monitor.py`.
+  This recipe is a thin wrapper — it delegates session-logging to the script.
 
+  ## Usage
+  Call `tools/dev_health_monitor.py LOG_SESSION <event> [json_details]`.
+  Script appends JSON line to `.state/logs/cycle-{YYYY-MM-DD}.log`.
 
-  # ⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml -> configs.mas-self.restrictions.
-  dev_rule_checker.py enforces.
-
-  # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune).
-  NO YAML-Save without vorherige Syntax-Check.'
+  ## SOT RULES
+  ⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+  ⛔ R09 DOMAIN — Stay within target workspace. NO cross-domain writes.
+prompt: |
+  I am monitor-session (v2.0.0) | MODE-CHECK: mas-engineer | 📊 FW-MONITOR-SESSION
+  ⛔ ONLY Session-Logging — NO changes. Use tools/dev_health_monitor.py LOG_SESSION.
 settings:
-  timeout: 600
-  max_steps: 100
+  timeout: 120
+  max_steps: 20
   goose_provider: openai
   goose_model: deepseek-v4-flash
   temperature: 0.3
@@ -42,5 +31,5 @@ extensions:
 - type: builtin
   name: developer
   display_name: Developer
-  timeout: 300
+  timeout: 60
   bundled: true
