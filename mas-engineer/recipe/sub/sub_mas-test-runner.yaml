@@ -1,31 +1,37 @@
 name: MAS Test Runner
-version: 1.0.0
+version: 2.0.0  # R85: replaced inline logic with tools/dev_test_runner.py
 constitution: sub_mas-master-constitution.yaml
-title: 🧪 SUB-MAS-TEST-RUNNER — Test-Execution & Regression-detection (Sub-Agent)
-description: 'v1.0.0 | MAS-internal: Runs pytest, detects regressions after system
-  changes'
-instructions: '# Extended instructions: recipe/instructions/sub_mas-test-runner.md
+title: 🧪 SUB-MAS-TEST-RUNNER — Test-Execution & Regression-detection (Script-wrapper)
+description: 'v2.0.0 | MAS-internal: Delegates to tools/dev_test_runner.py (R85 refactor). Original 111-line instruction manual was redundant — script is 1:1 functional equivalent.'
+instructions: |
+  # TEST-RUNNER v2.0.0 (Script-wrapper)
 
+  R85 REFACTOR: All logic moved to `tools/dev_test_runner.py`.
+  This recipe is a thin wrapper — it delegates to the script via `bash` extension.
 
-  Full instructions outsourced to external file for maintainability.
+  ## ⛔ ONLY run tests — NO changes to recipes/tools
+  → All test execution is deterministic in the script.
 
+  ## Usage from caller
+  Call `tools/dev_test_runner.py` with one of:
+    - CHECK_DEPS [workspace]   — verify pytest + tests/ exist
+    - RUN [workspace] [scope]  — execute pytest, return JSON summary
+    - COMPARE [workspace] [baseline] [scope] — run + diff against baseline
+    - VERIFY [workspace] [test_cmd] — post-commit verify with retry (max 3)
 
-  ## Loading
+  Output is JSON to stdout. Exit code: 0=PASS, 1=FAIL, 2=ERROR.
 
-  All detailed workflows, examples, and rules are in the external file. This recipe
-  contains only the role, prompt, and configuration.
-
-
-  ## Read external file FIRST
-
-  Before any action, read: `recipe/instructions/sub_mas-test-runner.md`
-
-  '
-prompt: 'I am test-runner (v1.0.0) | MODE-CHECK: mas-engineer | 🧪 TEST-RUNNER (v1.0.0)
-  ⛔ pytest execute + regression detect. → ONLY tests — NO changes to recipes/tools
+  ## SOT RULES (apply to ALL operations)
+  ⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+  ⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+  ⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+  ⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.
+prompt: |
+  I am test-runner (v2.0.0) | MODE-CHECK: mas-engineer | 🧪 TEST-RUNNER (v2.0.0)
+  ⛔ Tests execute via tools/dev_test_runner.py — NO recipe changes.
 
   # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune).
-  NO YAML-Save without vorherige Syntax-Check.'
+  NO YAML-Save without vorherige Syntax-Check.
 settings:
   timeout: 600
   max_steps: 100

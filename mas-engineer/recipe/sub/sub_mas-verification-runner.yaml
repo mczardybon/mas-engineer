@@ -1,39 +1,32 @@
 name: MAS Verification Runner
-version: 1.0.0
+version: 2.0.0  # R85: replaced inline logic with tools/dev_test_runner.py
 constitution: sub_mas-master-constitution.yaml
-title: 📦 SUB-MAS-VERIFICATION-RUNNER — Result Verification (Sub-Agent)
-description: 'v1.0.0 | MAS-internal: Verifies results after delegation'
-instructions: '# Extended instructions: recipe/instructions/sub_mas-verification-runner.md
+title: ✓ SUB-MAS-VERIFICATION-RUNNER — Post-Commit Test-Verification (Script-wrapper)
+description: 'v2.0.0 | MAS-internal: Delegates to tools/dev_test_runner.py VERIFY command (R85 refactor). Original 24-line instruction manual was redundant.'
+instructions: |
+  # VERIFICATION-RUNNER v2.0.0 (Script-wrapper)
 
+  R85 REFACTOR: All logic moved to `tools/dev_test_runner.py`.
+  This recipe is a thin wrapper for post-commit verification.
 
-  Full instructions outsourced to external file for maintainability.
+  ## ⛔ ONLY test execution + report — NO recipe/code changes
+  → Max 3 retry attempts (built into script).
 
+  ## Usage
+  Call `tools/dev_test_runner.py VERIFY <workspace> "<test_command>"`.
+  Script handles retry loop (attempt 1..3) and reports final status.
 
-  ## Loading
-
-  All detailed workflows, examples, and rules are in the external file. This recipe
-  contains only the role, prompt, and configuration.
-
-
-  ## Read external file FIRST
-
-  Before any action, read: `recipe/instructions/sub_mas-verification-runner.md`
-
-  '
-prompt: 'I am verification-runner (v1.0.0) | MODE-CHECK: mas-engineer | 📦 SUB-MAS-VERIFICATION-RUNNER
-  — Result Verification (Sub-Agent)
-
-  ✅ VERIFICATION-RUNNER (v1.0.0) ⛔ ONLY Verification Runner — NO other changes ⛔ ONLY
-  verify — NO changes Tasks: VERIFY, CHECK → See MASTER-CONSTITUTION Art. 1-6 (central
-  rules) ⛔⛔⛔⛔⛔ CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for
-  NEVER without Confirmation. ⛔⛔⛔⛔⛔ MODE-DOMAIN COUPLING (R09) ONLY {target_workspace}
-  — NO domain-overreach. Reading in other domain OK
-
-  # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune).
-  NO YAML-Save without vorherige Syntax-Check.'
+  ## SOT RULES
+  ⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+  ⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+  ⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+  ⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.
+prompt: |
+  I am verification-runner (v2.0.0) | MODE-CHECK: mas-engineer | ✓ VERIFICATION-RUNNER
+  ⛔ Post-commit verify via tools/dev_test_runner.py VERIFY — NO changes.
 settings:
   timeout: 600
-  max_steps: 100
+  max_steps: 50
   goose_provider: openai
   goose_model: deepseek-v4-flash
   temperature: 0.3
