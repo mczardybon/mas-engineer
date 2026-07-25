@@ -1,0 +1,16 @@
+# R55 — dev_goose_expert_check.py missing-args issue
+# Pre-push-validator ruft das script ohne args auf wenn git diff leer ist.
+# Result: usage-error wird als finding geloggt (false positive).
+target_fixes:
+  - id: F-DEV-GOOSE-CHECK
+    file: recipe/instructions/sub_mas-pre-push-validator.md
+    description: |
+      Check 8 (Goose mechanism) ruft dev_goose_expert_check.py mit
+      --check-mechanism "$(git diff ...)" auf. Wenn diff leer ist,
+      wird das script mit leerem string aufgerufen → usage-error →
+      false positive.
+      
+      Fix: conditional call — only invoke if diff non-empty,
+      otherwise default to current findings.yaml/patches.yaml.
+    expected_after: |
+      grep "if \[ -n \"\$DIFF_CONTENT\" mas-engineer/recipe/instructions/sub_mas-pre-push-validator.md

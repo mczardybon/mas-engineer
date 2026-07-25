@@ -1,0 +1,43 @@
+# R52 — mas-side fix: NN1 threshold + skip-if-recently-split
+# Diese fixes sind RECIPE-INSTRUCTION edits, nicht neue findings.
+# Mas soll die im-designer instructions direkt editieren.
+
+target_fixes:
+
+  - id: F-NN1-THRESHOLD
+    file: recipe/instructions/sub_mas-im-designer.md
+    description: |
+      NN1 split_into_orchestrator_and_subs wird zu oft angewendet
+      (intention-parser, dashboard-refresh, degradation-handler,
+      team-packager, test-reporter alle 3-5x gesplittet R48-R51).
+      
+      Fix: NN1 nur anwenden wenn:
+        1. Agent hat 200+ lines of code (sub_*.yaml instruction-section)
+        2. UND agent wurde nicht in den letzten 5 mas-rounds gesplittet
+        3. UND agent hat aktuell 3+ distinct roles (existing check)
+      
+      Edit: "Split-Design Procedure" Sektion — add precondition check.
+    expected_after: |
+      In im-designer.md: precondition "Check 1: Line count >= 200" 
+      und "Check 2: NOT in recently_split_agents[] (last 5 rounds)"
+
+  - id: F-RECENTLY-SPLIT-LIST
+    file: recipe/sub/sub_mas-general-improver.yaml
+    description: |
+      Add "skip_recently_split" list to SOT (.state/pipeline/skip_recently_split.yaml)
+      die mas R52+ konsultiert vor NN1 application.
+      
+      Mas-internal mechanism: nach jedem NN1 split, add agent to skip list
+      with timestamp. Skip-list expires after 5 rounds.
+    expected_after: |
+      mas R52: when reading im-finder findings, filter out NN1 findings
+      whose target_agent is in skip_recently_split.yaml with ts < 5 rounds ago.
+
+  - id: F-SPLIT-EVIDENCE
+    file: recipe/instructions/sub_mas-im-finder.md
+    description: |
+      Im-finder sollte NN1 findings mit "already_split_history" tag
+      dekorieren wenn der agent schon mal gesplittet wurde.
+    expected_after: |
+      im-finder NN1 finding: add field "already_split: true" wenn
+      sub_mas-{name}-director.yaml existiert.
