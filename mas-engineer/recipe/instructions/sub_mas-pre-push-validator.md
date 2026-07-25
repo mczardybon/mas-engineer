@@ -328,7 +328,98 @@ command: <full command run>
 
 **Reference:** docs/BUG-BRIEF-2026-07-23.md §3 (verification theater root cause).
 
-### Check 11 — constitution coverage
+
+### Check 11 — sub_recipe resolution coverage (structural e2e test baseline)
+
+**Why:** mas's main loop relies on sub_recipe references resolving correctly. If `recipe/sub/X.yaml` declares sub_recipes pointing to files that don't exist, the framework fails at runtime. This check pre-validates all sub_recipe references resolve before push.
+
+**Command (FOREGROUND, ~1-3s):**
+```bash
+cd {workspace}
+python3 -c "
+import yaml, glob, os, json
+broken = []
+total = 0
+for f in glob.glob('mas-engineer/recipe/sub/*.yaml'):
+    if 'ORIGINAL' in f: continue
+    try: d = yaml.safe_load(open(f))
+    except: continue
+    for s in d.get('sub_recipes', []):
+        total += 1
+        path = s.get('path','').lstrip('./')
+        full = os.path.join(os.path.dirname(f), path)
+        if not os.path.exists(full):
+            broken.append(f'{os.path.basename(f)} -> {s.get(\"name\")} ({path})')
+print(json.dumps({'refs': total, 'broken': len(broken), 'pct': round(100*(1-len(broken)/max(total,1)), 2), 'sample': broken[:3]}, indent=2))
+"
+```
+
+**Block conditions (ANY of):**
+- ⛔ broken count > 0 (any sub_recipe reference unresolved)
+- ⛔ refs == 0 (no sub_recipes found — likely YAML parse error)
+- ⛔ command exits non-zero
+
+**Warn conditions:**
+- ⚠️ pct < 100 but > 95 (some broken refs, blocking)
+
+**Reference:** R52-R55 post-flight audit pattern.
+
+
+### Check 12 — test coverage gate (sub-agents vs tests, 80% minimum)
+
+**Why:** With 120 sub-agents and only ~2 dedicated test files, mas's framework is critically undertested. The pre-push gate must enforce a minimum test-to-sub-agent ratio to prevent shipping unbacked code. This is the structural test-coverage gate.
+
+**User requirement (2026-07-25):** tests/test_*.py count must be >= recipe/sub/*.yaml count × 0.8
+
+**Command (FOREGROUND, ~1s):**
+```bash
+cd {workspace}
+python3 -c "
+import glob
+sub_count = len([f for f in glob.glob('mas-engineer/recipe/sub/*.yaml') if 'ORIGINAL' not in f])
+test_count = len(glob.glob('mas-engineer/tests/test_*.py'))
+threshold = int(sub_count * 0.8)
+ratio = round(test_count / max(sub_count, 1), 3)
+gate_passed = test_count >= threshold
+print(json.dumps({
+    'sub_agents': sub_count,
+    'tests': test_count,
+    'threshold_80pct': threshold,
+    'ratio': ratio,
+    'gate_passed': gate_passed,
+    'gap': max(0, threshold - test_count)
+}, indent=2))
+"
+```
+
+**Block conditions (ANY of):**
+- ⛔ test_count < sub_count × 0.8 (below 80% coverage)
+- ⛔ tests directory missing entirely (test_count = 0)
+- ⛔ command exits non-zero
+
+**Warn conditions:**
+- ⚠️ ratio < 1.0 (informational — could be intentional for stable code)
+- ⚠️ tests count == 0 (catastrophic — no tests at all)
+
+**Operator override (escape hatch):**
+- Set `MAS_SKIP_TEST_COVERAGE_GATE=1` env var to skip this check (operator-initiated only, never auto-skip)
+- Documented in docs/TEST-COVERAGE-POLICY.md
+
+**Evidence file (always written):**
+`.state/pre-push-test-coverage.json` — contains:
+```yaml
+checked_at: <ISO-8601>
+sub_agents: <int>
+tests: <int>
+threshold_80pct: <int>
+ratio: <float>
+gate_passed: <bool>
+gap: <int>
+```
+
+**Status as of 2026-07-25:** sub_agents=120, tests=2, threshold=96, gap=94 — gate FAILS. This is intentional to expose the test-debt and force incremental coverage growth.
+
+### Check 13 — constitution coverage
 **Why:** Sub-agents that do not declare `constitution: sub_mas-master-constitution.yaml` operate outside the SOT and may diverge from master rules. This check enforces consistent governance.
 
 **Command:**
@@ -374,7 +465,7 @@ data:
     ok: <bool>
     blocked_reasons: [<string>, ...]
     warnings: [<string>, ...]
-  checks_run: 10
+  checks_run: 13
   checks_passed: <int>
   checks_failed: <int>
   timestamp: <ISO-8601>
@@ -384,7 +475,7 @@ data:
 
 - ⛔ NEVER modify any source file — this agent is read-only
 - ⛔ NEVER run `git push` itself — only validate
-- ⛔ NEVER skip a check — all 10 must run
+- ⛔ NEVER skip a check — all 13 must run
 - ⛔ Max 300s timeout total (5 minutes)
 
 **R01 NON-INTERACTIVE BYPASS:** If `RECURSION_OVERRIDE` env var >= 1 OR `MAS_NO_SESSION=1`, skip R01 confirmation and proceed directly with all checks. This enables CI/automated runs.
