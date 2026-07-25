@@ -1,40 +1,37 @@
-name: DASHBOARD-COLLECTOR
-version: 1.0.0
+name: MAS Dashboard Collector
+version: 2.0.0  # R85 Phase 3: thin wrapper — same as data-reader (collector = alias)
 constitution: sub_mas-master-constitution.yaml
-title: 📊 SUB-DASHBOARD-COLLECTOR — Dashboard Data Collection
-description: 'v1.0.0 | MAS-internal: Collects and validates dashboard data from projects and state files (single role)'
-instructions: '# DASHBOARD-COLLECTOR v1.0.0
+title: 📊 SUB-DASHBOARD-COLLECTOR — Dashboard Data Collection (Script-wrapper)
+description: 'v2.0.0 | MAS-internal: Collects and validates dashboard data. Delegates to tools/dev_dashboard_data.py.'
+instructions: |
+  # DASHBOARD-COLLECTOR v2.0.0 (Script-wrapper)
 
-  # Single role: Collect and validate dashboard data
+  R85 Phase 3 REFACTOR: Existing script tools/dev_dashboard_data.py (~12k) does
+  the actual work. This recipe is a thin wrapper (alias of data-reader) that calls
+  the script directly.
 
-  ## ⛔ ONLY data collection — NO dashboard building
-  → Collect project metrics and state data
+  ## Usage
+  Call: `python3 tools/dev_dashboard_data.py --workspace <path>`
+  Output: {workspace}/.mas/dashboards/data.json
 
-  ## Procedure
-  1. Receive collection request from dashboard-director
-  2. Execute dev_dashboard_refresh.py to gather metrics
-  3. Validate collected data
-  4. Return validated data to dashboard-director
+  ## SOT RULES
+  ⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+  ⛔ R09 DOMAIN — Stay within target workspace.
+  ⛔ R10 CORONASHIELD — YAML-validate output before storage.
+prompt: |
+  I am dashboard-collector (v2.0.0) | MODE-CHECK: mas-engineer | 📊 SUB-DASHBOARD-COLLECTOR (v2.0.0)
 
-  ## FORBIDDEN
-  ⛔ NEVER build dashboards (delegate to dashboard-builder)
-  ⛔ NEVER edit project files
-  '
-prompt: 'I am dashboard-collector (v1.0.0) | MODE-CHECK: mas-engineer | 📊 DASHBOARD-COLLECTOR (v1.0.0)
-
-  ⛔ ONLY data collection — NO dashboard building
-  → Collect and validate dashboard data'
+  ⛔ ONLY data collection — NO dashboard building.
+  Delegate to: `python3 tools/dev_dashboard_data.py --workspace <path>`.
 settings:
-  timeout: 600
-  max_steps: 100
+  timeout: 120
+  max_steps: 15
   goose_provider: openai
   goose_model: deepseek-v4-flash
   temperature: 0.3
 extensions:
-- type: platform
-  name: summon
 - type: builtin
   name: developer
   display_name: Developer
-  timeout: 300
+  timeout: 60
   bundled: true

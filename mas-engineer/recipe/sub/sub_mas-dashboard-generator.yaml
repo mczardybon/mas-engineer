@@ -1,41 +1,36 @@
 name: MAS Dashboard Generator
-version: 1.0.0
+version: 2.0.0  # R85 Phase 3: thin wrapper — calls existing tools/dev_dashboard_refresh.py
 constitution: sub_mas-master-constitution.yaml
-title: SUB-DASHBOARD-GENERATOR — Dashboard Rendering
-description: 'v1.0.0 | MAS-internal: Generates and renders the project dashboard from collected data'
-instructions: '# SUB-DASHBOARD-GENERATOR v1.0.0
+title: 🎨 SUB-DASHBOARD-GENERATOR — Dashboard Rendering (Script-wrapper)
+description: 'v2.0.0 | MAS-internal: Generates and renders the project dashboard. Delegates to tools/dev_dashboard_refresh.py.'
+instructions: |
+  # DASHBOARD-GENERATOR v2.0.0 (Script-wrapper)
 
-  # Generates and renders dashboards
+  R85 Phase 3 REFACTOR: Existing script tools/dev_dashboard_refresh.py (~16k) does
+  the actual rendering. This recipe is a thin wrapper that calls the script directly.
 
+  ## Usage
+  Call: `python3 tools/dev_dashboard_refresh.py` (uses MAS_WORKSPACE env or '.')
+  Output: {workspace}/.mas/dashboards/project.json + formatted text
 
-  ## ONLY generation — NO data collection or editing
+  ## SOT RULES
+  ⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+  ⛔ R09 DOMAIN — Stay within target workspace.
+  ⛔ R10 CORONASHIELD — YAML-validate output before storage.
+prompt: |
+  I am dashboard-generator (v2.0.0) | MODE-CHECK: mas-engineer | 🎨 SUB-DASHBOARD-GENERATOR (v2.0.0)
 
-  Generate dashboard from pre-collected data
-
-
-  ## RULES
-
-  - R01: No changes without User confirmation
-
-  - R09: Strict domain separation
-
-  - R10: CORONASHIELD — validate YAML before storage'
-prompt: 'I am dashboard-generator (v1.0.0) | MODE-CHECK: mas-engineer | SUB-DASHBOARD-GENERATOR (v1.0.0)
-
-  ONLY generation — NO data collection or editing
-
-  Generate dashboard visualization from project data'
+  ⛔ ONLY generation — NO data collection or editing.
+  Delegate to: `python3 tools/dev_dashboard_refresh.py`.
 settings:
-  timeout: 600
-  max_steps: 100
+  timeout: 120
+  max_steps: 15
   goose_provider: openai
   goose_model: deepseek-v4-flash
   temperature: 0.3
 extensions:
-- type: platform
-  name: summon
 - type: builtin
   name: developer
   display_name: Developer
-  timeout: 300
+  timeout: 60
   bundled: true
