@@ -1,0 +1,86 @@
+Build a complete Multi-Agent System called "translator-team" at
+/tmp/translator-team using a PARALLEL + VOTING architecture. Do NOT
+just plan it — actually create the files, run live tests, and report
+results.
+
+ARCHITECTURE (PARALLEL + VOTING — IMPORTANT):
+The translator-orchestrator receives a source text + target language.
+It PARALLEL dispatches the SAME text to 3 different translator agents
+(translator-literal, translator-literary, translator-technical) at
+the SAME TIME. Each produces an independent translation. Then a
+JUDGE agent (translation-judge) compares all 3 outputs and votes for
+the best one based on accuracy, fluency, and style. The judge returns
+the winning translation with its reasoning.
+
+This is NOT a pipeline. It is NOT hub-and-spoke. It is PARALLEL
+generation followed by a VOTE/SELECT step.
+
+STEP 1 — Initialize the project skeleton
+Run: python3 ~/.config/goose/recipes/tools/dev_generic_init.py
+     --init /tmp/translator-team --components all
+
+STEP 2 — Create 5 agents in /tmp/translator-team/recipe/sub/:
+
+1. translator-orchestrator.yaml (root: /tmp/translator-team/recipe/
+   translator-team.yaml)
+   - Receives {source_text, source_lang, target_lang}.
+   - PARALLEL dispatches the same text to all 3 translator agents
+     simultaneously (NOT sequentially).
+   - After all 3 return, delegates to translation-judge with all 3
+     candidate translations.
+   - Returns the judge's chosen translation with vote reasoning.
+
+2. translator-literal.yaml
+   - Style: word-for-word literal translation.
+   - Preserves technical terms, no idiomatic substitutions.
+   - Returns {style: "literal", text, notes}.
+
+3. translator-literary.yaml
+   - Style: literary, idiomatic, preserves tone and emotion.
+   - Adapts metaphors and cultural references.
+   - Returns {style: "literary", text, notes}.
+
+4. translator-technical.yaml
+   - Style: technical, preserves domain jargon and precision.
+   - Keeps numbers, units, formulas exact.
+   - Returns {style: "technical", text, notes}.
+
+5. translation-judge.yaml
+   - Receives the 3 candidate translations + source text.
+   - Scores each on accuracy (0-1), fluency (0-1), style-fit (0-1).
+   - VOTES for the best one.
+   - Returns {winner, scores, reasoning, final_text}.
+
+STEP 3 — Create the orchestrator root recipe translator-team.yaml
+that references all 4 sub-recipes via sub_recipes field.
+
+STEP 4 — LIVE TEST (mandatory):
+a) goose run --recipe /tmp/translator-team/recipe/translator-team.yaml
+   --no-session --explain
+b) goose run --recipe /tmp/translator-team/recipe/sub/translator-literal.yaml
+   --no-session --explain
+c) goose run --recipe /tmp/translator-team/recipe/sub/translator-literary.yaml
+   --no-session --explain
+d) goose run --recipe /tmp/translator-team/recipe/sub/translator-technical.yaml
+   --no-session --explain
+e) goose run --recipe /tmp/translator-team/recipe/sub/translation-judge.yaml
+   --no-session --explain
+f) python3 -c "import yaml; [yaml.safe_load(open(f))
+   for f in ['/tmp/translator-team/recipe/translator-team.yaml',
+            '/tmp/translator-team/recipe/sub/translator-literal.yaml',
+            '/tmp/translator-team/recipe/sub/translator-literary.yaml',
+            '/tmp/translator-team/recipe/sub/translator-technical.yaml',
+            '/tmp/translator-team/recipe/sub/translation-judge.yaml']]"
+
+STEP 5 — Report:
+- List all 6 files created with line counts.
+- Show PASS/FAIL for each of the 5 + 6 = 11 checks.
+- Show any YAML errors with line numbers.
+- CRITICALLY: confirm that the orchestrator's instructions contain the
+  string "PARALLEL dispatches" and that translation-judge is invoked
+  AFTER all 3 translators, to prove the parallel + voting pattern
+  (not pipeline, not hub-and-spoke).
+
+Critical: This team uses PARALLEL GENERATION + VOTING. The orchestrator
+MUST invoke all 3 translators in parallel (or at minimum all 3 before
+the judge runs). The judge MUST score and vote, not just pick one.
