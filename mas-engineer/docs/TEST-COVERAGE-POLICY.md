@@ -38,11 +38,12 @@ theater).
 
 | Metric | Value |
 |--------|-------|
-| sub_agents (yaml) | 119 |
-| tests (test_*.py) | 3 |
+| sub_agents (yaml, excluding *.llm-backup-r89) | 119 |
+| sub_agents (yaml, including backups) | 124 |
+| tests (test_*.py) | 6 |
 | threshold_80pct | 95 |
-| gap (tests needed) | **92** |
-| ratio | 0.025 |
+| gap (tests needed) | **89** |
+| ratio | 0.050 |
 | gate_passed | **false** |
 
 **Status:** the gate currently FAILS by design. The framework was
