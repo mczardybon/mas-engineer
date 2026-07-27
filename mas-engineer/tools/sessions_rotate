@@ -98,18 +98,22 @@ def show_status(db_path: Path) -> None:
     print(f"Size: {size:,} bytes ({size / 1024 / 1024:.1f} MB)")
     print(f"Modified: {datetime.fromtimestamp(db_path.stat().st_mtime, tz=timezone.utc).isoformat()}")
     print()
-    with sqlite3.connect(str(db_path)) as conn:
-        for tbl, col in [("messages", "created_timestamp"), ("sessions", "created_at"), ("usage_ledger", "created_timestamp")]:
-            try:
-                dist = age_distribution(conn, tbl, col)
-                if not dist:
-                    continue
-                print(f"{tbl} ({col}):")
-                for age, cnt, _ in dist:
-                    print(f"  {age:8s} {cnt:>6,} rows")
-                print()
-            except sqlite3.OperationalError as e:
-                print(f"  ({tbl}: {e})")
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            for tbl, col in [("messages", "created_timestamp"), ("sessions", "created_at"), ("usage_ledger", "created_timestamp")]:
+                try:
+                    dist = age_distribution(conn, tbl, col)
+                    if not dist:
+                        continue
+                    print(f"{tbl} ({col}):")
+                    for age, cnt, _ in dist:
+                        print(f"  {age:8s} {cnt:>6,} rows")
+                    print()
+                except sqlite3.OperationalError as e:
+                    print(f"  ({tbl}: {e})")
+    except sqlite3.DatabaseError as e:
+        print(f"  ERROR: cannot read DB: {e}", file=sys.stderr)
+        return 1
 
 
 def count_to_delete(conn, keep_days: int) -> dict[str, int]:
@@ -144,21 +148,26 @@ def main() -> int:
 
     size_before = get_db_size(db_path)
 
+    try:
+        with sqlite3.connect(str(db_path)) as conn:
+            to_del = count_old_messages(conn, args.keep_days)
+    except sqlite3.DatabaseError as e:
+        print(f"ERROR: cannot read DB: {e}", file=sys.stderr)
+        return 1
+
+    print(f"[sessions_rotate] db: {db_path}")
+    print(f"[sessions_rotate] size before: {size_before:,} bytes ({size_before / 1024 / 1024:.1f} MB)")
+    print(f"[sessions_rotate] keep-days: {args.keep_days}")
+    print(f"[sessions_rotate] messages > {args.keep_days}d: {to_del:,}")
+
+    if not args.apply:
+        print(f"[sessions_rotate] DRY-RUN — pass --apply to actually delete")
+        return 0
+
     with sqlite3.connect(str(db_path)) as conn:
-        to_del = count_old_messages(conn, args.keep_days)
-
-        print(f"[sessions_rotate] db: {db_path}")
-        print(f"[sessions_rotate] size before: {size_before:,} bytes ({size_before / 1024 / 1024:.1f} MB)")
-        print(f"[sessions_rotate] keep-days: {args.keep_days}")
-        print(f"[sessions_rotate] messages > {args.keep_days}d: {to_del:,}")
-
-        if not args.apply:
-            print(f"[sessions_rotate] DRY-RUN — pass --apply to actually delete")
-            return 0
-
         deleted = delete_old_messages(conn, args.keep_days)
         conn.commit()
-        print(f"[sessions_rotate] deleted: {deleted:,} messages")
+    print(f"[sessions_rotate] deleted: {deleted:,} messages")
 
     # VACUUM must be outside transaction; use fresh connection
     if not args.no_vacuum and deleted > 0:
