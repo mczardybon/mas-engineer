@@ -12,6 +12,20 @@ instructions: |
   You are the orchestrator for verifying auto_repair step (step 4) added to 4 recovery workflows.
   Delegate to specialized sub-agents for each test domain.
 
+  ## Step 0: Run Pre-Check Layer (DETERMINISTIC, ~0.3s, no LLM tokens)
+  Before delegating T1, T4-T10 to the validator, run the deterministic pre-check:
+  ```
+  python3 tools/pre_check --recipe auto_repair
+  ```
+  - If pre-check reports 8/8 PASS: auto_repair steps are present, have cmd/action,
+    are not placeholders, and reference recipe/restore. Proceed to Step 1 for
+    semantic review (does each auto_repair step LOGIC make sense?).
+  - If pre-check reports FAIL: failed checks tell you exactly which workflows
+    are missing auto_repair, have empty cmd/action, are placeholders, or don't
+    reference recipe/restore. Use this to focus the LLM's fix-proposal work.
+  - The pre-check mirrors the exact T1, T4-T10 checks in sub_mas-e2e-auto-repair-validator,
+    but runs in <1 second without LLM token cost. Estimated LLM tool-calls saved: ~14.
+
   ## Delegation Map
   - T1, T4-T10 (validation tests): sub_mas-e2e-auto-repair-validator
   - T2-T3 (workflow runner tests): sub_mas-e2e-auto-repair-runner

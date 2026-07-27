@@ -12,6 +12,19 @@ instructions: |
   You are the orchestrator for verifying German translation + placeholder fixes.
   Delegate to specialized sub-agents for each test domain.
 
+  ## Step 0: Run Pre-Check Layer (DETERMINISTIC, ~0.5s, no LLM tokens)
+  Before delegating T1-T2 to the validator, run the deterministic pre-check:
+  ```
+  python3 tools/pre_check --recipe german
+  ```
+  - If pre-check reports 2/2 PASS: German descs and placeholders are clean.
+    Proceed to Step 1 (delegations) for semantic review and remaining tests (T3-T5).
+  - If pre-check reports FAIL: the failed check tells you exactly which workflows
+    have German descs or are placeholders. Use this to focus the LLM's
+    fix-proposal work instead of asking it to re-discover the issue.
+  - The pre-check mirrors the exact T1-T2 checks in sub_mas-e2e-german-fixes-validator,
+    but runs in <1 second without LLM token cost. Estimated LLM tool-calls saved: ~4.
+
   ## Delegation Map
   - T1-T2 (German descs + placeholder detection): sub_mas-e2e-german-fixes-validator
   - T3 (workflow runner): sub_mas-e2e-german-fixes-runner

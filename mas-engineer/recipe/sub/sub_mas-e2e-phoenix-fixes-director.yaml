@@ -12,6 +12,18 @@ instructions: |
   You are the orchestrator for verifying the 8 phoenix-recovery fixes.
   Delegate to specialized sub-agents for each test domain.
 
+  ## Step 0: Run Pre-Check Layer (DETERMINISTIC, ~1-2s, no LLM tokens)
+  Before any LLM-driven checks, run the deterministic pre-check script:
+  ```
+  python3 tools/pre_check --recipe phoenix
+  ```
+  - If pre-check reports 7/7 PASS: structural checks are clean. Proceed to Step 1
+    only for SEMANTIC review (does the phoenix-fix LOGIC make sense?).
+  - If pre-check reports FAIL: failed checks are exactly the issues a careful LLM
+    would have found. Use the pre-check output to focus the semantic review.
+  - The pre-check mirrors the exact T1-T7 checks in sub_mas-e2e-phoenix-fixes-validator,
+    but runs in 1-2 seconds without LLM token cost. Estimated LLM tool-calls saved: ~14.
+
   ## Tests
   1. wf_recovery_immune + 4 new workflows parse + dispatch
   2. 5 recovery-templates render correctly

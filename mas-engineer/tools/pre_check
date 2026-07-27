@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+"""
+pre_check — Deterministic pre-check layer for e2e-verify recipes.
+
+Runs shell/python checks BEFORE LLM delegation. If pre-checks pass, the
+LLM only needs to do semantic review (much cheaper). If they fail, the
+LLM gets a precise list of which checks failed and can focus on fix
+proposals instead of re-discovering the same issues.
+
+Usage:
+    pre_check --recipe phoenix
+    pre_check --recipe german
+    pre_check --recipe auto-repair
+    pre_check --all                  # run all 3 e2e-verify pre-checks
+    pre_check --list                 # list available pre-check profiles
+    pre_check --dry-run --recipe X   # show what would run, no execution
+    pre_check --json --recipe X      # machine-readable output for recipes
+
+Exit codes:
+    0  all checks passed
+    1  one or more checks failed
+    2  profile not found
+    3  internal error
+
+Output format (default):
+    === PRE-CHECK — Phoenix Fixes (T1-T7) ===
+    [T1] wf_recovery_immune exists .......................... PASS
+    [T2] 4 new recovery workflows exist ..................... PASS (5/5)
+    [T3] recovery_checkpoint has restore-step ............... PASS
+    ...
+    Result: 7/7 PASS in 0.42s (estimated ~14 LLM tool-calls saved)
+
+Output format (--json):
+    {"recipe": "phoenix", "title": "...", "passed": 7, "failed": 0,
+     "duration_s": 0.42, "checks": [{"id": "T1", "name": "...", "passed": true, ...}]}
+
+Profile discovery:
+    Each .py file in tools/pre_check_lib/ that defines run(workspace) -> dict
+    is auto-discovered. Filename = profile id (e.g. phoenix.py -> "phoenix").
+"""
+import argparse
+import importlib
+import json
+import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, List
+
+WORKSPACE = Path(__file__).resolve().parent.parent  # mas-engineer/
+LIB_DIR = WORKSPACE / "tools" / "pre_check_lib"
+
+
+def discover_profiles() -> Dict[str, str]:
+    """Return {profile_id: module_name} for all available profiles.
+
+    Uses standalone loading (not package import) because tools/ is not a package
+    (no __init__.py — every tools/*.py is a standalone script).
+    """
+    profiles = {}
+    for f in sorted(LIB_DIR.glob("*.py")):
+        if f.name.startswith("_"):
+            continue
+        pid = f.stem
+        # Use runpy to load module by file path (no package context needed)
+        profiles[pid] = str(f)
+    return profiles
+
+
+def run_profile(profile_id: str, workspace: Path) -> Dict[str, Any]:
+    """Run a single profile. Returns the profile's result dict."""
+    import runpy
+    profiles = discover_profiles()
+    if profile_id not in profiles:
+        return {
+            "error": f"profile '{profile_id}' not found",
+            "available": sorted(profiles.keys()),
+        }
+    mod = runpy.run_path(profiles[profile_id], run_name="__main__")
+    if "run" not in mod:
+        return {"error": f"profile '{profile_id}' has no run() function"}
+    return mod["run"](workspace)
+
+
+def _print_human(profile_id: str, result: Dict[str, Any]) -> None:
+    """Human-readable output for one profile."""
+    title = result.get("title", profile_id)
+    print(f"\n=== PRE-CHECK — {title} ===")
+    checks = result.get("checks", [])
+    if not checks:
+        print("  (no checks defined)")
+        return
+    max_len = max(len(f"{c['id']} {c['name']}") for c in checks)
+    for c in checks:
+        status = "PASS" if c.get("passed") else "FAIL"
+        marker = "✓" if c.get("passed") else "✗"
+        detail = c.get("detail", "")
+        line = f"  [{c['id']}] {c['name']}"
+        line = line.ljust(max_len + 2)
+        line += f" {marker} {status}"
+        if detail:
+            line += f"  ({detail})"
+        print(line)
+    duration = result.get("duration_s", 0)
+    n_passed = result.get("passed", 0)
+    n_total = len(checks)
+    est_saved = n_passed * 2  # heuristic: avg 2 LLM tool-calls per check
+    print(f"  Result: {n_passed}/{n_total} PASS in {duration:.2f}s "
+          f"(estimated ~{est_saved} LLM tool-calls saved)")
+
+
+def cmd_run(args, workspace: Path) -> int:
+    if args.list:
+        import runpy
+        profiles = discover_profiles()
+        print("=== AVAILABLE PRE-CHECK PROFILES ===")
+        for pid in sorted(profiles.keys()):
+            mod = runpy.run_path(profiles[pid], run_name="__main__")
+            desc = mod.get("DESCRIPTION", "(no description)")
+            print(f"  {pid:30s}  {desc}")
+        return 0
+
+    if args.all:
+        profile_ids = sorted(discover_profiles().keys())
+    else:
+        profile_ids = [args.recipe]
+
+    overall_passed = 0
+    overall_failed = 0
+    overall_start = time.time()
+    for pid in profile_ids:
+        if args.dry_run:
+            print(f"[DRY-RUN] would execute profile: {pid}")
+            continue
+        result = run_profile(pid, workspace)
+        if result.get("error"):
+            print(f"ERROR: {result['error']}", file=sys.stderr)
+            if "available" in result:
+                print(f"  available: {', '.join(result['available'])}", file=sys.stderr)
+            return 2
+        if args.json:
+            print(json.dumps({"profile": pid, **result}, indent=2))
+        else:
+            _print_human(pid, result)
+        overall_passed += result.get("passed", 0)
+        overall_failed += result.get("failed", 0)
+
+    if not args.json and not args.dry_run and not args.list:
+        duration = time.time() - overall_start
+        total = overall_passed + overall_failed
+        if total > 0:
+            print(f"\n=== OVERALL: {overall_passed}/{total} checks PASS in {duration:.2f}s ===")
+    return 0 if overall_failed == 0 else 1
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Pre-check layer for e2e-verify recipes (saves LLM tool-calls)"
+    )
+    parser.add_argument("--recipe", help="Run pre-check for this recipe profile")
+    parser.add_argument("--all", action="store_true", help="Run all profiles")
+    parser.add_argument("--list", action="store_true", help="List available profiles")
+    parser.add_argument("--dry-run", action="store_true", help="Show what would run")
+    parser.add_argument("--json", action="store_true", help="Output as JSON")
+    parser.add_argument(
+        "--workspace", type=Path, default=WORKSPACE,
+        help=f"Workspace path (default: {WORKSPACE})",
+    )
+    args = parser.parse_args()
+    if not (args.recipe or args.all or args.list):
+        parser.print_help()
+        return 0
+    return cmd_run(args, args.workspace)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
