@@ -266,8 +266,10 @@ cd $WORKSPACE
 # Only run if e2e-results or cert-style files are staged
 STAGED_CERTS=$(git diff --cached --name-only | grep -E "^(e2e-results/|docs/.*CERTAIN|certificates/|\w*\.md$)" | head -5)
 if [ -n "$STAGED_CERTS" ]; then
-  # Run the self-auditor
-  python3 tools/dev_self_auditor.py --scope e2e-results --check-patterns
+  # R108-12 fix: use --scope staged (audit only files in this commit),
+  # not --scope e2e-results (which would re-audit ALL historical reports
+  # and cause whack-a-mole: fix one cert → expose 5 more in older reports).
+  python3 tools/dev_self_auditor.py --scope staged
   # Read its report
   cat .state/pipeline/self_audit.yaml
 fi

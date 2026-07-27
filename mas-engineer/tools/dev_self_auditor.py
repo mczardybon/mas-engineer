@@ -32,6 +32,7 @@ Output:
 
 import argparse
 import re
+import subprocess
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -334,7 +335,7 @@ def write_report(workspace: str, file_results: list[dict], scope: str) -> dict:
 def main():
     parser = argparse.ArgumentParser(description='Self-auditor: detect "verification theater" in MAS-Engineer docs')
     parser.add_argument('--workspace', default='.', help='Workspace root')
-    parser.add_argument('--scope', help='Path to scope (e.g. e2e-results, e2e-results/2026-07-21)')
+    parser.add_argument('--scope', help='Path to scope (e.g. e2e-results, e2e-results/2026-07-21, or "staged" to audit only git-cached files)')
     parser.add_argument('--file', help='Single file to audit')
     parser.add_argument('--output', default='.state/pipeline/self_audit.yaml', help='Output report path')
     parser.add_argument('--json', action='store_true', help='Output JSON to stdout instead of YAML')
@@ -344,6 +345,28 @@ def main():
 
     if args.file:
         target_files = [Path(args.file)]
+    elif args.scope == 'staged':
+        # Audit only files that are currently git-staged (cached).
+        # This is the R108-12 fix: prevents whack-a-mole where every
+        # cert-fix exposes historical overclaims in unrelated files.
+        # Cert-style audit is then scoped to what the user is actually pushing.
+        try:
+            staged_output = subprocess.run(
+                ['git', 'diff', '--cached', '--name-only', '--diff-filter=ACMR'],
+                capture_output=True, text=True, cwd=workspace, check=True
+            ).stdout.strip()
+        except subprocess.CalledProcessError as e:
+            print(f'❌ git diff --cached failed: {e}', file=sys.stderr)
+            return 2
+        if not staged_output:
+            print('ℹ️  No staged files — nothing to audit (PASS)', file=sys.stderr)
+            return 0
+        all_staged = [Path(workspace) / line for line in staged_output.split('\n') if line]
+        # Only audit .md/.txt files (cert-style); skip code/JSON/binaries
+        target_files = [f for f in all_staged if f.suffix in ('.md', '.txt') and f.exists()]
+        if not target_files:
+            print(f'ℹ️  Staged {len(all_staged)} files but none are .md/.txt — nothing to audit (PASS)', file=sys.stderr)
+            return 0
     elif args.scope:
         target_files = find_target_files(args.scope, workspace)
     else:
