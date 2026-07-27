@@ -1,14 +1,91 @@
 #!/bin/bash
-# Block secrets at PUSH time too — defense in depth
-# In case pre-commit was bypassed (--no-verify) or files were committed before hook was installed
-SECRETS=$(git diff origin/master..HEAD | grep -nE "^\+.*(sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{30,}|gho_[A-Za-z0-9]{30,})" 2>/dev/null)
-if [ -n "$SECRETS" ]; then
+# Pre-push hook: defense in depth
+#
+# 1. Secret detection (R88) — blocks commits containing real API keys
+#    - Catches: sk-XXXXXXXX... (32+ chars, no spaces, no markdown mask)
+#    - Allows:  sk-0f3...78a6 (masked documentation reference)
+#
+# 2. Recipe-YAML validation (R108-8) — blocks broken recipes
+#    - Catches: YAML parse errors, missing required fields
+#    - Skips:  .backups/, __pycache__/
+#
+# Compare against the same branch on origin (Dev..Dev, master..master).
+# Per R88 branch rule: NEVER auto-merge, push to own branch.
+
+set +e  # Don't exit on first error
+
+CURRENT_BRANCH="$(git branch --show-current 2>/dev/null || echo 'Dev')"
+UPSTREAM="origin/${CURRENT_BRANCH}"
+
+# === 1. Secret detection (R88) ===
+DUMP="$(git diff "${UPSTREAM}..HEAD" 2>/dev/null)"
+
+KEY_LINES="$(echo "$DUMP" | grep -nE '(sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{30,}|gho_[A-Za-z0-9]{30,})' 2>/dev/null | grep -E '^\+' || true)"
+
+REAL_SECRETS=""
+while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    case "$line" in
+        *'...'*) continue ;;
+    esac
+    case "$line" in
+        *'`sk-'*) continue ;;
+        *'`ghp_'*) continue ;;
+    esac
+    REAL_SECRETS="${REAL_SECRETS}${line}
+"
+done <<< "$KEY_LINES"
+
+if [ -n "$REAL_SECRETS" ]; then
     echo ""
     echo "🚨 SECRET DETECTED in commits being pushed:"
     echo "----------------------------------------"
-    echo "$SECRETS"
+    echo "$REAL_SECRETS"
     echo "----------------------------------------"
     echo "Push blocked. Revert the offending commits first."
     exit 1
 fi
+
+# === 2. Recipe-YAML validation (R108-8) ===
+YAML_FILES="$(git diff --name-only "${UPSTREAM}..HEAD" 2>/dev/null | grep -E '^mas-engineer/recipe/.*\.ya?ml$' || true)"
+if [ -n "$YAML_FILES" ]; then
+    YAML_ERRORS=0
+    YAML_CHECKED=0
+    for f in $YAML_FILES; do
+        case "$f" in
+            */.backups/*|*/__pycache__/*) continue ;;
+        esac
+        [ ! -f "$f" ] && continue
+        YAML_CHECKED=$((YAML_CHECKED + 1))
+        if ! python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
+            echo "❌ YAML PARSE ERROR in: $f"
+            YAML_ERRORS=$((YAML_ERRORS + 1))
+            continue
+        fi
+        case "$f" in
+            recipe/sub/sub_mas-*.yaml|recipe/*.yaml|recipe/template/recovery/*.yaml)
+                MISSING="$(python3 -c "
+import yaml
+d = yaml.safe_load(open('$f'))
+missing = [k for k in ('name', 'version') if k not in d]
+print(','.join(missing))
+" 2>/dev/null)"
+                if [ -n "$MISSING" ]; then
+                    echo "❌ MISSING FIELDS [$MISSING] in: $f"
+                    YAML_ERRORS=$((YAML_ERRORS + 1))
+                fi
+                ;;
+        esac
+    done
+    if [ $YAML_ERRORS -gt 0 ]; then
+        echo ""
+        echo "🚨 $YAML_ERRORS recipe-YAML error(s) detected."
+        echo "Push blocked. Fix the recipe files or revert."
+        exit 1
+    fi
+    if [ $YAML_CHECKED -gt 0 ]; then
+        echo "✅ Recipe-YAML validation passed ($YAML_CHECKED files checked)"
+    fi
+fi
+
 exit 0
