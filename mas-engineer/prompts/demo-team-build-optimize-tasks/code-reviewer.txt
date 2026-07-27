@@ -1,0 +1,263 @@
+Build a complete Multi-Agent System called "code-reviewer" at
+/tmp/code-reviewer, OPTIMIZE it via the mas-engineer E2E-improvement
+loop, then ASSIGN 3 real code-review jobs to it. Repeat build-optimize-
+tasks 5 times to measure consistency. Each cycle = fresh /tmp/code-reviewer.
+
+This is the 2026-07-28 demo-team template: build → optimize → assign → repeat.
+Mirrors the 2026-07-27 15x test methodology (run_15x_demo.py), but extended
+with mandatory OPTIMIZE and TASK-ASSIGNMENT phases.
+
+======================================================================
+CYCLE 1 (FRESH) — BUILD + OPTIMIZE + ASSIGN
+======================================================================
+
+STEP 1 — Initialize the project skeleton
+Run: python3 ~/.config/goose/recipes/tools/dev_generic_init.py
+     --init /tmp/code-reviewer --components all
+
+STEP 2 — Create 4 parallel agents + 1 aggregator in
+         /tmp/code-reviewer/recipe/sub/:
+
+ARCHITECTURE: Parallel fan-out then aggregator (5 agents)
+
+  code input
+      |
+      v
+  review-orchestrator
+      |
+      +-- parallel start -----------------------+
+      |                                         |
+      +-> style-reviewer     (lint, formatting) |
+      |                                         |
+      +-> security-reviewer  (vulns, secrets)   |
+      |                                         |
+      +-> perf-reviewer      (perf, complexity) |
+      |                                         |
+      +-> test-reviewer      (coverage, edge)   |
+      |                                         |
+      parallel end (all 4 results) --------------+
+      |
+      v
+  review-aggregator   (merges + prioritizes)
+      |
+      v
+  final review report
+
+1. style-reviewer.yaml
+   - Reviews code for: lint errors, formatting, naming conventions,
+     import order, dead code
+   - Returns: {issues: [{file, line, severity, message, suggestion}]}
+
+2. security-reviewer.yaml (MANDATORY — security gate)
+   - Reviews code for: hardcoded secrets, SQL injection, XSS,
+     insecure dependencies, missing auth checks
+   - Returns: {issues: [{file, line, severity, cwe_id, fix}]}
+   - This is a hard quality gate. Any HIGH severity issue
+     blocks the merge.
+
+3. perf-reviewer.yaml
+   - Reviews code for: O(n^2) loops, blocking I/O, memory leaks,
+     redundant computation, missing caching
+   - Returns: {issues: [{file, line, severity, impact_ms, fix}]}
+
+4. test-reviewer.yaml
+   - Reviews code for: missing tests, edge cases, mock coverage,
+     flaky patterns
+   - Returns: {issues: [{file, line, severity, missing_scenarios}]}
+
+5. review-aggregator.yaml
+   - Receives {style_issues, security_issues, perf_issues, test_issues}
+   - Merges into a single prioritized list (critical, high, medium, low)
+   - Calculates overall score (0-100)
+   - Decides: approve | request_changes | needs_discussion
+   - Returns: {score, decision, summary, all_issues_sorted}
+
+STEP 3 — Create orchestrator root recipe
+/tmp/code-reviewer/recipe/code-reviewer.yaml that runs the 4 reviewers
+in PARALLEL (no dependencies between them) and then dispatches to
+review-aggregator. Document the parallel execution in instructions.
+
+STEP 4 — DASHBOARD SETUP (mandatory)
+a) Set up MCP dashboard for the new project
+b) First dashboard-data refresh
+c) Verify dashboard:
+   - "agents.total" = 5, "agents.healthy" = 5
+   - "project_name" = "code-reviewer", "workspace" = "/tmp/code-reviewer"
+
+STEP 5 — LIVE TEST (mandatory):
+a) goose run --recipe /tmp/code-reviewer/recipe/code-reviewer.yaml
+   --no-session --explain
+b) goose run --recipe /tmp/code-reviewer/recipe/sub/style-reviewer.yaml
+   --no-session --explain
+c) goose run --recipe /tmp/code-reviewer/recipe/sub/security-reviewer.yaml
+   --no-session --explain
+d) goose run --recipe /tmp/code-reviewer/recipe/sub/perf-reviewer.yaml
+   --no-session --explain
+e) goose run --recipe /tmp/code-reviewer/recipe/sub/test-reviewer.yaml
+   --no-session --explain
+f) goose run --recipe /tmp/code-reviewer/recipe/sub/review-aggregator.yaml
+   --no-session --explain
+g) python3 -c "import yaml; [yaml.safe_load(open(f)) for f in
+   ['/tmp/code-reviewer/recipe/code-reviewer.yaml',
+    '/tmp/code-reviewer/recipe/sub/style-reviewer.yaml',
+    '/tmp/code-reviewer/recipe/sub/security-reviewer.yaml',
+    '/tmp/code-reviewer/recipe/sub/perf-reviewer.yaml',
+    '/tmp/code-reviewer/recipe/sub/test-reviewer.yaml',
+    '/tmp/code-reviewer/recipe/sub/review-aggregator.yaml']]"
+h) Test MCP server starts: timeout 5 node /tmp/code-reviewer/.mas/mcp/
+   server.js
+
+STEP 6 — Report (build only):
+- 6 yaml files created with line counts
+- dashboard data.json summary (12 keys, 5 agents)
+- MCP server files installed
+- extension registration in config.yaml
+- PASS/FAIL for 6+6+5+4 = 21 build checks
+
+======================================================================
+STEP 7 — OPTIMIZE via mas-engineer E2E-improvement (mandatory)
+======================================================================
+
+Run the mas-engineer improvement pipeline to harden the team:
+
+a) SUB_MAS-GENERAL-IMPROVER on the team:
+   goose run --recipe ~/.config/goose/recipes/mas-engineer/recipe/
+   sub/sub_mas-general-improver.yaml --no-session --text
+   "IMPROVE /tmp/code-reviewer — find and fix all YAML
+   issues, missing fields, brittle patterns. Pay attention
+   to parallel-execution semantics (4 reviewers must not have
+   dependencies). Apply APPLY_ONLY mode (write fixes, do not
+   invent new features)."
+
+b) SUB_MAS-PRE-PUSH-VALIDATOR on the team:
+   goose run --recipe ~/.config/goose/recipes/mas-engineer/recipe/
+   sub/sub_mas-pre-push-validator.yaml --no-session --text
+   "validate /tmp/code-reviewer — run all 14 checks. Verify
+   the 4 reviewers have no inter-dependencies and that
+   review-aggregator only runs after all 4 complete."
+
+c) DASHBOARD HEALTH CHECK:
+   - python3 ~/.config/goose/recipes/tools/dev_dashboard_data.py
+     /tmp/code-reviewer
+   - cat /tmp/code-reviewer/.mas/dashboards/data.json | grep
+     -E '"health"|"health_trend"|"issues"' -A 3
+
+d) COUNT FIXES APPLIED:
+   - before improvement: X issues (from validator report)
+   - after improvement: Y issues (re-run validator)
+   - delta = X - Y (must be > 0 for PASS)
+
+STEP 7 — Report (optimize only):
+- general-improver fixes applied: N (with file paths)
+- pre-push-validator findings: before X, after Y, delta = X-Y
+- dashboard health: before/after trend
+- PASS criteria: delta > 0 AND no CRITICAL findings remaining
+
+======================================================================
+STEP 8 — ASSIGN 3 REAL CODE-REVIEW JOBS (mandatory)
+======================================================================
+
+After optimization, the team must review 3 real code snippets
+end-to-end. Each snippet = fresh `goose run --recipe code-reviewer.yaml
+--text "<snippet>"`. Reviews must produce prioritized issue lists,
+not just "looks good" handwaving.
+
+SNIPPET 1 (security — hardcoded secret):
+  ```python
+  import os
+  def get_db():
+      return psycopg2.connect(
+          host="db.prod.example.com",
+          user="admin",
+          password="hunter2",  # hardcoded!
+          dbname="app"
+      )
+  ```
+  - Expected: security-reviewer flags CWE-798 (hardcoded credentials)
+  - Quality gate: HIGH severity issue + fix suggestion
+
+SNIPPET 2 (perf — O(n^2) loop):
+  ```python
+  def find_duplicates(items):
+      dups = []
+      for i, a in enumerate(items):
+          for j, b in enumerate(items):
+              if i != j and a == b and a not in dups:
+                  dups.append(a)
+      return dups
+  ```
+  - Expected: perf-reviewer flags O(n^2) + style-reviewer flags unused
+    `j` variable + test-reviewer flags missing edge cases
+  - Quality gate: ≥2 issues across reviewers, score < 80
+
+SNIPPET 3 (style + test — unclean function):
+  ```python
+  def Calc(x,y):return x+y  # no spaces, bad name
+  # No tests
+  ```
+  - Expected: style-reviewer flags naming + spacing
+              test-reviewer flags "no tests for this function"
+  - Quality gate: ≥2 issues, request_changes decision
+
+For each snippet, run:
+  goose run --recipe /tmp/code-reviewer/recipe/code-reviewer.yaml
+  --no-session --text "<SNIPPET_PROMPT>"
+
+Capture the full output. Verify:
+- review-aggregator output contains numeric score (0-100)
+- review-aggregator decision is one of: approve | request_changes |
+  needs_discussion
+- All HIGH severity issues have file:line + fix suggestion
+- Issues are sorted by severity (critical/high/medium/low)
+- No false-positive "I cannot review" hedging
+
+STEP 8 — Report (tasks only):
+| # | Snippet           | Score | Decision        | Issues | Result |
+|---|-------------------|------:|-----------------|-------:|--------|
+| 1 | hardcoded secret  | ___   | approve/request/needs | ___ | PASS/FAIL |
+| 2 | O(n^2) duplicates | ___   | ...             | ___    | PASS/FAIL |
+| 3 | Calc() no tests   | ___   | ...             | ___    | PASS/FAIL |
+
+PASS criteria: all 3 PASS (correct catch + score + decision) = CYCLE 1 PASS
+
+======================================================================
+CYCLE 2..5 (FRESH) — REPEAT BUILD + OPTIMIZE + ASSIGN
+======================================================================
+
+For each cycle n=2,3,4,5:
+1. rm -rf /tmp/code-reviewer
+2. Repeat CYCLE 1 STEPS 1-8 verbatim
+3. Record per-cycle results in the same table format
+
+This generates 5 independent build+optimize+review attempts.
+Expected: 4-5/5 cycles PASS (Wilson 95% CI similar to 2026-07-27).
+
+======================================================================
+FINAL REPORT (after all 5 cycles)
+======================================================================
+
+Per-cycle:
+| # | Build 21/21 | Optimize delta>0 | Reviews 3/3 | Cycle PASS |
+|---|-------------|------------------|-------------|------------|
+| 1 | Y/N          | Y/N + N fixes     | Y/N         | Y/N        |
+| 2 | ...                                                         |
+| 3 | ...                                                         |
+| 4 | ...                                                         |
+| 5 | ...                                                         |
+
+FINAL TALLY:
+- Cycles PASS: X/5
+- Build pass-rate: Y/5
+- Optimize delta>0 rate: Z/5
+- Reviews 3/3 pass-rate: W/5
+- Wilson 95% CI on cycles: [__%, __%]
+- Total checks across 5 cycles: ___
+- Total fixes applied: ___
+- Total issues found across all reviews: ___
+
+Critical: the 4 reviewer agents MUST run in parallel. No sequential
+dependencies. The aggregator only runs after ALL 4 have completed.
+
+Critical: the OPTIMIZE phase is what makes this different from a
+build-only test. Without it, the team is brittle. The E2E-improvement
+loop is the value-add of mas-engineer.

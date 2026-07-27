@@ -1,0 +1,214 @@
+Build a complete Multi-Agent System called "research-team" at
+/tmp/research-team, OPTIMIZE it via the mas-engineer E2E-improvement
+loop, then ASSIGN 3 real research tasks to it. Repeat build-optimize-
+tasks 5 times to measure consistency. Each cycle = fresh /tmp/research-team.
+
+This is the 2026-07-28 demo-team template: build → optimize → assign → repeat.
+Mirrors the 2026-07-27 15x test methodology (run_15x_demo.py), but extended
+with mandatory OPTIMIZE and TASK-ASSIGNMENT phases.
+
+======================================================================
+CYCLE 1 (FRESH) — BUILD + OPTIMIZE + ASSIGN
+======================================================================
+
+STEP 1 — Initialize the project skeleton
+Run: python3 ~/.config/goose/recipes/tools/dev_generic_init.py
+     --init /tmp/research-team --components all
+
+STEP 2 — Create 5+ interconnected agents in
+         /tmp/research-team/recipe/sub/:
+
+1. research-orchestrator.yaml (root: /tmp/research-team/recipe/
+   research-team.yaml)
+   - Main entry point. Receives user query.
+   - Decomposes into sub-tasks.
+   - Dispatches to specialists.
+   - Collects results.
+   - Returns synthesized final answer WITH CITATIONS.
+
+2. web-searcher.yaml
+   - Uses web_search to find sources.
+   - Returns: list of {url, title, snippet, source_domain}.
+
+3. source-verifier.yaml (MANDATORY — quality gate)
+   - Receives raw search results from web-searcher.
+   - Filters low-quality, spam, irrelevant, single-source claims.
+   - Cross-checks facts against multiple sources.
+   - Returns ONLY verified facts with confidence score (0-1) and URLs.
+
+4. fact-extractor.yaml
+   - Receives verified sources from source-verifier.
+   - Extracts specific facts, numbers, dates, quotes.
+   - Returns {claim, evidence, source_url}.
+
+5. synthesizer.yaml
+   - Receives structured facts from fact-extractor.
+   - Combines into coherent answer.
+   - Adds inline citations [1], [2], [3].
+   - Returns final research report.
+
+STEP 3 — Create the orchestrator root recipe research-team.yaml
+that references all 5 sub-recipes via sub_recipes field.
+
+STEP 4 — DASHBOARD SETUP (mandatory)
+a) Set up MCP dashboard for the new project:
+   - cd /tmp/research-team
+   - mkdir -p .mas/mcp
+   - Copy MCP server files from mas-engineer
+   - Run: cd .mas/mcp && npm install
+   - Register framework-dashboard extension in
+     ~/.config/goose/config.yaml (under extensions:)
+b) First dashboard-data refresh:
+   - python3 ~/.config/goose/recipes/tools/dev_dashboard_data.py
+     /tmp/research-team
+c) Verify dashboard:
+   - cat /tmp/research-team/.mas/dashboards/data.json | python3 -m json.tool
+   - "agents.total" = 5, "agents.healthy" = 5
+   - "project_name" = "research-team", "workspace" = "/tmp/research-team"
+
+STEP 5 — LIVE TEST (mandatory):
+a) goose run --recipe /tmp/research-team/recipe/research-team.yaml
+   --no-session --explain
+b) goose run --recipe /tmp/research-team/recipe/sub/web-searcher.yaml
+   --no-session --explain
+c) goose run --recipe /tmp/research-team/recipe/sub/source-verifier.yaml
+   --no-session --explain
+d) goose run --recipe /tmp/research-team/recipe/sub/fact-extractor.yaml
+   --no-session --explain
+e) goose run --recipe /tmp/research-team/recipe/sub/synthesizer.yaml
+   --no-session --explain
+f) python3 -c "import yaml; [yaml.safe_load(open(f)) for f in
+   ['/tmp/research-team/recipe/research-team.yaml',
+    '/tmp/research-team/recipe/sub/web-searcher.yaml',
+    '/tmp/research-team/recipe/sub/source-verifier.yaml',
+    '/tmp/research-team/recipe/sub/fact-extractor.yaml',
+    '/tmp/research-team/recipe/sub/synthesizer.yaml']]"
+g) Test MCP server starts: timeout 5 node /tmp/research-team/.mas/mcp/
+   server.js
+   (should print "Framework Dashboard MCP Server running" on stderr)
+
+STEP 6 — Report (build only):
+- 6 yaml files created with line counts
+- dashboard data.json summary (12 keys, 5 agents)
+- MCP server files installed
+- extension registration in config.yaml
+- PASS/FAIL for 5+6+4 = 15 build checks
+
+======================================================================
+STEP 7 — OPTIMIZE via mas-engineer E2E-improvement (mandatory)
+======================================================================
+
+Run the mas-engineer improvement pipeline to harden the team:
+
+a) SUB_MAS-GENERAL-IMPROVER on the team:
+   goose run --recipe ~/.config/goose/recipes/mas-engineer/recipe/
+   sub/sub_mas-general-improver.yaml --no-session --text
+   "IMPROVE /tmp/research-team — find and fix all YAML
+   issues, missing fields, brittle patterns. Apply APPLY_ONLY
+   mode (write fixes, do not invent new features)."
+
+b) SUB_MAS-PRE-PUSH-VALIDATOR on the team:
+   goose run --recipe ~/.config/goose/recipes/mas-engineer/recipe/
+   sub/sub_mas-pre-push-validator.yaml --no-session --text
+   "validate /tmp/research-team — run all 14 checks. Report
+   every finding with severity and fix-recommendation."
+
+c) DASHBOARD HEALTH CHECK:
+   - python3 ~/.config/goose/recipes/tools/dev_dashboard_data.py
+     /tmp/research-team
+   - cat /tmp/research-team/.mas/dashboards/data.json | grep
+     -E '"health"|"health_trend"|"issues"' -A 3
+
+d) COUNT FIXES APPLIED:
+   - before improvement: X issues (from validator report)
+   - after improvement: Y issues (re-run validator)
+   - delta = X - Y (must be > 0 for PASS)
+
+STEP 7 — Report (optimize only):
+- general-improver fixes applied: N (with file paths)
+- pre-push-validator findings: before X, after Y, delta = X-Y
+- dashboard health: before/after trend
+- PASS criteria: delta > 0 AND no CRITICAL findings remaining
+
+======================================================================
+STEP 8 — ASSIGN 3 REAL RESEARCH TASKS (mandatory)
+======================================================================
+
+After optimization, the team must solve 3 real research questions
+end-to-end. Each task = fresh `goose run --recipe research-team.yaml
+--text "..."`. Tasks must produce citable output, not hallucinate.
+
+TASK 1: "Who won the Nobel Prize in Physics 2024 and what was
+their key contribution?"
+  - Expected: 2 names, institution, year, citation, source URL
+  - Quality gate: ≥2 independent sources cited
+
+TASK 2: "When was the C programming language created and by whom?"
+  - Expected: year range, name, organization, citation, source URL
+  - Quality gate: ≥1 primary source (Bell Labs / Dennis Ritchie bio)
+
+TASK 3: "What is quantum entanglement and how was it experimentally
+confirmed?"
+  - Expected: 2-3 sentence definition, 1-2 experiments, citations
+  - Quality gate: ≥2 independent sources, confidence > 0.8
+
+For each task, run:
+  goose run --recipe /tmp/research-team/recipe/research-team.yaml
+  --no-session --text "<TASK_PROMPT>"
+
+Capture the full output. Verify:
+- Output contains [1], [2], [3] citation markers
+- Output contains real URLs (not placeholders)
+- source-verifier confidence > 0.7 for all cited facts
+- No "I cannot find" or "as an AI" hedging in the final answer
+
+STEP 8 — Report (tasks only):
+| # | Task | Duration | Citations | Confidence | Result |
+|---|------|---------:|----------:|-----------:|--------|
+| 1 | Nobel Physics 2024 | ___s | ___ | ___ | PASS/FAIL |
+| 2 | C language origin | ___s | ___ | ___ | PASS/FAIL |
+| 3 | Quantum entanglement | ___s | ___ | ___ | PASS/FAIL |
+
+PASS criteria: all 3 PASS = CYCLE 1 PASS
+
+======================================================================
+CYCLE 2..5 (FRESH) — REPEAT BUILD + OPTIMIZE + ASSIGN
+======================================================================
+
+For each cycle n=2,3,4,5:
+1. rm -rf /tmp/research-team
+2. Repeat CYCLE 1 STEPS 1-8 verbatim
+3. Record per-cycle results in the same table format
+
+This generates 5 independent build+optimize+tasks attempts.
+Expected: 4-5/5 cycles PASS (Wilson 95% CI similar to 2026-07-27).
+
+======================================================================
+FINAL REPORT (after all 5 cycles)
+======================================================================
+
+Per-cycle:
+| # | Build 15/15 | Optimize delta>0 | Tasks 3/3 | Cycle PASS |
+|---|-------------|------------------|-----------|------------|
+| 1 | Y/N          | Y/N + N fixes     | Y/N       | Y/N        |
+| 2 | ...                                                       |
+| 3 | ...                                                       |
+| 4 | ...                                                       |
+| 5 | ...                                                       |
+
+FINAL TALLY:
+- Cycles PASS: X/5
+- Build pass-rate: Y/5
+- Optimize delta>0 rate: Z/5
+- Tasks 3/3 pass-rate: W/5
+- Wilson 95% CI on cycles: [__%, __%]
+- Total checks across 5 cycles: ___
+- Total fixes applied: ___
+- Total citations produced: ___
+
+Critical: every research result MUST pass through source-verifier
+before reaching the user. No unverified claims in the final output.
+
+Critical: the OPTIMIZE phase is what makes this different from a
+build-only test. Without it, the team is brittle. The E2E-improvement
+loop is the value-add of mas-engineer.

@@ -1,0 +1,215 @@
+Build a complete Multi-Agent System called "customer-support" at
+/tmp/customer-support, OPTIMIZE it via the mas-engineer E2E-improvement
+loop, then ASSIGN 3 real support tickets to it. Repeat build-optimize-
+tasks 5 times to measure consistency. Each cycle = fresh /tmp/customer-support.
+
+This is the 2026-07-28 demo-team template: build → optimize → assign → repeat.
+Mirrors the 2026-07-27 15x test methodology (run_15x_demo.py), but extended
+with mandatory OPTIMIZE and TASK-ASSIGNMENT phases.
+
+======================================================================
+CYCLE 1 (FRESH) — BUILD + OPTIMIZE + ASSIGN
+======================================================================
+
+STEP 1 — Initialize the project skeleton
+Run: python3 ~/.config/goose/recipes/tools/dev_generic_init.py
+     --init /tmp/customer-support --components all
+
+STEP 2 — Create 3 agents in /tmp/customer-support/recipe/sub/:
+
+ARCHITECTURE: Linear pipeline (3 agents, sequential flow)
+
+  user message
+      |
+      v
+  intent-router        (classifies: billing|tech|general)
+      |
+      v
+  specialist-handler   (handles the actual issue)
+      |
+      v
+  empathic-responder   (adds empathy, formats final reply)
+
+1. intent-router.yaml
+   - Reads user message
+   - Classifies into one of: "billing", "technical", "general"
+   - Returns: {category: str, confidence: float, reasoning: str}
+   - If confidence < 0.6, falls back to "general"
+
+2. specialist-handler.yaml (sub_recipes based on category)
+   - Receives {category, user_message}
+   - Dispatches to the matching handler:
+     * billing-handler: handles invoices, refunds, subscriptions
+     * tech-handler: handles bugs, errors, integrations
+     * general-handler: handles questions, feedback
+   - Returns: {solution: str, steps: [str], needs_escalation: bool}
+
+3. empathic-responder.yaml
+   - Receives {user_message, solution, steps}
+   - Adds empathy (acknowledges frustration if any)
+   - Formats final reply as: greeting + empathy + solution + steps + offer
+   - Returns: final customer-facing response string
+
+STEP 3 — Create orchestrator root recipe /tmp/customer-support/recipe/
+customer-support.yaml that references all 3 sub-recipes via sub_recipes.
+The orchestrator runs them in strict sequence:
+intent-router → specialist-handler → empathic-responder
+
+STEP 4 — DASHBOARD SETUP (mandatory)
+a) Set up MCP dashboard for the new project
+b) First dashboard-data refresh
+c) Verify dashboard:
+   - "agents.total" = 3, "agents.healthy" = 3
+   - "project_name" = "customer-support"
+
+STEP 5 — LIVE TEST (mandatory):
+a) goose run --recipe /tmp/customer-support/recipe/customer-support.yaml
+   --no-session --explain
+b) goose run --recipe /tmp/customer-support/recipe/sub/intent-router.yaml
+   --no-session --explain
+c) goose run --recipe /tmp/customer-support/recipe/sub/specialist-handler.yaml
+   --no-session --explain
+d) goose run --recipe /tmp/customer-support/recipe/sub/empathic-responder.yaml
+   --no-session --explain
+e) python3 -c "import yaml; [yaml.safe_load(open(f)) for f in
+   ['/tmp/customer-support/recipe/customer-support.yaml',
+    '/tmp/customer-support/recipe/sub/intent-router.yaml',
+    '/tmp/customer-support/recipe/sub/specialist-handler.yaml',
+    '/tmp/customer-support/recipe/sub/empathic-responder.yaml']]"
+f) Test MCP server starts: timeout 5 node /tmp/customer-support/.mas/mcp/
+   server.js
+
+STEP 6 — Report (build only):
+- 4 yaml files created with line counts
+- dashboard data.json summary (12 keys, 3 agents)
+- MCP server files installed
+- extension registration in config.yaml
+- PASS/FAIL for 4+5+4 = 13 build checks
+
+======================================================================
+STEP 7 — OPTIMIZE via mas-engineer E2E-improvement (mandatory)
+======================================================================
+
+Run the mas-engineer improvement pipeline to harden the team:
+
+a) SUB_MAS-GENERAL-IMPROVER on the team:
+   goose run --recipe ~/.config/goose/recipes/mas-engineer/recipe/
+   sub/sub_mas-general-improver.yaml --no-session --text
+   "IMPROVE /tmp/customer-support — find and fix all YAML
+   issues, missing fields, brittle patterns in the linear
+   pipeline. Apply APPLY_ONLY mode (write fixes, do not invent
+   new features)."
+
+b) SUB_MAS-PRE-PUSH-VALIDATOR on the team:
+   goose run --recipe ~/.config/goose/recipes/mas-engineer/recipe/
+   sub/sub_mas-pre-push-validator.yaml --no-session --text
+   "validate /tmp/customer-support — run all 14 checks.
+   Pay special attention to the sequential pipeline integrity
+   (intent-router MUST run before specialist-handler)."
+
+c) DASHBOARD HEALTH CHECK:
+   - python3 ~/.config/goose/recipes/tools/dev_dashboard_data.py
+     /tmp/customer-support
+   - cat /tmp/customer-support/.mas/dashboards/data.json | grep
+     -E '"health"|"health_trend"|"issues"' -A 3
+
+d) COUNT FIXES APPLIED:
+   - before improvement: X issues (from validator report)
+   - after improvement: Y issues (re-run validator)
+   - delta = X - Y (must be > 0 for PASS)
+
+STEP 7 — Report (optimize only):
+- general-improver fixes applied: N (with file paths)
+- pre-push-validator findings: before X, after Y, delta = X-Y
+- dashboard health: before/after trend
+- PASS criteria: delta > 0 AND no CRITICAL findings remaining
+
+======================================================================
+STEP 8 — ASSIGN 3 REAL SUPPORT TICKETS (mandatory)
+======================================================================
+
+After optimization, the team must solve 3 real support tickets
+end-to-end. Each ticket = fresh `goose run --recipe customer-support.yaml
+--text "<ticket>"`. Tickets must produce coherent, empathetic
+customer-facing replies (not raw classifications).
+
+TICKET 1 (BILLING — refund request):
+  "Hi, I was charged $49.99 yesterday for a subscription I cancelled
+  last week. Can you please refund this charge? Order #12345."
+  - Expected: classify as billing, handle refund, empathetic reply
+  - Quality gate: mentions refund, gives timeframe, asks for confirmation
+
+TICKET 2 (TECHNICAL — integration bug):
+  "Our API integration started returning 500 errors since yesterday.
+  We use the python SDK v2.3. Nothing changed on our end. Please help."
+  - Expected: classify as technical, suggest debugging steps
+  - Quality gate: mentions error code, suggests check steps, escalates
+
+TICKET 3 (GENERAL — feedback):
+  "Just wanted to say I love the new dashboard design! The dark mode
+  is exactly what I needed. Keep up the great work."
+  - Expected: classify as general, warm acknowledgment
+  - Quality gate: thanks user, mentions feedback channel, no upsell
+
+For each ticket, run:
+  goose run --recipe /tmp/customer-support/recipe/customer-support.yaml
+  --no-session --text "<TICKET>"
+
+Capture the full output. Verify:
+- intent-router classification is correct
+- specialist-handler produces actionable steps (not generic)
+- empathic-responder output contains empathy marker ("I understand",
+  "I apologize", "thank you for")
+- No "as an AI" or "I cannot" hedging in the final reply
+- Final reply is customer-facing (no internal YAML/JSON leakage)
+
+STEP 8 — Report (tasks only):
+| # | Ticket         | Class        | Empathy | Actionable | Result |
+|---|----------------|--------------|---------|------------|--------|
+| 1 | Refund $49.99  | billing/tech/general | Y/N | Y/N | PASS/FAIL |
+| 2 | API 500 error  | billing/tech/general | Y/N | Y/N | PASS/FAIL |
+| 3 | Dashboard love | billing/tech/general | Y/N | Y/N | PASS/FAIL |
+
+PASS criteria: all 3 PASS (correct class + empathy + actionable) = CYCLE 1 PASS
+
+======================================================================
+CYCLE 2..5 (FRESH) — REPEAT BUILD + OPTIMIZE + ASSIGN
+======================================================================
+
+For each cycle n=2,3,4,5:
+1. rm -rf /tmp/customer-support
+2. Repeat CYCLE 1 STEPS 1-8 verbatim
+3. Record per-cycle results in the same table format
+
+This generates 5 independent build+optimize+tickets attempts.
+Expected: 4-5/5 cycles PASS (Wilson 95% CI similar to 2026-07-27).
+
+======================================================================
+FINAL REPORT (after all 5 cycles)
+======================================================================
+
+Per-cycle:
+| # | Build 13/13 | Optimize delta>0 | Tickets 3/3 | Cycle PASS |
+|---|-------------|------------------|-------------|------------|
+| 1 | Y/N          | Y/N + N fixes     | Y/N         | Y/N        |
+| 2 | ...                                                         |
+| 3 | ...                                                         |
+| 4 | ...                                                         |
+| 5 | ...                                                         |
+
+FINAL TALLY:
+- Cycles PASS: X/5
+- Build pass-rate: Y/5
+- Optimize delta>0 rate: Z/5
+- Tickets 3/3 pass-rate: W/5
+- Wilson 95% CI on cycles: [__%, __%]
+- Total checks across 5 cycles: ___
+- Total fixes applied: ___
+- Total customer-facing replies: ___
+
+Critical: the pipeline is STRICTLY LINEAR. No agent may skip ahead
+or invoke another. intent-router MUST run first.
+
+Critical: the OPTIMIZE phase is what makes this different from a
+build-only test. Without it, the team is brittle. The E2E-improvement
+loop is the value-add of mas-engineer.
