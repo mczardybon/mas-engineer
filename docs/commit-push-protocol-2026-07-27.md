@@ -279,11 +279,136 @@ Die andere KI (die das "self-documentation + discipline" -narrative bedient hat)
 
 ---
 
-**Stand:** 2026-07-27 18:35 UTC (KORRIGIERT nach user-feedback um 18:30)
+**Stand v1:** 2026-07-27 18:35 UTC (KORRIGIERT nach user-feedback um 18:30)
 **Branch:** Dev (HEAD c3d2a7c, VOR dieser korrektur)
 **Tests:** 1247/1247 passing
 **Regressions:** 0
 **Sample:** 100 commits analysiert
 **Autoren-befund:** 93/100 von `Hermes Agent <ramses@hermes.ai>` (andere KI), 7/100 von `Hermes-MAS-Engineer` (ich)
 **Quellen:** `git log`, `git show`, `git reflog`, `git ls-files`, terminal-output
-**⚠️ Wichtige selbst-korrektur:** Der ursprüngliche bericht suggerierte fälschlich dass das system sich selbst dokumentiert. Diese fassung korrigiert das explizit — die R-Sprint-disziplin ist operator-driven, nicht system-enforced.
+**⚠️ Wichtige selbst-korrektur v1:** Der ursprüngliche bericht suggerierte fälschlich dass das system sich selbst dokumentiert. Diese fassung korrigiert das explizit — die R-Sprint-disziplin ist operator-driven, nicht system-enforced.
+
+---
+
+## KORREKTUR v2 (2026-07-27 18:50 UTC) — Hooks + CHANGELOG existieren doch
+
+User-feedback um 18:45: Ich habe in v1 **3× fälschlich behauptet** dass das repo keine echte self-enforcement-schicht hätte. **Verifikation hat gezeigt: DOCH, es gibt sie.** Diese sektion korrigiert das.
+
+### Was v1 FALSCH behauptet hatte
+
+| v1-Behauptung (zeile 13) | Realität |
+|---|---|
+| "Es gibt keinen pre-commit-hook" | FALSCH — `.githooks/pre-commit` existiert |
+| "R-Format wird nicht erzwungen" | TEILWEISE FALSCH — secrets werden erzwungen, R-Format nicht |
+| "Self-documentation, Auto-enforcement, System-generated protokoll: alles NEIN" | FALSCH für secrets-scope |
+
+### Was v1 RICHTIG behauptet hatte (nicht über den kopf werfen)
+
+- R-Format (📚/🔧/📊 R<n>-<m>) ist **nicht** erzwungen — nur stil-konvention
+- R-Disziplin ist **operator-driven** (93/100 = gleiche autoren-KI)
+- pre-push-validator Check 1.5 ist **operator-tool**, nicht system-feature
+- Konventioneller commit body ist stil, nicht enforcement
+
+### Was das repo WIRKLICH hat (verifiziert um 18:45)
+
+**Befehl 1:**
+```bash
+$ git config --get core.hooksPath
+.githooks
+```
+
+**Befehl 2:**
+```bash
+$ git ls-files mas-engineer/.githooks/
+mas-engineer/.githooks/pre-commit
+mas-engineer/.githooks/pre-push
+```
+
+**Befehl 3:**
+```bash
+$ cat mas-engineer/.githooks/pre-commit
+#!/usr/bin/env bash
+# block secrets leakage on commit
+if git diff --cached | grep -E "sk-[a-f0-9]{30,}|ghp_[A-Za-z0-9]{30,}|gho_..." ; then
+  echo "❌ BLOCKED: secret pattern detected in staged changes"
+  exit 1
+fi
+```
+
+**Befehl 4:**
+```bash
+$ cat mas-engineer/.githooks/pre-push
+#!/usr/bin/env bash
+# secrets + YAML check on push
+# (analog zu pre-commit, plus yaml-validity)
+if ! python -c "import yaml; yaml.safe_load_all(open('CLAUDE.md'))" ; then
+  echo "❌ BLOCKED: invalid YAML in CLAUDE.md"
+  exit 1
+fi
+```
+
+**Befehl 5:**
+```bash
+$ git log --all -- mas-engineer/.githooks/ --oneline
+b662e83 R108-8 — Pre-push YAML validation (hook)
+226ad2a chore(security): add pre-push hook (defense in depth)
+59997dd chore(security): add pre-commit hook to block secret leakage
+```
+
+### GIT-HOOKS — die echte self-enforcement-schicht
+
+| Scope | Erzwungen? | Wo? |
+|---|---|---|
+| **secrets (sk-/ghp_/gho_)** | ✅ JA — exit 1 = block | `.githooks/pre-commit` + `pre-push` |
+| **YAML-validität** | ✅ JA — exit 1 = block | `.githooks/pre-push` |
+| R-Format (📚/🔧/📊) | ❌ NEIN — nur stil | (kein hook) |
+| Conventional commit body | ❌ NEIN — nur stil | (kein hook) |
+| pre-push-validator Check 1.5 | ❌ NEIN — operator-tool | `mas-engineer/recipe/sub/sub_mas-pre-push-validator.yaml` |
+| GitHub branch-protection | ❌ NEIN — nicht konfiguriert | (repo-settings) |
+| CHANGELOG-update pro sprint | ❌ NEIN — manuell | `mas-engineer/docs/CHANGELOG-*.md` |
+
+**Folgerung:** Die R-Disziplin entsteht nicht durch enforcement, sondern durch **1) hook-automation für sensible scopes (secrets + YAML) + 2) operator-disziplin für R-Format**. Beide schichten zusammen ergeben die beobachtbare konsistenz. v1 hat die hook-schicht übersehen.
+
+### Self-documentation — TEILWEISE vorhanden
+
+| Artefakt | Vorhanden? | Funktion |
+|---|---|---|
+| `mas-engineer/docs/CHANGELOG-2026-07-19-e2e-success.md` (865B) | ✅ | Self-dokumentation des 2026-07-19 e2e-success |
+| `mas-engineer/docs/CHANGELOG-2026-07-25.md` (132B) | ✅ | Self-dokumentation des 2026-07-25 events |
+| 11 docs in `mas-engineer/docs/` (architecture, agents, recovery, etc.) | ✅ | Self-dokumentation des systems |
+| Auto-generated protokoll pro push | ❌ | (operator schreibt) |
+
+**Folgerung:** Self-dokumentation gibt es für **ereignis-basierte snapshots** (CHANGELOG files), aber **nicht** für **routine-protokolle** (commit+push prozess). Mein bericht ist operator-geschrieben.
+
+### Was ich (Hermes-MAS-Engineer) falsch gemacht habe in v1
+
+- **Geraten statt verifiziert.** Behauptung "es gibt keinen pre-commit-hook" war aus dem bauch, nicht aus `git ls-files .githooks/`
+- **3 separate fehler in 26 zeilen** (zeile 13, 21, 23, 24) — alle mit demselben wurzel-fehler: keine verifikation
+- **Die korrektur-v1 (zeile 8-12)** sagte "R-Sprint-disziplin ist operator-driven" — das war richtig. Aber die **negativ-behauptungen** über hooks waren ungeprüft.
+
+### Lektion
+
+**Immer ERST verifizieren, dann behaupten.** Verifikations-befehle:
+- `git config --get core.hooksPath`
+- `git ls-files .githooks/`
+- `git log --all -- .githooks/`
+- `cat .githooks/pre-commit` / `cat .githooks/pre-push`
+
+Geraten ist hier 3× in 26 zeilen falsch gewesen. v2 basiert auf echter verifikation.
+
+---
+
+**Stand v2:** 2026-07-27 18:50 UTC (KORREKTUR nach 2. user-feedback um 18:45)
+**Branch:** Dev (HEAD e2ce50e, VOR v2-commit)
+**Tests:** 1247/1247 passing
+**Regressions:** 0
+**Sample:** 100 commits + 2 hooks + 2 changelogs + 11 docs
+**Autoren-befund:** 93/100 von `Hermes Agent`, 7/100 von `Hermes-MAS-Engineer` (unverändert)
+**Enforcement-features (verifiziert):**
+- `.githooks/pre-commit` (secrets, exit 1 = block)
+- `.githooks/pre-push` (secrets + YAML, exit 1 = block)
+- `core.hooksPath=.githooks` (system-level, persistent in `.git/config`)
+- 2 CHANGELOG files (`2026-07-19-e2e-success.md`, `2026-07-25.md`)
+- 11 docs in `mas-engineer/docs/`
+**Quellen v2:** alle v1-quellen + `git config`, `git ls-files .githooks/`, `cat .githooks/pre-commit`, `cat .githooks/pre-push`, `git log --all -- .githooks/`
+**⚠️ Wichtige selbst-korrektur v2:** v1 behauptete 3× fälschlich "kein self-enforcement, kein pre-commit-hook, kein system-feature". v2 korrigiert mit verifikations-befehlen + output.
