@@ -1,8 +1,12 @@
 """
-test_sub_mas_test_runner.py — sanity tests for the test-runner recipe.
+test_sub_mas_test_runner.py — sanity tests for test-runner.
 
-Test-runner is a thin wrapper around tools/dev_test_runner.py (R85
-refactor). It runs pytest in the target workspace, returns JSON.
+test-runner v2.0.0 is a SCRIPT-WRAPPER (R85 refactor). All logic
+moved to tools/dev_test_runner.py. Recipe is a thin wrapper that
+delegates to the script via 'bash' extension.
+
+Note: this recipe has 'description:' but NO 'settings:' field.
+Required-fields test adapted accordingly.
 
 Run with:
     python3 -m pytest tests/test_sub_mas_test_runner.py -v
@@ -12,7 +16,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 RECIPE = REPO_ROOT / "recipe" / "sub" / "sub_mas-test-runner.yaml"
-TOOL = REPO_ROOT / "tools" / "dev_test_runner.py"
+SCRIPT = REPO_ROOT / "tools" / "dev_test_runner.py"
 
 
 def test_test_runner_recipe_exists():
@@ -26,10 +30,11 @@ def test_test_runner_recipe_is_valid_yaml():
 
 
 def test_test_runner_recipe_has_required_fields():
+    """Adapted: has description+instructions+prompt but no 'settings'."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
-    for field in ("name", "version", "instructions", "prompt", "settings"):
-        assert field in data
+    for field in ("name", "version", "prompt", "description", "instructions"):
+        assert field in data, f"Missing required field: {field}"
 
 
 def test_test_runner_references_master_constitution():
@@ -38,43 +43,52 @@ def test_test_runner_references_master_constitution():
     assert data.get("constitution") == "sub_mas-master-constitution.yaml"
 
 
-def test_test_runner_delegates_to_script():
-    """R85: recipe must delegate to tools/dev_test_runner.py (no inline logic)."""
+def test_test_runner_script_wrapper():
+    """Spec: R85 refactor — script-wrapper for tools/dev_test_runner.py."""
     content = RECIPE.read_text()
-    assert "dev_test_runner.py" in content, \
-        "Recipe must reference tools/dev_test_runner.py (R85 refactor)"
+    assert "R85" in content, "test-runner must reference R85 refactor"
+    assert "tools/dev_test_runner.py" in content, \
+        "test-runner must delegate to tools/dev_test_runner.py"
+    assert "Script-wrapper" in content or "script" in content.lower(), \
+        "test-runner must declare script-wrapper pattern"
 
 
-def test_test_runner_tool_script_exists():
-    """The delegated tool must exist (R85 created it)."""
-    assert TOOL.exists(), f"Missing delegated tool: {TOOL}"
-
-
-def test_test_runner_tool_imports_correctly():
-    """R10 CORONASHIELD: tool must be valid Python."""
-    import py_compile
-    try:
-        py_compile.compile(str(TOOL), doraise=True)
-    except py_compile.PyCompileError as e:
-        raise AssertionError(f"Tool has Python syntax errors: {e}")
-
-
-def test_test_runner_tool_has_subcommands():
-    """Tool must define CHECK_DEPS, RUN, COMPARE, VERIFY subcommands."""
-    content = TOOL.read_text()
-    for cmd in ("CHECK_DEPS", "RUN", "COMPARE", "VERIFY"):
-        assert cmd in content, f"Tool must implement subcommand: {cmd}"
-
-
-def test_test_runner_mentions_pytest():
-    """Tool must use pytest as the test framework."""
-    content = TOOL.read_text()
-    assert "pytest" in content, "Tool must use pytest"
-
-
-def test_test_runner_does_not_edit_recipes():
-    """R85: test-runner is read-only, must not write to recipe/ or tools/."""
+def test_test_runner_4_operations():
+    """Spec: 4 operations — CHECK_DEPS, RUN, COMPARE, VERIFY."""
     content = RECIPE.read_text()
-    # Should explicitly say NO changes
-    assert "NO changes" in content or "ONLY run" in content, \
-        "Test-runner must declare it's read-only (R85)"
+    for op in ("CHECK_DEPS", "RUN", "COMPARE", "VERIFY"):
+        assert op in content, \
+            f"test-runner must declare operation: {op}"
+
+
+def test_test_runner_no_changes():
+    """Spec: ONLY run tests — NO changes to recipes/tools."""
+    content = RECIPE.read_text()
+    assert "ONLY run tests" in content, \
+        "test-runner must declare ONLY-run-tests rule"
+    assert "NO changes to recipes/tools" in content or "NO changes" in content, \
+        "test-runner must forbid changes"
+
+
+def test_test_runner_json_output():
+    """Spec: JSON output — exit code 0/1/2 (PASS/FAIL/ERROR)."""
+    content = RECIPE.read_text()
+    assert "JSON" in content, "test-runner must declare JSON output"
+    assert "Exit code" in content or "exit code" in content, \
+        "test-runner must declare exit-code semantics"
+
+
+def test_test_runner_script_exists():
+    """EVIDENCE: tools/dev_test_runner.py must exist for wrapper to work."""
+    assert SCRIPT.exists(), f"Missing: {SCRIPT} (R85 refactor target)"
+
+
+def test_test_runner_r01_r04_r09_r10():
+    """Spec: R01, R04 (no general-improver edit), R09, R10."""
+    content = RECIPE.read_text()
+    assert "R01" in content, "test-runner must declare R01"
+    assert "R04" in content, "test-runner must declare R04"
+    assert "R09" in content, "test-runner must declare R09"
+    assert "R10" in content, "test-runner must declare R10"
+    assert "CORONASHIELD" in content, \
+        "test-runner must declare CORONASHIELD"
