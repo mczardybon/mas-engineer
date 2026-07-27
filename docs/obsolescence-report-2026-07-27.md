@@ -7,15 +7,15 @@
 
 ---
 
-## 0. EXECUTIVE SUMMARY (KORRIGIERT)
+## 0. EXECUTIVE SUMMARY (FINAL — nach 2. korrektur)
 
-**Befund nach Korrektur:** **2 von 119 sub-agents sind obsolete** (vs. 15-20 in der ersten schätzung).
+**Befund:** **0 von 119 sub-agents sind obsolet.**
 
-**Obsolet (high-confidence, runtime-evidence + state-cross-check):**
-- `security-scanner.yaml` (60 lines, 0 active-refs)
-- `static-analyzer.yaml` (80 lines, 0 active-refs)
+**KORREKTUREN zur ersten und zweiten version:**
 
-**KORREKTUR zur ersten version:** Die behauptung "2 byte-identische duplikate können gelöscht werden" war **FALSCH**. Beide duplikate (framework-scanner, python-repair) sind **aktiv referenziert** in .state/workflows.yaml, tests, tools und runtime-evidence (269 + 196 runtime-calls).
+1. **Erste version behauptete:** 2 byte-identische duplikate löschbar → **FALSCH** (269 + 196 runtime-calls)
+2. **Zweite version behauptete:** security-scanner + static-analyzer obsolet → **FALSCH** (kanonische archetype-files für code-review-team-generation)
+3. **Dritte version (final):** Alle 119 agents haben einen nachweisbaren zweck. Keine lösch-empfehlung.
 
 ---
 
@@ -58,29 +58,26 @@ NEVER called in runtime: 2
 
 ---
 
-## 3. OBSOLET-BEFUND: 2 AGENTS
+## 3. ARCHETYPE-BEFUND: 2 AGENTS (NICHT OBSOLET)
 
-### `security-scanner.yaml` (60 lines, 1844 bytes)
+### `security-scanner.yaml` (60 lines, 1844 bytes) — **ARCHETYPE**
 - **Pfad:** `mas-engineer/recipe/sub/security-scanner.yaml`
-- **Hat .md pendant:** JA (`mas-engineer/recipe/instructions/security-scanner.md`)
-- **Active state refs (.state/):** **0**
-- **Tools refs (tools/*.py):** **0**
-- **Runtime-calls:** **0** (nur in altem 2026-07-19 evidence als "TODO: create" erwähnt)
-- **Doc refs:** 8 (manifest.md, REVIEW-2026-07-18, E2E-SELF-IMPROVEMENT-REPORT)
-- **Last modified:** 2026-07-24 20:40
-- **Verdict:** OBSOLET
-
-### `static-analyzer.yaml` (80 lines, 2547 bytes)
-- **Pfad:** `mas-engineer/recipe/sub/static-analyzer.yaml`
 - **Hat .md pendant:** JA
-- **Active state refs:** **0**
-- **Tools refs:** **0**
-- **Runtime-calls:** **0**
-- **Doc refs:** 8 (manifest.md, e2e-final-2026-07-22.json, REVIEW-2026-07-18)
-- **Last modified:** 2026-07-25 09:11
-- **Verdict:** OBSOLET
+- **Runtime-calls:** 0 (aber siehe unten)
+- **Aktive referenzen:**
+  - `recipe/instructions/sub_mas-system-knowledge.md:131` dokumentiert: "96 sub_mas-*.yaml + 2 (security-scanner, static-analyzer) in sub/"
+  - `recipe/instructions/sub_mas-system-knowledge.md:50` listet sie in "Special (11)" kategorie
+  - `recipe/sub/demo-team/sub_mas-code-reviewer-director.yaml:32` ruft sie explizit auf: "findings from static-analyzer + security-scanner"
+  - `recipe/sub/demo-team/code-reviewer.yaml:14` warnt: "NEVER bypass static-analyzer or security-scanner"
+  - `prompts/security-scanner.txt` — archetype-prompt für team-generation ("Build a new Multi-Agent System called 'security-scanner'")
+  - `scripts/e2e-full-pipeline.sh:69,103,107` — test der code-review-team-generation mit diesen 2 agents als team-mitglieder
+  - `tests/test_recipe_instructions.py:8,32,37-40` — pytest der explizit diese 2 .md files erwartet
+- **Verdict:** **NICHT OBSOLET.** Archetype-file für die code-review-team-generation. Löschen würde den e2e-test brechen UND die team-generation kaputt machen.
 
-**Beide agents** sind in **der manifest als 'verfügbar' gelistet** aber werden **nirgendwo aktiv aufgerufen** — weder im workflow-orchestrator (.state/workflows.yaml), noch in tools/, noch in runtime-evidence.
+### `static-analyzer.yaml` (80 lines, 2547 bytes) — **ARCHETYPE**
+- Gleicher befund wie security-scanner. Archetype für code-review-team-generation.
+
+**KORREKTUR zur zweiten version:** Ich hatte in der zweiten version 95% confidence gegeben für "obsolet" basierend auf "0 runtime-calls in 167 logs". Das war ein **measurement-bug**: die log-files die runtime-calls zeigen, sind von generierten teams in `/tmp/` oder in `e2e-results/2026-07-19/team1/` — der **archetype-aufruf** passiert in `e2e-full-pipeline.sh` (test-run), nicht im produktiven workflow.
 
 ---
 
@@ -103,59 +100,66 @@ NEVER called in runtime: 2
 
 ---
 
-## 5. KORRIGIERTE AKTIONS-EMPFEHLUNG
+## 5. FINALE AKTIONS-EMPFEHLUNG
 
-**Sicher zu löschen (obsolet, 0 active-refs, 0 runtime-calls):**
-1. `mas-engineer/recipe/sub/security-scanner.yaml` (1844B)
-2. `mas-engineer/recipe/sub/static-analyzer.yaml` (2547B)
-3. `mas-engineer/recipe/instructions/security-scanner.md` (falls vorhanden, miterwähnen)
-4. `mas-engineer/recipe/instructions/static-analyzer.md` (falls vorhanden)
+**Zu löschen: NICHTS.**
 
-**Total:** 2-4 files, ~4400-5500 bytes, **echte** redundancy.
+Alle 119 sub-agents in `recipe/sub/` haben einen nachweisbaren zweck:
 
-**Zu BEHALTEN (entgegen erster empfehlung):**
-- `sub_mas-framework-scanner.yaml` und `sub_mas-framework-scanner-director.yaml` (byte-identisch aber aktiv)
-- `sub_mas-python-repair.yaml` und `sub_mas-python-repair-director.yaml` (byte-identisch aber aktiv)
-- Alle 3 `e2e-auto-repair-*` und 3 `e2e-phoenix-fixes-*` (unterschiedliche workflows, kein dedup)
-- 95%+ ähnliche Paare (framework-audit-agent/-auditor, framework-harden-agent/-hardener) — beide aktiv
+- **96 mit `sub_mas-` prefix:** aktiv aufgerufen, in workflows, tests, tools referenziert
+- **2 byte-identische duplikate (framework-scanner, python-repair + -director):** system-canon + director-alias, beide aktiv
+- **3 e2e-auto-repair + 3 e2e-phoenix-fixes:** unterschiedliche test-workflows, beide aktiv
+- **3 framework-* agent-paare (auditor/-audit-agent, hardener/-harden-agent, scanner/-scan-agent):** director/sub-role-pairs, alle aktiv
+- **2 archetypes (security-scanner, static-analyzer):** template-files für code-review-team-generation
+- **~10 weitere special agents:** master-constitution, generic-init, web-researcher, etc. — alle in `sub_mas-system-knowledge.md` als "Special (11)" dokumentiert
+
+**Empfehlung: Obsolescence-cleanup branch verwerfen.** Keine cleanup-aufgabe vorhanden.
 
 ---
 
 ## 6. NEXT STEPS
 
-**Empfohlene vorgehensweise für die 2 obsoleten files:**
+**Empfehlung: Obsolescence-cleanup branch NICHT weiterverfolgen.**
 
-1. **Vor der löschung:** Verifiziere dass KEIN workflow `.state/workflows.yaml` sie referenziert (done: 0 refs)
-2. **Vor der löschung:** Grep nach string-references in code-pfaden die zur laufzeit geladen werden (done: 0 in tools/*.py)
-3. **Löschung in separatem commit** auf `obsolescence-cleanup` branch
-4. **Nach löschung:** pytest gesamt laufen lassen
-5. **Nach erfolgreichem test:** PR/merge zurück zu `Dev`
+1. **Keine löschungen erforderlich.** Alle 119 sub-agents haben nachweisbaren zweck.
+2. **Korrigierte report committed** auf `obsolescence-cleanup` branch.
+3. **Memory-update** erforderlich: heuristic "0 runtime-calls = obsolet" ist **FALSCH**. Korrekte heuristic: "0 active-refs in `.state/`, `tools/`, `tests/`, **UND** keine archetype-funktion in scripts/prompts/demo-team = obsolet".
+4. **Branch-entscheidung:** Verwerfen (kein merge zu Dev nötig) oder behalten als documentation-only (beweis dass 0 cleanup nötig).
 
-**Risiko:** Niedrig. Beide files sind:
-- 0 active state refs
-- 0 tool refs
-- 0 runtime-calls
-- Nur in alten evidence-logs (2026-07-19) und manifest-docs erwähnt
-
-Manifest-docs können separat in einem follow-up-commit aktualisiert werden.
+**Was diese analyse stattdessen zeigt:** Das mas-engineer system ist **sehr gut gepflegt** — keine offensichtlichen orphans, alle namen dokumentiert, archetypes explizit, byte-identische files sind design-pattern nicht abfall.
 
 ---
 
-## 7. METHODOLOGIE (KORRIGIERT)
+## 7. METHODOLOGIE (FINAL)
 
-**Verwendete scans:**
-- `grep -r "sub_mas-X"` über **ganzen** `mas-engineer/` tree (nicht nur `recipe/`)
-- Runtime-evidence scan: alle 167 e2e-logs der letzten 14 tage
-- State-cross-check: aktive .state/ files (workflows, guardian, best-practices, templates, rules)
-- Tool-cross-check: alle `tools/*.py` files
-- File-size und last-modified check
+**Was ich dazugelernt habe (3 iterationen):**
 
-**Was NICHT in diesem report:**
-- Konkrete lösch-commits (folgen in separatem schritt)
-- Manifest-update (manueller follow-up)
-- Andere dedup-verdachtsfälle (analysiert, befund: nicht dedup)
+1. **Iteration 1:** Grep nur in recipe/ → falsche "0 hard-refs" → falsche 8 dedup-pairs
+2. **Iteration 2:** Grep im ganzen baum + runtime-evidence → 2 byte-identische duplikate sind aktiv, neue verdächtige (security-scanner, static-analyzer) gefunden
+3. **Iteration 3:** Tiefere analyse zeigt dass security-scanner/static-analyzer **archetype-files** sind, referenziert in:
+   - `recipe/instructions/sub_mas-system-knowledge.md` (kanonische zählung)
+   - `recipe/sub/demo-team/*` (template-files für team-generation)
+   - `prompts/security-scanner.txt` (archetype-prompt)
+   - `scripts/e2e-full-pipeline.sh` (e2e-test der team-generation)
+   - `tests/test_recipe_instructions.py` (pytest der .md files erwartet)
 
-**Confidence-level:**
-- 2 obsoleten: **95%** (3 unabhängige datenquellen bestätigen 0 active-refs)
-- Byte-identische duplikate: **90%** (verifiziert dass beide aktiv genutzt)
-- Andere verdachts-paare: **75%** (nicht weiter verfolgt, da runtime-evidence sie als aktiv zeigt)
+**Finale heuristic für obsoleszenz-analyse:**
+- 0 active-refs in `.state/workflows.yaml`, `tools/`, `tests/` UND
+- 0 archetype-funktion (kein prompt-template, kein demo-team-ref, kein script-test)
+- DANN ist der agent ein obsolet-kandidat
+
+**Verwendete scans (final):**
+- Vollbaum-grep: alle .py, .yaml, .yml, .md, .json, .txt, .sh, .toml, .cfg, .ini, .env* files
+- 167 e2e-logs der letzten 14 tage
+- Active state-cross-check (.state/workflows, guardian, best-practices, templates, rules)
+- Tool-cross-check (tools/*.py)
+- Path-based grep (recipe/sub/{name}.yaml)
+- Archetype-funktion check (prompts/, demo-team/, scripts/)
+
+**Confidence:** **0** für die ursprüngliche 2-files-empfehlung, **99%** für die finale "0 files zu löschen"-aussage.
+
+**Lessons learned (für memory):**
+- "0 runtime-calls" ≠ obsolet (archetype-files für team-generation sind genau so)
+- Vollbaum-grep vor jeder lösch-empfehlung
+- Archetype-pattern erkennen: prompts/{name}.txt + scripts/{name}*.sh + demo-team/* refs
+- "Byte-identisch" ≠ "redundant" in einem system mit kanonizitäts-konventionen
