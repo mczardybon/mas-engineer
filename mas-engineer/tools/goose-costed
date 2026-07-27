@@ -22,6 +22,7 @@ Exit codes:
     3 = goose itself failed (after cost check passed)
 """
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -67,6 +68,12 @@ def main() -> int:
         return 1
 
     # Hand off to real goose
+    # Ensure goose-cli is findable even when PATH wasn't set in this shell
+    if not shutil.which("goose"):
+        for guess in ("/root/.local/bin/goose", os.path.expanduser("~/.local/bin/goose"), "/usr/local/bin/goose"):
+            if os.path.isfile(guess) and os.access(guess, os.X_OK):
+                os.environ["PATH"] = os.path.dirname(guess) + os.pathsep + os.environ.get("PATH", "")
+                break
     os.execvp("goose", ["goose"] + sys.argv[1:])
     return 3  # unreachable
 

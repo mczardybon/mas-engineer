@@ -150,7 +150,9 @@ sys.exit(1 if err else 0)
 ```bash
 cd $WORKSPACE
 for f in tools/dev_*.py; do
-    python3 -c "compile(open('$f').read(), '$f', 'exec')" 2>&1 | grep -q . && echo "SYNTAX: $f"
+    if ! python3 -c "compile(open('$f').read(), '$f', 'exec')" 2>/dev/null; then
+        echo "SYNTAX: $f"
+    fi
 done
 ```
 **Block if:** any Python syntax error.
