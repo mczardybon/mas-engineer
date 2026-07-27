@@ -98,7 +98,7 @@ applied 1, validated 10 as approved, rejected 7 as already-done.
 The recipe-prompt has a real bug (RECURSION_OVERRIDE=2 conflated with
 APPLY_ONLY) that requires the operator to also set MAS_TASK env.
 
-This is a real e2e, not a 33s YAML-check. If you want a "100% pass"
+This is a real e2e, not a 33s YAML-check. If you want a clean pass
 metric, this is what you should be measuring: not how many YAML
 files parse, but how many self-improvement rounds complete without
 operator intervention.
