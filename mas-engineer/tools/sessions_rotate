@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+"""
+sessions_rotate — Rotate goose sessions.db to prevent unbounded growth.
+
+Per R99 lesson: sessions.db grew to 246MB in 8 days (~31MB/day) without rotation.
+R100 (pre-check layer) reduces per-session message volume, but retention is still needed.
+
+Usage:
+    sessions_rotate --dry-run             # show what would be deleted (default)
+    sessions_rotate --apply              # actually delete + VACUUM
+    sessions_rotate --apply --keep-days 60  # custom retention
+    sessions_rotate --status             # show db size + age distribution
+
+Policy:
+    - Drop messages older than N days (default 30)
+    - KEEP all sessions rows (accumulated_cost is historical evidence)
+    - KEEP all usage_ledger rows (cost-data, critical for mas_cost)
+    - VACUUM after delete to reclaim disk space
+
+Default db path: /root/.local/share/goose/sessions/sessions.db
+Override: --db PATH
+"""
+import argparse
+import os
+import sqlite3
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+DEFAULT_DB = "/root/.local/share/goose/sessions/sessions.db"
+DEFAULT_KEEP_DAYS = 30
+
+
+def get_db_size(db_path: Path) -> int:
+    """Return file size in bytes, or 0 if not exists."""
+    return db_path.stat().st_size if db_path.exists() else 0
+
+
+def age_distribution(conn, table: str, date_col: str) -> list[tuple[str, int, int]]:
+    """Return (age_bucket, count, size_bytes_est) per age bucket.
+    
+    For TEXT/ISO timestamp columns: use julianday(col) directly.
+    For INTEGER unix-epoch columns: use (strftime('%s','now') - col) / 86400.0
+    to avoid the julianday() bug where it interprets datetime() output as string.
+    """
+    if date_col in ("created_at", "updated_at", "archived_at", "timestamp"):
+        # TEXT ISO timestamp column
+        age_expr = f"julianday('now') - julianday({date_col})"
+    else:
+        # INTEGER unix epoch (usage_ledger.created_timestamp, messages.created_timestamp)
+        # Days = (now_epoch - row_epoch) / 86400
+        age_expr = f"(strftime('%s','now') - {date_col}) / 86400.0"
+
+    sql = f"""
+    SELECT 
+        CASE 
+            WHEN {age_expr} <= 7 THEN '0-7d'
+            WHEN {age_expr} <= 30 THEN '8-30d'
+            WHEN {age_expr} <= 90 THEN '31-90d'
+            ELSE '90+d'
+        END as age,
+        COUNT(*) as cnt
+    FROM {table}
+    GROUP BY age
+    ORDER BY age
+    """
+    return [(r[0], r[1], 0) for r in conn.execute(sql).fetchall()]
+
+
+def count_old_messages(conn, keep_days: int) -> int:
+    """Count messages older than keep_days.
+    
+    messages.created_timestamp is INTEGER unix epoch seconds.
+    """
+    return conn.execute(
+        "SELECT COUNT(*) FROM messages WHERE (strftime('%s','now') - created_timestamp) / 86400.0 > ?",
+        (keep_days,)
+    ).fetchone()[0]
+
+
+def delete_old_messages(conn, keep_days: int) -> int:
+    """Delete messages older than keep_days. Returns count deleted."""
+    before = conn.total_changes
+    conn.execute(
+        "DELETE FROM messages WHERE (strftime('%s','now') - created_timestamp) / 86400.0 > ?",
+        (keep_days,)
+    )
+    return conn.total_changes - before
+
+
+def show_status(db_path: Path) -> None:
+    """Print db size + age distribution for messages, sessions, usage_ledger."""
+    if not db_path.exists():
+        print(f"DB not found: {db_path}")
+        return
+    size = get_db_size(db_path)
+    print(f"DB: {db_path}")
+    print(f"Size: {size:,} bytes ({size / 1024 / 1024:.1f} MB)")
+    print(f"Modified: {datetime.fromtimestamp(db_path.stat().st_mtime, tz=timezone.utc).isoformat()}")
+    print()
+    with sqlite3.connect(str(db_path)) as conn:
+        for tbl, col in [("messages", "created_timestamp"), ("sessions", "created_at"), ("usage_ledger", "created_timestamp")]:
+            try:
+                dist = age_distribution(conn, tbl, col)
+                if not dist:
+                    continue
+                print(f"{tbl} ({col}):")
+                for age, cnt, _ in dist:
+                    print(f"  {age:8s} {cnt:>6,} rows")
+                print()
+            except sqlite3.OperationalError as e:
+                print(f"  ({tbl}: {e})")
+
+
+def count_to_delete(conn, keep_days: int) -> dict[str, int]:
+    """Return counts of rows that would be deleted per table."""
+    cutoff_ts = datetime.now(tz=timezone.utc).timestamp() - (keep_days * 86400)
+    cutoff_iso = datetime.fromtimestamp(cutoff_ts, tz=timezone.utc).isoformat()
+    return {
+        "messages > {cutoff_iso}": conn.execute(
+            "SELECT COUNT(*) FROM messages WHERE julianday(?) - julianday(created_at) > 0",
+            (cutoff_iso,)
+        ).fetchone()[0],
+    }
+
+
+def main() -> int:
+    p = argparse.ArgumentParser(description="Rotate goose sessions.db")
+    p.add_argument("--db", default=DEFAULT_DB, help=f"Path to sessions.db (default: {DEFAULT_DB})")
+    p.add_argument("--keep-days", type=int, default=DEFAULT_KEEP_DAYS, help=f"Days to keep messages (default: {DEFAULT_KEEP_DAYS})")
+    p.add_argument("--apply", action="store_true", help="Actually delete (default is dry-run)")
+    p.add_argument("--status", action="store_true", help="Show db status and exit")
+    p.add_argument("--no-vacuum", action="store_true", help="Skip VACUUM (faster, but space not reclaimed)")
+    args = p.parse_args()
+
+    db_path = Path(args.db)
+    if not db_path.exists():
+        print(f"ERROR: DB not found: {db_path}", file=sys.stderr)
+        return 2
+
+    if args.status:
+        show_status(db_path)
+        return 0
+
+    size_before = get_db_size(db_path)
+
+    with sqlite3.connect(str(db_path)) as conn:
+        to_del = count_old_messages(conn, args.keep_days)
+
+        print(f"[sessions_rotate] db: {db_path}")
+        print(f"[sessions_rotate] size before: {size_before:,} bytes ({size_before / 1024 / 1024:.1f} MB)")
+        print(f"[sessions_rotate] keep-days: {args.keep_days}")
+        print(f"[sessions_rotate] messages > {args.keep_days}d: {to_del:,}")
+
+        if not args.apply:
+            print(f"[sessions_rotate] DRY-RUN — pass --apply to actually delete")
+            return 0
+
+        deleted = delete_old_messages(conn, args.keep_days)
+        conn.commit()
+        print(f"[sessions_rotate] deleted: {deleted:,} messages")
+
+    # VACUUM must be outside transaction; use fresh connection
+    if not args.no_vacuum and deleted > 0:
+        print(f"[sessions_rotate] running VACUUM (reclaims space, can take a minute on large dbs)...")
+        with sqlite3.connect(str(db_path)) as vconn:
+            vconn.execute("VACUUM")
+        print(f"[sessions_rotate] VACUUM complete")
+
+    size_after = get_db_size(db_path)
+    saved = size_before - size_after
+    print(f"[sessions_rotate] deleted: {to_del:,} messages")
+    print(f"[sessions_rotate] size after: {size_after:,} bytes ({size_after / 1024 / 1024:.1f} MB)")
+    print(f"[sessions_rotate] saved: {saved:,} bytes ({saved / 1024 / 1024:.1f} MB, {100 * saved / max(size_before, 1):.1f}%)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
