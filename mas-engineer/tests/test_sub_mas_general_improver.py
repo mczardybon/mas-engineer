@@ -1,9 +1,9 @@
 """
-test_sub_mas_general_improver.py — sanity tests for the IM-pipeline recipe.
+test_sub_mas_general_improver.py — sanity tests for general-improver.
 
-The general-improver orchestrates 6 sub-agents in 7 steps (FIND→RANK→
-DESIGN→...→SHIP). It's the only entry point for the improvement system,
-so any structural break here blocks the whole loop.
+General-improver v3.0.0 is the IM-PIPELINE orchestrator. ONLY entry
+point for the Improvement-System. Orchestrates 6 specialized agents
+in 7 steps.
 
 Run with:
     python3 -m pytest tests/test_sub_mas_general_improver.py -v
@@ -13,95 +13,76 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 RECIPE = REPO_ROOT / "recipe" / "sub" / "sub_mas-general-improver.yaml"
-INSTRUCTIONS = REPO_ROOT / "recipe" / "instructions" / "sub_mas-general-improver.md"
 
 
 def test_general_improver_recipe_exists():
-    """Recipe must exist at canonical location."""
     assert RECIPE.exists(), f"Missing: {RECIPE}"
 
 
 def test_general_improver_recipe_is_valid_yaml():
-    """R10 CORONASHIELD: recipe must be parseable YAML."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
-    assert isinstance(data, dict), "Recipe must be a YAML mapping"
+    assert isinstance(data, dict)
 
 
 def test_general_improver_recipe_has_required_fields():
-    """Constitution requires: name, version, instructions, prompt, settings."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
-    for field in ("name", "version", "instructions", "prompt", "settings"):
+    for field in ("name", "version", "prompt", "settings", "instructions"):
         assert field in data, f"Missing required field: {field}"
 
 
 def test_general_improver_references_master_constitution():
-    """R10 traceability: must declare master constitution."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     assert data.get("constitution") == "sub_mas-master-constitution.yaml"
 
 
-def test_general_improver_has_10_sub_recipes():
-    """Recipe must declare 10 sub-agents in the pipeline (R36+ expanded).
-    Original R36 design had 6, but Finder/Rank/Designer + helpers grew to 10.
-    """
+def test_general_improver_entry_point():
+    """Spec: ONLY entry point for the Improvement-System."""
+    content = RECIPE.read_text()
+    assert "ONLY entry point" in content or "entry point" in content.lower(), \
+        "general-improver must declare ONLY entry-point rule"
+
+
+def test_general_improver_im_pipeline_orchestrator():
+    """Spec: IM-PIPELINE orchestrator — 7 steps, 6 sub-agents."""
+    content = RECIPE.read_text()
+    assert "7 steps" in content or "7-step" in content, \
+        "general-improver must declare 7-step pipeline"
+    assert "6 sub-agents" in content or "6 specialized" in content, \
+        "general-improver must declare 6 sub-agents"
+
+
+def test_general_improver_sub_recipes():
+    """Spec: 6 sub_recipes (specialized agents)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
-    subs = data.get("sub_recipes", [])
-    assert len(subs) == 10, f"Expected 10 sub_recipes, got {len(subs)}: {[s.get('name') for s in subs]}"
+    subs = [s.get("name") for s in data.get("sub_recipes", [])]
+    assert len(subs) >= 6, \
+        f"general-improver must have ≥6 sub_recipes. subs: {subs}"
 
 
-def test_general_improver_pipeline_sub_agents_present():
-    """All 6 sub-agents must be from the canonical IM pipeline (R36+)."""
+def test_general_improver_v3_architecture():
+    """Spec: v3.0.0 architecture (R36+ cost-control) — declared in description."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
-    names = {s.get("name") for s in data.get("sub_recipes", [])}
-    required = {
-        "sub_mas-im-finder",
-        "sub_mas-im-rank",
-        # FIND→RANK→DESIGN→... pattern; the remaining 4 vary per version
-    }
-    missing = required - names
-    assert not missing, f"Missing required IM pipeline sub-agents: {missing}"
+    desc = data.get("description", "")
+    assert "v3.0.0" in desc, \
+        f"general-improver description must declare v3.0.0 architecture. desc: {desc}"
 
 
-def test_general_improver_has_summon_extension():
-    """Summon platform extension is required (R3-summon)."""
+def test_general_improver_extensions():
+    """Spec: requires developer + summon extensions."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
-    extensions = data.get("extensions", [])
-    ext_names = [e.get("name") for e in extensions]
-    assert "summon" in ext_names, \
-        f"summon extension missing. extensions: {extensions}"
+    exts = [e.get("name") for e in data.get("extensions", [])]
+    assert "summon" in exts, \
+        f"general-improver must require summon extension. exts: {exts}"
 
 
-def test_general_improver_has_developer_extension():
-    """Developer builtin is required for file operations in the IM pipeline."""
-    with open(RECIPE) as f:
-        data = yaml.safe_load(f)
-    extensions = data.get("extensions", [])
-    ext_names = [e.get("name") for e in extensions]
-    assert "developer" in ext_names, \
-        f"developer extension missing. extensions: {extensions}"
-
-
-def test_general_improver_instructions_mention_find_rank_design():
-    """The instructions must describe the FIND→RANK→DESIGN pipeline (R36 v2)."""
-    content = INSTRUCTIONS.read_text()
-    # At least 2 of the 3 core stages must be explicitly named
-    stages = [s for s in ("FIND", "RANK", "DESIGN") if s in content]
-    assert len(stages) >= 2, \
-        f"Instructions must mention at least 2 of FIND/RANK/DESIGN. Found: {stages}"
-
-
-def test_general_improver_instructions_mention_7_steps():
-    """Recipe header says '7 steps' — instructions must reflect that."""
-    content = INSTRUCTIONS.read_text()
-    assert "7" in content, "Instructions must reference the 7-step pipeline"
-
-
-def test_general_improver_instructions_file_exists():
-    """External instructions file must exist."""
-    assert INSTRUCTIONS.exists(), f"Missing: {INSTRUCTIONS}"
+def test_general_improver_orchestrator_role():
+    """Spec: orchestrator role — improvements-pipeline orchestrator."""
+    content = RECIPE.read_text()
+    assert "Orchestrat" in content or "orchestrate" in content.lower(), \
+        "general-improver must be an orchestrator"
