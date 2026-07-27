@@ -1602,7 +1602,7 @@ task_workflows:
       timeout: 15
     - id: auto_repair
       action: shell
-      cmd: "LATEST=$(ls -1t .state/checkpoints/ 2>/dev/null | head -1) && if [ -d \".state/checkpoints/$LATEST/recipe\" ] && [ ! -d recipe ]; then echo \"[AUTO_REPAIR DRY-RUN] would: cp -r .state/checkpoints/$LATEST/recipe recipe/\"; elif [ -d recipe ]; then echo \"[AUTO_REPAIR] recipe/ already exists \u2014 no action\"; else echo \"[AUTO_REPAIR] no checkpoint to restore from\"; fi"
+      cmd: 'LATEST=$(ls -1t .state/checkpoints/ 2>/dev/null | head -1) && if [ -n "$LATEST" ] && [ -d ".state/checkpoints/$LATEST/recipe" ]; then cp -r ".state/checkpoints/$LATEST/recipe/." recipe/ && echo "[AUTO_REPAIR] restored recipe/ from checkpoint $LATEST" || echo "[AUTO_REPAIR] restore failed"; else echo "[AUTO_REPAIR] no checkpoint to restore from"; fi'
       timeout: 15
       on_error: skip
   wf_recovery_safezone:
@@ -1622,7 +1622,7 @@ task_workflows:
       timeout: 10
     - id: auto_repair
       action: shell
-      cmd: 'if [ ! -L mas-engineer_active ]; then TS=$(date +%Y%m%d_%H%M%S); echo "[AUTO_REPAIR DRY-RUN - safezone] would: ln -s mas-engineer_fork_$TS mas-engineer_active"; else echo "[AUTO_REPAIR] fork already active"; fi'
+      cmd: 'if [ ! -L mas-engineer_active ]; then LATEST=$(ls -1dt mas-engineer_fork_* 2>/dev/null | head -1); if [ -n "$LATEST" ]; then ln -s "$LATEST" mas-engineer_active && echo "[AUTO_REPAIR] safezone-restored fork: $LATEST -> mas-engineer_active"; else echo "[AUTO_REPAIR] no safezone-fork to restore"; fi; else echo "[AUTO_REPAIR] safezone-fork already active"; fi'
       timeout: 15
       on_error: skip
   wf_recovery_timeline:
@@ -1642,7 +1642,7 @@ task_workflows:
       timeout: 15
     - id: auto_repair
       action: shell
-      cmd: 'LATEST=$(ls -1t .state/checkpoints/ 2>/dev/null | head -1) && if [ -n "$LATEST" ]; then echo "[AUTO_REPAIR DRY-RUN - timeline] would: cp -rn .state/checkpoints/$LATEST/recipe/* recipe/ (if current state corrupted)"; else echo "[AUTO_REPAIR] no checkpoint available"; fi'
+      cmd: 'LATEST=$(ls -1t .state/checkpoints/ 2>/dev/null | head -1) && if [ -n "$LATEST" ] && [ -d ".state/checkpoints/$LATEST/recipe" ]; then cp -rn ".state/checkpoints/$LATEST/recipe/." recipe/ 2>/dev/null && echo "[AUTO_REPAIR] timeline-restored missing recipe/ files from $LATEST" || echo "[AUTO_REPAIR] no timeline-restorable files missing"; else echo "[AUTO_REPAIR] no timeline checkpoint to restore from"; fi'
       timeout: 15
       on_error: skip
   wf_recovery_defib:
@@ -1662,7 +1662,7 @@ task_workflows:
       timeout: 15
     - id: auto_repair
       action: shell
-      cmd: "if [ ! -f recipe/dev-mas-engineer.yaml ]; then echo \"[AUTO_REPAIR DRY-RUN] would: write emergency dev-mas-engineer.yaml with only recovery-mode sub-recipes\"; else echo \"[AUTO_REPAIR] config present \u2014 no action needed\"; fi"
+      cmd: "if [ ! -f recipe/dev-mas-engineer.yaml ]; then printf 'version: 1.0.0\\ntitle: emergency dev-mas-engineer\\ndescription: minimal recovery-mode config\\ninstructions: |\\n  Emergency mode: only recovery workflows available.\\n  All other agents disabled.\\n' > recipe/dev-mas-engineer.yaml && echo \"[AUTO_REPAIR] restored emergency dev-mas-engineer.yaml\" || echo \"[AUTO_REPAIR] restore failed\"; else echo \"[AUTO_REPAIR] config present \u2014 no action needed\"; fi"
       timeout: 15
       on_error: skip
   wf_immune_check_yaml:
