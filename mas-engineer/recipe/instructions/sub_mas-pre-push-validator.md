@@ -263,8 +263,15 @@ emits a report to `.state/pipeline/self_audit.yaml`.
 
 ```bash
 cd $WORKSPACE
-# Only run if e2e-results or cert-style files are staged
-STAGED_CERTS=$(git diff --cached --name-only | grep -E "^(e2e-results/|docs/.*CERTAIN|certificates/|\w*\.md$)" | head -5)
+# Only run if e2e-results or cert-style files are staged.
+# R108-13 fix: the previous detector used '\w*\.md$' which only matched
+# root-level .md files (e.g. README.md), NOT nested paths like
+# 'mas-engineer/docs/CERT.md' or 'e2e-results/2026-07-27/foo.md'.
+# Result: Check 9 was silently SKIPPED for almost every commit. The
+# --scope staged fix from R108-12 only runs IF this detector matches.
+# New pattern '\.md$' + '\.txt$' matches any path ending in those
+# suffixes (no leading-anchor on the filename part).
+STAGED_CERTS=$(git diff --cached --name-only | grep -E "(^e2e-results/|^docs/.*CERTAIN|^certificates/|\.md$|\.txt$)" | head -5)
 if [ -n "$STAGED_CERTS" ]; then
   # R108-12 fix: use --scope staged (audit only files in this commit),
   # not --scope e2e-results (which would re-audit ALL historical reports
