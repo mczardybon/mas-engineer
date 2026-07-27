@@ -291,7 +291,7 @@ making the pre-push gate reject unbacked strong claims.
 **Command (FOREGROUND, ~25-60s, no PTY):**
 ```bash
 cd {workspace}
-python3 tools/e2e_run_all.py --quick --no-interactive --no-write-results 2>&1 | tail -30
+python3 tools/e2e_run_all.py --quick --no-interactive 2>&1 | tail -30
 ```
 
 **Parse output:** look for `✅ All {N} tests passed (100%)` or the summary line. Extract pass-count from the YAML report at the end of stdout (or stderr). The output format is: `Summary: {ok}/{total} passed ({pct}%)` — this is the canonical signal.
