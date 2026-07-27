@@ -7,12 +7,15 @@ gate:
   per_session: warn
 cost_source:
   db_path: /root/.local/share/goose/sessions/sessions.db
-  table: sessions
-  cost_column: accumulated_cost
-  timestamp_column: created_at
-  _note: absolute path because goose db is outside mas-engineer workspace
+  table: usage_ledger
+  cost_column: cost
+  timestamp_column: created_timestamp
+  _note: usage_ledger tracks per-API-call cost (deepseek-v4-flash 29478 entries today)
+  _previous_note: was sessions.accumulated_cost which only counts NEW sessions started today
+  _why_changed: "R99 e2e audit found 6x underreport - $4.03 (sessions) vs $24.33 (ledger)"
+  _timestamp_format: "unix epoch SECONDS (not ms, not text) - see fix in mas_cost query"
 display:
   top_n_sessions: 10
   currency_symbol: $
   show_session_breakdown: true
-version: 1.0.0
+version: 1.1.0

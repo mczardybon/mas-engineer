@@ -74,26 +74,44 @@ def get_cost_data(workspace: Path, config: dict) -> dict:
     try:
         con = sqlite3.connect(str(db_path))
         cur = con.cursor()
-        # 24h rolling
+        # 24h rolling window — supports both text timestamps (sessions.created_at)
+        # and unix epoch seconds (usage_ledger.created_timestamp).
+        ts_col = src['timestamp_column']
+        cur.execute(f"PRAGMA table_info({src['table']})")
+        cols = {row[1]: row[2].upper() for row in cur.fetchall()}
+        ts_type = cols.get(ts_col, "TEXT")
+        if ts_type in ("INTEGER", "REAL", "NUMERIC"):
+            # Unix epoch seconds — compare to strftime('%s','now', '-24 hours')
+            where_ts = f"{ts_col} >= strftime('%s','now', '-24 hours')"
+        else:
+            # Text/timestamp — compare to datetime('now', '-24 hours')
+            where_ts = f"{ts_col} >= datetime('now', '-24 hours')"
         cur.execute(
             f"SELECT COALESCE(SUM({src['cost_column']}), 0.0) "
             f"FROM {src['table']} "
-            f"WHERE {src['timestamp_column']} >= datetime('now', '-24 hours')"
+            f"WHERE {where_ts}"
         )
         cost_today = float(cur.fetchone()[0] or 0.0)
         # Session count
         cur.execute(
             f"SELECT COUNT(*) FROM {src['table']} "
-            f"WHERE {src['timestamp_column']} >= datetime('now', '-24 hours')"
+            f"WHERE {where_ts}"
         )
         session_count = int(cur.fetchone()[0] or 0)
         # Top-N sessions
         top_n = config.get("display", {}).get("top_n_sessions", 10)
+        # For ledger (per-call) there's no session id column on the row;
+        # group by session_id for top-N breakdown.
+        id_col = "id" if src["table"] == "sessions" else "session_id"
+        name_col = "name" if src["table"] == "sessions" else "session_id"
+        sched_col = "schedule_id" if src["table"] == "sessions" else "NULL"
         cur.execute(
-            f"SELECT id, {src['cost_column']}, {src['timestamp_column']}, name, schedule_id "
+            f"SELECT {id_col}, SUM({src['cost_column']}), MAX({ts_col}), "
+            f"  MAX({name_col}), MAX({sched_col}) "
             f"FROM {src['table']} "
-            f"WHERE {src['timestamp_column']} >= datetime('now', '-24 hours') "
-            f"ORDER BY {src['cost_column']} DESC LIMIT {top_n}"
+            f"WHERE {where_ts} "
+            f"GROUP BY {id_col} "
+            f"ORDER BY SUM({src['cost_column']}) DESC LIMIT {top_n}"
         )
         sessions = [
             {"id": r[0], "cost": float(r[1] or 0), "created_at": r[2], "name": r[3], "schedule": r[4]}
@@ -109,14 +127,18 @@ def cmd_status(args, workspace: Path) -> int:
     cfg = load_config(workspace)
     data = get_cost_data(workspace, cfg)
     budget = float(cfg.get("daily_budget_usd", 5.00))
+    src = cfg.get("cost_source", {})
     cur = data["cost_today"]
     pct = (cur / budget * 100) if budget else 0
     sym = cfg.get("display", {}).get("currency_symbol", "$")
     gate = cfg.get("gate", {}).get("daily", "block")
 
+    is_ledger = src.get("table") == "usage_ledger"
+    unit = "API calls" if is_ledger else "sessions"
     print(f"=== MAS-ENGINEER COST STATUS ===")
     print(f"Workspace:    {workspace}")
-    print(f"Today:        {sym}{cur:.2f} ({data['session_count']} sessions in 24h)")
+    print(f"Source:       {src.get('table')}.{src.get('cost_column')} ({'per-call ledger' if is_ledger else 'per-session'})")
+    print(f"Today:        {sym}{cur:.4f} ({data['session_count']} {unit} in 24h)")
     print(f"Daily budget: {sym}{budget:.2f}  ({pct:.0f}% used)")
     print(f"Gate mode:    {gate}")
     if cur >= budget:
@@ -130,8 +152,15 @@ def cmd_status(args, workspace: Path) -> int:
         print(f"\nTop {len(data['sessions'])} most expensive sessions (24h):")
         print(f"  {'ID':32s}  {'Cost':>8s}  {'Created':19s}  Schedule")
         for s in data["sessions"]:
+            ca = s['created_at']
+            if isinstance(ca, (int, float)):
+                # Unix epoch seconds — format to UTC
+                from datetime import datetime, timezone
+                ca = datetime.fromtimestamp(int(ca), tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+            elif ca is None:
+                ca = ''
             print(f"  {s['id'][:32]:32s}  {sym}{s['cost']:>6.3f}  "
-                  f"{(s['created_at'] or '')[:19]:19s}  {s['schedule'] or '-'}")
+                  f"{ca[:19]:19s}  {s['schedule'] or '-'}")
     return 0
 
 
@@ -189,10 +218,18 @@ def cmd_reset(args, workspace: Path) -> int:
     # Show what's old
     con = sqlite3.connect(str(db_path))
     cur = con.cursor()
+    ts_col = src['timestamp_column']
+    cur.execute(f"PRAGMA table_info({src['table']})")
+    cols = {row[1]: row[2].upper() for row in cur.fetchall()}
+    ts_type = cols.get(ts_col, "TEXT")
+    if ts_type in ("INTEGER", "REAL", "NUMERIC"):
+        where_ts_old = f"{ts_col} < strftime('%s','now', '-24 hours')"
+    else:
+        where_ts_old = f"{ts_col} < datetime('now', '-24 hours')"
     cur.execute(
         f"SELECT COUNT(*), COALESCE(SUM({src['cost_column']}),0) "
         f"FROM {src['table']} "
-        f"WHERE {src['timestamp_column']} < datetime('now', '-24 hours')"
+        f"WHERE {where_ts_old}"
     )
     old_count, old_cost = cur.fetchone()
     con.close()
