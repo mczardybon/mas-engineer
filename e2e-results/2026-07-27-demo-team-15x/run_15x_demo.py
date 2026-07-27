@@ -104,7 +104,7 @@ def run_one(team: str, run: int) -> dict:
 
 
 def evaluate(team: str, team_dir: str, log_path: Path) -> dict:
-    """Check files + agent's reported tests."""
+    """Check files + run real mas-engineer YAML validator + agent's reported tests."""
     td = Path(team_dir)
     recipe_dir = td / 'recipe'
     sub_dir = recipe_dir / 'sub'
@@ -112,10 +112,30 @@ def evaluate(team: str, team_dir: str, log_path: Path) -> dict:
     if n_files == 0:
         n_files = len(list(td.rglob('*.yaml')))
 
-    # Agent reported its test results in the log
+    # --- NEW: Run real mas-engineer YAML validator (deterministic) ---
+    yaml_check_result = None
+    yaml_check_passed = False
+    if recipe_dir.exists() and n_files > 0:
+        try:
+            check_proc = subprocess.run(
+                ['python3', 'tools/dev_yaml_check.py', 'VERIFY_STATE', str(td)],
+                cwd='/workspace/mas-engineer-src/mas-engineer',
+                capture_output=True, text=True, timeout=30
+            )
+            yaml_check_result = check_proc.stdout.strip()
+            try:
+                check_data = json.loads(yaml_check_result)
+                yaml_check_passed = (check_data.get('status') == 'ok'
+                                     and check_data.get('failed', 1) == 0
+                                     and check_data.get('total', 0) >= 4)
+            except (json.JSONDecodeError, KeyError):
+                yaml_check_passed = False
+        except Exception as e:
+            yaml_check_result = f"validator_error: {e}"
+            yaml_check_passed = False
+
+    # --- Agent reported its test results in the log (best-effort LLM-self-report) ---
     log_text = log_path.read_text() if log_path.exists() else ''
-    # Common success markers — capture N from "N of M PASSED", "N/N PASS", etc.
-    # We want the LARGEST N that appears in a "passed" context.
     success_markers = [
         r'(\d+)\s+of\s+\d+\s+PASS',
         r'(\d+)\s*/\s*\d+\s*PASS',
@@ -143,11 +163,13 @@ def evaluate(team: str, team_dir: str, log_path: Path) -> dict:
     has_401 = bool(re.search(r'401|Authentication failed', log_text))
     has_crash = bool(re.search(r'panic|SIGSEGV|out of memory', log_text, re.IGNORECASE))
 
-    # Pass criteria (same as 2026-07-24):
-    #   - files created (>=4)
-    #   - agent's own test suite ran and reported some PASS count
+    # Pass criteria v2 (uses real validator, not just regex):
+    #   - real mas-engineer YAML validator passes (status=ok, failed=0, total>=4)
     #   - no auth failures
-    pass_ok = (n_files >= 4) and (max_pass > 0) and not has_401 and not has_crash
+    #   - no crashes
+    # The "max_pass" regex check is now informational (not gating) because
+    # the LLM self-report format varies — the real validator is authoritative.
+    pass_ok = yaml_check_passed and not has_401 and not has_crash
 
     return {
         'pass': pass_ok,
@@ -155,6 +177,10 @@ def evaluate(team: str, team_dir: str, log_path: Path) -> dict:
         'max_pass_reported': max_pass,
         'has_401': has_401,
         'has_crash': has_crash,
+        'yaml_check_passed': yaml_check_passed,
+        'yaml_check_status': json.loads(yaml_check_result).get('status', '?') if yaml_check_result and yaml_check_result.startswith('{') else '?',
+        'yaml_check_total': json.loads(yaml_check_result).get('total', 0) if yaml_check_result and yaml_check_result.startswith('{') else 0,
+        'yaml_check_failed': json.loads(yaml_check_result).get('failed', -1) if yaml_check_result and yaml_check_result.startswith('{') else -1,
     }
 
 
