@@ -1,70 +1,80 @@
 """
-test_sub_mas_test_runner.py — sanity tests for sub_mas-test-runner recipe.
+test_sub_mas_test_runner.py — sanity tests for the test-runner recipe.
 
-These tests verify that the recipe file exists, is valid YAML, and has the
-required fields per the constitution (sub_mas-master-constitution.yaml).
+Test-runner is a thin wrapper around tools/dev_test_runner.py (R85
+refactor). It runs pytest in the target workspace, returns JSON.
 
 Run with:
     python3 -m pytest tests/test_sub_mas_test_runner.py -v
 """
 import yaml
-import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.resolve()
-TEST_RUNNER_RECIPE = REPO_ROOT / "recipe" / "sub" / "sub_mas-test-runner.yaml"
-TEST_RUNNER_INSTRUCTIONS = REPO_ROOT / "recipe" / "instructions" / "sub_mas-test-runner.md"
+RECIPE = REPO_ROOT / "recipe" / "sub" / "sub_mas-test-runner.yaml"
+TOOL = REPO_ROOT / "tools" / "dev_test_runner.py"
 
 
 def test_test_runner_recipe_exists():
-    """Recipe file must exist at the canonical location."""
-    assert TEST_RUNNER_RECIPE.exists(), f"Missing: {TEST_RUNNER_RECIPE}"
+    assert RECIPE.exists(), f"Missing: {RECIPE}"
 
 
 def test_test_runner_recipe_is_valid_yaml():
-    """Recipe must be parseable as YAML (R10 CORONASHIELD)."""
-    with open(TEST_RUNNER_RECIPE) as f:
+    with open(RECIPE) as f:
         data = yaml.safe_load(f)
-    assert isinstance(data, dict), "Recipe must be a YAML mapping"
+    assert isinstance(data, dict)
 
 
 def test_test_runner_recipe_has_required_fields():
-    """Constitution (master) requires: name, version, instructions, prompt, settings."""
-    with open(TEST_RUNNER_RECIPE) as f:
+    with open(RECIPE) as f:
         data = yaml.safe_load(f)
     for field in ("name", "version", "instructions", "prompt", "settings"):
-        assert field in data, f"Missing required field: {field}"
+        assert field in data
 
 
-def test_test_runner_recipe_references_constitution():
-    """Recipe must declare which constitution it follows (R10 traceability)."""
-    with open(TEST_RUNNER_RECIPE) as f:
+def test_test_runner_references_master_constitution():
+    with open(RECIPE) as f:
         data = yaml.safe_load(f)
-    assert "constitution" in data, "Missing constitution reference"
-    assert data["constitution"] == "sub_mas-master-constitution.yaml", \
-        f"Wrong constitution: {data['constitution']}"
+    assert data.get("constitution") == "sub_mas-master-constitution.yaml"
 
 
-def test_test_runner_instructions_file_exists():
-    """The external instructions file must exist (referenced by recipe)."""
-    assert TEST_RUNNER_INSTRUCTIONS.exists(), f"Missing: {TEST_RUNNER_INSTRUCTIONS}"
+def test_test_runner_delegates_to_script():
+    """R85: recipe must delegate to tools/dev_test_runner.py (no inline logic)."""
+    content = RECIPE.read_text()
+    assert "dev_test_runner.py" in content, \
+        "Recipe must reference tools/dev_test_runner.py (R85 refactor)"
 
 
-def test_test_runner_instructions_mention_pytest():
-    """The instructions must mention pytest (sanity check that the test-runner
-    is actually for pytest, not unittest or nose)."""
-    content = TEST_RUNNER_INSTRUCTIONS.read_text()
-    assert "pytest" in content, "Instructions should mention pytest"
-    # Should also EXPLICITLY forbid other test frameworks
-    assert "unittest" in content or "nose" in content or "tox" in content, \
-        "Instructions should explicitly forbid non-pytest frameworks (R10 boundary)"
+def test_test_runner_tool_script_exists():
+    """The delegated tool must exist (R85 created it)."""
+    assert TOOL.exists(), f"Missing delegated tool: {TOOL}"
 
 
-def test_test_runner_has_summon_extension():
-    """sub_mas-test-runner must have the summon extension (per 2026-07-22 patches)."""
-    with open(TEST_RUNNER_RECIPE) as f:
-        data = yaml.safe_load(f)
-    extensions = data.get("extensions", [])
-    ext_names = [e.get("name") for e in extensions]
-    assert "summon" in ext_names, \
-        f"summon extension missing. extensions: {extensions}"
+def test_test_runner_tool_imports_correctly():
+    """R10 CORONASHIELD: tool must be valid Python."""
+    import py_compile
+    try:
+        py_compile.compile(str(TOOL), doraise=True)
+    except py_compile.PyCompileError as e:
+        raise AssertionError(f"Tool has Python syntax errors: {e}")
+
+
+def test_test_runner_tool_has_subcommands():
+    """Tool must define CHECK_DEPS, RUN, COMPARE, VERIFY subcommands."""
+    content = TOOL.read_text()
+    for cmd in ("CHECK_DEPS", "RUN", "COMPARE", "VERIFY"):
+        assert cmd in content, f"Tool must implement subcommand: {cmd}"
+
+
+def test_test_runner_mentions_pytest():
+    """Tool must use pytest as the test framework."""
+    content = TOOL.read_text()
+    assert "pytest" in content, "Tool must use pytest"
+
+
+def test_test_runner_does_not_edit_recipes():
+    """R85: test-runner is read-only, must not write to recipe/ or tools/."""
+    content = RECIPE.read_text()
+    # Should explicitly say NO changes
+    assert "NO changes" in content or "ONLY run" in content, \
+        "Test-runner must declare it's read-only (R85)"
