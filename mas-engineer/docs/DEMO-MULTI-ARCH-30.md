@@ -423,8 +423,11 @@ at the end of this file — it is empty.
 **Status: ✅ RUN #1 COMPLETE — 44/44 tests pass, 2026-07-28 19:49 UTC.**
 
 ### Run identifiers
-- Recipe commit: `c03a6f0` (R110-7), branch: `new-agent`
+- Recipe commit: `1c7d033` (R110-8), branch: `new-agent`
 - Evidence dir: `e2e-results/2026-07-28-r1108-30agents-run/`
+  (relative to mas-engineer/ repo root; the run.log is gitignored
+  per the existing `e2e-results/` rule in .gitignore, so it stays
+  on disk but is not committed)
 - Evidence file: `evidence/run.log` (5483 lines, 214 KB)
 - Generated project: `/tmp/multi-arch-30/`
 - Recipe-fix in same commit: `recipe/dev-mas-engineer-30agents.yaml`
