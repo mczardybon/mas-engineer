@@ -261,6 +261,52 @@ for yp in sorted(ALL_YAMLS):
                     'Non-standard fields may not be processed',
                     'Remove or rename unknown fields')
 
+    # Q4: schema drift between similar recipes (R110-12)
+    # Detects when recipes in the same category have inconsistent
+    # instruction-path styles (inline vs external recipe/instructions/xxx.md)
+    # or inconsistent extension-include patterns. This catches the off-by-one
+    # path bug (R110-10): some recipes reference "recipe/instructions/x.md"
+    # while others have inline "instructions: '# ...'", so the same recipe
+    # run with different CWD ends up writing to different paths.
+    instructions = data.get('instructions', '')
+    if instructions:
+        _has_external_ref = bool(re.search(
+            r"#\s*Extended instructions:\s*([^\s'\"]+\.md)", str(instructions)))
+        _has_inline = instructions.lstrip().startswith('#') and not _has_external_ref
+        # Extract path style if external
+        _m = re.search(r"#\s*Extended instructions:\s*([^\s'\"]+\.md)", str(instructions))
+        _ext_path = _m.group(1) if _m else None
+        # Check if path starts with 'recipe/' or is bare (off-by-one)
+        if _ext_path and not _ext_path.startswith('recipe/'):
+            add_finding('Q4', 'high', yp,
+                        f'schema_drift: external instruction path "{_ext_path}" missing "recipe/" prefix (off-by-one risk)',
+                        'Different CWD may write to wrong directory at runtime',
+                        'Update path to "recipe/' + _ext_path + '"')
+
+    # Q4b: STEP-N off-by-one path in prompt (R110-12, R110-10 bug #1)
+    # Recipes that say "Create instructions/ folder" without the
+    # "recipe/" prefix cause runtime off-by-one writes when the agent's
+    # CWD is the project root (e.g. /tmp/multi-arch-30) instead of the
+    # recipe directory. This was the R110-10 bug: 30agents recipe said
+    # "STEP 4 — Create instructions/ folder" and the files landed in
+    # /tmp/multi-arch-30/instructions/ instead of
+    # /tmp/multi-arch-30/recipe/instructions/.
+    prompt = data.get('prompt', '')
+    if prompt:
+        # Look for STEP-N lines that say "Create <bare-path>/" or
+        # "Create folder <bare-path>" where the path does NOT start
+        # with "recipe/" (would be correct).
+        _offbyone_steps = re.findall(
+            r"STEP\s+\d+\s*[—\-]\s*Create\s+([a-z_]+/)",
+            str(prompt), flags=re.IGNORECASE
+        )
+        for _step_path in _offbyone_steps:
+            if _step_path.rstrip('/') not in ('recipe', 'tests', 'tools', 'workflows'):
+                add_finding('Q4', 'high', yp,
+                            f'schema_drift: STEP creates folder "{_step_path}" without "recipe/" prefix (off-by-one risk)',
+                            f'Runtime writes land in wrong directory (e.g. /tmp/proj/{_step_path} instead of /tmp/proj/recipe/{_step_path})',
+                            f'Update to "Create recipe/{_step_path}"')
+
     # --- JJ: Extensions ---
     # P-F012-2: only fire JJ1 if extensions: is present AND not empty AND missing summon
     # SKIP files where extensions: is absent (templates, one-off recipes, recovery)
