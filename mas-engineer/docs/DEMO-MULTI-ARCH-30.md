@@ -389,27 +389,55 @@ echo "Run started, PID=$RUN_PID. Tail the log: tail -f /tmp/multi-arch-30-run.lo
 Total expected runtime: **~2 minutes** (init + 30 YAMLs + 30 MDs +
 dashboard + 44 tests + routing).
 
-## Lessons learned (from the first run)
+## Expected lessons (UNVERIFIED — pending first live run)
 
-- **30-agent MAS is small for mas-engineer.** It built the entire
-  system + dashboard + ran 44 tests in under 2 minutes. The bottleneck
-  was goose's LLM calls for file generation, not mas-engineer logic.
-- **3 architectures, 1 master orchestrator** — proves mas-engineer
+⚠️ **These are HYPOTHESES, not measured facts.** They describe what
+we expect to observe when this demo is run for the first time. None
+of these have been verified end-to-end yet. See the EVIDENCE section
+at the end of this file — it is empty.
+
+- **30-agent MAS is small for mas-engineer.** Hypothesis: it will build
+  the entire system + dashboard + run 44 tests in under 2 minutes. The
+  bottleneck is expected to be goose's LLM calls for file generation,
+  not mas-engineer logic.
+- **3 architectures, 1 master orchestrator** — hypothesis: mas-engineer
   handles architectural diversity in one project. The master
-  orchestrator's keyword-based routing is correct on all 6 sample tasks.
-- **PTY mode is fine for long prompts** — goose accepts the 8.3 KB
-  prompt via input-feld + Enter. The auto-confirm at 6s idle
-  handles the "proceed?" mid-prompt question.
+  orchestrator's keyword-based routing is expected to be correct on
+  all 6 sample tasks.
+- **PTY mode is fine for long prompts** — hypothesis: goose will accept
+  the 8.3 KB prompt via input-feld + Enter. The auto-confirm at 6s
+  idle is expected to handle the "proceed?" mid-prompt question.
 - **All routing decisions land in `.state/routing-test.jsonl`** —
-  auditable, machine-readable, replayable. Same pattern as
-  research-team's research log.
-- **Dashboard 30/30 healthy on first run** — no degradation, no
-  retries, no warnings. The 30 agents are well-formed on the first
-  generation pass.
-- **`dev-mas-engineer` is the right entry point** — it delegates to
-  `sub_mas-dev-director` → `sub_mas-dev-builder` →
+  expected to be auditable, machine-readable, replayable. Same pattern
+  as research-team's research log.
+- **Dashboard 30/30 healthy on first run** — hypothesis: no
+  degradation, no retries, no warnings. The 30 agents are expected to
+  be well-formed on the first generation pass.
+- **`dev-mas-engineer` is the right entry point** — hypothesis: it
+  delegates to `sub_mas-dev-director` → `sub_mas-dev-builder` →
   `sub_mas-generic-init`, which together handle "create a new MAS"
   requests. No need to know which sub-recipe does what.
+
+## EVIDENCE
+
+**Status: NOT YET RUN.** This demo has been written but not yet
+executed end-to-end. No log files, no dashboard output, no routing
+test results, no agent health reports. The "Expected lessons" section
+above is speculation based on the R110-4 PTY pipeline results, not
+on actual measurements from this 30-agent recipe.
+
+When the first run completes, fill in this section with:
+- Date + run identifier (e2e-results/<date>/)
+- Real PASS/FAIL counts for: 30/30 agent recipes parsed,
+  6/6 team recipes dispatched, 6/6 sample tasks routed correctly,
+  dashboard shows 30 healthy agents
+- Actual measured runtime
+- Raw log excerpt with tool-call markers
+- Honest list of what was NOT tested (e2e skill section 'Evidence
+  checklist' #1-6 — the 'write README from logs' rule)
+
+Until then, treat the "Expected lessons" section as the test
+hypotheses this demo is designed to confirm or refute.
 
 ## Related docs
 
