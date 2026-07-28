@@ -11,7 +11,7 @@
 ## UX-Bug 2: OPENAI_API_KEY in config file is IGNORED
 **Status:** CONFIRMED (real goose bug, workaround in place)
 - Test: 
-  - config-file key: `sk-0f3019c2aa4c4fe5b3beb932537178a6` (35 bytes)
+  - config-file key: `sk-REDACTED-DEEPSEEK (35 chars)` (35 bytes)
   - env var: same key
   - without env: `Provider Check: Auth: FAILED 401`
   - with env: `Provider Check: Auth: ok, Connection: ok`

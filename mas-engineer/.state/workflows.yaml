@@ -858,21 +858,25 @@ agents:
     type: sub
     task: 'v1.0.0 | MAS-intern: smoke'
     desc: Automatic generates aus Template-Generator
+    task_workflows: {}
   smoketest2:
     name: sub_mas-smoketest2
     type: sub
     task: 'v1.0.0 | MAS-intern: foo'
     desc: Automatic generates aus Template-Generator
+    task_workflows: {}
   smoketest3:
     name: sub_mas-smoketest3
     type: sub
     task: 'v1.0.0 | MAS-intern: foo'
     desc: Automatic generates aus Template-Generator
+    task_workflows: {}
   clone:
     name: sub_mas-clone
     type: sub
     task: 'v1.0.0 | MAS-intern: list'
     desc: Automatic generates aus Template-Generator
+    task_workflows: {}
 task_workflows:
   wf_fw_discover:
     desc: Dynamically discover framework structure
@@ -1585,6 +1589,11 @@ task_workflows:
       action: shell
       cmd: python3 tools/dev_rule_checker.py --all 2>&1 | tail -5
       timeout: 60
+    - id: auto_repair
+      action: shell
+      cmd: python3 tools/dev_rule_checker.py --all 2>&1 | grep -E "^(VIOLATION|FAIL)" | head -10 > .state/immune_violations.log 2>&1; if [ -s .state/immune_violations.log ]; then echo "[AUTO_REPAIR] violations found, see .state/immune_violations.log (manual fix required for rule-violations)"; else echo "[AUTO_REPAIR] no violations, immune state OK"; touch .state/.immune_clean; fi
+      timeout: 60
+      on_error: skip
   wf_recovery_checkpoint:
     desc: Checkpoint content validation + C-01/C-02 fix
     steps:
