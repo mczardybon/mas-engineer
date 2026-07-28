@@ -57,8 +57,8 @@ DEEPSEEK KEY STATUS
 - OPENAI_API_KEY: NOT in env (empty)
 - /root/.config/goose/config.yaml: MISSING
 - .env files: NONE found
-- Memory-pin (R12): old key sk-0f3019c2aa4c4fe5b3beb932537178a6 was
-  ROTATED 2026-07-28. New key is NOT in memory, NOT in env, NOT in file.
+- Memory-pin (R12): old key `sk-***REDACTED***` (rotated 2026-07-28).
+  New key is NOT in memory, NOT in env, NOT in file.
 - User said "den deepseek key solltest du bereits haben" — this is
   INCONSISTENT with memory. Need user to provide new key explicitly.
 
