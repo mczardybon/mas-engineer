@@ -3,15 +3,28 @@
 # Run from /workspace. Works after fresh sandbox reset.
 # Usage: ./e2e-mas.sh
 set -e
-export DEEPSEEK_API_KEY=***
+set -o pipefail
+# R110-4c: env vars are inherited from caller (.env sourced before running)
+# DO NOT overwrite with literal placeholders (R110-1 regression pattern).
+# If caller didn't set them, fail fast below.
 export PATH="/root/.local/bin:$PATH"
 export GOOSE_PROVIDER=openai
 export GOOSE_MODEL=deepseek-chat
 export OPENAI_HOST=https://api.deepseek.com
-export OPENAI_API_KEY=***
 # Auto-detect available deepseek model
-if curl -sS -m 5 -H "Authorization: Bearer $DEEPS...KEY" https://api.deepseek.com/v1/models 2>/dev/null | grep -q "deepseek-v4-flash"; then
+if curl -sS -m 5 -H "Authorization: Bearer ${DEEPSEEK_API_KEY}" https://api.deepseek.com/v1/models 2>/dev/null | grep -q "deepseek-v4-flash"; then
   export GOOSE_MODEL=deepseek-v4-flash
+fi
+# Validate that keys are real (not literal placeholders)
+if [ -z "$DEEPSEEK_API_KEY" ] || [ "$DEEPSEEK_API_KEY" = "***" ]; then
+  echo "FATAL: DEEPSEEK_API_KEY not set or is placeholder." >&2
+  echo "Source .env first: source mas-engineer/.env && bash scripts/e2e-full-pipeline.sh" >&2
+  exit 1
+fi
+# R110-4c: OPENAI_API_KEY is the goose-compat shim for DEEPSEEK_API_KEY.
+# Only fall back to $DEEPSEEK_API_KEY if OPENAI_API_KEY is empty/placeholder.
+if [ -z "$OPENAI_API_KEY" ] || [ "$OPENAI_API_KEY" = "***" ]; then
+  export OPENAI_API_KEY="$DEEPSEEK_API_KEY"
 fi
 export WORKSPACE=/workspace
 # Auto-detect: are we in a fresh clone (mas-engineer-src/) or already installed (mas-engineer/)?
@@ -164,10 +177,29 @@ EOF
 goose_run "team2-task2" \
   "Please analyze this second dataset: $TEAM2_DIR/data/messy_dataset.csv — it has many missing values, outliers, and duplicates. Use the data-quality-team in $TEAM2_DIR/recipe/sub/ to produce a quality report with score 0-100."
 section "STEP 11: Generate final report"
-ls -la "$EVIDENCE/"*.log 2>&1 | head -20
-log "E2E test complete. Evidence in $EVIDENCE/"
+# R110-4c: count failed LLM runs and exit honestly
+FAILED_RUNS=0
+SUCCESS_RUNS=0
+for logfile in "$EVIDENCE"/*.log; do
+  [ -f "$logfile" ] || continue
+  # Skip the main run.log
+  [ "$(basename "$logfile")" = "run.log" ] && continue
+  if grep -qE "401 Unauthorized|Authentication.*failed|Ran into this error" "$logfile"; then
+    FAILED_RUNS=$((FAILED_RUNS + 1))
+  else
+    SUCCESS_RUNS=$((SUCCESS_RUNS + 1))
+  fi
+done
+log "Run summary: $SUCCESS_RUNS succeeded, $FAILED_RUNS failed"
 echo ""
 echo "=================================="
+if [ "$FAILED_RUNS" -gt 0 ]; then
+  echo "E2E TEST FAILED ($FAILED_RUNS LLM runs errored)"
+  echo "=================================="
+  echo "Evidence: $EVIDENCE/"
+  echo "Inspect failed logs: grep -lE '401|Authentication|Ran into this error' $EVIDENCE/*.log"
+  exit 1
+fi
 echo "E2E TEST COMPLETE"
 echo "=================================="
 echo "Evidence: $EVIDENCE/"
