@@ -2,7 +2,9 @@
 
 **Status:** R108-11 — Zentralisierte Provider-Config via env-vars.
 **Date:** 2026-07-27
-**Updated:** 2026-07-28 — deepseek-chat → deepseek-v4-flash, OPENAI_HOST /v1 fix
+**Updated:** 2026-07-28 — deepseek-chat → deepseek-v4-flash (R110-1)
+**Updated:** 2026-07-28 — R110-3 fix: OPENAI_HOST reverted (do NOT add /v1, goose does that)
+**Evidence:** `e2e-results/2026-07-28-r1101-pty-verification/README.md` (R110-2)
 
 ## Problem
 
@@ -80,17 +82,21 @@ bash -n mas-engineer/.state/goose-defaults.env && echo "OK"
 source mas-engineer/.state/goose-defaults.env
 echo "GOOSE_PROVIDER=$GOOSE_PROVIDER"     # soll: openai
 echo "GOOSE_MODEL=$GOOSE_MODEL"           # soll: deepseek-v4-flash (not deepseek-chat, deprecated 2026-07-23)
-echo "OPENAI_HOST=$OPENAI_HOST"           # soll: https://api.deepseek.com/v1 (with /v1!)
+echo "OPENAI_HOST=$OPENAI_HOST"           # soll: https://api.deepseek.com (NO /v1, goose 1.44 adds it)
 ```
 
-## Häufige Fehler (2026-07-28)
+## Häufige Fehler (2026-07-28, updated R110-3)
 
 | Fehler | Symptom | Fix |
 |--------|---------|-----|
-| `OPENAI_HOST=https://api.deepseek.com` (ohne `/v1`) | 404 Not Found | `/v1` anhängen |
-| `GOOSE_MODEL=deepseek-chat` | 401 Unauthorized | `deepseek-v4-flash` benutzen |
+| `OPENAI_HOST=https://api.deepseek.com/v1` (mit `/v1`) | 404 Not Found at `/v1/v1/chat/completions` | `/v1` weglassen — goose 1.44 hängt es intern an |
+| `GOOSE_MODEL=deepseek-chat` | 401 Unauthorized (deprecated 2026-07-23) | `deepseek-v4-flash` benutzen |
 | `OPENAI_API_KEY` in `~/.config/goose/config.yaml` | `goose info --check` meldet Auth: FAILED | Als env-var setzen |
 | Key in commit message / markdown file | GitHub revoked + email alert | `sk-***REDACTED***` placeholder |
+
+**Wichtig (R110-3 lesson):** R110-1 hatte die OPENAI_HOST-Zeile der Häufige-Fehler-Tabelle INVERTIERT dokumentiert
+("ohne /v1 → 404, fix: /v1 anhängen"). Realität ist genau umgekehrt: MIT /v1 → 404 (doppelt),
+OHNE /v1 → 18/18 PASS. PTY evidence: `e2e-results/2026-07-28-r1101-pty-verification/`.
 
 ## R108-11 Referenzen
 
