@@ -1,0 +1,187 @@
+name: DEV-MAS-ENGINEER-E2E-30AGENTS
+version: 1.0.0
+constitution: sub_mas-master-constitution.yaml
+title: "🦆 DEV-MAS-ENGINEER — E2E test (30 agents, multi-arch)"
+description: 'v1.0.0 | E2E: 30-agent multi-arch MAS build + run. See docs/DEMO-MULTI-ARCH-30.md
+  for the full prompt + pitfalls + reproduce. Use this recipe to drive the e2e from any
+  goose session inside the mas-engineer project scope.
+
+  Architecture: 6 teams × 5 agents = 30 agents, 3 orchestration patterns
+  (HIERARCHICAL, FLAT, PIPELINE) + master orchestrator on top.'
+instructions: |
+  ## TASK
+  Execute the 30-agent multi-arch MAS build and live test as described in the prompt.
+  Work step by step. Report results clearly at each step.
+  Do NOT ask for confirmation — execute autonomously and report at the end.
+
+  ## REFERENCE
+  Full prompt and pitfalls: docs/DEMO-MULTI-ARCH-30.md in this repo.
+  Use that doc as the source of truth for the task definition.
+prompt: |
+  Build a complete Multi-Agent System called "multi-arch-30" at
+  /tmp/multi-arch-30. Do NOT just plan it — actually create the
+  files, run live tests, and report results.
+
+  ARCHITECTURE: 6 teams × 5 agents = 30 agents, each team uses a
+               different orchestration architecture. Master orchestrator
+               on top routes incoming tasks to the right team.
+
+    task input (description)
+        |
+        v
+    master-orchestrator                (root, routes to 1 of 6 teams)
+        |
+        +-- team selection by content type ----+
+        |                                      |
+        +-> code-review-team     [HIERARCHICAL]   (1 lead + 4 specialists)
+        +-> security-scan-team   [FLAT]            (5 peer scanners + consensus)
+        +-> data-quality-team    [PIPELINE]        (5 sequential stages)
+        +-> perf-eval-team       [HIERARCHICAL]
+        +-> refactor-team        [FLAT]
+        +-> doc-gen-team         [PIPELINE]
+
+
+  ARCHITECTURE DISTRIBUTION:
+  - HIERARCHICAL: code-review-team, perf-eval-team (10 agents)
+  - FLAT:         security-scan-team, refactor-team (10 agents)
+  - PIPELINE:     data-quality-team, doc-gen-team (10 agents)
+
+
+  STEP 1 — Initialize the project skeleton
+  Run: python3 ~/.config/goose/recipes/tools/dev_generic_init.py \
+       --init /tmp/multi-arch-30 --components all
+
+  STEP 2 — Create 30 agents in /tmp/multi-arch-30/recipe/sub/
+           (6 teams × 5 agents each, plus 1 master orchestrator at
+            /tmp/multi-arch-30/recipe/multi-arch-30.yaml)
+
+  === TEAM 1: code-review-team [HIERARCHICAL] ===
+  Lead agent delegates to 4 specialists. Lead aggregates, makes final call.
+
+  1. code-review-lead.yaml (LEAD — receives task, delegates, aggregates)
+  2. code-review-style.yaml (SPECIALIST — PEP8/formatting)
+  3. code-review-perf.yaml (SPECIALIST — algorithmic complexity)
+  4. code-review-correctness.yaml (SPECIALIST — logic bugs)
+  5. code-review-readability.yaml (SPECIALIST — naming/comments)
+
+  === TEAM 2: security-scan-team [FLAT] ===
+  5 equal-weight scanners. Consensus on findings.
+  1. security-scan-1-sast.yaml      (static analysis)
+  2. security-scan-2-secrets.yaml   (hardcoded creds)
+  3. security-scan-3-deps.yaml      (vulnerable deps)
+  4. security-scan-4-input.yaml     (injection: SQLi/XSS/cmd)
+  5. security-scan-5-crypto.yaml    (weak hash/cipher/random)
+
+  === TEAM 3: data-quality-team [PIPELINE] ===
+  Stage 1 → Stage 2 → Stage 3 → Stage 4 → Stage 5. Sequential handoff.
+  1. dq-stage-1-profile.yaml   (rows, columns, types, missing %)
+  2. dq-stage-2-validate.yaml  (schema/types/range checks)
+  3. dq-stage-3-anomalies.yaml (outliers, duplicates, drift)
+  4. dq-stage-4-enrich.yaml    (imputation suggestions, dedup key)
+  5. dq-stage-5-report.yaml    (score 0-100, findings, recommendations)
+
+  === TEAM 4: perf-eval-team [HIERARCHICAL] ===
+  Same shape as code-review-team but for runtime perf.
+  1. perf-eval-lead.yaml
+  2. perf-eval-cpu.yaml        (hot functions, algorithmic)
+  3. perf-eval-memory.yaml     (allocations, leaks, GC pressure)
+  4. perf-eval-io.yaml         (disk, network, serialization)
+  5. perf-eval-concurrency.yaml (locks, contention, races)
+
+  === TEAM 5: refactor-team [FLAT] ===
+  5 equal-weight refactoring advisors. User picks suggestions.
+  1. refactor-1-simplify.yaml   (complex expressions)
+  2. refactor-2-extract.yaml    (extract function/class)
+  3. refactor-3-rename.yaml     (better names)
+  4. refactor-4-patterns.yaml   (apply design patterns)
+  5. refactor-5-decompose.yaml  (split god classes)
+
+  === TEAM 6: doc-gen-team [PIPELINE] ===
+  Stage-by-stage doc generation.
+  1. doc-gen-1-analyze.yaml   (parse code, find public API)
+  2. doc-gen-2-skeleton.yaml  (generate doc skeletons)
+  3. doc-gen-3-examples.yaml  (add usage examples)
+  4. doc-gen-4-crosslink.yaml (cross-link related symbols)
+  5. doc-gen-5-render.yaml    (final markdown/HTML render)
+
+
+  STEP 3 — Create master orchestrator at /tmp/multi-arch-30/recipe/multi-arch-30.yaml
+           that references all 6 team recipes via sub_recipes.
+
+  STEP 4 — Create instructions/ folder with one .md per agent (30 files).
+
+  STEP 5 — DASHBOARD SETUP (mandatory)
+  a) cd /tmp/multi-arch-30
+  b) mkdir -p .mas/mcp
+  c) Copy MCP server files from mas-engineer:
+       cp /workspace/dev-branch/mas-engineer/.mas/mcp/server.js .mas/mcp/
+       cp /workspace/dev-branch/mas-engineer/.mas/mcp/package.json .mas/mcp/
+       cp /workspace/dev-branch/mas-engineer/.mas/mcp/dashboard.html .mas/mcp/
+  d) cd .mas/mcp && npm install
+  e) Register multi-arch-30-dashboard extension in ~/.config/goose/config.yaml
+  f) First dashboard-data refresh:
+       python3 ~/.config/goose/recipes/tools/dev_dashboard_data.py /tmp/multi-arch-30
+  g) Verify: cat /tmp/multi-arch-30/.mas/dashboards/data.json
+     Check "agents.total" >= 30 and "agents.healthy" == total
+
+  STEP 6 — LIVE TEST (mandatory, run each one):
+  a) goose run --recipe /tmp/multi-arch-30/recipe/multi-arch-30.yaml --no-session --explain
+  b-g) goose run --recipe /tmp/multi-arch-30/recipe/teams/<team>.yaml --no-session --explain
+       (6 teams: code-review, security-scan, data-quality, perf-eval, refactor, doc-gen)
+  h) For each of 30 agent recipes, run:
+     goose run --recipe <agent> --no-session --explain
+  i) python3 -c "import yaml, glob; [yaml.safe_load(open(f)) for f in \
+     glob.glob('/tmp/multi-arch-30/recipe/**/*.yaml', recursive=True)]"
+     Expect: 37 files parse (1 master + 6 team + 30 agent)
+
+  STEP 7 — ROUTING TEST:
+  Send 6 sample tasks (one per team) through the master orchestrator
+  and verify the orchestrator picks the correct team:
+  1. "Review this Python file for bugs"     → code-review-team (HIERARCHICAL)
+  2. "Check this code for SQL injection"    → security-scan-team (FLAT)
+  3. "Analyze this CSV for missing values"  → data-quality-team (PIPELINE)
+  4. "Profile this function's runtime"      → perf-eval-team (HIERARCHICAL)
+  5. "Simplify this 200-line function"      → refactor-team (FLAT)
+  6. "Generate docs for this module"        → doc-gen-team (PIPELINE)
+  Save the routing decisions to /tmp/multi-arch-30/.state/routing-test.jsonl
+
+  STEP 8 — Report:
+  - Total files created (expect 37 yaml + 30 md + dashboard files = 70+)
+  - Dashboard data.json summary (30+ agents.healthy)
+  - PASS/FAIL for: 7 team-recipe runs + 30 agent-recipe runs
+                   + 1 yaml-parse-all + 6 routing tests = 44 checks
+  - Architecture distribution: 10 HIERARCHICAL, 10 FLAT, 10 PIPELINE
+  - Any YAML errors with line numbers
+  - List of all files with line counts
+
+  Critical:
+  - 6 teams × 5 agents = 30 agents exactly
+  - 2 HIERARCHICAL teams, 2 FLAT teams, 2 PIPELINE teams
+  - Master orchestrator MUST route to the right team
+  - All YAMLs MUST parse
+  - Dashboard MUST show 30 healthy agents
+sub_recipes:
+- name: sub_mas-dev-director
+  path: ./sub/sub_mas-dev-director.yaml
+  description: Orchestrator for dev-mas-engineer operations (delegator)
+- name: sub_mas-dev-builder
+  path: ./sub/sub_mas-dev-builder.yaml
+  description: Build phase — generates YAML recipes and instructions
+- name: sub_mas-generic-init
+  path: ./sub/sub_mas-generic-init.yaml
+  description: Project skeleton initializer (sub-dirs, dashboard, MCP server)
+- name: sub_mas-dashboard-data
+  path: ./sub/sub_mas-dashboard-data.yaml
+  description: Dashboard data refresh + health scoring
+settings:
+  timeout: 1800
+  max_steps: 200
+  temperature: 0.7
+extensions:
+- type: platform
+  name: summon
+- type: builtin
+  name: developer
+  display_name: Developer
+  timeout: 300
+  bundled: true
