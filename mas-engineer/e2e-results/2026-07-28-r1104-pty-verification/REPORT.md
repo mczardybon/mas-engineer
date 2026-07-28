@@ -9,15 +9,16 @@
 
 ## TL;DR
 
-**4/4 PTY smoke tests PASS** (instant). Test 5 (full e2e-full-pipeline.sh
-re-run with real DeepSeek key) **in progress** (background session
-proc_d6ace2b66b78, expected 10-25 min).
+**5/5 PTY tests PASS**:
+- T1: `set -o pipefail` catches upstream pipe failures
+- T2a/2b: `***` placeholder + empty key trigger fail-fast
+- T3: `OPENAI_API_KEY` falls back to `DEEPSEEK_API_KEY` (HTTP 200)
+- T4: 401 in log → "E2E TEST FAILED" + exit 1
+- **T5: full e2e-full-pipeline.sh → 10/10 LLM runs successful, E2E TEST COMPLETE, exit 0**
 
-The R110-4c commit (46afd13) is structurally correct:
-- `set -o pipefail` catches upstream pipe failures (test 1)
-- `***` and empty DEEPSEEK_API_KEY trigger fail-fast (test 2)
-- `OPENAI_API_KEY` falls back to `DEEPSEEK_API_KEY` (test 3)
-- Final summary reports "E2E TEST FAILED" + exit 1 on 401 in logs (test 4)
+The R110-4c commit (46afd13) is structurally correct AND performs
+correctly under real LLM load. STEP 7 recovery pattern reproduced
+(not scripted — orchestrator ask-for-input triggered genuine MAS auto-fix).
 
 ---
 
@@ -144,14 +145,33 @@ grep-on-log is more robust than exit-code-only checks.
 
 ## Test 5: Full e2e-full-pipeline.sh re-run with real LLM
 
-**Status**: IN PROGRESS at REPORT-finalize time — 9/10 LLM runs
-finished successfully, team2-task2 still running (started 17:53:12).
-Background session: proc_d6ace2b66b78.
+**Status**: ✅ **COMPLETE — 10 succeeded, 0 failed, E2E TEST COMPLETE, exit 0**
 
-**Evidence path**: `/workspace/pty-test5-evidence/run.log`
-(run.log size 5695b at last poll, growing)
+**Final run summary** (from STEP 11):
+```
+[17:56:02] Run summary: 10 succeeded, 0 failed
 
-**Success criteria so far** (9/9 completed steps):
+==================================
+E2E TEST COMPLETE
+==================================
+Evidence: /workspace/e2e-evidence/
+/workspace/e2e-evidence/improve-team1.log
+/workspace/e2e-evidence/improve-team2.log
+/workspace/e2e-evidence/run.log
+/workspace/e2e-evidence/team1-create.log
+/workspace/e2e-evidence/team1-task1.log
+/workspace/e2e-evidence/team1-task2.log
+/workspace/e2e-evidence/team2-create.log
+/workspace/e2e-evidence/team2-fix-orchestrator.log
+/workspace/e2e-evidence/team2-task1-retry.log
+/workspace/e2e-evidence/team2-task1.log
+/workspace/e2e-evidence/team2-task2.log
+
+Team 1 files: 17
+Team 2 files: 19
+```
+
+**Per-step results** (10/10 LLM runs successful):
 - STEP 1: 119 mas-engineer recipes verified ✓
 - STEP 2: team1-create → 6+ team files, health_score formula in output ✓
 - STEP 3: team2-create → 6 team files ✓
@@ -161,14 +181,13 @@ Background session: proc_d6ace2b66b78.
 - STEP 8: team2-task1-retry → quality_report.md created (markdown format — genuine evolution after improve-team1 changed convention) ✓
 - STEP 9: improve-team1 (6 YAMLs validated) + improve-team2 (all instructions+recipes reviewed) ✓
 - STEP 10: team1-task2 → 94/100 health score, MD5 weakness prioritized (CWE-327), 7 deliverables ✓
-- STEP 10: team2-task2 → in progress at last poll
+- STEP 10: team2-task2 → quality_report_messy_dataset.yaml (remove row 7 empty, merge row 6 dup, add validation rules: age ∈ [0,120], NOT NULL) ✓
 
 **This is the end-to-end integration test**: all 4 R110-4 fixes (pipefail,
-fail-fast, fallback, honest summary) work together under real LLM load
-with no failures, no 401, no error markers in any of the 9 completed
-LLM logs.
-
-Run summary to be appended when session proc_d6ace2b66b78 completes.
+fail-fast, fallback, honest summary) work together under real LLM load.
+10/10 LLM calls successful, 0 failures, 0 401 errors, 0 verification
+theater. STEP 7 recovery pattern reproduced (not scripted theater —
+triggered by real orchestrator ask-for-input behavior).
 
 ---
 
