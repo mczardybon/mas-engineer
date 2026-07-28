@@ -64,7 +64,7 @@ goose run --recipe <recipe.yaml>
 
 ## Auto-load (optional)
 
-Füge in `~/.bashrc`:
+Add to `~/.bashrc`:
 
 ```bash
 # Auto-load mas-engineer provider defaults
@@ -72,13 +72,13 @@ Füge in `~/.bashrc`:
   source /workspace/mas-engineer-src/mas-engineer/.state/goose-defaults.env
 ```
 
-## Validierung
+## Validation
 
 ```bash
-# Check: ist .state/goose-defaults.env gültig?
+# Check: is .state/goose-defaults.env valid?
 bash -n mas-engineer/.state/goose-defaults.env && echo "OK"
 
-# Check: provider effektiv gesetzt nach source?
+# Check: provider effectively set after source?
 source mas-engineer/.state/goose-defaults.env
 echo "GOOSE_PROVIDER=$GOOSE_PROVIDER"     # expected: openai
 echo "GOOSE_MODEL=$GOOSE_MODEL"           # expected: deepseek-v4-flash (not deepseek-chat, deprecated 2026-07-23)
