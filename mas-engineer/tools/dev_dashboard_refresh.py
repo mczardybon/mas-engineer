@@ -400,7 +400,7 @@ if __name__ == '__main__':
 
     # History write
     with open(HISTORY_FILE, 'w') as f:
-        json.dump(data['history'], f, indent=2)
+        json.dump(data['history'], f, indent=2, ensure_ascii=False)
 
     # Send notification for realtime updates
     flag_file = os.path.join(DASH_DIR, '.updated')

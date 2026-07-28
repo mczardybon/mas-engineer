@@ -78,4 +78,4 @@ if __name__ == '__main__':
     import sys
     ws = sys.argv[1] if len(sys.argv) > 1 else '.'
     data = get_dashboard_data(ws)
-    print(json.dumps(data, indent=2))
+    print(json.dumps(data, indent=2, ensure_ascii=False))

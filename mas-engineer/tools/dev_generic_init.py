@@ -532,7 +532,7 @@ def create_dashboard_scaffold(project_path, dry_run=False):
     with open(os.path.join(dash_dir, 'data.json'), 'w') as f:
         json.dump(initial_data, f, indent=2, ensure_ascii=False)
     with open(os.path.join(dash_dir, 'history.json'), 'w') as f:
-        json.dump({"health_trend": [], "build_size": []}, f, indent=2)
+        json.dump({"health_trend": [], "build_size": []}, f, indent=2, ensure_ascii=False)
     ok(".mas/dashboards/ (data.json + history.json)")
 
     mcp_dir = os.path.join(project_path, '.mas', 'mcp')
@@ -607,7 +607,7 @@ def create_state_files(project_path, dry_run=False):
 
     # changes.json: emptys Array
     with open(os.path.join(state_dir, "changes.json"), 'w') as f:
-        json.dump([], f, indent=2)
+        json.dump([], f, indent=2, ensure_ascii=False)
 
     # guardian.yaml: empty Guardian-Struktur mit drift_log
     guardian = {
@@ -646,10 +646,10 @@ def create_state_files(project_path, dry_run=False):
     # health-report.json + health-history.json
     hr = {"checks": [], "score": 0, "timestamp": None}
     with open(os.path.join(state_dir, "health-report.json"), 'w') as f:
-        json.dump(hr, f, indent=2)
+        json.dump(hr, f, indent=2, ensure_ascii=False)
     hh = [{"timestamp": datetime.now().isoformat(), "score": 0}]
     with open(os.path.join(state_dir, "health-history.json"), 'w') as f:
-        json.dump(hh, f, indent=2)
+        json.dump(hh, f, indent=2, ensure_ascii=False)
 
     # checkpoints Directory
     os.makedirs(os.path.join(state_dir, "checkpoints"), exist_ok=True)
@@ -718,11 +718,11 @@ def copy_monitoring_files(project_path, dry_run=False):
     os.makedirs(state_dir, exist_ok=True)
     hr = {"checks": [], "score": 0, "timestamp": None}
     with open(os.path.join(state_dir, "health-report.json"), 'w') as f:
-        json.dump(hr, f, indent=2)
+        json.dump(hr, f, indent=2, ensure_ascii=False)
     import datetime as _dt
     hh = [{"timestamp": _dt.datetime.now().isoformat(), "score": 0}]
     with open(os.path.join(state_dir, "health-history.json"), 'w') as f:
-        json.dump(hh, f, indent=2)
+        json.dump(hh, f, indent=2, ensure_ascii=False)
     ok("Monitoring: health-report.json + health-history.json")
 
 

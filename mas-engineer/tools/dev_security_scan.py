@@ -29,43 +29,50 @@ from typing import Optional
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# Pattern definitions: (name, regex, severity, confidence, language)
+# Pattern definitions: (regex, severity, language)
+# Confidence is no longer hardcoded per pattern; it is read from the
+# SEC_SCAN_CONFIDENCE env var at scan time (default 0.95). This was
+# the R110-13 Q4d fix: hardcoded 0.95 values across 28 pattern tuples
+# caused confidence-marker drift between PTY and --no-session run modes.
+# To override per-run: export SEC_SCAN_CONFIDENCE=0.8 (for example).
+DEFAULT_CONFIDENCE = float(os.environ.get('SEC_SCAN_CONFIDENCE', '0.95'))
+
 PATTERNS = {
     "cmd-injection": [
-        (r"os\.system\s*\(", "CRITICAL", 0.95, "py"),
-        (r"subprocess\.\w+\([^)]*shell\s*=\s*True", "CRITICAL", 0.95, "py"),
-        (r"subprocess\.\w+\(\s*[\"']\s*(?:rm|sudo|bash|sh|chmod|chown|cat|curl|wget)\b", "HIGH", 0.85, "py"),
-        (r"\beval\s*\(\s*(?:input|request|stdin|argv)", "CRITICAL", 0.95, "py"),
-        (r"\bexec\s*\(\s*(?:input|request|stdin|argv)", "CRITICAL", 0.95, "py"),
+        (r"os\.system\s*\(", "CRITICAL", "py"),
+        (r"subprocess\.\w+\([^)]*shell\s*=\s*True", "CRITICAL", "py"),
+        (r"subprocess\.\w+\(\s*[\"']\s*(?:rm|sudo|bash|sh|chmod|chown|cat|curl|wget)\b", "HIGH", "py"),
+        (r"\beval\s*\(\s*(?:input|request|stdin|argv)", "CRITICAL", "py"),
+        (r"\bexec\s*\(\s*(?:input|request|stdin|argv)", "CRITICAL", "py"),
     ],
     "deserialize": [
-        (r"pickle\.load\s*\(", "HIGH", 0.9, "py"),
-        (r"pickle\.loads\s*\(", "HIGH", 0.9, "py"),
-        (r"yaml\.load\s*\((?![^)]*Loader\s*=\s*yaml\.SafeLoader)", "CRITICAL", 0.95, "py"),
-        (r"yaml\.load\s*\((?![^)]*Loader\s*=\s*yaml\.FullLoader)", "HIGH", 0.7, "py"),
-        (r"marshal\.loads\s*\(", "MEDIUM", 0.8, "py"),
-        (r"shelve\.open\s*\(", "MEDIUM", 0.7, "py"),
+        (r"pickle\.load\s*\(", "HIGH", "py"),
+        (r"pickle\.loads\s*\(", "HIGH", "py"),
+        (r"yaml\.load\s*\((?![^)]*Loader\s*=\s*yaml\.SafeLoader)", "CRITICAL", "py"),
+        (r"yaml\.load\s*\((?![^)]*Loader\s*=\s*yaml\.FullLoader)", "HIGH", "py"),
+        (r"marshal\.loads\s*\(", "MEDIUM", "py"),
+        (r"shelve\.open\s*\(", "MEDIUM", "py"),
     ],
     "secrets": [
-        (r"sk-[A-Za-z0-9]{20,}", "CRITICAL", 1.0, "any"),  # OpenAI/DeepSeek
-        (r"sk-[a-f0-9]{30,}", "CRITICAL", 1.0, "any"),     # older DeepSeek
-        (r"ghp_[A-Za-z0-9]{30,}", "CRITICAL", 1.0, "any"), # GitHub PAT
-        (r"gho_[A-Za-z0-9]{30,}", "CRITICAL", 1.0, "any"), # GitHub OAuth
-        (r"AWS_ACCESS_KEY\s*=\s*[\"']?AKIA[A-Z0-9]{16}", "CRITICAL", 1.0, "any"),
-        (r"AKIA[0-9A-Z]{16}", "CRITICAL", 1.0, "any"),     # AWS access key ID
-        (r"AIza[0-9A-Za-z\-_]{35}", "HIGH", 0.95, "any"),  # Google API key
-        (r"xox[bpoas]-[A-Za-z0-9\-]{10,}", "HIGH", 0.9, "any"),  # Slack tokens
-        (r"-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----", "CRITICAL", 1.0, "any"),
-        (r"(?i)password\s*=\s*[\"'][^\"']{8,}[\"']", "MEDIUM", 0.6, "py"),  # many false positives
-        (r"(?i)(?:api_key|api_token|secret_key)\s*=\s*[\"'][^\"']{16,}[\"']", "HIGH", 0.7, "py"),
+        (r"sk-[A-Za-z0-9]{20,}", "CRITICAL", "any"),  # OpenAI/DeepSeek
+        (r"sk-[a-f0-9]{30,}", "CRITICAL", "any"),     # older DeepSeek
+        (r"ghp_[A-Za-z0-9]{30,}", "CRITICAL", "any"), # GitHub PAT
+        (r"gho_[A-Za-z0-9]{30,}", "CRITICAL", "any"), # GitHub OAuth
+        (r"AWS_ACCESS_KEY\s*=\s*[\"']?AKIA[A-Z0-9]{16}", "CRITICAL", "any"),
+        (r"AKIA[0-9A-Z]{16}", "CRITICAL", "any"),     # AWS access key ID
+        (r"AIza[0-9A-Za-z\-_]{35}", "HIGH", "any"),  # Google API key
+        (r"xox[bpoas]-[A-Za-z0-9\-]{10,}", "HIGH", "any"),  # Slack tokens
+        (r"-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----", "CRITICAL", "any"),
+        (r"(?i)password\s*=\s*[\"'][^\"']{8,}[\"']", "MEDIUM", "py"),  # many false positives
+        (r"(?i)(?:api_key|api_token|secret_key)\s*=\s*[\"'][^\"']{16,}[\"']", "HIGH", "py"),
     ],
     "sqli": [
-        (r"execute\s*\(\s*[\"'][^\"']*%s[^\"']*[\"']\s*%", "HIGH", 0.85, "py"),
-        (r"execute\s*\(\s*f[\"'][^\"']*\{[^\}]+\}[^\"']*[\"']", "HIGH", 0.85, "py"),
-        (r"execute\s*\(\s*[\"'][^\"']*\"\s*\+\s*\w+", "HIGH", 0.85, "py"),
-        (r"\.format\s*\(\s*\*\s*\*?\s*\w+\s*\)\s*;?\s*$", "MEDIUM", 0.6, "py"),
-        (r"raw\s*\(\s*f[\"'][^\"']*\{", "HIGH", 0.85, "py"),
-        (r"cursor\.execute\s*\(\s*[\"'].*?%s.*?[\"']\s*%", "HIGH", 0.85, "py"),
+        (r"execute\s*\(\s*[\"'][^\"']*%s[^\"']*[\"']\s*%", "HIGH", "py"),
+        (r"execute\s*\(\s*f[\"'][^\"']*\{[^}]+\}[^\"']*[\"']", "HIGH", "py"),
+        (r"execute\s*\(\s*[\"'][^\"']*\"\s*\+\s*\w+", "HIGH", "py"),
+        (r"\.format\s*\(\s*\*\s*\*?\s*\w+\s*\)\s*;?\s*$", "MEDIUM", "py"),
+        (r"raw\s*\(\s*f[\"'][^\"']*\{", "HIGH", "py"),
+        (r"cursor\.execute\s*\(\s*[\"'].*?%s.*?[\"']\s*%", "HIGH", "py"),
     ],
 }
 
