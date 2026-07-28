@@ -528,6 +528,72 @@ for yp in ALL_YAMLS:
                         'Agent scope too broad',
                         'Split into domain-specific sub-agents')
 
+# --- Python tool scanner (R110-13): catches R110-10 bugs #2 and #3 ---
+# The YAML scanner above cannot see into .py files. R110-10 documented
+# 3 runtime-mode bugs; Q4 caught #1 (off-by-one path in recipe prompt).
+# Q4c catches #2 (data.json format drift) and Q4d catches #3
+# (confidence 0.95 hardcoded markers). Both walk tools/*.py directly.
+import glob as _glob
+PY_TOOLS = sorted(_glob.glob('tools/dev_*.py') + _glob.glob('tools/mcp_*.py'))
+for _pt in PY_TOOLS:
+    try:
+        with open(_pt) as _f:
+            _src = _f.read()
+    except Exception:
+        continue
+
+    # Q4c: data.json format drift (R110-10 bug #2)
+    # Detects json.dump / json.dumps calls that omit explicit indent or
+    # ensure_ascii. When the dashboard generator runs in PTY mode vs
+    # --no-session mode, missing options lead to different file
+    # layouts (e.g. compact on one side, pretty on the other). R110-10
+    # saw exactly this: data.json was valid in both modes but
+    # dashboard consumers misparsed because the format silently differed.
+    # Only flag files that actually write to a dashboard/JSON output
+    # path (contain 'data.json' or 'dashboards' string) — pure
+    # logging/serialization tools are out of scope.
+    if ('data.json' in _src or 'dashboards' in _src) and 'json.dump' in _src:
+        # Match each json.dump/dumps call individually (non-greedy to
+        # stay inside one paren-group, even if call spans multiple lines).
+        # Skip json.load (read-only, no mode-drift risk).
+        _json_dumps = re.findall(
+            r"json\.dump(?:s)?\s*\((?:[^()]|\n)*?\)", _src)
+        for _call in _json_dumps:
+            # Must contain BOTH indent and ensure_ascii to be mode-safe
+            _has_indent = 'indent' in _call
+            _has_ascii = 'ensure_ascii' in _call
+            if not (_has_indent and _has_ascii):
+                add_finding('Q4c', 'medium', _pt,
+                            f'data_json_drift: json.dump missing indent/ensure_ascii: "{_call[:80].strip()}..."',
+                            'Different run modes may produce different on-disk JSON layouts',
+                            'Pass indent=2 and ensure_ascii=False to all json.dump calls')
+
+    # Q4d: hardcoded confidence markers (R110-10 bug #3)
+    # Detects numeric confidence values (0.X or 1.0) hardcoded in
+    # pattern/secrets/regex definitions. When the scanner is invoked
+    # from PTY mode vs --no-session mode, hardcoded values get logged
+    # literally, but downstream consumers expect to read confidence
+    # from session metadata. R110-10 found that 6+ secret-detection
+    # patterns had hardcoded 0.95 values, and the discrepancy surfaced
+    # as "log marker drift" between run modes.
+    if 'confidence' in _src:
+        # Simpler: count confidence-like values that appear inside
+        # a 3-tuple position (after a quoted string, before another
+        # quoted string). Format in PATTERNS dict is:
+        #   (r"regex", "SEVERITY", 0.95, "py")
+        # so we look for ", 0.X, " or ", 1.0, " patterns.
+        # Bumped severity to 'medium' (was 'low' in first cut) because
+        # R97 SEVERITY_FILTER = {medium, high} would otherwise hide
+        # this finding, and the R110-10 confidence-drift bug
+        # manifested as silent log misparse, not just style.
+        _conf_hardcoded = re.findall(
+            r",\s*(0\.\d+|1\.0)\s*,\s*[\"']", _src)
+        if len(_conf_hardcoded) >= 3:
+            add_finding('Q4d', 'medium', _pt,
+                        f'confidence_marker_drift: {len(_conf_hardcoded)} hardcoded confidence values in pattern tuples',
+                        'Log mode compares confidence by string match; hardcoded values differ between run modes',
+                        'Read confidence from session metadata, not from pattern tuples')
+
 # --- Summary ---
 by_type = Counter(f['type'] for f in findings)
 by_sev = Counter(f['severity'] for f in findings)
