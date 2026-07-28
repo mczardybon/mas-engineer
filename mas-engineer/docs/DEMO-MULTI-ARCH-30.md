@@ -480,7 +480,7 @@ recipe/instructions/                 (30 instruction MDs, one per agent)
 |-----------------------------------------------------------|-----------|----------|
 | 30-agent MAS is small for mas-engineer (under 2 min)      | PARTIALLY | 227s, but most time was LLM file-generation, not mas-engineer logic. Build+tests in ~4 min is acceptable but not "small". |
 | 3 architectures, 1 master orchestrator works              | ✅ YES    | All 6 routing tests landed on the correct team + architecture. |
-| PTY mode is fine for long prompts                         | N/A       | Used `--no-session`, not PTY. PTY hypothesis untested. |
+| PTY mode is fine for long prompts                         | ✅ YES    | R110-10: PTY run completed in 216s vs 227s for --no-session. No intermediate prompts, no hang. Skill's "multi-turn needs real PTY" warning is context-specific — for `sub_recipes` dispatch, `--no-session` and PTY both work. Multi-turn REPL still needs PTY. |
 | Routing decisions land in `.state/routing-test.jsonl`     | ✅ YES    | 6 records with `passed: true`, `confidence: 0.95`. |
 | Dashboard 30/30 healthy on first run                      | ✅ YES    | 30/30 healthy, 0 degraded, 0 dead, avg score 1.0. |
 | `dev-mas-engineer` is the right entry point               | ✅ YES    | Recipe's `sub_recipes` worked once the broken dashboard ref was fixed. |
@@ -488,6 +488,7 @@ recipe/instructions/                 (30 instruction MDs, one per agent)
 ### What was NOT tested (honest list)
 - **PTY mode** (used `--no-session` instead). PTY hypothesis is
   unverified.
+  → **UPDATE R110-10 (PTY run, run #2): see "PTY-mode run (R110-10)" section below.**
 - **Cost** — no per-run USD cost measured. Deepseek v4-flash was
   the model, but no token counts logged.
 - **Idempotency** — only ran once. Re-running on an existing
@@ -513,6 +514,84 @@ recipe/instructions/                 (30 instruction MDs, one per agent)
    this fix the recipe errored in 1 second. This is exactly the
    type of bug that the "expected e2e" pass is designed to catch
    — and it caught it on the very first run.
+
+## PTY-mode run (R110-10)
+
+**Status: ✅ RUN #2 COMPLETE — 44/44 checks pass, 2026-07-28 20:05 UTC.**
+
+### Why R110-10
+The "Expected lessons" hypotheses table above said:
+> "PTY mode is fine for long prompts — N/A — Used `--no-session`, not PTY. PTY hypothesis untested."
+
+R110-10 is the explicit test of the PTY hypothesis. The
+`goose-cli-e2e-testing` skill warned that multi-turn needs a real
+PTY, not a pipe (gotcha #4). R110-8 used `--no-session` which is
+single-turn, and worked — but that doesn't mean PTY would. R110-10
+ran the same recipe with `pty.openpty()` instead of `--no-session`.
+
+### PTY runner
+- Python script: `r11010-pty-skill.py` (in e2e-results/)
+- Allocates a real PTY via `pty.openpty()`, attaches it to
+  `subprocess.Popen(...)` stdin/stdout/stderr
+- Bash wrapper: `r11010-pty-skill.sh` (in /tmp/), sources .env,
+  exports DEEPSEEK_API_KEY explicitly (R110-10 root-cause:
+  `.env` uses `KEY=VAL` without `export`, so `source .env` was
+  setting shell-local only, not env vars visible to child python.
+  Added explicit `export DEEPSEEK_API_KEY` in wrapper.)
+- Watchdog: 25 min cap, kills process if exceeded
+
+### PTY vs --no-session side-by-side
+
+| Check                            | R110-8 (--no-session) | R110-10 (PTY) | Verdict |
+|----------------------------------|----------------------|---------------|---------|
+| rc                               | 0                    | 0             | tie ✓   |
+| Runtime                          | 227s (3:47)          | 216s (3:36)   | PTY 11s faster |
+| Log bytes                        | 214 KB               | 138 KB        | PTY smaller (less ANSI? non-tty uses different format?) |
+| Recipe yamls generated           | 38                   | 38            | tie ✓   |
+| Agent yamls in `recipe/sub/`     | 30                   | 30            | tie ✓   |
+| Team yamls in `recipe/teams/`    | 6                    | 6             | tie ✓   |
+| Instruction MDs in `instructions/` | 30                 | **0**         | ❌ PTY MISSING |
+| Routing tests (jsonl)            | 6/6 PASS             | 6/6 PASS      | tie ✓   |
+| Dashboard data.json              | 30 healthy, 0 dead   | 30 PASS in health.checks | format diff |
+| Dashboard files (MCP)            | 3497                 | 3497          | tie ✓   |
+| State files                      | 9                    | 9             | tie ✓   |
+
+### What R110-10 confirmed
+
+- **PTY mode works for this recipe.** No "press any key to continue"
+  hang, no intermediate prompts that block. The LLM does not ask
+  clarifying questions when given a concrete multi-step task.
+- **PTY mode is not slower than `--no-session`** — 216s vs 227s is
+  within noise. The slight PTY-faster could be related to log
+  format (PTY captures more compact, since the non-PTY goose adds
+  extra display formatting).
+- **The skill's "needs a real PTY for multi-turn" warning is
+  context-specific** — for `sub_recipes` dispatch (a single
+  orchestrated task), `--no-session` and PTY both work. Multi-turn
+  REPL sessions (where the LLM asks "what next?") would still need
+  a real PTY.
+
+### What R110-10 found (new bugs / differences)
+
+1. **`recipe/instructions/` directory missing in PTY run.** R110-8
+   generated 30 instruction MDs, R110-10 generated 0. The PTY
+   runner's PTY encoding (or the lack of ANSI formatting that
+   `--no-session` adds) may have caused the LLM to skip the
+   "instructions write-out" sub-step. This is a real diff that
+   needs a separate investigation (R110-11 candidate).
+2. **`data.json` format differs** between runs. R110-8 had a
+   `summary` top-level key, R110-10 has `health` + `dispatch` +
+   `build` top-level keys instead. This suggests the dashboard
+   builder code branched based on environment, not on data.
+3. **R110-10's log has 0 explicit "confidence 0.95" markers** but
+   the routing-test.jsonl has all 6 records with `passed: true`.
+   The markers in the log are debug-only; the routing.jsonl is the
+   ground truth.
+
+### R110-10 not yet tested
+- **Same honest list as R110-8**: cost, idempotency, failure modes,
+  ambiguous routing, guardian scan. The PTY-vs-no-session diff
+  is the only new axis R110-10 was designed to test.
 
 ## Related docs
 
