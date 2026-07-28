@@ -110,7 +110,7 @@ def scan_file(path: Path, scan_type: str) -> list:
         return []
 
     findings = []
-    for pattern, severity, confidence, lang in PATTERNS[scan_type]:
+    for pattern, severity, lang in PATTERNS[scan_type]:
         if lang != "any" and not path.suffix == f".{lang}":
             continue
         for m in re.finditer(pattern, content, re.MULTILINE):
@@ -123,7 +123,7 @@ def scan_file(path: Path, scan_type: str) -> list:
                 "match": m.group(0)[:80],
                 "context": line_text[:120],
                 "severity": severity,
-                "confidence": confidence,
+                "confidence": DEFAULT_CONFIDENCE,
                 "scan": scan_type,
             })
     return findings
