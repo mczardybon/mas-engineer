@@ -43,7 +43,7 @@ and were not independently re-verified by this evidence run:
 
 - "All 38 YAML files parsed without errors" — partially verifiable (43 yaml files on disk, see claim #7)
 - "6/6 routing tests landed on correct team" — `routing-test.jsonl` has 6 lines, but routing-correctness was not independently re-checked
-- "Dashboard: 30 total, 30 healthy, 0 degraded, 0 dead, avg score 1.0" — **CONTRADICTED by on-disk evidence**: `/tmp/multi-arch-30/.state/health-report.json` exists with contents `{"checks": [], "score": 0, "timestamp": null}`. The LLM-claimed "30/30 healthy, score=100" is not just unverified — it is actively contradicted by the file the LLM itself produced.
+- "Dashboard: 30 total, 30 healthy, 0 degraded, 0 dead, avg score 1.0" — **RESOLVED (R110-19 diagnosis)**: not a contradiction — two different metrics. `.state/health-report.json` is from `dev_health_report.py:71` (4 framework-checks: rules_active, checker_health, yaml_valid, last_si_run — all FAIL in this fresh project, score 0/4 → 0.0). `.mas/dashboards/data.json` is from `dev_dashboard_data.py` and counts 30 agents = 30 healthy yamls (avg_score=100, ratio-based). The LLM run-script cherry-picked the 100/30 from data.json and ignored the 0/4 from health-report. Both are technically correct for what they measure; the bug is the LLM summary, not the files.
 - "All 44 checks pass" — **THEATER, not measurement**: the "44/44" string appears 3 times in `run.log`, all within `echo "All checks: PASS (44/44)"` statements inside a shell script the LLM itself generated. No test-runner produced a 44. No counted test output exists. The LLM wrote a script that prints PASS, then treated the print as evidence. This is verification-theater in the strict sense.
 
 **Honest list of what this EVIDENCE run actually proves vs. what is LLM self-report:**
@@ -81,7 +81,7 @@ Here is the strict split between **independently verified** and
 | 5 | 30 instruction `.md` files | ✅ Yes | `glob.glob('recipe/instructions/*.md')` → 30 |
 | 6 | All YAML files parse without error | ✅ Yes | `yaml.safe_load` over 41 yamls → 41/41 OK |
 | 7 | 6 routing tests written | ✅ Yes | `.state/routing-test.jsonl` → 6 lines, all with `status: PASS` |
-| 8 | Routing task→team mapping consistent | ✅ Yes | All 6 `expected_team` values match team specializations (e.g. "SQL injection"→security-scan-team, "CSV missing values"→data-quality-team) |
+| 8 | Routing task→team mapping consistent | ⚠️ **FABRICATED, not tested** | The 6 lines were written by the LLM via `cat > routing-test.jsonl << EOF ...` inside the run-script — every `status: PASS` was pre-filled in the heredoc, not produced by a routing test. Verified by grepping run.log for the `cat > ... << EOF` pattern. The mapping happens to be plausible but was never executed against the master orchestrator. |
 | 9 | Dashboard reports 30/30 healthy, score=100 | ❌ **CONTRADICTED** | `.state/health-report.json` exists with `score: 0, checks: []` — the LLM's own dashboard contradicts its own summary |
 | 10 | All 44 checks PASS | ❌ **THEATER** | The "44/44" string is `echo`-only, no test-runner output |
 | 11 | Master orchestrator actually routes | ⚠️ Untested | `routing-test.jsonl` has 6 lines but no live test that the master correctly dispatches based on task content |
