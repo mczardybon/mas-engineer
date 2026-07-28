@@ -1,133 +1,63 @@
 stage: 4
 agent: im-validator
-version: 1.0.0
-timestamp: '2026-07-25T18:49:00+00:00'
-request_id: d49756c9-8afa-4507-9c8b-29d4488ccf16
+timestamp: '2026-07-28T20:37:30+00:00'
+request_id: 20260728_115
 from: sub_mas-im-validator
 to: sub_mas-general-improver
 status: success
 input_file: .state/pipeline/patches.yaml
-data:
-  validation:
-    status: approved
-    skip_reason: null
-    severity_fallback: null
-    details:
-      - file: tools/dev_im_finder_scan.py
-        patches:
-          - finding_id: F-1629
-            patch_name: "IM-005 — Fix scope exclusion"
-            yaml_syntax: ✅ VALID (Python syntax OK)
-            before_score: N/A
-            after_score: N/A
-            delta: N/A
-            goose_l01_check: ✅ PASS — no Goose-native conflict
-            goose_post_apply: CONFORM (HIGH)
-            notes: "Python tool, no YAML recipe. Conditional exclusion of /.config/goose/recipes/ aligns with Goose configurable scan scope."
-          - finding_id: F-1631
-            patch_name: "NN-SPLIT — Read skip_recently_split.yaml"
-            yaml_syntax: ✅ VALID (Python syntax OK)
-            before_score: N/A
-            after_score: N/A
-            delta: N/A
-            goose_l01_check: ✅ PASS — no Goose-native conflict
-            goose_post_apply: CONFORM (HIGH)
-            notes: "MAS internal state file check. No Goose native mechanism exists for split detection."
-      - file: recipe/sub/sub_mas-dev-director.yaml
-        patches:
-          - finding_id: F-1630
-            patch_name: "OO1 — Register 3 orphan directors"
-            yaml_syntax: ✅ VALID
-            before_score: N/A
-            after_score: N/A
-            delta: N/A
-            goose_l01_check: ✅ PASS — no Goose-native conflict
-            goose_post_apply: CONFORM (HIGH)
-            notes: "3 orphan directors confirmed EXIST as files. Goose requires explicit sub_recipes registration. Cross-references preserved (dev-observer, dev-tester, etc. reference dev-director by name, not sub_recipes content)."
-      - file: recipe/root_recipe.yaml
-        patches:
-          - finding_id: F-063
-            patch_name: "MM8 — Add I_AM identity"
-            yaml_syntax: ✅ VALID
-            before_score: N/A
-            after_score: N/A
-            delta: N/A
-            goose_l01_check: ✅ PASS — no Goose-native conflict
-            goose_post_apply: CONFORM (HIGH)
-            notes: "Goose expects I_AM identity in prompts. Name field unchanged ('mas-engineer-root'). Team-packager cross-references are documentation text, not functional dependencies."
-      - file: recipe/test-fix-failures.yaml
-        patches:
-          - finding_id: F-1561
-            patch_name: "MM9 — Add MODE-CHECK"
-            yaml_syntax: ✅ VALID
-            before_score: N/A
-            after_score: N/A
-            delta: N/A
-            goose_l01_check: ✅ PASS — no Goose-native conflict
-            goose_post_apply: RESTRICTED (MEDIUM)
-            notes: "MODE-CHECK is a MAS convention, not a Goose requirement. No cross-references break (test-fix-failures-director references by sub_recipes name, not prompt content). Change is valid MAS-internal convention."
 
-    recommendation:
-      - finding_id: F-1629
-        verdict: APPROVE
-        severity: medium
-        confidence: HIGH
-      - finding_id: F-1631
-        verdict: APPROVE
-        severity: medium
-        confidence: HIGH
-      - finding_id: F-1630
-        verdict: APPROVE
-        severity: medium
-        confidence: HIGH
-      - finding_id: F-063
-        verdict: APPROVE
-        severity: low
-        confidence: HIGH
-      - finding_id: F-1561
-        verdict: APPROVE_WITH_CAVEAT
-        severity: low
-        confidence: MEDIUM
-        caveat: "RESTRICTED verdict — MODE-CHECK is MAS convention. No functional impact."
-
-    approved_count: 5
-    rejected_count: 0
-
-    goose_post_checks:
-      - finding_id: F-1629
-        verdict: CONFORM
-        confidence: HIGH
-        explanation: "Conditional scope exclusion in Python tool. No Goose-native mechanism conflict. Goose scan scope is configurable — fix aligns with expected behavior."
-        applied_state: "EXCLUDED_PATH_PATTERNS conditionally excludes /.config/goose/recipes/ when _USER_EXPLICIT_SCOPE is True"
-        cross_references_intact: true
-      - finding_id: F-1631
-        verdict: CONFORM
-        confidence: HIGH
-        explanation: "MAS internal state file skip_recently_split.yaml check before NN1 detection. Goose has no native split-detection; this is a MAS tooling fix."
-        applied_state: "skip_recently_split.yaml loaded before add_finding('NN1'), agents split within last 5 rounds are skipped"
-        cross_references_intact: true
-      - finding_id: F-1630
-        verdict: CONFORM
-        confidence: HIGH
-        explanation: "3 orphan directors registered as sub_recipes under dev-director. Files confirmed exist. Goose requires explicit sub_recipes registration for sub-agent visibility."
-        applied_state: "dev-director.yaml sub_recipes grows from 5 to 8 entries, adding degradation-director, team-packager-director, test-reporter-director"
-        cross_references_intact: true
-      - finding_id: F-063
-        verdict: CONFORM
-        confidence: HIGH
-        explanation: "I_AM identity format added to root_recipe prompt. Goose expects I_AM identity for clear agent role definition. Name field unchanged."
-        applied_state: "prompt changed from 'You are the mas-engineer root agent.' to 'I am mas-engineer-root (v1.0.0) | MODE-CHECK: mas-engineer\n⛔ ONLY orchestration — NO direct execution\n→ Delegate to sub-agents via dev-mas-engineer'"
-        cross_references_intact: true
-      - finding_id: F-1561
-        verdict: RESTRICTED
-        confidence: MEDIUM
-        explanation: "MODE-CHECK is a MAS convention, not a Goose requirement. Prompt change is valid string content. No Goose-native conflict detected."
-        applied_state: "prompt changed from 'I am test-fix-failures (delegator)...' to 'I am test-fix-failures (v1.0.0) | MODE-CHECK: mas-engineer\n⛔ ONLY delegation — NO direct execution\n→ Delegate to sub_mas-test-fix-failures-director'"
-        cross_references_intact: true
-
-    notes:
-      - "ALL-RESTRICTED check: PASS — 4/5 patches CONFORM, 1/5 RESTRICTED. Skip signal NOT triggered."
-      - "L01 Goose-native mechanism check: ALL 5 patches PASS — no conflicts detected."
-      - "YAML/ Python syntax: ALL 4 unique files across 5 patches PASS validation."
-      - "Cross-references: ALL references preserved — no functional breakage in dev-observer, dev-tester, dev-builder, team-packager, test-fix-failures-director recipes."
-      - "Patch 5 (F-1561/MM9) carries RESTRICTED caveat for MODE-CHECK convention — approved with caveat, not rejected."
+validation:
+  status: approved
+  skip_reason: null
+  severity_fallback: null
+  details:
+    - file: recipe/dev-mas-engineer-30agents.yaml
+      field: description
+      score_before:
+        prompt: 5.2
+        settings: 15.3
+        structure: 1.0
+      score_after:
+        prompt: 5.2
+        settings: 15.3
+        structure: 1.0
+      delta:
+        prompt: 0.0
+        settings: 0.0
+        structure: 0.0
+      notes: >
+        Description-only change (352 chars → ~153 chars).
+        Does not affect YAML structure, instructions, prompt, or sub_recipes.
+        Scores unchanged because fast_scan metrics unaffected by cosmetic description change.
+      syntax_valid: true
+      l01_check: "CONFORM — no Goose-native mechanism conflict (scope_reduction is internal convention)"
+  recommendation:
+    - APPROVE
+  approved_count: 1
+  rejected_count: 0
+  goose_post_checks:
+    - patch_id: F-002
+      verdict: CONFORM
+      confidence: HIGH
+      explanation: >
+        Description length reduction from ~352 to ~153 chars is purely cosmetic
+        and affects only the user-facing description field. Goose does not enforce
+        any character limits on description fields. The change consolidates from
+        3 domains (recipe, pipeline, session) to 1 domain (pipeline/build),
+        which is an internal MAS-NN3 convention, not a Goose rule.
+        Cross-references preserved: dev-mas-engineer.yaml references the file
+        by name ('recipe/dev-mas-engineer-30agents.yaml'), which does not change.
+        docs/DEMO-MULTI-ARCH-30.md reference in description is removed, but the
+        file still exists at that path and is still referenced from dev-mas-engineer.yaml.
+      sources:
+        - "dev_goose_expert_check.py --patches: OK (no conflicts)"
+        - "dev_goose_expert_check.py --check-mechanism: CONFORM"
+        - "yaml.safe_load: ✅ syntax valid"
+  notes:
+    - "1 patch (F-002) validated and approved."
+    - "13 findings (F-001, F-003-F-015) skipped by im-designer as FALSE POSITIVES — not in scope."
+    - "Cross-reference integrity checked: 2 files reference dev-mas-engineer-30agents.yaml (dev-mas-engineer.yaml, docs/DEMO-MULTI-ARCH-30.md). Both unaffected by description-only change."
+    - "No R10 coronashield violations: YAML parsed successfully."
+    - "No L01 conflicts: scope_reduction is a MAS-internal NN3 convention, not a Goose-native mechanism."
+    - "No all-restricted pattern detected (only 1 patch, verdict = CONFORM)."
