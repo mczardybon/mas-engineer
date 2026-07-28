@@ -2,6 +2,7 @@
 
 **Status:** R108-11 — Zentralisierte Provider-Config via env-vars.
 **Date:** 2026-07-27
+**Updated:** 2026-07-28 — deepseek-chat → deepseek-v4-flash, OPENAI_HOST /v1 fix
 
 ## Problem
 
@@ -77,9 +78,19 @@ bash -n mas-engineer/.state/goose-defaults.env && echo "OK"
 
 # Check: provider effektiv gesetzt nach source?
 source mas-engineer/.state/goose-defaults.env
-echo "GOOSE_PROVIDER=$GOOSE_PROVIDER"  # soll: openai
-echo "GOOSE_MODEL=$GOOSE_MODEL"        # soll: deepseek-chat
+echo "GOOSE_PROVIDER=$GOOSE_PROVIDER"     # soll: openai
+echo "GOOSE_MODEL=$GOOSE_MODEL"           # soll: deepseek-v4-flash (not deepseek-chat, deprecated 2026-07-23)
+echo "OPENAI_HOST=$OPENAI_HOST"           # soll: https://api.deepseek.com/v1 (with /v1!)
 ```
+
+## Häufige Fehler (2026-07-28)
+
+| Fehler | Symptom | Fix |
+|--------|---------|-----|
+| `OPENAI_HOST=https://api.deepseek.com` (ohne `/v1`) | 404 Not Found | `/v1` anhängen |
+| `GOOSE_MODEL=deepseek-chat` | 401 Unauthorized | `deepseek-v4-flash` benutzen |
+| `OPENAI_API_KEY` in `~/.config/goose/config.yaml` | `goose info --check` meldet Auth: FAILED | Als env-var setzen |
+| Key in commit message / markdown file | GitHub revoked + email alert | `sk-***REDACTED***` placeholder |
 
 ## R108-11 Referenzen
 
