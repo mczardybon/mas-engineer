@@ -1,0 +1,529 @@
+stage: 3
+agent: im-designer
+timestamp: '2026-07-28T20:34:00+00:00'
+request_id: 20260728_114
+from: sub_mas-im-designer
+to: sub_mas-im-validator
+status: success
+input_file: .state/pipeline/ranked_findings.yaml
+
+data:
+  patches:
+    # ================================================================
+    # PATCH-002 (NN3) — dev-mas-engineer-30agents.yaml: Scope Reduction
+    # ================================================================
+    - finding_id: F-002
+      type: NN3
+      severity: medium
+      file: recipe/dev-mas-engineer-30agents.yaml
+      rank_score: 75
+      priority: 1
+      pattern: scope_reduction
+      proposal: |
+        ## Scope Reduction — `dev-mas-engineer-30agents.yaml` description
+
+        ### Issue
+        `description` field is 305 characters (exceeds 200-char NN3 threshold) and
+        spans 3 domains (recipe, pipeline, session). The current text reads:
+        ```
+        v1.0.0 | E2E: 30-agent multi-arch MAS build + run. See docs/DEMO-MULTI-ARCH-30.md
+        for the full prompt + pitfalls + reproduce. Use this recipe to drive the e2e from any
+        goose session inside the mas-engineer project scope.
+        Architecture: 6 teams × 5 agents = 30 agents, 3 orchestration patterns
+        (HIERARCHICAL, FLAT, PIPELINE) + master orchestrator on top.
+        ```
+
+        ### Domain analysis
+        - **recipe** — "See docs/DEMO-MULTI-ARCH-30.md" (user must find docs)
+        - **pipeline** — "30-agent multi-arch MAS build + run" (describes pipeline workflow)
+        - **session** — "drive the e2e from any goose session" (usage context)
+
+        ### Fix
+        Reduce description to < 200 chars, consolidate to single domain (E2E test).
+        Remove session and recipe references — these are implied by being in
+        `recipe/dev-mas-engineer-30agents.yaml`.
+
+        ### Proposed new description
+        ```yaml
+        description: >
+          v1.0.0 | E2E: 30-agent multi-arch MAS build + run with 6 teams
+          (HIERARCHICAL, FLAT, PIPELINE patterns) + master orchestrator.
+        ```
+
+        Character count: ~153 chars ✓ under 200
+        Domains: 1 (pipeline/build) ✓ consolidated
+
+        ### Rationale
+        - E2E test recipes are inherently multi-step but their scope is DISCOVERY
+          (does the system build and run?) not production operation
+        - The `recipe/` directory path already signals this is a recipe file
+        - Users read recipe files from within the repo — "see docs..." is redundant
+        - Remove "session" domain: recipes are run by goose sessions by nature,
+          not an extra domain concern
+
+  skipped:
+    # ================================================================
+    # F-001 (NN1) — dev-mas-engineer-30agents.yaml: E2E Test Recipe, Not a Sub-Agent
+    # ================================================================
+    - finding_id: F-001
+      type: NN1
+      file: recipe/dev-mas-engineer-30agents.yaml
+      rank_score: 73
+      priority: 2
+      why_skipped: >
+        FALSE POSITIVE — This is an E2E test recipe (30-agent build + run), not a
+        sub-agent. The 10 distinct verbs (analyze, validate, generate, report, scan)
+        are extracted from the multi-step TEST PROMPT, which naturally describes a
+        workflow ("analyze code," "validate YAML," "generate agents," "report results,"
+        "scan for issues"). This is a prompt for the USER/GOOSE to execute, not a
+        sub-agent violating single-responsibility. Applying NN1 `split_into_orchestrator_and_subs`
+        would destroy the recipe's purpose as a runnable single-command test.
+      goose_verdict:
+        verdict: CONFORM
+        confidence: HIGH
+        explanation: >
+          E2E test recipes describe multi-step workflows as their core function.
+          Verb diversity in a test prompt is expected — the recipe IS the workflow.
+          NN1 single-responsibility applies to sub-agents, not test recipes.
+          Splitting this into orchestrator + subs would increase complexity without
+          benefit (the recipe already delegates to 4 sub_recipes: dev-director,
+          dev-builder, generic-init, dashboard-director).
+        scope: subagents
+        sources:
+          - "NN1 rule: applies to sub-agent role boundaries, not test case prompts"
+          - "Existing sub_recipes: 4 delegated sub-agents already provide separation"
+
+    # ================================================================
+    # F-008 (NN1) — sub_mas-dev-director.yaml: Already Orchestrator (8 sub-agents)
+    # ================================================================
+    - finding_id: F-008
+      type: NN1
+      file: recipe/sub/sub_mas-dev-director.yaml
+      rank_score: 72
+      priority: 3
+      why_skipped: >
+        FALSE POSITIVE — dev-director.yaml is already an orchestrator with 8
+        specialized sub-agents (dev-analyzer, dev-builder, dev-tester, dev-observer,
+        git-operator, degradation-director, team-packager-director, test-reporter-director).
+        It has `summon` extension for delegation, a clear delegation map in instructions,
+        and explicit prohibitions ("⛔ ONLY orchestration — NO direct execution").
+        The 9 detected roles (analyze, validate, generate, monitor, audit) are the
+        verb categories of its 8 sub-agents — exactly the orchestrator pattern.
+        PRECONDITION 1 (≥200 instruction lines) FAILS: file is 66 lines total.
+      goose_verdict:
+        verdict: CONFORM
+        confidence: HIGH
+        explanation: >
+          Already implements orchestrator pattern with sub_recipes + summon.
+          Force-splitting an orchestrator with 8 sub-agents would create nested
+          orchestration layers (orchestrator → mid-tier orchestrator → sub-agents)
+          with no measurable benefit. Goose architecture natively supports
+          orchestrators delegating to sub-agents via summon.
+        scope: subagents
+        sources:
+          - "Goose docs: sub_recipes + summon pattern for orchestrator delegation"
+          - "Instructions: explicit 'ONLY orchestration — NO direct execution'"
+
+    # ================================================================
+    # F-011 (NN1) — sub_mas-test-director.yaml: Already Orchestrator (4 sub-agents)
+    # ================================================================
+    - finding_id: F-011
+      type: NN1
+      file: recipe/sub/sub_mas-test-director.yaml
+      rank_score: 71
+      priority: 4
+      why_skipped: >
+        FALSE POSITIVE — test-director.yaml is already an orchestrator with 4
+        specialized sub-agents (test-executor, test-reporter, test-scanner,
+        test-validator). The description explicitly states "7 roles split into 4
+        focused subs" (NN1 Enhanced). It has `summon` extension, a delegation map,
+        and explicit prohibitions ("⛔ ONLY orchestration — NO direct test execution").
+        The 7 detected roles (analyze, validate, monitor, report, scan) map to its
+        4 sub-agents' responsibilities. File is 60 lines. PRECONDITION 1 FAILS.
+      goose_verdict:
+        verdict: CONFORM
+        confidence: HIGH
+        explanation: >
+          Already implements orchestrator pattern with documented NN1 split.
+          Description mentions "NN1 Enhanced" and "7 roles split into 4 focused subs."
+          Force-splitting further would create unnecessary nesting (orchestrator of
+          4 → orchestration of 2 + 2 → sub-agents). Already at optimal granularity.
+        scope: subagents
+        sources:
+          - "Description field: '7 roles split into 4 focused subs'"
+          - "Goose docs: orchestrator pattern with 3-5 sub-agents is standard"
+
+    # ================================================================
+    # F-014 (NN1) — sub_mas-im-session-reader.yaml: Thin Wrapper Around Tool
+    # ================================================================
+    - finding_id: F-014
+      type: NN1
+      file: recipe/sub/sub_mas-im-session-reader.yaml
+      rank_score: 71
+      priority: 5
+      why_skipped: >
+        FALSE POSITIVE — Session-reader is a thin wrapper around the deterministic
+        tool `tools/dev_session_query.py`. The 7 detected roles (analyze, validate,
+        find, read, write) come from the tool's 5 sub-commands (ANALYZE, FILTER_LEVEL,
+        SHOW_DB_INFO, STALE, HELP) which are documented in instructions for user
+        reference. The agent does ONE thing: invoke the session query tool and
+        format the output. R89 Phase 7 already extracted ALL logic into the
+        deterministic script — the sub-agent is a thin 120-line wrapper.
+        Applying NN1 `split_into_orchestrator_and_subs` would create sub-agents for
+        each of the 5 tool sub-commands, adding 4 more YAML files with zero logic.
+      goose_verdict:
+        verdict: CONFORM
+        confidence: HIGH
+        explanation: >
+          Extraction already happened (R89 Phase 7): deterministic tool replaced
+          inline LLM-based sqlite3 queries. The sub-agent is a thin wrapper with
+          documented sub-command reference. Creating sub-agents for each tool
+          sub-command (ANALYZE, FILTER_LEVEL, SHOW_DB_INFO, STALE, HELP) would
+          add 4× YAML files with ~20 lines each wrapping a single tool call.
+          This is architectural over-engineering with no operational benefit.
+        scope: subagents
+        sources:
+          - "R89 Phase 7 migration: LLM sqlite3 → dev_session_query.py tool"
+          - "Tool pattern: thin wrapper around deterministic script is valid Goose design"
+
+    # ================================================================
+    # F-015 (NN1) — sub_mas-git-operator.yaml: Single-Purpose, Tool-Focused Agent
+    # ================================================================
+    - finding_id: F-015
+      type: NN1
+      file: recipe/sub/sub_mas-git-operator.yaml
+      rank_score: 71
+      priority: 6
+      why_skipped: >
+        FALSE POSITIVE — Git-operator is a single-purpose agent responsible for
+        ALL git operations in the MAS workspace. The 7 detected roles (validate,
+        report, design, find, read) come from the detailed COMMIT pipeline which
+        naturally has multiple steps (pre-commit review, selective add, YAML
+        validation, commit message formatting, post-commit verification) and
+        auxiliary commands (STATUS, LOG, DIFF, PUSH, INIT). These are NOT separate
+        roles — they are sub-operations of "Git Administration."
+
+        The 221-line instruction size reflects the complexity of git operations
+        (commit message conventions, clean-commit pipeline, selective add rules,
+        YAML validation hooks). Splitting would fragment git logic across 4 files
+        (orchestrator + committer + inspector + pusher) and force duplication of
+        the commit message convention logic. The current monolithic approach
+        maintains consistency across all operations — see v2.0.0 CLEAN-COMMIT
+        design which was refined across R36-R89 to fix real bugs.
+
+        Recommended: mark as DEFER — revisit if git-operator exceeds 400 lines
+        or if git sub-operations develop independent complexity.
+      goose_verdict:
+        verdict: CONFORM
+        confidence: MEDIUM
+        explanation: >
+          Goose architecture supports both monolithic and split sub-agent designs.
+          Git-operator's monolithic design has advantages: (1) consistent commit
+          message conventions enforced in one place, (2) shared cleanup/validation
+          logic, (3) single point of change for git operations. A split would
+          force the commit convention logic (git log --oneline -20 convention
+          detection + emoji rules + body template) to be duplicated or shared
+          across sub-agents. The current design is a valid architectural choice.
+          Potential future split: COMMIT pipeline → sub_mas-git-committer if
+          instruction lines exceed 400 (current: 221).
+        scope: subagents
+        caveats:
+          - "Monolithic has advantages: consistent conventions, shared logic"
+          - "Split would require commit-convention logic in 2+ places"
+          - "Monitor at 400-line threshold for potential future split"
+        alternatives:
+          - "Keep current: single-purpose git agent with comprehensive pipeline"
+          - "Future: split COMMIT pipeline into sub_mas-git-committer when >400 lines"
+        sources:
+          - "Goose docs: sub-agent design allows monolithic or split patterns"
+          - "R36 bug history: monolithic design fixed by v2 CLEAN-COMMIT pipeline"
+
+    # ================================================================
+    # F-006 (NN1) — sub_mas-recovery-immune.yaml: Thin Wrapper Around Tool
+    # ================================================================
+    - finding_id: F-006
+      type: NN1
+      file: recipe/sub/sub_mas-recovery-immune.yaml
+      rank_score: 70
+      priority: 7
+      why_skipped: >
+        FALSE POSITIVE — Recovery-immune is a thin wrapper around the deterministic
+        tool `tools/dev_yaml_check.py`. The 6 detected roles (validate, scan, read,
+        write, edit) come from the tool's 4 sub-commands (CHECK_YAML, CHECK_SYNTAX,
+        VERIFY_STATE, CHECK_ALL) documented in instructions. R89 Phase 6 already
+        extracted ALL logic into the deterministic script. The agent does ONE thing:
+        invoke the YAML check tool and return structured output. Applying NN1 split
+        would create 3 more YAML files wrapping individual tool sub-commands with
+        zero logic. Same pattern as F-014 (session-reader).
+      goose_verdict:
+        verdict: CONFORM
+        confidence: HIGH
+        explanation: >
+          Same pattern as F-014 (session-reader). R89 Phase 6 extracted all YAML
+          validation logic into dev_yaml_check.py. The sub-agent is a thin 118-line
+          wrapper. Creating sub-agents for CHECK_YAML, CHECK_SYNTAX, VERIFY_STATE
+          would add structural complexity without operational benefit. The thin
+          wrapper + deterministic tool pattern is a valid Goose design.
+        scope: subagents
+        sources:
+          - "R89 Phase 6 migration: LLM yaml.safe_load → dev_yaml_check.py tool"
+          - "Same tool-wrapper pattern as F-014 (session-reader)"
+
+    # ================================================================
+    # F-009 (NN1) — sub_mas-degradation-handler.yaml: Already Orchestrator (3 sub-agents)
+    # ================================================================
+    - finding_id: F-009
+      type: NN1
+      file: recipe/sub/sub_mas-degradation-handler.yaml
+      rank_score: 70
+      priority: 8
+      why_skipped: >
+        FALSE POSITIVE — Despite filename (degradation-handler), this file actually
+        contains the DEGRADATION DIRECTOR — an orchestrator with 3 specialized
+        sub-agents (degradation-analyzer, degradation-planner, degradation-reporter).
+        It has `sub_recipes` with delegation mapping, `summon` extension, and
+        explicit prohibitions ("⛔ ONLY orchestration — NO direct handling,"
+        "⛔ NEVER analyze degradation (delegate to degradation-analyzer),"
+        "⛔ NEVER design treatment plans (delegate to degradation-planner),"
+        "⛔ NEVER write reports (delegate to degradation-reporter)"). The 6 detected
+        roles (analyze, validate, report, design, write) map cleanly to its 3
+        sub-agents' responsibilities. File is 63 lines. PRECONDITION 1 FAILS.
+        Note: filename/document mismatch — file is named `-handler` but contains
+        `-director` logic. Consider renaming for clarity (separate issue).
+      goose_verdict:
+        verdict: CONFORM
+        confidence: HIGH
+        explanation: >
+          Already implements orchestrator pattern with 3 specialized sub-agents.
+          The detected roles map to: analyze→degradation-analyzer, design/plan→
+          degradation-planner, report/write→degradation-reporter. Force-splitting
+          an orchestrator that already delegates to 3 sub-agents would create
+          nested orchestration with no benefit. Minor issue: filename says
+          -handler but content says -director (cosmetic, not structural).
+        scope: subagents
+        sources:
+          - "Goose docs: orchestrator pattern with 3 sub-agents is standard"
+          - "Instructions: explicit delegation map + prohibitions"
+
+    # ================================================================
+    # F-005 (NN1) — sub_mas-intention-parser.yaml: Single-Purpose Pattern Engine
+    # ================================================================
+    - finding_id: F-005
+      type: NN1
+      file: recipe/sub/sub_mas-intention-parser.yaml
+      rank_score: 70
+      priority: 9
+      why_skipped: >
+        FALSE POSITIVE — Intention-parser is a SINGLE-PURPOSE agent: detect user
+        intent from natural language and route to the correct generator/tool.
+        The 6 detected roles (analyze, validate, read, write, edit) come from its
+        50+ pattern-matching entries and the instructions documenting how to
+        interpret patterns. This is NOT role diversity — it's pattern diversity.
+
+        The agent's sole responsibility is "intention parsing and routing."
+        The patterns are its CORE DATA (50+ regex patterns mapping intents to
+        actions), not separate roles. Splitting patterns into separate sub-agents
+        would break the pattern-matching logic — the agent needs the FULL pattern
+        set to disambiguate between similar intents (e.g., "update agent" vs
+        "create agent" vs "refresh agent" vs "upgrade agent").
+        File is 252 lines including 50+ yaml pattern entries (~150 lines of data).
+        Core instruction logic is ~50 lines.
+      goose_verdict:
+        verdict: CONFORM
+        confidence: HIGH
+        explanation: >
+          Intention-parser implements a SINGLE responsibility: pattern-based intent
+          routing. The 50+ patterns are configuration/data, not role diversity.
+          Goose architecture supports pattern-driven agents. Splitting patterns
+          across sub-agents would create cross-referencing complexity and break
+          the disambiguation logic that requires the full pattern set for
+          near-match detection (e.g., "update the agent" → pattern: "update/refresh
+          agent {name}" vs "upgrade (the )?(agent|...)" → different actions).
+        scope: subagents
+        sources:
+          - "Single-responsibility: one purpose (intent detection), many patterns"
+          - "Pattern disambiguation requires full pattern set in one agent"
+
+    # ================================================================
+    # F-003 (NN1) — static-analyzer.yaml: Already Split (3 sub-agents documented)
+    # ================================================================
+    - finding_id: F-003
+      type: NN1
+      file: recipe/sub/static-analyzer.yaml
+      rank_score: 69
+      priority: 10
+      why_skipped: >
+        FALSE POSITIVE — static-analyzer.yaml already documents `architecture_split:
+        orchestrator + 3 sub-agents: sub_mas-static-analyzer-syntax-checker,
+        sub_mas-static-analyzer-lint-scanner, sub_mas-static-analyzer-type-checker`.
+        Core instructions are outsourced to external `recipe/instructions/static-analyzer.md`
+        (154 lines). The recipe is an 80-line thin wrapper. The 6 detected roles
+        (analyze, report, scan, find, read) are distributed across the 3 sub-agents.
+        Previous im-designer rounds (R47-R52) also confirmed this as already-split.
+        PRECONDITION 1 (≥200 inline instruction lines) FAILS.
+      goose_verdict:
+        verdict: CONFORM
+        confidence: HIGH
+        explanation: >
+          Already split per architecture_split field + external instructions file.
+          Same skip decision as previous im-designer rounds (R47-R52). Goose
+          architecture supports thin wrapper + external instructions pattern
+          for multi-sub-agent orchestrators.
+        scope: subagents
+        sources:
+          - "architecture_split field: 'orchestrator + 3 sub-agents'"
+          - "External instructions: recipe/instructions/static-analyzer.md"
+
+    # ================================================================
+    # F-004 (NN1) — security-scanner.yaml: Already Orchestrator (4 sub-agents)
+    # ================================================================
+    - finding_id: F-004
+      type: NN1
+      file: recipe/sub/security-scanner.yaml
+      rank_score: 68
+      priority: 11
+      why_skipped: >
+        FALSE POSITIVE — security-scanner.yaml is already an orchestrator with 4
+        specialized sub-agents (sqli-scanner, secrets-scanner, deserialize-scanner,
+        cmd-injection-scanner). It has `sub_recipes` with delegation mapping,
+        `summon` extension, and explicit prohibitions ("⛔ ONLY orchestration —
+        NO direct security scanning"). The 5 detected roles (analyze, validate,
+        report, scan, edit) map to its 4 sub-agents' responsibilities. File is
+        60 lines. Same skip as previous im-designer rounds.
+      goose_verdict:
+        verdict: CONFORM
+        confidence: HIGH
+        explanation: >
+          Already implements orchestrator pattern. Same skip as previous rounds
+          (F-002 in R47 patches.yaml was already confirmed as CONFORM). Force-splitting
+          an orchestrator with 4 sub-agents creates unnecessary orchestration
+          nesting. Goose architecture natively supports this pattern.
+        scope: subagents
+        sources:
+          - "Previous skip: F-002 in R47 patches.yaml confirmed as already-split"
+          - "Goose docs: orchestrator + sub_recipes + summon = standard pattern"
+
+    # ================================================================
+    # F-007 (NN1) — sub_mas-general-improver.yaml: Restricted (R04), Orchestrator
+    # ================================================================
+    - finding_id: F-007
+      type: NN1
+      file: recipe/sub/sub_mas-general-improver.yaml
+      rank_score: 68
+      priority: 12
+      why_skipped: >
+        FALSE POSITIVE — General-improver is RESTRICTED by R04 ("NEVER edit
+        general-improver.yaml — no recursion"). It is also already an orchestrator
+        with 10 sub-agents (web-researcher, goose-expert, session-reader, finder,
+        rank, designer, validator, yaml-editor, self-auditor, generic-init). The
+        5 detected roles (design, rank, find, read, edit) map directly to its
+        sub-agents' responsibilities: im-finder (find), im-rank (rank), im-designer
+        (design), im-validator + yaml-editor + self-auditor (read/edit). The
+        orchestrator's only job is to route improvement stages. R04 blocks ANY
+        modification to this file.
+      goose_verdict:
+        verdict: RESTRICTED
+        confidence: HIGH
+        explanation: >
+          R04 explicitly prohibits editing general-improver.yaml (anti-recursion).
+          Additionally, the agent is already an orchestrator with 10 sub-agents
+          covering the full improvement pipeline. The detected roles are the
+          ORCHESTRATION TARGETS, not the agent's own roles. No action possible
+          due to R04 restriction.
+        scope: subagents
+        caveats:
+          - "R04: NEVER edit general-improver.yaml — no recursion"
+          - "Already orchestrates 10 sub-agents in improvement pipeline"
+        sources:
+          - "R04 restriction: hard rule in constitution"
+          - "sub_recipes: 10 sub-agents covering all improvement stages"
+
+    # ================================================================
+    # F-010 (NN1) — sub_mas-team-packager.yaml: Single-Purpose Agent
+    # ================================================================
+    - finding_id: F-010
+      type: NN1
+      file: recipe/sub/sub_mas-team-packager.yaml
+      rank_score: 68
+      priority: 13
+      why_skipped: >
+        FALSE POSITIVE — Team-packager is a single-purpose agent with 2 tasks:
+        PACKAGE_TEAM (bundle team into standalone package) and VALIDATE_PACKAGE
+        (verify package completeness). The 5 detected roles (validate, generate,
+        report, read, build) come from the 8-step packaging procedure (validate
+        inputs → create structure → generate root recipe → copy subs → generate
+        SOT → generate knowledge → generate install scripts → generate README).
+        These are steps in a PROCEDURE, not separate roles. The agent's single
+        purpose is "package teams for standalone distribution." File is 68 lines
+        with instructions referencing external instructions file.
+      goose_verdict:
+        verdict: CONFORM
+        confidence: HIGH
+        explanation: >
+          Single-purpose agent: package teams for standalone distribution. The
+          detected verbs are procedure steps, not role boundaries. Goose supports
+          agents with multi-step procedures as long as they serve one purpose.
+          Creating sub-agents for individual packaging steps (validator, generator,
+          installer-writer) would add 4+ YAML files for a simple procedural flow.
+        scope: subagents
+        sources:
+          - "Single purpose: 'package teams for standalone distribution'"
+          - "Instructions: 8-step procedure with clear sequential flow"
+
+    # ================================================================
+    # F-012 (NN1) — sub_mas-recipe-designer.yaml: Already Split (architecture_split)
+    # ================================================================
+    - finding_id: F-012
+      type: NN1
+      file: recipe/sub/sub_mas-recipe-designer.yaml
+      rank_score: 68
+      priority: 14
+      why_skipped: >
+        FALSE POSITIVE — Recipe-designer already has `architecture_split: orchestrator
+        + 3 sub-agents: sub_mas-recipe-designer-scoper, sub_mas-recipe-designer-generator,
+        sub_mas-recipe-designer-registrar`. Core instructions are outsourced to
+        external `recipe/instructions/sub_mas-recipe-designer.md` (132 lines).
+        The recipe is a 65-line thin wrapper with external instructions reference.
+        The 5 detected roles (validate, design, read, write, edit) are distributed
+        across the 3 sub-agents. Previous im-designer rounds confirmed this as
+        already-split. PRECONDITION 1 FAILS.
+      goose_verdict:
+        verdict: CONFORM
+        confidence: HIGH
+        explanation: >
+          Already split per architecture_split field + external instructions file.
+          Same skip as previous im-designer rounds (R47-R52). Goose supports
+          thin wrapper + external instructions pattern for multi-sub-agent design.
+        scope: subagents
+        sources:
+          - "architecture_split field: 'orchestrator + 3 sub-agents'"
+          - "External instructions: recipe/instructions/sub_mas-recipe-designer.md"
+
+    # ================================================================
+    # F-013 (NN1) — sub_mas-test-fix-failures-director.yaml: Already Orchestrator (5 subs)
+    # ================================================================
+    - finding_id: F-013
+      type: NN1
+      file: recipe/sub/sub_mas-test-fix-failures-director.yaml
+      rank_score: 68
+      priority: 15
+      why_skipped: >
+        FALSE POSITIVE — Test-fix-failures-director is already an orchestrator with
+        5 specialized sub-agents (finder, ranker, designer, validator-director, applier)
+        covering the full fix pipeline. The 5 detected roles (report, design, rank,
+        find, test) map directly: finder→find, ranker→rank, designer→design,
+        applier→test, validator→report. The agent's sole responsibility is
+        orchestration ("⛔ ONLY orchestration — no direct fixes"). File is 62 lines.
+        PRECONDITION 1 FAILS.
+      goose_verdict:
+        verdict: CONFORM
+        confidence: HIGH
+        explanation: >
+          Already implements orchestrator pattern with 5 sub-agents covering the
+          fix pipeline end-to-end. The detected roles are the orchestrator's
+          DELEGATION TARGETS, not the agent's own multi-role behavior. Force-splitting
+          would create nested orchestration for a 5-step linear pipeline.
+        scope: subagents
+        sources:
+          - "sub_recipes: 5 sub-agents (finder → ranker → designer → validator → applier)"
+          - "Instructions: explicit 'ONLY orchestration — no direct fixes'"
