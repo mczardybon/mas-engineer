@@ -65,6 +65,38 @@ else
     echo "   💡 Set one before running recipes: export DEEPSEEK_API_KEY=sk-..."
 fi
 
+# ─── 2.7. Configure git hooks (R110-32, persistent in repo) ───
+echo "🪝 Step 2.7/7: Configure git hooks (R10/R88 enforcement)..."
+# Issue: core.hooksPath is normally a LOCAL config (not committed) so fresh
+# clones have NO hooks active. This step sets it relative to the repo root
+# so secret-leak defense (pre-commit) and recipe validation (pre-push) work
+# out of the box.
+# Find the git repo root: dev_install.sh lives at <root>/mas-engineer/tools/
+# so MAS_WORKSPACE/.. = repo-root. If we're not in a git repo, skip silently.
+GIT_REPO_ROOT="$(cd "$MAS_WORKSPACE/.." 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null || echo "")"
+if [ -n "$GIT_REPO_ROOT" ] && [ -d "$GIT_REPO_ROOT/mas-engineer/.githooks" ]; then
+    HOOKS_REL="mas-engineer/.githooks"
+    # Verify the hooks are present
+    if [ -x "$GIT_REPO_ROOT/$HOOKS_REL/pre-commit" ] && [ -x "$GIT_REPO_ROOT/$HOOKS_REL/pre-push" ]; then
+        CURRENT_HOOKS_PATH="$(git -C "$GIT_REPO_ROOT" config --get core.hooksPath 2>/dev/null || echo "")"
+        if [ "$CURRENT_HOOKS_PATH" = "$HOOKS_REL" ]; then
+            echo "   ✅ Hooks already active: $HOOKS_REL (R10/R88 enforced)"
+        else
+            git -C "$GIT_REPO_ROOT" config core.hooksPath "$HOOKS_REL"
+            echo "   ✅ Hooks configured: $HOOKS_REL (was: '${CURRENT_HOOKS_PATH:-<unset>}')"
+            echo "   🛡️  pre-commit: secret-leak defense (R88)"
+            echo "   🛡️  pre-push: recipe-YAML validation (R108-8)"
+        fi
+    else
+        echo "   ⚠️  Hooks files not executable in $HOOKS_REL — fixing..."
+        chmod +x "$GIT_REPO_ROOT/$HOOKS_REL/pre-commit" "$GIT_REPO_ROOT/$HOOKS_REL/pre-push" 2>/dev/null && \
+            echo "   ✅ Hooks chmod +x'd" || echo "   ⚠️  chmod failed (manual: chmod +x $HOOKS_REL/{pre-commit,pre-push})"
+    fi
+else
+    echo "   ⚠️  Not a git repo or hooks dir missing — skipping (R10/R88 NOT auto-enforced)"
+    echo "   💡 To activate later: git config core.hooksPath mas-engineer/.githooks"
+fi
+
 # ─── 3. Start dashboard MCP server (stdio-based) ───
 echo "🖥️  Step 3/7: Start dashboard MCP server (stdio)..."
 DASHBOARD_PID_FILE="$MAS_WORKSPACE/.mas/dashboard.pid"

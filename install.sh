@@ -147,6 +147,51 @@ validate_all() {
     return 0
 }
 
+# ─── HOOKS-CONFIG (R110-32, optional for git clones) ──────────
+configure_git_hooks() {
+    # Only if this install.sh is inside a git repo (i.e. user cloned via git, not
+    # extracted from a zip). If yes, set core.hooksPath so R10/R88 are auto-enforced
+    # on every commit. R110-32 lesson: without this, fresh git-clones have NO
+    # hooks active (R10 secret-leak defense + R88 recipe-YAML validation both
+    # silently disabled).
+    local git_root
+    git_root="$(cd "$INSTALL_DIR" 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null || echo "")"
+    if [ -z "$git_root" ]; then
+        if [ "$DRY_RUN" = true ]; then dry "Not a git repo — hooks-config skipped"; fi
+        return 0
+    fi
+    # Detect hooks dir: prefer mas-engineer/.githooks, else .githooks
+    local hooks_rel=""
+    if [ -d "$git_root/mas-engineer/.githooks" ]; then
+        hooks_rel="mas-engineer/.githooks"
+    elif [ -d "$git_root/.githooks" ]; then
+        hooks_rel=".githooks"
+    else
+        if [ "$DRY_RUN" = true ]; then dry "No .githooks/ found — R10/R88 not auto-enforced"; fi
+        return 0
+    fi
+    if [ "$DRY_RUN" = true ]; then
+        dry "git config core.hooksPath $hooks_rel (in $git_root)"
+        return 0
+    fi
+    local current
+    current="$(git -C "$git_root" config --get core.hooksPath 2>/dev/null || echo "")"
+    if [ "$current" = "$hooks_rel" ]; then
+        ok "Git hooks already active: $hooks_rel"
+    else
+        git -C "$git_root" config core.hooksPath "$hooks_rel"
+        ok "Git hooks configured: $hooks_rel (was: '${current:-<unset>}')"
+    fi
+    # Make sure pre-commit + pre-push are executable
+    if [ -x "$git_root/$hooks_rel/pre-commit" ] && [ -x "$git_root/$hooks_rel/pre-push" ]; then
+        : # OK
+    else
+        chmod +x "$git_root/$hooks_rel/pre-commit" "$git_root/$hooks_rel/pre-push" 2>/dev/null \
+            && ok "Hook executables fixed (chmod +x)" \
+            || warn "Could not chmod hooks (manual: chmod +x $hooks_rel/{pre-commit,pre-push})"
+    fi
+}
+
 # ─── INSTALL: MAS (Distribution → ~/.config/goose/) ──────────
 install_mas() {
     echo ""
@@ -200,9 +245,9 @@ install_mas() {
     
     # SOT workflows.yaml
     [ -f "$SRC_MAS_STATE/workflows.yaml" ] && copy_file "$SRC_MAS_STATE/workflows.yaml" "$DST_MAS_STATE/workflows.yaml" "📜 SOT:     "
-    
+    # 4. Git hooks (if this is a git clone, R110-32: auto-configure R10/R88)
+    configure_git_hooks
 
-    
     echo ""
     
     # 4. Set .mas-mode
