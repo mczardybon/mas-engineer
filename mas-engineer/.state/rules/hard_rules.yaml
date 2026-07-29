@@ -84,7 +84,16 @@ rules:
   hardness: 5
   id: R10
   name: CORONASHIELD
-  prompt_text: CORONASHIELD — Every YAML must be validated via sub_mas-recovery-immune CHECK_YAML before saving
+  prompt_text: 'CORONASHIELD (R110-30) — Every YAML must be validated before saving.
+    Applies to ALL yaml save paths (not just mas-workflow). Original enforcement
+    was only via yaml-editor R18 + dev_editor.py, leaving standalone recipe-pack
+    testscripts unprotected → BUG-1 (sub_recipe path resolution failure) went
+    undetected. R110-30 EXTENSION: R10 now triggers on any yaml write/edit, recognizes
+    dev_yaml_immune.py and sub_mas-yaml-immune as valid immune-checks, and degrades
+    gracefully (WARNING not BLOCKED) when tools/dev_yaml_immune.py is missing so
+    mas remains runnable on fresh clones. Use: `python3 tools/dev_yaml_immune.py
+    --strict <file>` (syntax + roundtrip + path + required-fields) or `delegate
+    sub_mas-yaml-immune` (sub-agent version).'
 - block: true
   check: python3 tools/dev_rule_checker.py --check R55 --action {aktion}
   hardness: 5

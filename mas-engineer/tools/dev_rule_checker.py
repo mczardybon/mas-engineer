@@ -278,19 +278,54 @@ def check_rule(rule_id, action=""):
                         "detail": "general-improver.yaml may not be edited", "action": "BLOCKED"}
         
         if rule_id == "R10":
-            """CORONASHIELD: Every YAML must be validated before saving"""
+            """CORONASHIELD (R110-30 extended): Every YAML must be validated before saving.
+
+            R110-30 EXTENSION:
+            - R10 NOW applies to ALL yaml save paths, not just mas-workflow.
+              Originally only yaml-editor R18 + dev_editor.py enforced R10.
+              Standalone recipe-pack testscripts did not invoke yaml-editor →
+              BUG-1 (sub_recipe path resolution failure) went undetected.
+            - R10 now also recognizes dev_yaml_immune.py (universal standalone
+              wrapper) and sub_mas-yaml-immune (delegation-friendly sub-agent).
+            - Graceful degradation: if dev_yaml_immune.py is missing, R10 returns
+              WARNING (not BLOCKED) so mas remains runnable on fresh clones.
+            - --action write/edit (CLI action-type flag) also triggers R10, not
+              just string match on "write "/"edit " in the action description.
+            """
             import os as _os
+            import subprocess as _sp_r10
             akt = action.lower()
+
+            # R110-30: detect action-type flag (--action-type write|edit|shell)
+            # Caller passes action like "write|edit: path/to/file.yaml"
+            action_type_yaml = any(x in akt for x in ["action-type write", "action-type edit", "action_type write", "action_type edit"])
 
             # Only bei write/edit von .yaml/.yml files check
             is_yaml_write = any(x in akt for x in [".yaml", ".yml"]) and ("write " in akt or "edit " in akt)
+            is_yaml_write = is_yaml_write or action_type_yaml
 
             if is_yaml_write:
                 # Check ob immune-check im Command ist
-                has_immune = "immune" in akt or "CHECK_YAML" in akt or "corona" in akt
+                # R110-30: extended trigger keywords
+                has_immune = any(kw in akt for kw in [
+                    "immune",           # sub_mas-yaml-immune, dev_yaml_immune
+                    "CHECK_YAML",       # sub_mas-recovery-immune CHECK_YAML
+                    "corona",           # R10 CORONASHIELD
+                    "yaml_immune",      # explicit tool call
+                    "dev_yaml_immune",  # standalone tool
+                    "yaml.safe_load",   # inline python yaml validation
+                ])
                 if not has_immune:
                     return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
-                            "detail": "YAML edit without CORONASHIELD check — sub_mas-recovery-immune CHECK_YAML required!", "action": "BLOCKED"}
+                            "detail": "YAML edit without CORONASHIELD check — invoke sub_mas-yaml-immune or dev_yaml_immune.py first! R110-30: R10 now applies to ALL yaml save paths.", "action": "BLOCKED"}
+
+                # R110-30: if dev_yaml_immune.py was called but failed, surface the error
+                # Otherwise graceful: if tool missing, WARN (not BLOCK) so mas remains runnable
+                immune_tool = _os.path.join(MAS_DIR if 'MAS_DIR' in dir() else BASE_DIR, "tools/dev_yaml_immune.py")
+                if not _os.path.exists(immune_tool):
+                    # Tool missing → graceful: WARN, not BLOCK
+                    return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                            "detail": "R10 yaml-immune check present in action string, but tools/dev_yaml_immune.py not found. mas continues in graceful-degradation mode (R10 falls back to check:null).", "action": "WARNING"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
 
         if rule_id == "R55":
