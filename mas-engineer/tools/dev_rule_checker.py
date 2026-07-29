@@ -77,7 +77,7 @@ def check_confirmation():
     return int(time.time()) - ts < 300
 
 def check_rule(rule_id, action=""):
-    rules = load_rules(REGEL_DATEI)
+    rules = load_rules(REGEL_DATEI) + load_rules(REGEL_4_DATEI) + load_rules(HARTE_REGEL_DATEI)
     # Load auch aus workflows.yaml (R12-R19)
     import os as _wf_os
     if _wf_os.path.exists(WORKFLOWS_DATEI):
@@ -277,6 +277,126 @@ def check_rule(rule_id, action=""):
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": "general-improver.yaml may not be edited", "action": "BLOCKED"}
         
+        if rule_id == "R110-31":
+            """DOMAIN-SCOPED sub-agent registration (R110-31, R110-30 correction)
+            Three domains, coupled to .mas-mode work_on (R14):
+              work_on=mas      → DOMAIN 1: mas-self sub-agents, MUST be in
+                                 workflows.yaml.configs.mas-self.sub_agents
+              work_on=framework → DOMAIN 2: mas-generated team (orchestrator + sub-agents
+                                  in same dir), NO mas-self registration required.
+                                  Orchestrator's instructions.md is the registry.
+              work_on=generic  → DOMAIN 3: project in framework/generic mode.
+                                  mas-engineer workflows.yaml NOT involved.
+
+            Detection priority:
+              1. Read .mas-mode file (authoritative — set by R14 work_on)
+              2. If .mas-mode missing, fall back to action string heuristics
+            """
+            akt = action.lower()
+            if not any(x in akt for x in ["write", "edit", "create", "add"]):
+                return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": "No write/edit action — R110-31 not applicable",
+                        "action": "OK"}
+
+            # PRIORITY 1: read .mas-mode (authoritative per R14)
+            work_on = None
+            mas_mode_paths = [
+                os.path.join(BASE_DIR, "mas-engineer/.mas-mode"),
+                os.path.join(BASE_DIR, ".mas-mode"),
+                os.path.expanduser("~/.config/goose/.mas-mode"),
+            ]
+            for p in mas_mode_paths:
+                if os.path.exists(p):
+                    try:
+                        work_on = open(p).read().strip().lower()
+                    except Exception:
+                        pass
+                    break
+
+            domain = None
+            domain_source = None
+            if work_on == "mas":
+                domain = 1; domain_source = f".mas-mode={work_on}"
+            elif work_on == "framework":
+                domain = 2; domain_source = f".mas-mode={work_on}"
+            elif work_on == "generic":
+                domain = 3; domain_source = f".mas-mode={work_on}"
+
+            # PRIORITY 2: action string heuristics (only if .mas-mode missing/unknown)
+            if domain is None:
+                is_domain_2 = any(x in akt for x in ["demo-team", "demo_team", "generated team",
+                                                      "on-demand team", "user-generated team",
+                                                      "orchestrator"])
+                is_domain_3 = any(x in akt for x in ["project workflows.yaml", "framework mode",
+                                                      "generic mode", "project sub-agent",
+                                                      "project workspace"])
+                is_domain_1 = ("sub_mas-" in akt or "recipe/sub/" in akt or
+                               "mas-self" in akt or "mas_self" in akt)
+                if is_domain_2: domain = 2
+                elif is_domain_3: domain = 3
+                elif is_domain_1: domain = 1
+                domain_source = "string-heuristic (no .mas-mode found)"
+
+            # If still unknown → OK with note
+            if domain is None:
+                return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": "Domain not determined (no .mas-mode, no clear signal). "
+                                  "Use LLM judgment. See R110-31 prompt_text for the "
+                                  "3-domain table keyed to .mas-mode (R14).",
+                        "action": "OK"}
+
+            # DOMAIN 2 / 3: NO mas-self registration required
+            if domain == 2:
+                return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"DOMAIN 2 ({domain_source}) — mas-generated team. "
+                                  f"NO mas-self registration required. Orchestrator's "
+                                  f"instructions.md is the registry.",
+                        "action": "OK"}
+            if domain == 3:
+                return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"DOMAIN 3 ({domain_source}) — project in framework/generic "
+                                  f"mode. mas-engineer workflows.yaml NOT involved. "
+                                  f"Project owns its own workflow.",
+                        "action": "OK"}
+
+            # DOMAIN 1: check registration
+            wf_path = os.path.join(MAS_DIR, ".state/workflows.yaml")
+            if not os.path.exists(wf_path):
+                return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"DOMAIN 1 ({domain_source}) but workflows.yaml missing — "
+                                  f"cannot verify registration (fresh clone?)",
+                        "action": "OK"}
+
+            with open(wf_path) as f:
+                wf = yaml.safe_load(f)
+            sub_agents = wf.get("configs", {}).get("mas-self", {}).get("sub_agents", {})
+            all_registered = set()
+            for cat, agents in sub_agents.items():
+                if isinstance(agents, list):
+                    all_registered.update(agents)
+
+            import re
+            mentioned_agents = re.findall(r"sub_mas-[a-z0-9-]+", akt)
+            if not mentioned_agents:
+                return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"DOMAIN 1 ({domain_source}) but no sub_mas-* name in action "
+                                  f"— cannot verify. Use R10 for yaml validation.",
+                        "action": "OK"}
+
+            unregistered = [a for a in mentioned_agents if a not in all_registered]
+            if unregistered:
+                return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"DOMAIN 1 ({domain_source}) sub-agents NOT registered: "
+                                  f"{unregistered}. R18 cannot dispatch unregistered agents "
+                                  f"(R110-29 lesson). Either add to workflows.yaml under a "
+                                  f"fitting category, OR check .mas-mode — if work_on != "
+                                  f"'mas' (it's currently {work_on}), set it correctly.",
+                        "action": "BLOCKED"}
+            return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                    "detail": f"DOMAIN 1 ({domain_source}) all sub-agents registered: "
+                              f"{mentioned_agents}",
+                    "action": "OK"}
+
         if rule_id == "R10":
             """CORONASHIELD (R110-30 extended): Every YAML must be validated before saving.
 

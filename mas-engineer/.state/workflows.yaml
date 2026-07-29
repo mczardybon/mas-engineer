@@ -26,6 +26,20 @@ configs:
         - mas
         - framework
         - generic
+        _r11031_note: |
+          The mode controls which DOMAIN a sub-agent belongs to (see R110-31):
+            work_on=mas       → DOMAIN 1: mas-self sub-agents. All sub_mas-*.yaml in
+                                  recipe/sub/ MUST be registered in configs.mas-self.
+                                  sub_agents (below). Enforced by R18 + R110-31.
+            work_on=framework → DOMAIN 2: mas-generated team (orchestrator + sub-agents).
+                                  NO mas-self registration. Orchestrator's instructions.md
+                                  is the registry. Example: team-packager-* in this file's
+                                  `agents:` section.
+            work_on=generic   → DOMAIN 3: project in framework mode. mas-engineer
+                                  workflows.yaml is NOT involved. Project owns its own.
+          Detection priority in R110-31: .mas-mode (this value) > action string heuristic.
+        _r14_rule: 'work_on is a HARD RULE (R14). Set it BEFORE writing/editing any
+          sub-agent recipe. Default for mas-engineer development = "mas".'
     restrictions:
       r01_confirmation:
         level: extreme
@@ -293,6 +307,12 @@ configs:
           - "recovery --resurrect \u2192 wf_recovery_defib_resurrect"
       _mode_note: Recovery-agents are MAS-internal. In Generic/framework-Mode via delegate() aus MAS-Installation available. Target-Pathe muitsen auf Project-Workspace show.
     sub_agents:
+      _r11031_domain: |
+        DOMAIN 1 marker (R110-31). This is the mas-self sub-agent registry.
+        Every sub_mas-*.yaml file in recipe/sub/ MUST be listed here under
+        a fitting category (verwaltung, recovery, monitoring, etc.) when
+        work_on=mas. R18 (DELEGATION) reads this to dispatch agents.
+        For DOMAIN 2 (work_on=framework) see the `agents:` section below.
       analyse:
       - sub_mas-framework-knowledge
       - sub_mas-framework-scanner
@@ -487,8 +507,17 @@ workflow_defaults:
       - request_id
       - status
 agents:
-  _schema: "v2.0.0 \u2014 task_workflows mappt agent-task \u2192 workflow-name"
+  _schema: "v2.0.0 — task_workflows mappt agent-task → workflow-name"
   _note: agents-Workflow-Mapping. Changeen via intention-parser.
+  _r11031_domain: |
+    DOMAIN 2 marker (R110-31). The agents in this section are NOT mas-self
+    sub-agents (those are under configs.mas-self.sub_agents, above). They
+    are mas-orchestrated task workflows and mas-generated team orchestrators
+    (e.g. team-packager-*, test-reporter-*). Per R110-31 they require NO
+    registration in configs.mas-self.sub_agents — they are MAS OUTPUT
+    (domain 2 = work_on=framework), not MAS INFRASTRUCTURE.
+    If you need to add a new agent here, switch .mas-mode=framework first
+    (echo "framework" > .mas-mode) to avoid R110-31 false-positives.
   framework-knowledge:
     tier: balanced
     token_budget: 30000
