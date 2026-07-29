@@ -252,3 +252,57 @@ team-structures** that the 30 agents can form:
 
 This is the **team-composition test** — proving that the 30-agent team can
 play together in their declared typologies.
+
+---
+
+## R10 CORONASHIELD retro-fit (added post-hoc)
+
+After R110-28 completed, a question was raised: "Why didn't R10 verify the
+wrapper-recipes?" R10 (from sub_mas-yaml-editor.md) states:
+
+> ⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.
+
+Investigation revealed that **R10 is a workflow protocol, not an auto-enforcer**.
+mas-engineer itself does not run a validation step at `goose run` time. R10 is
+enforced only when:
+1. The yaml-editor agent is invoked (R18 delegation)
+2. The mas-engineer recipe-workflow (dev_editor.py) is used
+3. The dev_changes.py records the change
+
+R110-28 ran **outside** this workflow (a standalone test script), so R10 was
+never invoked. To make the script R10-konform, we added:
+
+### scripts/r11028-r10-validate.py (new)
+
+A standalone validator that enforces R10 on a directory of recipe-wrappers:
+1. `yaml.safe_load` parse check (BEFORE)
+2. `safe_dump → safe_load` round-trip check (AFTER)
+3. Sub-recipe path resolution check (the BUG-1 class)
+4. Required-fields check (name, version, prompt, sub_recipes)
+5. `--strict` mode adds title/description check
+
+### Integration into the team-composition script
+
+`scripts/r11028-team-composition-live-pty.sh` now has a **Step 2: R10
+CORONASHIELD pre-flight** that runs the validator BEFORE the `goose run`
+loop. If any wrapper fails R10, the script exits 1 without running goose
+(wasting no API calls).
+
+### Validation results
+
+- **Existing 6 wrappers (from R110-28):** all R10-conform (6/6 pass)
+- **BUG-1 simulation** (relative path `./sub_mas-X.yaml` in wrong dir):
+  R10 validator **catches it before goose run** (would have prevented
+  R110-28 iteration 1's 0/6 PASS / 0.6s walltime waste)
+- **Strict mode:** also requires title/description (recommended for
+  production wrappers)
+
+### Lesson: R10 enforcement is the caller's responsibility
+
+mas-engineer does **not** automatically validate recipe-wrappers. Any
+script that writes recipes to disk and feeds them to `goose run` MUST
+include an R10 round-trip check, or it risks the BUG-1 class of
+failures (silent YAML-serialisation loss, bad sub_recipe paths, etc.).
+
+This is now codified in the r11028-r10-validate.py tool, which can be
+reused for any future recipe-pack tests.
