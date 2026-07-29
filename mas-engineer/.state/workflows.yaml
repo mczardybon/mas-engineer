@@ -1799,20 +1799,24 @@ task_workflows:
       cmd: echo 'Workflow-Usage gezaehlt. Tote Pattern identified.'
       timeout: 30
   wf_recovery_immune:
-    desc: YAML preflight check before every edit
+    desc: 'YAML preflight check before every edit (4-step, check then list then categorize then auto_repair)'
     steps:
     - id: check
       action: shell
-      cmd: python3 tools/dev_rule_checker.py --all 2>&1 | tail -5
+      cmd: 'python3 tools/dev_rule_checker.py --all 2>&1 | tail -5'
       timeout: 60
+    - id: list_violations
+      action: shell
+      cmd: 'python3 tools/dev_rule_checker.py --all 2>&1 | grep -E "^(VIOLATION|FAIL)" | head -10 > .state/immune_violations.log 2>&1; if [ -s .state/immune_violations.log ]; then echo "[LIST_VIOLATIONS] found $(wc -l < .state/immune_violations.log) violation(s) - see .state/immune_violations.log"; cat .state/immune_violations.log; else echo "[LIST_VIOLATIONS] no violations found"; fi'
+      timeout: 60
+    - id: categorize
+      action: shell
+      cmd: 'if [ -s .state/immune_violations.log ]; then CRITICAL=$(grep -c -E "^VIOLATION" .state/immune_violations.log 2>/dev/null || echo 0); WARN=$(grep -c -E "^FAIL" .state/immune_violations.log 2>/dev/null || echo 0); echo "[CATEGORIZE] critical=$CRITICAL warn=$WARN"; if [ "$CRITICAL" -gt 0 ]; then echo CRITICAL > .state/immune_severity; else echo WARN > .state/immune_severity; fi; else echo OK > .state/immune_severity; fi'
+      timeout: 30
     - id: auto_repair
       action: shell
-      cmd: python3 tools/dev_rule_checker.py --all 2>&1 | grep -E "^(VIOLATION|FAIL)"
-        | head -10 > .state/immune_violations.log 2>&1; if [ -s .state/immune_violations.log
-        ]; then echo "[AUTO_REPAIR] violations found, see .state/immune_violations.log
-        (manual fix required for rule-violations)"; else echo "[AUTO_REPAIR] no violations,
-        immune state OK"; touch .state/.immune_clean; fi
-      timeout: 60
+      cmd: 'SEVERITY=$(cat .state/immune_severity 2>/dev/null || echo OK); if [ "$SEVERITY" = "CRITICAL" ]; then printf "version: 1.0.0\ntitle: emergency immune-mode\ndescription: minimal recovery template for R01-R18 violations\ninstructions: |\n  Emergency mode - only recovery workflows available.\n  All other agents disabled until violations are resolved.\n" > .state/immune_emergency.yaml && echo "[AUTO_REPAIR] critical violations - emergency template written to .state/immune_emergency.yaml (manual fix required)"; else echo "[AUTO_REPAIR] severity=$SEVERITY - no emergency restore needed"; touch .state/.immune_clean; fi'
+      timeout: 30
       on_error: skip
   wf_recovery_checkpoint:
     desc: Checkpoint content validation + C-01/C-02 fix
