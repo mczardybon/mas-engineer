@@ -71,6 +71,22 @@ AGENTS=(
   "refactor-5-decompose:FLAT-ADVISOR"
 )
 
+# --- Step 2: R10 CORONASHIELD pre-flight validation ---
+# Per R10 (from sub_mas-yaml-editor.md), validate ALL wrapper-recipes BEFORE
+# running them: yaml.safe_load + safe_dump round-trip + sub_recipe path
+# resolution. This catches the BUG-1 class of errors (sub_recipe path not
+# resolvable) immediately, without waiting for goose run to fail.
+echo "=== STEP 2: R10 CORONASHIELD pre-flight validation ==="
+if [ -f "scripts/r11028-r10-validate.py" ]; then
+  if ! python3 scripts/r11028-r10-validate.py "$WRAPPER_DIR" --strict; then
+    echo "FATAL: R10 validation failed. Fix wrapper-recipes first." >&2
+    exit 1
+  fi
+else
+  echo "  WARN: scripts/r11028-r10-validate.py not found, skipping R10 pre-flight"
+fi
+echo
+
 # --- Step 3: run all 6 leads sequentially in TRUE PTY mode ---
 echo "=== STEP 3: running 6 team-leads (sequential, TRUE PTY, 180s timeout each) ==="
 echo
