@@ -39,7 +39,10 @@ if [ "$HTTP_CODE" != "200" ]; then
   exit 1
 fi
 
-# OPENAI_API_KEY shim (gotcha #2, #18)
+# OPENAI_API_KEY shim (gotcha #2, #18) — R110-45.1 BUG-2 fix:
+# Never overwrite with literal ***. If .env didn't set it, derive from DEEPSEEK_API_KEY.
+# Display-redaction trap (gotcha #20): terminal shows "***" for redacted values,
+# but the actual file content uses $DEEPSEEK_API_KEY (verified via od -c).
 if [ -z "$OPENAI_API_KEY" ] || [ "$OPENAI_API_KEY" = "***" ]; then
   export OPENAI_API_KEY="$DEEPSEEK_API_KEY"
 fi
@@ -106,7 +109,8 @@ run_recipe() {
 
   # 5-min timeout per recipe (gotcha #7 — some recipes take 3-5min)
   # Use script -qec with bash -c to ensure bash features work (gotcha #19)
-  bash -c "source '$MAS_ROOT/.env' && export OPENAI_API_KEY='$DEEPSEEK_API_KEY' && export OPENAI_HOST='$OPENAI_HOST' && export GOOSE_MODEL='$GOOSE_MODEL' && export GOOSE_PROVIDER='$GOOSE_PROVIDER' && export GOOSE_TELEMETRY_ENABLED='$GOOSE_TELEMETRY_ENABLED' && timeout 300 goose run --recipe '$recipe_path' --no-session" \
+  # R110-45 BUG-2 fix: do NOT export OPENAI_API_KEY=***; inherit from env.
+  bash -c "source '$MAS_ROOT/.env' && export OPENAI_API_KEY='$OPENAI_API_KEY' && export OPENAI_HOST='$OPENAI_HOST' && export GOOSE_MODEL='$GOOSE_MODEL' && export GOOSE_PROVIDER='$GOOSE_PROVIDER' && export GOOSE_TELEMETRY_ENABLED='$GOOSE_TELEMETRY_ENABLED' && timeout 300 goose run --recipe '$recipe_path' --no-session" \
     > "$log" 2>&1 || true   # ignore non-zero; check log content instead
 
   local end_time
@@ -114,8 +118,20 @@ run_recipe() {
   local duration=$((end_time - start_time))
 
   # pass/fail detection (gotcha #17 — check log content, not exit code)
+  # R110-45.6: classifier refined. "401" alone is NOT an auth error.
+  # LLMs quote historical git hashes (b9401a3), diff stats (+401/-14),
+  # file sizes (2094014), issue refs (R110-4c), and audit tables
+  # documenting previous test results. The detector was classifying
+  # 10/130 recipes as FAIL_AUTH when they were genuine PASSes that
+  # just mentioned "401" in their output.
+  #
+  # Real HTTP 401 patterns (any one is sufficient):
+  #   - HTTP/1.x 401 / HTTP/2 401 (curl status line)
+  #   - "status_code":401 / "status":401 (JSON API error)
+  #   - "Received 401" / "got 401 Unauthorized" (LLM text about REAL auth error)
+  #   - "Authentication failed:" / "Invalid API key:" (LLM text about REAL auth error)
   local status
-  if grep -qE "(401|Unauthorized|Authentication failed|Invalid API key)" "$log"; then
+  if grep -qE "(HTTP/[0-9.]+ 401|status_code[\"\\x27]?[[:space:]]*:[[:space:]]*401|[\"\\x27]status[\"\\x27][[:space:]]*:[[:space:]]*401|Received 401|got 401 Unauthorized|Authentication failed:|Invalid API key:)" "$log"; then
     status="FAIL_AUTH"
   elif grep -qE "(recipe not found|recipe_not_found|FileNotFoundError.*recipe)" "$log"; then
     status="FAIL_NOTFOUND"

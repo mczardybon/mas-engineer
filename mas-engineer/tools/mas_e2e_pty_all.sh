@@ -15,7 +15,10 @@ RECIPE_LIST="$MAS_ROOT/tools/mas_e2e_pty_test_recipes.txt"
 set -a
 source "$MAS_ROOT/.env"
 set +a
-export OPENAI_API_KEY="$DEEPSEEK_API_KEY"
+# R110-45 BUG-2 fix: never overwrite with literal ***. Derive from DEEPSEEK_API_KEY.
+if [ -z "$OPENAI_API_KEY" ] || [ "$OPENAI_API_KEY" = "***" ]; then
+  export OPENAI_API_KEY="$DEEPSEEK_API_KEY"
+fi
 export OPENAI_HOST="${OPENAI_HOST:-https://api.deepseek.com}"
 export OPENAI_HOST="${OPENAI_HOST%/v1}"   # gotcha #3b
 export GOOSE_MODEL="${GOOSE_MODEL:-deepseek-v4-flash}"
@@ -72,7 +75,10 @@ run_one() {
   dur=$((end - start))
 
   # status detection
-  if grep -qE "(401|Unauthorized|Authentication failed|Invalid API key)" "$log"; then
+  # R110-45.6: classifier refined. See tools/mas_e2e_pty_test.sh for the
+  # full rationale — bare "401" is not an auth error (LLMs quote git
+  # hashes, diff stats, file sizes, R-numbers, audit tables).
+  if grep -qE "(HTTP/[0-9.]+ 401|status_code[\"\\x27]?[[:space:]]*:[[:space:]]*401|[\"\\x27]status[\"\\x27][[:space:]]*:[[:space:]]*401|Received 401|got 401 Unauthorized|Authentication failed:|Invalid API key:)" "$log"; then
     status="FAIL_AUTH"
   elif grep -qE "(recipe not found|recipe_not_found|FileNotFoundError.*recipe)" "$log"; then
     status="FAIL_NOTFOUND"
