@@ -56,18 +56,24 @@ import fcntl
 import termios
 import struct
 from datetime import datetime
+import shutil
+import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Team recipes live at the goose user config (not in this repo)
+# Team recipes live at the goose user config (not in this repo).
+# R110-43: use os.path.expanduser so $HOME is honored (works for any user, not just root).
+_TEAM_RECIPES_BASE = os.path.expanduser("~/.config/goose/recipes")
 TEAM_RECIPES = {
-    "translator": "/root/.config/goose/recipes/translator/translator-team.yaml",
-    "sales":      "/root/.config/goose/recipes/sales/sales-team.yaml",
-    "marketing":  "/root/.config/goose/recipes/marketing/marketing-team.yaml",
+    "translator": os.path.join(_TEAM_RECIPES_BASE, "translator", "translator-team.yaml"),
+    "sales":      os.path.join(_TEAM_RECIPES_BASE, "sales",      "sales-team.yaml"),
+    "marketing":  os.path.join(_TEAM_RECIPES_BASE, "marketing",  "marketing-team.yaml"),
 }
 
-# Where the runner writes generated wrapper recipes (ephemeral, in /tmp)
-WRAPPER_DIR = "/tmp/e2e_teams_recipes"
+# Where the runner writes generated wrapper recipes (ephemeral, in /tmp).
+# R110-43: use $TMPDIR (honored by tempfile) so multi-user systems don't collide.
+# Falls back to /tmp if TMPDIR is unset.
+WRAPPER_DIR = os.environ.get("TMPDIR", tempfile.gettempdir()) + "/e2e_teams_recipes"
 
 
 def log(msg, level="INFO"):
@@ -368,7 +374,9 @@ def run_team_test(team, level, case, env):
     wrapper = write_wrapper(team, level, case)
 
     # 2. Build goose command: --recipe <wrapper> --params <kv>... --no-session
-    cmd = ["/root/.local/bin/goose", "run", "--recipe", wrapper, "--no-session"]
+    # R110-43: use shutil.which to find goose on PATH, not hard-coded /root/.local/bin
+    _goose = shutil.which("goose") or os.path.expanduser("~/.local/bin/goose")
+    cmd = [_goose, "run", "--recipe", wrapper, "--no-session"]
     for k, v in case["params"].items():
         cmd.extend(["--params", f"{k}={v}"])
 
@@ -497,7 +505,9 @@ def main():
         sys.exit(0)
 
     env = {**os.environ}
-    env.setdefault("PATH", "/root/.local/bin:" + env.get("PATH", ""))
+    # R110-43: use ~/.local/bin dynamically (works for any user)
+    _user_bin = os.path.expanduser("~/.local/bin")
+    env.setdefault("PATH", _user_bin + ":" + env.get("PATH", ""))
     # Use DEEPSEEK_API_KEY from .env if present, else fall back to OPENAI_API_KEY.
     # The placeholder "sk-e1a...1b93" was a redacted test value that produced 401s.
     env.setdefault("OPENAI_HOST", "https://api.deepseek.com")

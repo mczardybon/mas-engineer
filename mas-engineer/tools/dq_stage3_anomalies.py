@@ -17,6 +17,8 @@ import math
 import statistics
 from collections import Counter
 from datetime import datetime
+import os
+import tempfile
 
 DATA_PATH = "/workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/sample-input/data.csv"
 
@@ -426,6 +428,8 @@ for a in anomaly_findings:
     print()
 
 # Machine-readable JSON output
-with open("/tmp/anomaly_findings.json", "w") as fout:
+# R110-43: use tempfile.gettempdir() (multi-user safe)
+_anomaly_path = os.path.join(tempfile.gettempdir(), "anomaly_findings.json")
+with open(_anomaly_path, "w") as fout:
     json.dump(anomaly_findings, fout, indent=2)
 print(f"[Machine-readable findings written to /tmp/anomaly_findings.json]")

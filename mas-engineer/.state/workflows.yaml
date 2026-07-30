@@ -426,29 +426,6 @@ configs:
       - sub_mas-json-utility
       design:
       - sub_mas-recipe-designer
-      recherche: []
-      code-review:
-      - sub_mas-code-reviewer-director
-      - sub_mas-code-reviewer-reporter
-      - sub_mas-code-reviewer-synthesizer
-      - sub_mas-code-reviewer-validator
-      - sub_mas-cr-director
-      - sub_mas-cr-orchestrator
-      - sub_mas-cr-report-valid-coordinator
-      - sub_mas-cr-reporter
-      - sub_mas-cr-reporter-formatter
-      - sub_mas-cr-reporter-orchestrator
-      - sub_mas-cr-reporter-recommender
-      - sub_mas-cr-synth-coordinator
-      - sub_mas-cr-synthesizer
-      - sub_mas-cr-synthesizer-merger
-      - sub_mas-cr-synthesizer-orchestrator
-      - sub_mas-cr-synthesizer-prioritizer
-      - sub_mas-cr-validator
-      - sub_mas-cr-validator-crosschecker
-      - sub_mas-cr-validator-orchestrator
-      - sub_mas-cr-validator-scorer
-      - sub_mas-demo-runner
       dev:
       - sub_mas-dev-analyzer
       - sub_mas-dev-builder
@@ -997,30 +974,6 @@ agents:
     name: sub_mas-test-agent
     type: sub
     task: 'v1.0.0 | MAS-intern: Test agent for validation'
-    desc: Automatic generates aus Template-Generator
-    task_workflows: {}
-  smoketest:
-    name: sub_mas-smoketest
-    type: sub
-    task: 'v1.0.0 | MAS-intern: smoke'
-    desc: Automatic generates aus Template-Generator
-    task_workflows: {}
-  smoketest2:
-    name: sub_mas-smoketest2
-    type: sub
-    task: 'v1.0.0 | MAS-intern: foo'
-    desc: Automatic generates aus Template-Generator
-    task_workflows: {}
-  smoketest3:
-    name: sub_mas-smoketest3
-    type: sub
-    task: 'v1.0.0 | MAS-intern: foo'
-    desc: Automatic generates aus Template-Generator
-    task_workflows: {}
-  clone:
-    name: sub_mas-clone
-    type: sub
-    task: 'v1.0.0 | MAS-intern: list'
     desc: Automatic generates aus Template-Generator
     task_workflows: {}
 task_workflows:
@@ -1799,23 +1752,40 @@ task_workflows:
       cmd: echo 'Workflow-Usage gezaehlt. Tote Pattern identified.'
       timeout: 30
   wf_recovery_immune:
-    desc: 'YAML preflight check before every edit (4-step, check then list then categorize then auto_repair)'
+    desc: YAML preflight check before every edit (4-step, check then list then categorize
+      then auto_repair)
     steps:
     - id: check
       action: shell
-      cmd: 'python3 tools/dev_rule_checker.py --all 2>&1 | tail -5'
+      cmd: python3 tools/dev_rule_checker.py --all 2>&1 | tail -5
       timeout: 60
     - id: list_violations
       action: shell
-      cmd: 'python3 tools/dev_rule_checker.py --all 2>&1 | grep -E "^(VIOLATION|FAIL)" | head -10 > .state/immune_violations.log 2>&1; if [ -s .state/immune_violations.log ]; then echo "[LIST_VIOLATIONS] found $(wc -l < .state/immune_violations.log) violation(s) - see .state/immune_violations.log"; cat .state/immune_violations.log; else echo "[LIST_VIOLATIONS] no violations found"; fi'
+      cmd: python3 tools/dev_rule_checker.py --all 2>&1 | grep -E "^(VIOLATION|FAIL)"
+        | head -10 > .state/immune_violations.log 2>&1; if [ -s .state/immune_violations.log
+        ]; then echo "[LIST_VIOLATIONS] found $(wc -l < .state/immune_violations.log)
+        violation(s) - see .state/immune_violations.log"; cat .state/immune_violations.log;
+        else echo "[LIST_VIOLATIONS] no violations found"; fi
       timeout: 60
     - id: categorize
       action: shell
-      cmd: 'if [ -s .state/immune_violations.log ]; then CRITICAL=$(grep -c -E "^VIOLATION" .state/immune_violations.log 2>/dev/null || echo 0); WARN=$(grep -c -E "^FAIL" .state/immune_violations.log 2>/dev/null || echo 0); echo "[CATEGORIZE] critical=$CRITICAL warn=$WARN"; if [ "$CRITICAL" -gt 0 ]; then echo CRITICAL > .state/immune_severity; else echo WARN > .state/immune_severity; fi; else echo OK > .state/immune_severity; fi'
+      cmd: if [ -s .state/immune_violations.log ]; then CRITICAL=$(grep -c -E "^VIOLATION"
+        .state/immune_violations.log 2>/dev/null || echo 0); WARN=$(grep -c -E "^FAIL"
+        .state/immune_violations.log 2>/dev/null || echo 0); echo "[CATEGORIZE] critical=$CRITICAL
+        warn=$WARN"; if [ "$CRITICAL" -gt 0 ]; then echo CRITICAL > .state/immune_severity;
+        else echo WARN > .state/immune_severity; fi; else echo OK > .state/immune_severity;
+        fi
       timeout: 30
     - id: auto_repair
       action: shell
-      cmd: 'SEVERITY=$(cat .state/immune_severity 2>/dev/null || echo OK); if [ "$SEVERITY" = "CRITICAL" ]; then printf "version: 1.0.0\ntitle: emergency immune-mode\ndescription: minimal recovery template for R01-R18 violations\ninstructions: |\n  Emergency mode - only recovery workflows available.\n  All other agents disabled until violations are resolved.\n" > .state/immune_emergency.yaml && echo "[AUTO_REPAIR] critical violations - emergency template written to .state/immune_emergency.yaml (manual fix required)"; else echo "[AUTO_REPAIR] severity=$SEVERITY - no emergency restore needed"; touch .state/.immune_clean; fi'
+      cmd: 'SEVERITY=$(cat .state/immune_severity 2>/dev/null || echo OK); if [ "$SEVERITY"
+        = "CRITICAL" ]; then printf "version: 1.0.0\ntitle: emergency immune-mode\ndescription:
+        minimal recovery template for R01-R18 violations\ninstructions: |\n  Emergency
+        mode - only recovery workflows available.\n  All other agents disabled until
+        violations are resolved.\n" > .state/immune_emergency.yaml && echo "[AUTO_REPAIR]
+        critical violations - emergency template written to .state/immune_emergency.yaml
+        (manual fix required)"; else echo "[AUTO_REPAIR] severity=$SEVERITY - no emergency
+        restore needed"; touch .state/.immune_clean; fi'
       timeout: 30
       on_error: skip
   wf_recovery_checkpoint:

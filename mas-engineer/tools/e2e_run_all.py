@@ -147,7 +147,8 @@ def test_task_workflows_sample(n_per_group=2):
         "wf_admin_generic": ["--task", "status"],
         "wf_controller_cycle": [],
         "wf_dashboard_refresh_run": [],
-        "wf_doc_create": ["--file", "/tmp/test_doc.md", "--content", "test"],
+        # R110-43: use tempfile.gettempdir() (multi-user safe)
+        "wf_doc_create": ["--file", os.path.join(tempfile.gettempdir(), "test_doc.md"), "--content", "test"],
         "wf_generic_init_run": ["--init", "testproject", "--project_name", "testproject", "--components", "all", "--workspace", "."],
         "wf_git_commsg": ["--msgsage", "test commit", "--PROJECT_UPPER", "MAS-ENGINEER"],
         "wf_guardian_check": ["--ok", "1"],
@@ -156,7 +157,8 @@ def test_task_workflows_sample(n_per_group=2):
         "wf_py_compile": ["--file", "tools/e2e_run_all.py"],
         "wf_rd_design": ["--project", "test", "--name", "agent"],
         "wf_recipe_generic": ["--task", "list"],
-        "wf_team_package": ["--root_recipe", "recipe/root_recipe.yaml", "--output_path", "/tmp/mas-pkg", "--team_name", "testteam", "--sub_recipes_csv", "recipe/sub/sub_a.yaml,recipe/sub/sub_b.yaml"],
+        # R110-43: use tempfile.gettempdir() (multi-user safe)
+        "wf_team_package": ["--root_recipe", "recipe/root_recipe.yaml", "--output_path", os.path.join(tempfile.gettempdir(), "mas-pkg"), "--team_name", "testteam", "--sub_recipes_csv", "recipe/sub/sub_a.yaml,recipe/sub/sub_b.yaml"],
         "wf_yaml_clone": ["--task", "list", "--new_name", "clone", "--emoji", "🧪"],
     }
     groups = defaultdict(list)

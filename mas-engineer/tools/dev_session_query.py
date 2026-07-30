@@ -55,7 +55,8 @@ def get_copy_path() -> str:
 
     # Always fresh — timestamped path
     import time
-    copy = f"/tmp/im_session_copy_{int(time.time())}.db"
+    # R110-43: use tempfile.gettempdir() so $TMPDIR is honored (multi-user safe)
+    copy = os.path.join(tempfile.gettempdir(), f"im_session_copy_{int(time.time())}.db")
 
     # Try sqlite3 .clone first (atomic copy under lock)
     try:
@@ -67,7 +68,8 @@ def get_copy_path() -> str:
             # Cleanup old copies
             try:
                 import glob
-                for old in glob.glob("/tmp/im_session_copy_*.db"):
+                # R110-43: use tempfile.gettempdir() (multi-user safe)
+                for old in glob.glob(os.path.join(tempfile.gettempdir(), "im_session_copy_*.db")):
                     if old != copy and os.path.isfile(old):
                         os.unlink(old)
             except Exception:
