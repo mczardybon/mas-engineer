@@ -8,7 +8,13 @@ Takes profile (Stage 1) + validation (Stage 2) as input, detects:
   - Duplicate records
   - Distribution drift
 
-Usage: python3 dq_stage3_anomalies.py
+Usage:
+  python3 dq_stage3_anomalies.py                                  # auto-detect
+  python3 dq_stage3_anomalies.py --data /path/to/data.csv         # explicit
+  DQ_DATA_PATH=/path/to/data.csv python3 dq_stage3_anomalies.py   # env var
+
+R110-43: data.csv path is now resolved via CLI/env/glob (no hard-coded /workspace/...).
+Output (anomaly_findings.json) is written to tempfile.gettempdir().
 """
 
 import csv
@@ -20,7 +26,43 @@ from datetime import datetime
 import os
 import tempfile
 
-DATA_PATH = "/workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/sample-input/data.csv"
+# R110-43: configurable via CLI / env / smart default (no hard-coded /workspace/.../data.csv)
+def _resolve_data_path():
+    """Find sample-input/data.csv via (in order):
+      1. CLI arg --data
+      2. env DQ_DATA_PATH
+      3. e2e-results/*/sample-input/data.csv glob (latest)
+      4. ./sample-input/data.csv relative
+      5. ../sample-input/data.csv relative
+    Returns absolute path or raises FileNotFoundError.
+    """
+    import argparse
+    ap = argparse.ArgumentParser(add_help=False)
+    ap.add_argument("--data", default=None)
+    args, _ = ap.parse_known_args()
+
+    candidates = []
+    if args.data:
+        # R110-43: when --data is explicit, fail fast if not found
+        if not os.path.isfile(args.data):
+            raise FileNotFoundError(f"--data path not found: {args.data}")
+        return os.path.abspath(args.data)
+    if os.environ.get("DQ_DATA_PATH"):
+        candidates.append(os.environ["DQ_DATA_PATH"])
+    import glob
+    candidates.extend(sorted(glob.glob("e2e-results/*/sample-input/data.csv"),
+                              reverse=True))   # latest first
+    candidates.extend(["./sample-input/data.csv", "../sample-input/data.csv"])
+    for c in candidates:
+        if c and os.path.isfile(c):
+            return os.path.abspath(c)
+    raise FileNotFoundError(
+        "data.csv not found. Tried: CLI --data, env DQ_DATA_PATH, "
+        "e2e-results/*/sample-input/data.csv, ./sample-input/data.csv, "
+        "../sample-input/data.csv"
+    )
+
+DATA_PATH = _resolve_data_path()
 
 with open(DATA_PATH) as f:
     reader = csv.DictReader(f)
@@ -432,4 +474,4 @@ for a in anomaly_findings:
 _anomaly_path = os.path.join(tempfile.gettempdir(), "anomaly_findings.json")
 with open(_anomaly_path, "w") as fout:
     json.dump(anomaly_findings, fout, indent=2)
-print(f"[Machine-readable findings written to /tmp/anomaly_findings.json]")
+print(f"[Machine-readable findings written to {_anomaly_path}]")
