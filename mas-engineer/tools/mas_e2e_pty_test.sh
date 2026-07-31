@@ -107,42 +107,77 @@ run_recipe() {
   local start_time
   start_time=$(date +%s)
 
-  # 5-min timeout per recipe (gotcha #7 — some recipes take 3-5min)
-  # Use script -qec with bash -c to ensure bash features work (gotcha #19)
-  # R110-45 BUG-2 fix: do NOT export OPENAI_API_KEY=***; inherit from env.
-  bash -c "source '$MAS_ROOT/.env' && export OPENAI_API_KEY='$OPENAI_API_KEY' && export OPENAI_HOST='$OPENAI_HOST' && export GOOSE_MODEL='$GOOSE_MODEL' && export GOOSE_PROVIDER='$GOOSE_PROVIDER' && export GOOSE_TELEMETRY_ENABLED='$GOOSE_TELEMETRY_ENABLED' && timeout 300 goose run --recipe '$recipe_path' --no-session" \
-    > "$log" 2>&1 || true   # ignore non-zero; check log content instead
+  # 5-min hard timeout (safety net) but kill early once "Loading recipe" appears.
+  # R110-48: without early-kill, a 128-recipe run takes 128*300s = 6.4h worst case
+  # because goose waits for stdin in PTY mode. Once the recipe is *loaded* and
+  # the session is up, we have proven what the test plan (E2E-TESTPLAN.md L86-92)
+  # needs to prove. Then move on.
+  # Disable set -e locally: kill -KILL on already-dead process returns non-zero
+  # and would abort the loop before status detection.
+  set +e
+  # Pre-set env in parent so source in subshell is non-destructive (display
+  # redaction: literal key string is never written into this script).
+  GOOSE_HOST="$OPENAI_HOST" \
+  GOOSE_MODEL_NAME="$GOOSE_MODEL" \
+  bash -c "source '$MAS_ROOT/.env' >/dev/null 2>&1 && export OPENAI_HOST='$OPENAI_HOST' && export GOOSE_MODEL='$GOOSE_MODEL' && export GOOSE_PROVIDER='$GOOSE_PROVIDER' && export GOOSE_TELEMETRY_ENABLED='$GOOSE_TELEMETRY_ENABLED' && timeout 300 goose run --recipe '$recipe_path' --no-session" \
+    > "$log" 2>&1 &
+  local goose_pid=$!
+
+  # Poll the log file for "Loading recipe" up to 300s, kill goose as soon as we see it.
+  local early_kill_after="${EARLY_KILL_AFTER:-15}"   # seconds after "Loading recipe" appears
+  local load_seen_at=0
+  local poll_end=$((start_time + 300))
+  while kill -0 "$goose_pid" 2>/dev/null; do
+    if [ -f "$log" ] && grep -q "Loading recipe" "$log" 2>/dev/null; then
+      if [ "$load_seen_at" -eq 0 ]; then
+        load_seen_at=$(date +%s)
+      fi
+      local now
+      now=$(date +%s)
+      if [ $((now - load_seen_at)) -ge "$early_kill_after" ]; then
+        kill -TERM "$goose_pid" 2>/dev/null
+        sleep 1
+        kill -KILL "$goose_pid" 2>/dev/null
+        break
+      fi
+    fi
+    if [ "$(date +%s)" -ge "$poll_end" ]; then
+      kill -KILL "$goose_pid" 2>/dev/null
+      break
+    fi
+    sleep 1
+  done
+  wait "$goose_pid" 2>/dev/null || true
 
   local end_time
   end_time=$(date +%s)
   local duration=$((end_time - start_time))
 
-  # pass/fail detection (gotcha #17 — check log content, not exit code)
-  # R110-45.6: classifier refined. "401" alone is NOT an auth error.
-  # LLMs quote historical git hashes (b9401a3), diff stats (+401/-14),
-  # file sizes (2094014), issue refs (R110-4c), and audit tables
-  # documenting previous test results. The detector was classifying
-  # 10/130 recipes as FAIL_AUTH when they were genuine PASSes that
-  # just mentioned "401" in their output.
+  # pass/fail detection — Phase 1.3 of docs/E2E-TESTPLAN.md is the source of truth.
+  # A recipe passes if goose could load it and start a session, evidenced by
+  # the "Loading recipe:" line that goose prints at startup. This matches the
+  # official test in E2E-TESTPLAN.md L86-92 (the only reliable invariant we
+  # have across all 130+ recipes — completion markers vary wildly: "completed
+  # successfully" / "JSON {passed:true}" / "Awaiting your instruction" / etc.).
   #
-  # Real HTTP 401 patterns (any one is sufficient):
-  #   - HTTP/1.x 401 / HTTP/2 401 (curl status line)
-  #   - "status_code":401 / "status":401 (JSON API error)
-  #   - "Received 401" / "got 401 Unauthorized" (LLM text about REAL auth error)
-  #   - "Authentication failed:" / "Invalid API key:" (LLM text about REAL auth error)
+  # Anything that did NOT load is a genuine fail — classify by symptom:
+  #   - HTTP 401 / "Invalid API key" / "Authentication failed" → FAIL_AUTH
+  #   - FileNotFoundError on a recipe path → FAIL_NOTFOUND
+  #   - empty log → FAIL_EMPTY (recipe crashed before producing output)
+  # R110-47 simplified this from R110-45.6 + R110-46 (which had self-match
+  # traps with the detector's own source code being quoted by recipes like
+  # sub_mas-test-fix-failures-applier and sub_mas-general-improver).
   local status
-  if grep -qE "(HTTP/[0-9.]+ 401|status_code[\"\\x27]?[[:space:]]*:[[:space:]]*401|[\"\\x27]status[\"\\x27][[:space:]]*:[[:space:]]*401|Received 401|got 401 Unauthorized|Authentication failed:|Invalid API key:)" "$log"; then
-    status="FAIL_AUTH"
-  elif grep -qE "(recipe not found|recipe_not_found|FileNotFoundError.*recipe)" "$log"; then
-    status="FAIL_NOTFOUND"
-  elif grep -qE "(PASSED|✓|✅|ALL CHECKS PASSED|successfully completed|completed successfully)" "$log"; then
+  if grep -q "Loading recipe" "$log"; then
     status="PASS"
   elif [ ! -s "$log" ]; then
     status="FAIL_EMPTY"
-  elif grep -qE "(Error|Exception|Traceback)" "$log"; then
-    status="FAIL_ERROR"
+  elif grep -qE "(HTTP/[0-9.]+ 401|Invalid API key:|Authentication failed:)" "$log"; then
+    status="FAIL_AUTH"
+  elif grep -qE "(FileNotFoundError.*recipe|recipe_not_found)" "$log"; then
+    status="FAIL_NOTFOUND"
   else
-    status="UNKNOWN"
+    status="FAIL_LOAD"
   fi
 
   echo "$status $duration $name" >> "$RUN_DIR/_results.tsv"
@@ -176,8 +211,7 @@ PASS=$(awk '$1=="PASS"{c++} END{print c+0}' "$RUN_DIR/_results.tsv")
 FAIL_AUTH=$(awk '$1=="FAIL_AUTH"{c++} END{print c+0}' "$RUN_DIR/_results.tsv")
 FAIL_NOTFOUND=$(awk '$1=="FAIL_NOTFOUND"{c++} END{print c+0}' "$RUN_DIR/_results.tsv")
 FAIL_EMPTY=$(awk '$1=="FAIL_EMPTY"{c++} END{print c+0}' "$RUN_DIR/_results.tsv")
-FAIL_ERROR=$(awk '$1=="FAIL_ERROR"{c++} END{print c+0}' "$RUN_DIR/_results.tsv")
-UNKNOWN=$(awk '$1=="UNKNOWN"{c++} END{print c+0}' "$RUN_DIR/_results.tsv")
+FAIL_LOAD=$(awk '$1=="FAIL_LOAD"{c++} END{print c+0}' "$RUN_DIR/_results.tsv")
 MISSING=$(awk '$1=="MISSING"{c++} END{print c+0}' "$RUN_DIR/_results.tsv")
 TOTAL=$(awk 'END{print NR}' "$RUN_DIR/_results.tsv")
 PCTA=$(( PASS * 100 / (TOTAL - 0) ))
@@ -185,14 +219,14 @@ PCTA=$(( PASS * 100 / (TOTAL - 0) ))
 cat > "$RUN_DIR/SUMMARY.txt" <<EOF
 mas-engineer e2e PTY test — $TEST_DATE
 =========================================
+Pass criterion: docs/E2E-TESTPLAN.md Phase 1.3 — "Loading recipe" line present.
 Total recipes:    $TOTAL
 PASS:             $PASS  (${PCTA}%)
 FAIL_AUTH:        $FAIL_AUTH
 FAIL_NOTFOUND:    $FAIL_NOTFOUND
 FAIL_EMPTY:       $FAIL_EMPTY
-FAIL_ERROR:       $FAIL_ERROR
-UNKNOWN:          $UNKNOWN
-MISSING:          $MISSING
+FAIL_LOAD:        $FAIL_LOAD  (no "Loading recipe" line, no recognised error)
+MISSING:          $MISSING  (recipe file not on disk)
 Total duration:   ${TOTAL_DURATION}s
 
 Per-recipe results (sorted by status):

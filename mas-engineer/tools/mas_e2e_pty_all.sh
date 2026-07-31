@@ -78,7 +78,9 @@ run_one() {
   # R110-45.6: classifier refined. See tools/mas_e2e_pty_test.sh for the
   # full rationale — bare "401" is not an auth error (LLMs quote git
   # hashes, diff stats, file sizes, R-numbers, audit tables).
-  if grep -qE "(HTTP/[0-9.]+ 401|status_code[\"\\x27]?[[:space:]]*:[[:space:]]*401|[\"\\x27]status[\"\\x27][[:space:]]*:[[:space:]]*401|Received 401|got 401 Unauthorized|Authentication failed:|Invalid API key:)" "$log"; then
+  # R110-46: also exclude self-match (detector quoting itself in recipe logs).
+  local detector_pattern='(HTTP/[0-9.]+ 401|status_code[\"\\x27]?[[:space:]]*:[[:space:]]*401|[\"\\x27]status[\"\\x27][[:space:]]*:[[:space:]]*401|Received 401|got 401 Unauthorized|Authentication failed:|Invalid API key:)'
+  if grep -vE '^\s*[#0-9]*\s*(if )?grep (-qE?|-E|-P)? ' "$log" 2>/dev/null | grep -qE "$detector_pattern"; then
     status="FAIL_AUTH"
   elif grep -qE "(recipe not found|recipe_not_found|FileNotFoundError.*recipe)" "$log"; then
     status="FAIL_NOTFOUND"
