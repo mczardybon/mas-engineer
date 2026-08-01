@@ -41,7 +41,7 @@ Management (5): pre-push-validator, verification-runner,
 dashboard-refresh, signal-generator, session-analyst
 Testing & E2E (24): test-director, test-runner, test-agent,
 test-scanner, test-reporter, unix-test-runner, prompt-engineer,
-4× e2e-auto-repair, 4× e2e-german-fixes, 3× e2e-phoenix-fixes,
+4× e2e-auto-repair, 3× e2e-phoenix-fixes,
 7× test-fix-failures (director, designer, finder, ranker,
 applier, validator, validator-director)
 Special (11): master-constitution, generic-init, web-researcher,

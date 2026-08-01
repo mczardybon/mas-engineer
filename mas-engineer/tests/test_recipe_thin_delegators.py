@@ -3,14 +3,14 @@ test_recipe_thin_delegators.py — sanity tests for thin-delegator master recipe
 
 There are 4 thin-delegator master recipes that follow the same pattern:
 - e2e-verify-auto-repair.yaml → sub_mas-e2e-auto-repair-director
-- e2e-verify-german-fixes.yaml → sub_mas-e2e-german-fixes-director
 - e2e-verify-phoenix-fixes.yaml → sub_mas-e2e-phoenix-fixes-director
 - test-fix-failures.yaml → sub_mas-test-fix-failures-director
 - test-mas-user.yaml → sub_mas-test-director
 
 Each is a thin delegator (sub_recipes=1) that routes to a director.
 
-Per R101 EVIDENCE: thin delegator pattern (5 recipes).
+Per R101 EVIDENCE: thin delegator pattern (4 recipes as of R110-50;
+e2e-verify-german-fixes removed in cleanup of obsoletes).
 
 Run with:
     python3 -m pytest tests/test_recipe_thin_delegators.py -v
@@ -24,7 +24,6 @@ REPO_ROOT = Path(__file__).parent.parent.resolve()
 # Map of (recipe_file, expected_director)
 THIN_DELEGATORS = [
     ("e2e-verify-auto-repair.yaml", "sub_mas-e2e-auto-repair-director"),
-    ("e2e-verify-german-fixes.yaml", "sub_mas-e2e-german-fixes-director"),
     ("e2e-verify-phoenix-fixes.yaml", "sub_mas-e2e-phoenix-fixes-director"),
     ("test-fix-failures.yaml", "sub_mas-test-fix-failures-director"),
     ("test-mas-user.yaml", "sub_mas-test-director"),
@@ -88,12 +87,12 @@ def test_thin_delegators_declare_thin_delegator():
         desc = data.get("description", "")
         if "thin delegator" in desc.lower() or "delegator" in desc.lower():
             matched += 1
-    assert matched >= 4, \
-        f"At least 4 thin delegators should declare 'thin delegator', " \
+    assert matched >= 3, \
+        f"At least 3 thin delegators should declare 'thin delegator', " \
         f"matched {matched}"
 
 
 def test_thin_delegator_count():
-    """Spec: 5 thin-delegator master recipes."""
-    assert len(THIN_DELEGATORS) == 5, \
-        f"Expected 5 thin delegators, got {len(THIN_DELEGATORS)}"
+    """Spec: 4 thin-delegator master recipes (after R110-50 cleanup)."""
+    assert len(THIN_DELEGATORS) == 4, \
+        f"Expected 4 thin delegators, got {len(THIN_DELEGATORS)}"

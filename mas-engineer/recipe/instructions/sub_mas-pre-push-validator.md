@@ -179,7 +179,7 @@ cd $WORKSPACE
 # below to keep this instructions file itself free of them and pass its own check.
 # Whitelist: files that are intentionally German (translation libs, test data for
 # German validators, legacy archival). These are functional, not bugs.
-GERMAN_WHITELIST='^(tools/pre_check_lib/german\.py|tools/e2e_teams\.py|tools/cleanup_repo_v1\.sh|recipe/sub/sub_mas-e2e-german-fixes-validator\.yaml|recipe/sub/legacy/)'
+GERMAN_WHITELIST='^(tools/pre_check_lib/german\.py|tools/e2e_teams\.py|tools/cleanup_repo_v1\.sh|recipe/sub/legacy/)'
 grep -rP $'[\xc3\xa4\xc3\xb6\xc3\xbc\xc3\x9f\xc3\x84\xc3\x96\xc3\x9c]' tools/ recipe/ docs/ 2>/dev/null \
   | grep -vE "$GERMAN_WHITELIST" \
   | grep -vE '^[^:]+:\s*(#|//)' \
