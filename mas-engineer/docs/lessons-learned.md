@@ -271,3 +271,106 @@ Add a new pattern to the `grep -qiE` regex in
 `.github/workflows/ai-pipeline-kill-switch.yml` and to the
 `FORBIDDEN_ACTORS` list in `.github/workflows/block-copilot.yml`.
 
+---
+
+## L14 — Commit body must PROVE every claim with file evidence
+
+**Date:** 2026-08-02
+**Severity:** HIGH (audit trail / honest reporting)
+**Discovered by:** User mczardybon review of R110-56 commit body (72457b8)
+
+### Symptom
+The R110-56 commit body for `chore(recipe): consolidate web-researcher into
+canonical recipe/` contained three unprovable claims that the user caught on
+review:
+
+1. "Adds 3 new tests covering the canonical location" — but `git show 72457b8
+   -- tests/` showed zero new test functions; 4 existing test files were
+   modified (test docstring + path edits + DEMAIN3_TOKENS removal in helpers).
+2. "Rationale: R110-54 moved the demo-team recipe set, but web-researcher is
+   a generic helper" — but R110-55 (029addf) had explicitly left web-researcher
+   in demos/demo-team/ with the comment "R110-55 also moved
+   sub_mas-web-researcher.yaml — R110-54 had left it behind, post-flight
+   audit caught it". The R110-56 rationale was therefore in direct
+   contradiction with R110-55's stated reasoning, and Hermes did not
+   notice.
+3. No mention of DOMAIN3_TOKENS removal in 3 test-helper files
+   (test_recipe_registry_consistency.py, demos/demo-team/tests/_helpers.py,
+   demos/multi-arch-30/tests/_helpers.py). This is a semantic change in
+   the classifier, not a cosmetic test update.
+
+The commit passed pre-push-validator (status: ok, 14/14 checks) and 1234/1234
+pytest. Both green — but the body was dishonest about what changed and why.
+The tests were correct; the body was wrong.
+
+### Root cause
+Three process gaps in the commit-authoring loop:
+
+1. **Plausibility vs. evidence:** the rationale was constructed from
+   "this file should live there because it is generic" instead of from
+   a verifiable load-path or external consumer. Plausibility is not
+   evidence.
+2. **No commit-body vs. diff diff:** the body was drafted before reading
+   the actual file diffs. `git show -- <file>` per modified file would
+   have caught "Adds 3 new tests" being false (no new test functions
+   in the diff).
+3. **No contradiction scan:** a simple
+   `git log --oneline -10 --grep "R110-5"` would have shown R110-55's
+   stated reasoning, contradicting the R110-56 rationale.
+
+### Fix applied
+**Immediate (already in 3aef534, force-pushed 2026-08-02):**
+- Rewrote the R110-56 body from scratch with the actual evidence:
+  the load-path `mas_e2e_pty_test_recipes.txt:130` (which loads
+  `recipe/sub/sub_mas-web-researcher.yaml`), not the generic
+  "canonical location" argument.
+- Added a dedicated "Discrepancy with the previous R110-56 commit
+  body (72457b8)" section that records the change-of-mind in the
+  commit body itself, so the v1 body is visible in the diff of the
+  amend commit.
+- Listed every DOMAIN3_TOKENS removal explicitly.
+- Replaced "Adds 3 new tests" with "NO new tests added; 4 existing
+  tests re-purposed".
+- Archived the v1 body in
+  `e2e-evidence-gen2/r11056-body-v1-72457b8.md` for full history.
+
+**Structural (this lesson):**
+For every commit, before drafting the body, run:
+```bash
+# 1. The "what changed" check
+git show <sha> --stat
+git show <sha> -- <each-modified-file>
+
+# 2. The "new tests" check (must be a numeric delta)
+pytest --collect-only -q | wc -l   # before
+pytest --collect-only -q | wc -l   # after
+# Only claim "Adds N new tests" if delta == N.
+
+# 3. The "load-path evidence" check
+grep -rn "sub_mas-foo" recipe/ scripts/ tests/
+# Rationale must reference what you found, not what you imagine.
+
+# 4. The "contradiction scan" check
+git log --oneline -20 --grep "<previous-round-tag>"
+# New rationale must not contradict recent stated reasoning.
+```
+
+### Rule for future agents
+> Every claim in a commit body must be backed by file evidence in the
+> diff (`git show -- <file>`) or by a load-path grep. If the body
+> says "adds N tests", the diff must contain N new test functions.
+> If the body says "rationale: X", the evidence for X must be
+> grep-able in the tree.
+>
+> If a later review catches an unprovable claim in a body, amend
+> the commit (on a non-shared branch like `cleanup`, force-push is
+> safe) with the corrected body AND a "Discrepancy with previous"
+> section that names the previous SHA explicitly. Do not silently
+> rewrite history.
+
+### Reference
+- Bad example (archived): `e2e-evidence-gen2/r11056-body-v1-72457b8.md`
+- Fixed example: commit `3aef534` on branch `cleanup`
+- Related skills: `mas-engineer-commit-protocol` (R110-16),
+  `verification-theater-guard` (the body is a verification artifact)
+
