@@ -21,7 +21,10 @@ import re
 
 # DOMAIN 3 demo-team filename tokens (summon-platform, per skill
 # mas-engineer-recipe-yaml-pytest-coverage)
-DOMAIN3_TOKENS=("social-media-manager", "email-campaign-manager", "seo-researcher", "content-writer", "analytics-reporter", "web-researcher",)
+DOMAIN3_TOKENS = (
+    "social-media-manager", "email-campaign-manager", "seo-researcher",
+    "content-writer", "analytics-reporter",
+)
 
 
 # DOMAIN 1 filename prefix tokens (sub-agents of mas-engineer itself)

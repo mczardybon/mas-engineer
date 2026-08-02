@@ -79,9 +79,11 @@ def test_instructions_reference_constitution_or_rules():
 
 
 def test_instructions_sub_mas_count():
-    """Spec: 38 sub_mas-*.md instruction files (was 43 in R110-54, R110-55
+    """Spec: >=38 sub_mas-*.md instruction files (was 43 in R110-54, R110-55
     moved 5 demo-team instructions out: content-writer, email-campaign-manager,
-    seo-researcher, social-media-manager, web-researcher → 38)."""
+    seo-researcher, social-media-manager, plus web-researcher (which
+    R110-56 confirmed is a FRAMEWORK sub-agent and moved back to
+    recipe/instructions/) → still 38 demo-team + 1 framework = 39 total)."""
     md = list(INST_DIR.glob("sub_mas-*.md"))
     assert len(md) >= 38, \
         f"Expected >= 38 sub_mas-*.md files, got {len(md)}"

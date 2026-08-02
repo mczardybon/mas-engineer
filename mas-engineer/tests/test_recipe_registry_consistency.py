@@ -47,7 +47,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 RECIPE_DIR = REPO_ROOT / "recipe"
 SUB_DIR = RECIPE_DIR / "sub"
-DEMO_TEAM_DIR = SUB_DIR / "demo-team"
+# R110-55 cleanup: demo-team was moved from recipe/sub/demo-team/ to
+# demos/demo-team/. Update DEMO_TEAM_DIR to the new location.
+DEMO_TEAM_DIR = REPO_ROOT / "demos" / "demo-team"
+DEMO_TEAM_RECIPES_DIR = DEMO_TEAM_DIR / "recipes"
+DEMO_TEAM_INSTRUCTIONS_DIR = DEMO_TEAM_DIR / "instructions"
 TEMPLATE_DIR = SUB_DIR / "template"
 LEGACY_DIR = SUB_DIR / "legacy"
 WORKFLOWS_YAML = REPO_ROOT / ".state" / "workflows.yaml"
@@ -68,7 +72,6 @@ DOMAIN3_TOKENS = (
     "seo-researcher",
     "content-writer",
     "analytics-reporter",
-    "web-researcher",
 )
 
 # DOMAIN 1 filename prefix tokens (sub-agents of mas-engineer itself)
@@ -114,7 +117,9 @@ def classify_domain(stem: str, data: dict, parent_path: "Path | None" = None) ->
     # ---- R110-39 PATH-BASED pre-classification (deterministic) ----
     if parent_path is not None:
         try:
-            if parent_path == DEMO_TEAM_DIR:
+            # R110-55: demo-team lives at demos/demo-team/{recipes,instructions}
+            if parent_path in (DEMO_TEAM_DIR, DEMO_TEAM_RECIPES_DIR,
+                               DEMO_TEAM_INSTRUCTIONS_DIR):
                 return "demo-team"
             if parent_path == TEMPLATE_DIR or parent_path == LEGACY_DIR:
                 return "unknown"
@@ -190,9 +195,12 @@ def _all_sub_recipe_files():
     R110-39: now scans MULTI_ARCH_DIR (multi-arch-30) in addition to SUB_DIR
     + DEMO_TEAM_DIR. Path-based classification is deterministic so multi-arch
     files don't fall through to "unknown".
+
+    R110-55: demo-team was moved from recipe/sub/demo-team/ to
+    demos/demo-team/. Scan DEMO_TEAM_RECIPES_DIR.
     """
     out = {}
-    search_dirs = [SUB_DIR, DEMO_TEAM_DIR]
+    search_dirs = [SUB_DIR, DEMO_TEAM_RECIPES_DIR]
     if MULTI_ARCH_DIR.exists():
         # R110-30 convention: sub-recipes in sub/, team recipes in teams/
         search_dirs += [MULTI_ARCH_DIR / "sub", MULTI_ARCH_DIR / "teams"]

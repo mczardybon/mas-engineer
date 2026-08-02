@@ -61,13 +61,20 @@ def test_demo_team_instructions_exist():
 
     R110-54: 2 (code-reviewer.md, sub_mas-demo-runner.md) + 1 created
              (sub_mas-analytics-reporter.md) = 3.
-    R110-55: +5 (sub_mas-content-writer, email-campaign-manager,
-             seo-researcher, social-media-manager, web-researcher) = 8 total.
+    R110-55: +4 (sub_mas-content-writer, email-campaign-manager,
+             seo-researcher, social-media-manager) = 7 total.
+    R110-56: -1 (sub_mas-web-researcher.md moved BACK to
+             recipe/instructions/ — it is a FRAMEWORK sub-agent,
+             not a demo. The e2e test recipe
+             mas_e2e_pty_test_recipes.txt:130 loads it from
+             recipe/sub/, and 4 framework instructions reference it
+             via DELEGATE).
     """
     mds = list(INSTRUCTIONS_DIR.glob("*.md"))
     assert len(mds) >= 5, (
         f"R110-55: {INSTRUCTIONS_DIR} has only {len(mds)} md files, expected 5+ "
-        f"(3 from R110-54 + 5 from R110-55)"
+        f"(3 from R110-54 + 4 from R110-55 = 7; R110-56 moved web-researcher "
+        f"back to recipe/instructions/, so 7 demo-team + 1 framework = 7 demo)"
     )
 
 
@@ -230,10 +237,11 @@ def test_demo_team_no_instructions_leftovers():
     in recipe/instructions/ after the move.
 
     R110-54 moved code-reviewer.md, sub_mas-demo-runner.md, and created
-    sub_mas-analytics-reporter.md. R110-55 moved the remaining 5
+    sub_mas-analytics-reporter.md. R110-55 moved the remaining 4
     (content-writer, email-campaign-manager, seo-researcher,
-    social-media-manager, web-researcher). This test guarantees they
-    never sneak back.
+    social-media-manager). R110-56 keeps web-researcher in
+    recipe/instructions/ (it is a FRAMEWORK sub-agent, not a demo).
+    This test guarantees demo-team instructions never sneak back.
     """
     recipe_instructions = (
         Path(__file__).resolve().parent.parent.parent.parent
@@ -241,11 +249,13 @@ def test_demo_team_no_instructions_leftovers():
     )
     if not recipe_instructions.exists():
         return
-    # DOMAIN3_TOKENS = the 6 demo-team stems. Any .md in recipe/instructions/
-    # whose stem contains one of these tokens is a leftover.
+    # DOMAIN3_TOKENS=*** 5 demo-team stems (R110-56: web-researcher removed —
+    # it is a framework sub-agent, e2e test recipe loads it from recipe/sub/).
+    # Any .md in recipe/instructions/ whose stem contains one of these tokens
+    # is a leftover.
     demo_stems = {
         "social-media-manager", "email-campaign-manager", "seo-researcher",
-        "content-writer", "analytics-reporter", "web-researcher",
+        "content-writer", "analytics-reporter",
     }
     leftovers = [
         p.name for p in recipe_instructions.glob("*.md")
