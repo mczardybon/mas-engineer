@@ -719,20 +719,46 @@ PYEOF
 - ⛔ NEVER skip a check — all 15 must run (Check 0 + Checks 1-14)
 - ⛔ Max 300s timeout total (5 minutes)
 
-**R01 NON-INTERACTIVE BYPASS (must set BOTH, not either):** R01
-(CONFIRMATION_REQUIRED) is a hardness-5 rule. To bypass for CI / batch
-runs, set **both** env vars before invoking the validator:
-`RECURSION_OVERRIDE=2 MAS_NO_SESSION=1`.
-- `RECURSION_OVERRIDE` alone is NOT sufficient.
-- `MAS_NO_SESSION=1` alone is NOT sufficient.
-- The two are checked together in
-  `tools/dev_rule_checker.py:99-106` (and
-  `tools/dev_rule_checker_generic.py:99-103`).
-- The freshness window is 5 min — if a CI step is taking longer than
-  5 min between when it set `RECURSION_OVERRIDE=2` and when it
-  actually triggers a preflight, the bypass might expire and the
-  check will re-block. Re-export the env vars in each child shell.
-- See `docs/E2E-TESTPLAN.md` Test 5.1 for the verification procedure.
+**R01 NON-INTERACTIVE BYPASS (current implementation):** R01
+(CONFIRMATION_REQUIRED) is a hardness-5 rule. The actual bypass mechanism
+is NOT `RECURSION_OVERRIDE` / `MAS_NO_SESSION` (older docs may have
+claimed this — those were aspirational and never implemented). The
+real mechanism is `.state/.last_confirmation` (unix timestamp; valid
+5 min, then auto-expires), checked in `check_confirmation()` at
+`tools/dev_rule_checker.py:71-77` and `tools/dev_rule_checker_generic.py:24-31`,
+and consumed by the R01 rule body at `tools/dev_rule_checker.py:102-106`
+(and the parallel site in the generic checker).
+
+Two ways to set `.state/.last_confirmation` programmatically:
+
+  1. **Direct write (operator-initiated, e.g. CI step):**
+       echo "$(date +%s)" > .state/.last_confirmation
+     The check `(time.time() - ts) < 300` then passes for 5 minutes.
+
+  2. **Via e2e_run_all.py wrapper (R110-58, automation context):**
+       export MAS_AUTO_CONFIRM=1
+       python3 tools/e2e_run_all.py --auto-confirm ...
+     e2e_run_all.py refreshes `.state/.last_confirmation` BEFORE
+     running the e2e tests, so the workflows it spawns (build-test,
+     top_workflows, recovery) see a fresh confirmation. BOTH the
+     `--auto-confirm` CLI flag AND the `MAS_AUTO_CONFIRM=1` env var
+     are required (defense in depth, AND-gate); the implementation
+     lives in `tools/e2e_run_all.py:226-262`.
+
+The validator's Check 10 command (lines 441-447, R110-60) already uses
+path 2. The freshness window is 5 min — if a CI step is taking longer
+than 5 min between when it refreshed the confirmation and when it
+actually triggers a preflight, the bypass might expire. Re-run
+`e2e_run_all.py --auto-confirm` to refresh.
+
+**R110-62 doc-fix note:** this section was rewritten to replace the
+older aspirational "RECURSION_OVERRIDE=2 MAS_NO_SESSION=1" claim.
+The vars `RECURSION_OVERRIDE` and `MAS_NO_SESSION` are used by
+`tools/dev_recursion_override.py` (24h cooldown for self-improvement
+patches) and by `tools/bulk_findings_fixer.py` (mode detection),
+NOT by R01. Anyone reading older docs (`docs/E2E-TESTPLAN.md`
+Test 5.1/5.2) or `docs/test-e2e-full.sh` should be aware those
+references are stale.
 
 CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation.
 MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.

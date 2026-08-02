@@ -229,14 +229,20 @@ def main():
     )
     args = parser.parse_args()
 
-    # R01 BYPASS (R110-57 + D follow-up): The R01 (CONFIRMATION_REQUIRED) rule
-    # blocks workflows when .state/.last_confirmation is older than 5 minutes.
-    # The recipe/sub_mas-pre-push-validator.md and docs/E2E-TESTPLAN.md Test 5.1
-    # both document that RECURSION_OVERRIDE=2 + MAS_NO_SESSION=1 together should
-    # bypass this — but check_confirmation() in tools/dev_rule_checker.py:71-77
-    # ONLY reads the file, not env-vars. This is the missing piece.
+    # R01 BYPASS (R110-58): The R01 (CONFIRMATION_REQUIRED) rule
+    # blocks workflows when .state/.last_confirmation is older than
+    # 5 minutes. check_confirmation() in tools/dev_rule_checker.py:71-77
+    # reads ONLY that file (not env-vars), so the bypass is a write
+    # to that file. The R110-58 + R110-60 + R110-62 fix establishes
+    # the operator-sanctioned path: when this tool is invoked with
+    # both --auto-confirm AND MAS_AUTO_CONFIRM=1, it refreshes the
+    # confirmation file BEFORE spawning the e2e tests, so the
+    # workflows those tests run (build-test, top_workflows, recovery)
+    # see a fresh confirmation.
     #
-    # Auto-confirm gate (operator-sanctioned, never silent):
+    # The pre-push-validator's Check 10 (recipe/instructions/sub_mas-
+    # pre-push-validator.md:441-447) and docs/E2E-TESTPLAN.md Test 5.1
+    # both invoke this tool with the BOTH-required flag+env combo.
     # - If --auto-confirm is passed AND MAS_AUTO_CONFIRM=1 is set in env: update
     #   the confirmation file to now (within the 5-min window).
     # - If only --auto-confirm OR only MAS_AUTO_CONFIRM=1: print warning + skip

@@ -296,22 +296,32 @@ goose run --with-builtin developer \
 #                    (valid 5 min, then auto-expires)
 #
 #   2. Non-interactive batch runs (CI, e2e preflight, pre-push-validator):
-#        RECURSION_OVERRIDE=2 MAS_NO_SESSION=1
-#      This combo is the SANCTIONED R01 bypass for tool-side rule checkers
-#      (dev_rule_checker.py:99-106 and dev_rule_checker_generic.py:99-103).
-#      RECURSION_OVERRIDE alone is NOT sufficient; MAS_NO_SESSION=1 is required.
-#      Confirmed in evidence log
-#      e2e-evidence-gen2/prepush-r53b-100pct-2026-07-25.log:447:
-#        "R01 Bypass confirmed — RECURSION_OVERRIDE=2 (>=1) and MAS_NO_SESSION=1.
-#         Proceeding non-interactively."
+#        export MAS_AUTO_CONFIRM=1
+#        python3 tools/e2e_run_all.py --auto-confirm ...
+#      e2e_run_all.py (R110-58) refreshes .state/.last_confirmation BEFORE
+#      running the e2e tests, so the workflows it spawns (build-test,
+#      top_workflows, recovery) see a fresh confirmation. BOTH the
+#      --auto-confirm CLI flag AND the MAS_AUTO_CONFIRM=1 env var are
+#      required (defense in depth, AND-gate); the implementation lives
+#      in tools/e2e_run_all.py:226-262. The pre-push-validator recipe's
+#      Check 10 (R110-60) already uses this path.
 #
-# Test 5.1 verifies the second path:
-RECURSION_OVERRIDE=2 MAS_NO_SESSION=1 \
-  goose run --recipe recipe/sub/sub_mas-general-improver.yaml \
-    --params "task=APPLY_ONLY" --no-session 2>&1 \
-  | grep -q "No confirmation in the last 5 minutes" \
-  && echo "FAIL: R01 not bypassed (got the un-bypassed error)" \
-  || echo "PASS"
+#   *** R110-62 doc-fix note: ***
+#   Older versions of this testplan and the pre-push-validator
+#   instructions (recipe/instructions/sub_mas-pre-push-validator.md)
+#   claimed that RECURSION_OVERRIDE=2 MAS_NO_SESSION=1 was the
+#   "SANCTIONED R01 bypass". That claim was aspirational and was
+#   never implemented. RECURSION_OVERRIDE is used by
+#   tools/dev_recursion_override.py (24h cooldown for self-improvement
+#   patches) and by tools/bulk_findings_fixer.py (mode detection);
+#   MAS_NO_SESSION is not consumed by any rule checker. Neither var
+#   affects the R01 check. Path 2 above is the actual current bypass.
+#
+# Test 5.1 verifies path 2:
+MAS_AUTO_CONFIRM=1 python3 tools/e2e_run_all.py --auto-confirm --quick --no-interactive 2>&1 \
+  | grep -q "R01 bypass active" \
+  && echo "PASS: R01 bypass engaged via e2e_run_all.py" \
+  || echo "FAIL: R01 bypass not engaged (check MAS_AUTO_CONFIRM + --auto-confirm)"
 ```
 
 ### Test 5.2 — RECURSION_OVERRIDE=2 bypass 24h-cooldown
