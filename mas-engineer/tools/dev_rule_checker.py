@@ -637,8 +637,26 @@ def check_rule(rule_id, action=""):
         
         if rule_id == "R14":
             """WORK_ON_MODE: work_on = mas | <projekt>"""
-            mode_file = os.path.expanduser("~/.config/goose/.mas-mode")
-            if not os.path.exists(mode_file):
+            # R110-61 (R14 path-bug fix): R14 originally hard-coded only
+            # ~/.config/goose/.mas-mode (line 640), but R110-31 (same file,
+            # line 301-314) already canonicalized the path resolution to
+            # a 3-path priority list: mas-engineer/.mas-mode > .mas-mode >
+            # ~/.config/goose/.mas-mode. Apply the same here so R14 sees
+            # the same authoritative .mas-mode as R110-31 and as the rest
+            # of the system. Without this fix, running from a non-default
+            # cwd (e.g. a clone of mas-engineer) would make R14 BLOCK even
+            # though R110-31 would correctly pass — a false-positive that
+            # blocked the pre-push-gate's Check 10 e2e run.
+            mode_file = None
+            for p in [
+                os.path.join(BASE_DIR, "mas-engineer/.mas-mode"),
+                os.path.join(BASE_DIR, ".mas-mode"),
+                os.path.expanduser("~/.config/goose/.mas-mode"),
+            ]:
+                if os.path.exists(p):
+                    mode_file = p
+                    break
+            if mode_file is None:
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": "No .mas-mode found — work_on mode not determinable", "action": "BLOCKED"}
             with open(mode_file) as _f:
