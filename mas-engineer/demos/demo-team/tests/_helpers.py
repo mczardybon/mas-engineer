@@ -1,18 +1,20 @@
 """
-demos/multi-arch-30/tests/_helpers.py
+demos/demo-team/tests/_helpers.py
 
-Internal helpers for the multi-arch-30 demo test suite.
+Internal helpers for the demo-team demo test suite.
 
-R110-53b: demos/ is fully autonomous — no imports from tests/.
-This file is a COPY of `classify_domain` from
-tests/test_recipe_registry_consistency.py (intentional DRY
-violation, kept in sync manually) so that the demo test suite
-has zero dependencies on the central tests/ directory.
+R110-54: demos/ is fully autonomous — no imports from tests/.
+This file is a COPY (intentional DRY violation) of:
+  - demos/multi-arch-30/tests/_helpers.py
+  - tests/test_recipe_registry_consistency.py (upstream)
+so that the demo test suite has zero dependencies on the central
+tests/ directory.
 
-If classify_domain logic changes upstream, this copy must be
-updated too. Both files should be kept in sync.
+If classify_domain logic changes upstream, this copy AND the
+multi-arch-30 copy must be updated too. All 3 files should be
+kept in sync.
 
-Used only by demos/multi-arch-30/tests/test_multi_arch_30.py.
+Used only by demos/demo-team/tests/test_demo_team.py.
 """
 import re
 
