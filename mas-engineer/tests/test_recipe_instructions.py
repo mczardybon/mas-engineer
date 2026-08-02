@@ -79,7 +79,9 @@ def test_instructions_reference_constitution_or_rules():
 
 
 def test_instructions_sub_mas_count():
-    """Spec: 43 sub_mas-*.md instruction files."""
+    """Spec: 38 sub_mas-*.md instruction files (was 43 in R110-54, R110-55
+    moved 5 demo-team instructions out: content-writer, email-campaign-manager,
+    seo-researcher, social-media-manager, web-researcher → 38)."""
     md = list(INST_DIR.glob("sub_mas-*.md"))
-    assert len(md) >= 40, \
-        f"Expected >= 40 sub_mas-*.md files, got {len(md)}"
+    assert len(md) >= 38, \
+        f"Expected >= 38 sub_mas-*.md files, got {len(md)}"

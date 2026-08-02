@@ -17,7 +17,10 @@ import yaml
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.resolve()
-RECIPE = REPO_ROOT / "recipe" / "sub" / "sub_mas-web-researcher.yaml"
+# R110-55: web-researcher is a demo-team agent (research-prompt-source
+# for research-team.txt), lives in demos/demo-team/recipes/
+# (not recipe/sub/)
+RECIPE = REPO_ROOT / "demos" / "demo-team" / "recipes" / "sub_mas-web-researcher.yaml"
 
 
 def test_web_researcher_recipe_exists():

@@ -1,8 +1,8 @@
-# MAS-Engineer Prompts
+# MAS-Engineer Demo Prompts
 
-This folder contains **ready-to-use prompts** for MAS-Engineer. Each
-prompt is a complete, tested example that builds a real Multi-Agent
-System. Use them as:
+This folder contains **ready-to-use prompts** that build complete demo
+Multi-Agent Systems. Each prompt is a self-contained, tested example
+that creates a real working MAS. Use them as:
 
 - **Templates** — copy and modify for your own projects
 - **Learning material** — see how a well-structured prompt looks
@@ -13,7 +13,7 @@ System. Use them as:
 ### Option 1: paste into goose session
 
 ```bash
-cd /tmp/mas-engineer/mas-engineer
+cd /path/to/mas-engineer
 goose session
 # then paste the prompt below
 ```
@@ -21,14 +21,14 @@ goose session
 ### Option 2: pipe to goose from command line
 
 ```bash
-cd /tmp/mas-engineer/mas-engineer
-cat prompts/research-team.txt | goose run --no-session -i -
+cd /path/to/mas-engineer
+cat demos/demo-team/prompts/research-team.txt | goose run --no-session -i -
 ```
 
 ### Option 3: load via the demo-runner sub-recipe
 
 ```bash
-goose run --recipe recipe/sub/sub_mas-demo-runner.yaml --no-session
+goose run --recipe demos/demo-team/recipes/sub_mas-demo-runner.yaml --no-session
 ```
 
 This is the same prompt, but wrapped in a sub-recipe that asks for
@@ -40,7 +40,7 @@ R01 confirmation first.
 |--------|--------------|--------|-------|
 | [research-team.txt](research-team.txt) | Sequential + verification gate | 5 | 14/14 PASS |
 | [customer-support.txt](customer-support.txt) | Linear with escalation gate | 3 | 13/13 PASS |
-| [code-reviewer.txt](demo-team/code-reviewer.txt) | Parallel fan-out + aggregator | 4 | 21/21 PASS |
+| [code-reviewer.txt](code-reviewer.txt) | Parallel fan-out + aggregator | 4 | 21/21 PASS |
 | [content-pipeline.txt](content-pipeline.txt) | 3-tier hierarchical (research → parallel creative → editor gate) | 6 | 28/28 PASS |
 | [data-analyzer.txt](data-analyzer.txt) | Iterative loop with convergence check (max 3 iterations) | 7 | 30/30 PASS |
 | [security-scanner.txt](security-scanner.txt) | Hybrid mesh (4 parallel scanners → correlator → prioritizer → patch loop) | 11 | 38/38 PASS |
@@ -139,7 +139,7 @@ reaching the user. No unverified claims escape the pipeline.
 
 ## See also
 
-- [docs/DEMO-RESEARCH-TEAM.md](../docs/DEMO-RESEARCH-TEAM.md) — Detailed
+- [docs/DEMO-RESEARCH-TEAM.md](../../docs/DEMO-RESEARCH-TEAM.md) — Detailed
   guide for the research-team demo
-- [docs/governance.md](../docs/governance.md) — R-rules MAS-Engineer follows
-- [docs/lessons-learned.md](../docs/lessons-learned.md) — Hard-won knowledge
+- [docs/governance.md](../../docs/governance.md) — R-rules MAS-Engineer follows
+- [docs/lessons-learned.md](../../docs/lessons-learned.md) — Hard-won knowledge
