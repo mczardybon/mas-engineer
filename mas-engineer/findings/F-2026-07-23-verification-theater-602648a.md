@@ -139,27 +139,55 @@ problem:
 - **R110-63 (7d8c3cf, 2026-08-02):** runtime artifacts (pre-push-validator
   state) updated to reflect new check 10 behavior.
 
-## STRUCTURAL FINDING (new, 2026-08-02 — e2e_run_all.py)
+## STRUCTURAL FINDING (new, 2026-08-02 — framework test coverage)
 
-`tools/e2e_run_all.py` reports 3 categories: recipe_yaml, top_workflows,
-recovery_workflows, task_workflows.
+**Update R110-65:** the original R110-64 claim that
+`e2e_run_all.py` has `top_workflows` / `recovery_workflows` as
+"0/0 silent no-op" was **WRONG**. Verified 2026-08-02 22:01 against
+`e2e-results/2026-08-02-run-{1..12}/raw-results.json`:
+- `top_workflows`: always 2/3 or 3/3 (build-test sometimes flaky)
+- `recovery_workflows`: always 5/5
+- `recipe_yaml`: 120/121 or 121/121
+- `task_workflows`: only in non-quick mode
 
-Recent runs (2026-07-29 .. 2026-08-02) show:
-- `recipe_yaml`: 121/0/0 (121 pass, 0 fail, 0 warn) — works
-- `top_workflows`: 0/0/0 — **SILENT NO-OP**
-- `recovery_workflows`: 0/0/0 — **SILENT NO-OP**
-- `task_workflows`: 0/0/0 (most runs) or 66/0/0 (rare runs) — sporadic
+So `e2e_run_all.py` is fine. The real verification-theater vector
+that survives is **framework test coverage**:
 
-**Pattern:** the runner reports `total=121ok/0fail/0warn` which would
-read as "100% PASS" if the categories weren't inspected. This is the
-**same shape** as the 602648a incident (25.3s infra-suite = 100%, real
-e2e teams test = 6/9 = 66.7%). The 0/0 silent no-op in 2-3 of 4
-categories makes the 100% claim structurally meaningless.
+`pytest tests/ --cov=tools` reports:
+- **1234 tests, 100% pass-rate** (all structural recipe-YAML checks)
+- **0/10977 = 0% line coverage** on `tools/*.py` framework code
 
-**Recommended fix** (not in scope of R110-64): make top_workflows +
-recovery_workflows + task_workflows actually run their workflow tests,
-or report "0 SKIPPED" / "0 NOT RUN" instead of "0 fail" so the 100%
-claim can't be made.
+That is, the 1234 tests verify that recipe YAMLs exist, parse, and
+have the right fields — they do **not** import or call any
+`tools/dev_*.py` function. So `dev_workflow_runner.py`,
+`dev_rule_checker.py`, `dev_health_monitor.py`, `dev_yaml_check.py`,
+`e2e_run_all.py`, `e2e_teams.py` and 45 other framework files have
+**0% line coverage**. A regression in any of them would not fail
+any pytest test.
+
+This is structurally the same shape as the 602648a incident: a
+test-pipeline that reports 100% PASS while leaving a real
+functionality vector unmeasured. The pass-rate is honest about
+what it tests (YAML structure) but silent about what it doesn't
+test (framework code).
+
+**Why this survived R110-cleanup:** the pytest gate validates
+recipe structure but never asked "what % of `tools/` is exercised?"
+pytest-cov is not in the dev-dependencies; `--cov=tools` was
+never run as part of any CI or pre-push check. The metric existed
+in concept (TEST-COVERAGE-POLICY.md test_count >= sub_count × 0.8)
+but measured a different thing (file-count ratio, not line coverage).
+
+**Recommended fix** (not in scope of R110-64 or R110-65):
+- Add `pytest-cov` to dev-deps (DONE 2026-08-02 R110-65)
+- Write framework tests that import + exercise `tools/dev_*.py`
+- Raise the line-coverage target to >= 90% on `tools/`
+- Either add `--cov=tools --cov-fail-under=90` to pytest.ini or
+  run a separate coverage gate in pre-push-validator
+
+Estimated effort: 4-6h for 90% across 51 tools/ files, because
+each file has 30-1500 lines of argparse + main() + helper code.
+Likely 5-8 incremental commits over multiple sessions.
 
 ## WAS NOCH OFFEN IST (as of 2026-08-02)
 
@@ -171,11 +199,16 @@ claim can't be made.
      demo teams are on-demand LLM-generated. A single 9/9 run does NOT
      prove the fix is solid. Need success rate over N=10+ generations.
 
-2. **e2e_run_all.py top/recovery/task_workflows = 0/0 silent** (30-60min)
-   - Either activate the workflow tests OR change 0/0 to "NOT RUN" so
-     the 100% claim is structurally impossible
-   - This prevents FUTURE 602648a-style verification theater in the
-     e2e_run_all.py vector (R110-60 closed the pre-push-validator vector)
+2. **framework line coverage on tools/ = 0%** (4-6h, multi-session)
+   - All 51 tools/*.py files have 0% line coverage from pytest tests/
+   - 1234 tests pass but never import any tools/ module
+   - Add pytest-cov (DONE 2026-08-02 R110-65), write framework tests
+     that exercise dev_yaml_check, dev_rule_checker, dev_health_monitor,
+     dev_workflow_runner, e2e_run_all, e2e_teams, etc.
+   - Target: >= 90% line coverage on tools/ (per
+     E2E-TESTPLAN.md:430 ≥90% pass-rate policy, generalized to coverage)
+   - 30-60min quick win: tests for 3-5 small tools/ files (current
+     R110-65 scope); rest is R110-66+
 
 3. **Mirror live test recipe fixes to mas-engineer** (longer)
    - sales/medium + marketing/hard live fixes are in
