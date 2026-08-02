@@ -137,7 +137,7 @@ if [ "$SCOPE" = "all" ]; then
     -not -path "./vendor/*" \
     -not -path "./node_modules/*" \
     -not -path "*/node_modules/*" \
-    -not -path "./.dev-team/memory/*" \
+    -not -path "./.monitor/memory/*" \
     -not -path "./.mas/*" \
     2>/dev/null | sort -u)
 else
@@ -205,7 +205,7 @@ docs = []
 for r in roots:
   if os.path.isdir(r):
     for root, _, files in os.walk(r):
-      if any(x in root for x in ('/node_modules/', '/.git/', '/.dev-team/memory/', '/.mas/mcp/')):
+      if any(x in root for x in ('/node_modules/', '/.git/', '/.monitor/memory/', '/.mas/mcp/')):
         continue
       for fn in files:
         if fn.endswith('.md'):
@@ -258,7 +258,7 @@ for root_dir, exts in roots:
   if not os.path.isdir(root_dir):
     continue
   for root, _, fns in os.walk(root_dir):
-    if any(x in root for x in ('/node_modules/', '/.git/', '/.dev-team/memory/', '/.mas/mcp/')):
+    if any(x in root for x in ('/node_modules/', '/.git/', '/.monitor/memory/', '/.mas/mcp/')):
       continue
     for fn in fns:
       if fn.endswith(exts):

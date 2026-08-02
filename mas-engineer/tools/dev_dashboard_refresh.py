@@ -228,7 +228,7 @@ def generate_dashboard(ws):
     # ─── EXECUTION STATUS (aus memory) ───
     execution = {"has_active_plan": False, "current_task": None,
                  "last_status": None, "done": 0, "total": 0, "running": []}
-    mem_dir = os.path.join(ws_abs, '.dev-team', 'memory')
+    mem_dir = os.path.join(ws_abs, '.monitor', 'memory')
     if os.path.exists(mem_dir):
         summary_files = glob.glob(os.path.join(mem_dir, 'summary-*.md'))
         if summary_files:

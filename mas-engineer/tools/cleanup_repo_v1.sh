@@ -628,7 +628,7 @@ p5_gitignore() {
 
 # Worktrees
 .worktrees/
-.dev-team/.heartbeat
+.monitor/.heartbeat
 
 # Python / OS
 __pycache__/
