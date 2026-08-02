@@ -438,7 +438,19 @@ making the pre-push gate reject unbacked strong claims.
 **Command (FOREGROUND, ~25-60s, no PTY):**
 ```bash
 cd {workspace}
-python3 tools/e2e_run_all.py --quick --no-interactive 2>&1 | tail -30
+python3 tools/e2e_run_all.py --quick --no-interactive --auto-confirm 2>&1 | tail -30
+```
+
+**IMPORTANT (R110-60):** The `--auto-confirm` flag is REQUIRED for the R01 (CONFIRMATION_REQUIRED) bypass in e2e_run_all.py. Without it, the 5-minute confirmation window will expire mid-run and the e2e preflight will BLOCK every workflow with `⛔ R01 CONFIRMATION_REQUIRED` (not the e2e tests themselves failing).
+
+**BOTH required (defense in depth, R110-58 + R110-60):**
+- `--auto-confirm` CLI flag: signals operator-intent to bypass
+- `MAS_AUTO_CONFIRM=1` env var: signals automation-context (e.g. CI/pre-push-gate)
+
+If only one is present, e2e_run_all.py logs a WARN and skips the bypass. This mirrors the R01 hardness-5 AND-gate semantics. The pre-push-gate is an automation context, so `MAS_AUTO_CONFIRM=1` MUST be present in the validator's process environment before invoking the e2e tool. If you are running the validator manually (e.g. for debugging), set it in your shell first:
+```bash
+export MAS_AUTO_CONFIRM=1
+goose run --recipe recipe/sub/sub_mas-pre-push-validator.yaml
 ```
 
 **Parse output:** look for `✅ All {N} tests passed (100%)` or the summary line. Extract pass-count from the YAML report at the end of stdout (or stderr). The output format is: `Summary: {ok}/{total} passed ({pct}%)` — this is the canonical signal.
