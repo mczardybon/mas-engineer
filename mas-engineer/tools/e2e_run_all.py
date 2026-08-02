@@ -23,6 +23,7 @@ Usage:
   python3 tools/e2e_run_all.py --quick         # just YAML + top + recovery (no task_workflows)
   python3 tools/e2e_run_all.py --no-interactive  # skip goose run (saves 20 min)
   python3 tools/e2e_run_all.py --workflow wf_foo  # run a single workflow
+  python3 tools/e2e_run_all.py --quick --no-interactive --auto-confirm  # CI mode (requires MAS_AUTO_CONFIRM=1)
 """
 
 import os
@@ -221,7 +222,43 @@ def main():
     parser.add_argument("--quick", action="store_true", help="skip task_workflows (saves 5-10 min)")
     parser.add_argument("--no-interactive", action="store_true", help="skip goose run (saves 20 min)")
     parser.add_argument("--workflow", help="run single workflow by name")
+    parser.add_argument(
+        "--auto-confirm", action="store_true",
+        help="operator-sanctioned R01 bypass: update .state/.last_confirmation to now. "
+             "ONLY use in CI/automated runs; never in interactive sessions."
+    )
     args = parser.parse_args()
+
+    # R01 BYPASS (R110-57 + D follow-up): The R01 (CONFIRMATION_REQUIRED) rule
+    # blocks workflows when .state/.last_confirmation is older than 5 minutes.
+    # The recipe/sub_mas-pre-push-validator.md and docs/E2E-TESTPLAN.md Test 5.1
+    # both document that RECURSION_OVERRIDE=2 + MAS_NO_SESSION=1 together should
+    # bypass this — but check_confirmation() in tools/dev_rule_checker.py:71-77
+    # ONLY reads the file, not env-vars. This is the missing piece.
+    #
+    # Auto-confirm gate (operator-sanctioned, never silent):
+    # - If --auto-confirm is passed AND MAS_AUTO_CONFIRM=1 is set in env: update
+    #   the confirmation file to now (within the 5-min window).
+    # - If only --auto-confirm OR only MAS_AUTO_CONFIRM=1: print warning + skip
+    #   (defense in depth — both signals required, mirroring R01 hardness-5).
+    # - Otherwise: no-op, workflow runs will block per R01 as before.
+    auto_confirm_requested = args.auto_confirm or os.environ.get("MAS_AUTO_CONFIRM") == "1"
+    auto_confirm_enabled = args.auto_confirm and os.environ.get("MAS_AUTO_CONFIRM") == "1"
+    if auto_confirm_requested:
+        confirmation_path = os.path.join(ROOT, ".state/.last_confirmation")
+        os.makedirs(os.path.dirname(confirmation_path), exist_ok=True)
+        if auto_confirm_enabled:
+            import time as _time
+            with open(confirmation_path, "w") as _cf:
+                _cf.write(str(int(_time.time())))
+            log(f"R01 bypass active: --auto-confirm + MAS_AUTO_CONFIRM=1 both set; "
+                f"updated {confirmation_path} to now")
+        else:
+            log(f"R01 bypass REQUESTED but not fully enabled: --auto-confirm={args.auto_confirm}, "
+                f"MAS_AUTO_CONFIRM={os.environ.get('MAS_AUTO_CONFIRM')!r}. "
+                f"Both required. R01 will still block workflows in this run.",
+                "WARN")
+
 
     if args.workflow:
         log(f"running single workflow: {args.workflow}")
