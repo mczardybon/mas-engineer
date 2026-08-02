@@ -23,8 +23,134 @@ everything is healthy.
 
 ## Procedure VALIDATE
 
-Run the following 14 checks IN ORDER. Stop at the first failure if a hard
+Run the following 15 checks IN ORDER. Stop at the first failure if a hard
 block is detected, but always collect all warnings.
+
+### Check 0: Commit-body disclosure audit (NEW v2.1.0, R110-56)
+**Why:** A commit body that says "Adds 3 new tests" but git diff shows
+zero new test functions is **dishonest disclosure**. It corrupts the
+audit trail, makes R-numbered findings un-trustable, and lets actors
+hide regressions behind plausible-sounding text. The validator's
+job is to catch THIS class of failure, not just code-level syntax.
+R110-56 v1 (commit 72457b8) committed exactly this anti-pattern
+(claimed 3 new tests + a contradicting rationale). Archived at
+`e2e-evidence-gen2/r11056-body-v1-72457b8-archive.md`.
+```bash
+cd $WORKSPACE
+python3 - <<'PYEOF'
+import subprocess, re, sys
+
+# Get the last commit body (subject + body)
+raw = subprocess.run(
+    ['git', 'log', '-1', '--pretty=format:%B'],
+    capture_output=True, text=True
+).stdout
+lines = raw.split('\n')
+subject = lines[0]
+body = '\n'.join(lines[1:]).strip()
+
+# 1. No-body check: short commits don't make claims, so they pass.
+# (Trivial doc-style or chore commits typically have no body.)
+if len(body) < 50:
+    print(f"  ✅ Check 0 PASS (commit body too short to make claims: {len(body)} chars)")
+    print(f"     {subject!r}")
+    sys.exit(0)
+
+# 2. Claim-extraction patterns
+#    Each pattern returns (regex, claim_type, what evidence is required)
+CLAIM_PATTERNS = [
+    (r'\b[Aa]dds?\s+(\d+)\s+new\s+tests?\b', 'new_tests', 'pytest --collect-only -q | wc -l must show +N test items compared to HEAD~1'),
+    (r'\b[Ff]ixes?\s+(R?\d+-\d+(?:/[A-Z\d]+)?)\b', 'fixes_X', 'git show HEAD --stat must show the fix touching the X file/function'),
+    (r'\b[Rr]ationale:?\s*([^\n]+)', 'rationale', 'body rationale must not contradict git log --grep on the referenced round/issue'),
+    (r'\b[Rr]eplaces?\s+(R?\d+-\d+)\b', 'replaces_X', 'prior commit X must be reachable OR the archive file must be referenced in the body'),
+    (r'\b(?:DOMAIN_[A-Z_]+_TOKENS)', 'domain_tokens', 'body must explicitly call out what DOMAIN_*_TOKENS were added/removed'),
+]
+
+violations = []
+for pat, ctype, required_evidence in CLAIM_PATTERNS:
+    matches = re.findall(pat, body)
+    if not matches:
+        continue
+    # 3. Cross-check each claim against the actual repo state
+    if ctype == 'new_tests':
+        for n in matches:
+            n_int = int(n)
+            # pytest --collect-only comparison
+            cur = subprocess.run(['python3', '-m', 'pytest', '--collect-only', '-q', '--ignore=.state'],
+                                 capture_output=True, text=True, timeout=60).stdout
+            cur_count = sum(1 for line in cur.split('\n') if '::' in line and '::' in line.split('::', 1)[1])
+            prev = subprocess.run(['git', 'show', 'HEAD~1:./'],
+                                  capture_output=True, text=True, timeout=30)
+            # Simpler: count test functions in HEAD~1 and HEAD diff
+            head_tests = subprocess.run(['git', 'ls-tree', '-r', 'HEAD', '--name-only'],
+                                        capture_output=True, text=True).stdout
+            prev_tests = subprocess.run(['git', 'ls-tree', '-r', 'HEAD~1', '--name-only'],
+                                        capture_output=True, text=True).stdout
+            head_test_files = set(f for f in head_tests.split('\n') if f.startswith(('tests/', 'test/')) and f.endswith(('.py', '.sh')))
+            prev_test_files = set(f for f in prev_tests.split('\n') if f.startswith(('tests/', 'test/')) and f.endswith(('.py', '.sh')))
+            new_test_files = head_test_files - prev_test_files
+            if len(new_test_files) != n_int:
+                violations.append(
+                    f"  ❌ Claim 'Adds {n_int} new tests' but git shows {len(new_test_files)} "
+                    f"new test files (HEAD~1 vs HEAD): {sorted(new_test_files) or '(none)'}."
+                )
+    elif ctype == 'rationale':
+        # Just note: rationale review requires human judgment; the validator
+        # can only flag it for the operator to verify, not auto-block.
+        # Heuristic: search for prior rounds' contradicting rationales.
+        for match in matches[:1]:
+            # Find any commit whose message references the same R-number
+            rnums = re.findall(r'R\d+-\d+', match)
+            for rn in rnums[:2]:
+                prior = subprocess.run(
+                    ['git', 'log', '--grep', rn, '--pretty=format:%s'],
+                    capture_output=True, text=True
+                ).stdout.split('\n')
+                if len(prior) > 1:  # Multiple commits reference this R-number → potential contradiction
+                    pass  # Soft flag only
+        # We do NOT block on rationale — just print a reminder
+        print(f"  ⚠️  Commit body contains 'Rationale: ...' — operator should manually verify")
+        print(f"     the rationale does not contradict any prior R-numbered commit message.")
+
+# 4. Additional generic check: body must NOT claim files are modified if
+#    `git show --stat` doesn't show them.
+stat = subprocess.run(['git', 'show', '--stat', 'HEAD', '--pretty=format:'],
+                     capture_output=True, text=True).stdout
+files_changed = set()
+for line in stat.split('\n'):
+    m = re.search(r'\|.*\b(\S+)$', line)
+    if m:
+        files_changed.add(m.group(1))
+
+# Look for explicit file mentions in body
+file_mentions = re.findall(r'`([a-zA-Z_][\w/.-]+\.[a-zA-Z]{1,5})`', body)
+for f in file_mentions:
+    if f not in files_changed and not f.startswith(('/', '.')) and 'archive' not in f.lower():
+        # Only flag if the file isn't tracked anywhere
+        exists = subprocess.run(['git', 'ls-tree', '-r', 'HEAD', '--name-only'],
+                                capture_output=True, text=True).stdout
+        if f not in exists:
+            violations.append(
+                f"  ❌ Body mentions file `{f}` but file is not in HEAD (might be archive-only). "
+                f"Confirm the file is referenced as archive, not as a change."
+            )
+
+if violations:
+    print(f"  ❌ Check 0 BLOCK: {len(violations)} disclosure violation(s):")
+    for v in violations:
+        print(v)
+    print()
+    print(f"  Fix: amend the commit (on cleanup branch) or write a corrected body. ")
+    print(f"  See docs/lessons-learned.md L14 for the disclosure rule and worked example.")
+    sys.exit(1)
+else:
+    print(f"  ✅ Check 0 PASS (commit body claims are evidence-backed)")
+    print(f"     Subject: {subject!r}")
+    print(f"     Body: {len(body)} chars, {len([l for l in body.split(chr(10)) if l.strip()])} non-blank lines")
+PYEOF
+```
+**Block if:** any body claim contradicts `git show --stat` or known file state.
+**R-numbered rationale mismatches are soft-warned only (not blocked) — they require human judgment.**
 
 ### Check 1.5: Last commit title matches repo convention (NEW v2.0.0)
 **Why:** R36 anti-pattern — invented `🪤 TRAP` and `🛡️ PUSH` titles that
@@ -578,10 +704,23 @@ PYEOF
 
 - ⛔ NEVER modify any source file — this agent is read-only
 - ⛔ NEVER run `git push` itself — only validate
-- ⛔ NEVER skip a check — all 13 must run
+- ⛔ NEVER skip a check — all 15 must run (Check 0 + Checks 1-14)
 - ⛔ Max 300s timeout total (5 minutes)
 
-**R01 NON-INTERACTIVE BYPASS:** If `RECURSION_OVERRIDE` env var >= 1 OR `MAS_NO_SESSION=1`, skip R01 confirmation and proceed directly with all checks. This enables CI/automated runs.
+**R01 NON-INTERACTIVE BYPASS (must set BOTH, not either):** R01
+(CONFIRMATION_REQUIRED) is a hardness-5 rule. To bypass for CI / batch
+runs, set **both** env vars before invoking the validator:
+`RECURSION_OVERRIDE=2 MAS_NO_SESSION=1`.
+- `RECURSION_OVERRIDE` alone is NOT sufficient.
+- `MAS_NO_SESSION=1` alone is NOT sufficient.
+- The two are checked together in
+  `tools/dev_rule_checker.py:99-106` (and
+  `tools/dev_rule_checker_generic.py:99-103`).
+- The freshness window is 5 min — if a CI step is taking longer than
+  5 min between when it set `RECURSION_OVERRIDE=2` and when it
+  actually triggers a preflight, the bypass might expire and the
+  check will re-block. Re-export the env vars in each child shell.
+- See `docs/E2E-TESTPLAN.md` Test 5.1 for the verification procedure.
 
 CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation.
 MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.

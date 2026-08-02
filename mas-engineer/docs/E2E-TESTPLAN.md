@@ -282,10 +282,36 @@ goose run --with-builtin developer \
 | `--params workspace=...` | workspace injection | IM-005 fix |
 | `SCAN_SCOPE=...` | scan-scope fuer im-finder | sub_mas-im-finder mit scope |
 
-### Test 5.1 — R01 confirmation-bypass
+### Test 5.1 — R01 confirmation-bypass (non-interactive preflight)
 ```bash
-echo "no-confirm" | goose run --recipe recipe/sub/sub_mas-general-improver.yaml \
-  --params "task=APPLY_ONLY,confirm=no" --no-session 2>&1 | grep -q "Are you sure" && echo "FAIL: R01 not bypassed" || echo "PASS"
+# R01 (CONFIRMATION_REQUIRED) is a hardness-5 rule that BLOCKS any preflight
+# in non-interactive mode unless a fresh confirmation token exists.
+# Mechanism: dev_rule_checker.py:71-77 reads
+#   mas-engineer/.state/.last_confirmation  (unix timestamp)
+#   and returns (time.time() - ts) < 300.
+#
+# Two known bypass paths (operator-initiated only, NEVER auto-set):
+#
+#   1. Interactive:  echo "$(date +%s)" > mas-engineer/.state/.last_confirmation
+#                    (valid 5 min, then auto-expires)
+#
+#   2. Non-interactive batch runs (CI, e2e preflight, pre-push-validator):
+#        RECURSION_OVERRIDE=2 MAS_NO_SESSION=1
+#      This combo is the SANCTIONED R01 bypass for tool-side rule checkers
+#      (dev_rule_checker.py:99-106 and dev_rule_checker_generic.py:99-103).
+#      RECURSION_OVERRIDE alone is NOT sufficient; MAS_NO_SESSION=1 is required.
+#      Confirmed in evidence log
+#      e2e-evidence-gen2/prepush-r53b-100pct-2026-07-25.log:447:
+#        "R01 Bypass confirmed — RECURSION_OVERRIDE=2 (>=1) and MAS_NO_SESSION=1.
+#         Proceeding non-interactively."
+#
+# Test 5.1 verifies the second path:
+RECURSION_OVERRIDE=2 MAS_NO_SESSION=1 \
+  goose run --recipe recipe/sub/sub_mas-general-improver.yaml \
+    --params "task=APPLY_ONLY" --no-session 2>&1 \
+  | grep -q "No confirmation in the last 5 minutes" \
+  && echo "FAIL: R01 not bypassed (got the un-bypassed error)" \
+  || echo "PASS"
 ```
 
 ### Test 5.2 — RECURSION_OVERRIDE=2 bypass 24h-cooldown
