@@ -50,7 +50,9 @@ SUB_DIR = RECIPE_DIR / "sub"
 DEMO_TEAM_DIR = SUB_DIR / "demo-team"
 TEMPLATE_DIR = SUB_DIR / "template"
 LEGACY_DIR = SUB_DIR / "legacy"
-MULTI_ARCH_DIR = RECIPE_DIR / "multi-arch-30"
+# R110-52: multi-arch-30 demo lives in demos/ (was recipe/multi-arch-30/).
+# demos/ is for evidence + generated content; recipe/ is for production recipes only.
+MULTI_ARCH_DIR = REPO_ROOT / "demos" / "multi-arch-30"
 WORKFLOWS_YAML = REPO_ROOT / ".state" / "workflows.yaml"
 
 # R110-41: multi-arch-30 master orchestrator + team recipes
