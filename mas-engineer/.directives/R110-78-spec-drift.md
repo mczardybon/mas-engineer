@@ -40,7 +40,7 @@ KONKRETE SPEZIFIKATION (PHASE 1, R110-82 spec):
 
   3. OUTPUT-PARSING:
      Expected pytest output format:
-       ============================= 1295 passed in 8.32s ==============================
+       ============================= 1277 passed in 8.12s ==============================
      Parser regex (Python re):
        PASSED_RE   = r"(\d+) passed"
        FAILED_RE   = r"(\d+) failed"
@@ -87,7 +87,7 @@ KONKRETE SPEZIFIKATION (PHASE 1, R110-82 spec):
 
   8. WIE TESTEN:
        a) POSITIVE: in mas-engineer/, `python3 -m pytest tests/ -q`
-          exit 0, 1295 passed. validator-status: passed.
+          exit 0, 1277 passed. validator-status: passed.
        b) NEGATIVE: einen test absichtlich brechen (z.B. in
           tests/test_sub_mas_bootstrap.py ein `assert False` einbauen,
           in einem temp-branch, NICHT cleanup). validator-status:
@@ -108,9 +108,10 @@ KONKRETE SPEZIFIKATION (PHASE 1, R110-82 spec):
          failure-tracebacks.
 
 Begruendung: pytest laeuft in ~10s fuer das mas-engineer-test-tree
-(1295 tests as of 2026-08-03), das ist billig genug um in jeden
-pre-push-validator-run eingebaut zu werden. Es faengt spec-drift
-frueh, BEVOR der 90s+ validator-run verschwendet wird.
+(1277 tests as of 2026-08-03, gemessen 8.12s wall-clock), das ist
+billig genug um in jeden pre-push-validator-run eingebaut zu werden.
+Es faengt spec-drift frueh, BEVOR der 90s+ validator-run verschwendet
+wird.
 
 ================================================================
 DIREKTIVE 2: SPEC-DRIFT-CHECK in sub_mas-im-finder einbauen
@@ -379,7 +380,7 @@ KONKRETE SPEZIFIKATION (PHASE 3, R110-84 spec):
         sub-agents" -> mismatch, 1 P1 finding.
      c) INTEGRATION: nach im-validator-run mit mismatch-fixture
         in temp-branch, exit code != 0, BLOCKED.
-     d) REGRESSION: existierende 1295 tests duerfen nicht brechen
+     d) REGRESSION: existierende 1277 tests duerfen nicht brechen
         (alle counts die aktuell matchen, muessen auch nach
         spec-invariant-check noch matchen).
 
