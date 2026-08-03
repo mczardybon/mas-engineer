@@ -129,18 +129,62 @@ Mas-engineer muss DIREKTIVE 1 umsetzen damit der validator selbst
 auch pytest laufen laesst, nicht nur der human-operator.
 
 ================================================================
-WORKFLOW FUER DIESE DIREKTIVEN
+WORKFLOW FUER DIESE DIREKTIVEN -- REIHENFOLGE DER UMSETZUNG
 ================================================================
 
-1. User packt diese datei in mas-engineer/.directives/R110-78-spec-drift.md
-   und committet sie auf cleanup.
-2. Naechster im-pipeline run (FIND/RANK/DESIGN/VALIDATE/APPLY)
-   bearbeitet die 3 mas-engineer-direktiven automatisch.
-3. Ergebnis: validator + im-finder + spec-invariants modul sind
-   spec-drift-resistent.
-4. Verifikation: ein erneuter count-fix (z.B. recipe 110 -> 120)
-   wuerde jetzt vom validator BLOCKED werden, der spec-invariants
-   wuerde P1 emittieren, der im-finder wuerde SD-findung generieren.
+Strategie: low-risk + immediate-impact zuerst, dann medium-risk
+structural improvements. Jede direktive ist ein eigenstaendiger
+patch -- bei abbruch nach PHASE N ist PHASE 1..N-1 bereits
+produktiv.
+
+PHASE 1 (sofort, ~30min, low risk):
+  DIREKTIVE 1 -- pytest-step in sub_mas-pre-push-validator
+    Risiko: minimal (ein zusatzlicher check, keine aenderung an
+            bestehender logik)
+    Effekt: SOFORT -- jeder zukuenftige pre-push-run faengt
+            spec-drift BEVOR er den 90s+ validator verschwendet.
+            Verhindert exact R110-71 wiederholung.
+    Verifikation: ein test-commit der einen count-fix macht ohne
+                  den test mitzuaendern, wird vom validator
+                  BLOCKED.
+
+PHASE 2 (nach phase 1, ~2h, medium risk):
+  DIREKTIVE 2 -- SD-* finding type in sub_mas-im-finder
+    Risiko: medium (neuer finding-type, koennte false-positive
+            SD-findung generieren bei legitimen patterns)
+    Effekt: mittelfristig -- im-finder findet spec-drift in
+            laufenden scans, nicht erst beim pre-push-validator.
+            Reduziert time-to-detect von Tagen (R110-71->R110-78
+            war ~24h) auf stunden.
+    Verifikation: ein absichtlicher stale-test erzeugt SD-finding,
+                  mas-engineer behebt ihn automatisch.
+
+PHASE 3 (nach phase 2, ~3h, medium risk):
+  DIREKTIVE 3 -- tools/dev_spec_invariant.py + 2 hooks
+    Risiko: medium (strukturelle aenderung, neue modulschnittstelle)
+    Effekt: langfristig -- dediziertes modul garantiert dass
+            test.asserts == recipe_says invariant IMMER gilt, nicht
+            nur in finding-runs. Wird in im-validator am ende
+            aufgerufen und emittiert P1 bei mismatch.
+    Verifikation: 100% der count-diskrepanzen werden gefangen,
+                  auch solche die im-finder/validator nicht direkt
+                  sehen.
+
+PHASE 4 (informational, bereits done):
+  DIREKTIVE 4 -- Hermes-side pre-push-gate skill
+    Status: bereits umgesetzt in dieser session (2026-08-03)
+            mas-engineer muss hier nichts mehr tun.
+
+STOP-PUNKTE:
+  - Nach PHASE 1: commit + push + verifikation OK
+                  -> PHASE 2 freigeben
+  - Nach PHASE 2: 1 tag warten, schauen ob SD-findings nuetzlich
+                  sind, dann PHASE 3
+  - Nach PHASE 3: alle 3 aktiv, mas-engineer spec-drift-resistent
+
+NICHT PARALLELISIEREN -- PHASE 1 muss erfolgreich sein bevor
+PHASE 2 startet, weil PHASE 2 die SD-findung gegen den
+erweiterten validator testet. PHASE 3 haengt von PHASE 1+2 ab.
 
 ================================================================
 REFERENZ-COMMITS
@@ -159,11 +203,18 @@ REFERENZ-COMMITS
 EXPECTED EFFORT
 ================================================================
 
-- DIREKTIVE 1 (validator + pytest): ~30min, 1 file
-- DIREKTIVE 2 (im-finder SD-findung): ~2h, 1 file
-- DIREKTIVE 3 (dev_spec_invariant.py): ~3h, 1 neues file + 2 hooks
-- Total: ~5.5h implementation + 30min im-pipeline run + 10min e2e
-  = ~6.5h end-to-end
+Phasen-reihenfolge (WICHTIG, siehe WORKFLOW section oben):
+
+  PHASE 1: DIREKTIVE 1 (validator + pytest)      ~30min,  1 file
+  PHASE 2: DIREKTIVE 2 (im-finder SD-findung)    ~2h,     1 file
+  PHASE 3: DIREKTIVE 3 (dev_spec_invariant.py)   ~3h,     1 neu + 2 hooks
+  PHASE 4: DIREKTIVE 4 (skill update)            done,    0 files
+
+  Total implementation:                          ~5.5h
+  + im-pipeline run (3 PHASEN):                  ~30min
+  + e2e verification:                            ~10min
+  ---------------------------------------------------
+  End-to-end:                                    ~6.5h
 
 ================================================================
 NICHT ZU TUN
