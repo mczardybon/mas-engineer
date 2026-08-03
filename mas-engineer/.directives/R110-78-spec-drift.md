@@ -130,12 +130,121 @@ Gewuenschter zustand: ein neuer finding-type mit code-prefix
         (z.B. "96 sub-agents"), UND
     (b) kein recipe/tool/docs-file in repo diesen literal enthaelt.
 
-Detection-algorithmus im im-finder:
+KONKRETE SPEZIFIKATION (PHASE 2, R110-83 spec):
 
-    for test_file in $(find tests -name 'test_*.py'):
+  1. DATEI: mas-engineer/recipe/sub/sub_mas-im-finder.yaml
+     ODER mas-engineer/tools/im_finder_spec_drift.py (je nachdem
+     wo im-finder seine sub-checks registriert -- bestehende
+     struktur wahren).
+     INSERT-POINT: als neue sub-check funktion
+     `check_spec_drift(findings, repo_root)` die im
+     haupt-im-finder-run aufgerufen wird.
+
+  2. EXTRACT_ASSERTED_LITERALS - konkrete regex patterns:
+     Python re patterns zum extrahieren von literalen aus
+     test-files in tests/:
+
+       # String-in-content assertions (z.B. 'assert "foo" in content')
+       STRING_IN_RE = re.compile(
+         r'''assert\s+["']([^"']{3,80})["']\s+in\s+'''
+       )
+       # Equivalenz-Vergleiche (z.B. 'assert N == len(items)')
+       # Wir extrahieren nur LITERALE, nicht variablen.
+       INT_EQ_RE = re.compile(
+         r'''assert\s+\(?(\d+)\)?\s*==\s*[\w\.\(]'''
+       )
+       # Integer literal in vergleich (z.B. 'assert len(x) >= 100')
+       INT_CMP_RE = re.compile(
+         r'''assert\s+[\w\.\(\)]+\s*(?:==|!=|>|<|>=|<=)\s*(\d+)'''
+       )
+     Filter:
+       - skip comments (# ... assert ...)
+       - skip docstrings (""" ... assert ... """)
+       - skip __pycache__/*.pyc
+       - skip paths mit /llm-backup/ im pfad (R110-71 noted
+         llm-backup files sind snapshot, nicht spec)
+
+  3. SEARCH-IN-REPO - was wo gesucht wird:
+     Fuer jeden extrahierten literal L:
+       grep -rqF "$L" recipe/ tools/ docs/ 2>/dev/null
+     Wenn KEIN match: emit SD-finding.
+     Wenn match: skip (literal ist aktuell, kein spec-drift).
+     Edge case: literal matched nur in tests/ selbst
+     (z.B. assert "test_sub_mas_bootstrap" in __name__)
+     -- das ist ein self-reference, skip via heuristic
+     "wenn literal in der gleichen zeile wie der assert ist".
+
+  4. FALSE-POSITIVE REDUKTION:
+     a) Assertion-werte die kuerzer als 4 chars sind:
+        skip (zu generisch, wuerde false-positive auf
+        "1", "ok", "yes" etc. generieren).
+     b) Assertion-werte die URLs enthalten (http://, https://):
+        skip (URLs sind keine spec-drift kandidaten).
+     c) Assertion-werte die nur aus whitespace + control-chars
+        bestehen: skip.
+     d) Wenn ein literal in 3+ files matched (egal wo),
+        wird es als "common value" klassifiziert und skip
+        (verhindert dass "True", "False", etc. SD-triggern).
+
+  5. FINDING-SCHEMA (in findings.yaml):
+       - code: "SD-<test-file-basename>-<index>"  (z.B. SD-test_sub_mas_bootstrap-1)
+       - severity: MEDIUM
+       - category: "spec-drift"
+       - location: "<test_file>:<line_number>"
+       - description: "Test asserts literal '<L>' but it does
+         not appear in any recipe/tool/doc. Either the test
+         is stale (recipe drift) or the literal is a private
+         constant that should be moved to a constant module."
+       - suggested_fix: konkreter bash-befehl:
+           grep -rn '<L>' tests/ recipe/ tools/ docs/
+         plus interpretation:
+           - Wenn nur tests/ matched: test ist stale.
+           - Wenn recipe/ matched aber anderer wert:
+             recipe wurde aktualisiert, test nicht.
+
+  6. PRIORISIERUNG:
+     im-rank priorisiert SD-* findings gleich nach P1 (weil
+     sie tests brechen, nicht nur stylistik sind). Konkret:
+       P1 (blocker): security, syntax-errors
+       SD-* (MEDIUM, hohe Prio): spec-drift
+       P3 (low): stylistik
+     im-designer MUSS einen patch erzeugen -- nicht "ignore"
+     als zulaessige action.
+
+  7. IDEMPOTENZ:
+     Wenn im-finder schon check_spec_drift registriert hat
+     (vorheriger run), skip re-insert. Detection:
+     `grep -q "def check_spec_drift" <im-finder-source>`.
+
+  8. WIE TESTEN:
+     a) POSITIVE: ein stale-test einfuegen (z.B. assert "96
+        sub-agents" in test), im-finder laufen lassen, SD-finding
+        wird generiert.
+     b) NEGATIVE: ein aktueller test (z.B. assert "110
+        sub-agents") erzeugt KEIN SD-finding.
+     c) FALSE-POSITIVE TEST: test mit assert "ok" in content
+        erzeugt KEIN SD-finding (zu kurz).
+     d) INTEGRATION: nach im-finder-run, mas-engineer pre-push
+        hat jetzt 2 befunde (alter P1 + neuer SD), RANK
+        priorisiert richtig.
+
+  9. NICHT TUN:
+       - KEIN auto-fix im-finder. SD-findings werden vom
+         im-designer behandelt, nicht vom im-finder selbst
+         (finder findet, designer fixt -- trennung der
+         concerns).
+       - KEINE regex auf docstring-content -- die sind
+         beschreibung, nicht spec.
+       - KEINE sammel-action "delete all stale tests" -- jeder
+         test braucht seinen eigenen fix weil context anders
+         sein kann (manche stale tests sind obsolete, andere
+         muessen aktualisiert werden).
+
+Detection-algorithmus im im-finder (high-level):
+
+    for test_file in $(find tests -name 'test_*.py' \
+                       -not -path '*/__pycache__/*'):
       for assertion in extract_asserted_literals(test_file):
-        # extract: alle strings in `assert "..." in content` und
-        #          alle integer-vergleiche `assert N == ...`
         if not grep -rqF "$assertion" recipe/ tools/ docs/:
           emit_finding(
             code=f"SD-{test_file}-{assertion}",
@@ -148,12 +257,6 @@ Detection-algorithmus im im-finder:
                           f"matches, the test is stale; either update "
                           f"it to current spec or delete if obsolete.",
           )
-
-Output fliesst in findings.yaml mit dem SD-prefix. im-rank priorisiert
-SD-* MEDIUM-severity findings gleich nach P1 (weil sie tests brechen,
-nicht nur stylistik sind). im-designer erzeugt einen patch der den
-test updated. im-validator verifiziert dass der patch die tests
-wieder gruen macht (pytest -q muss 0 failed zeigen).
 
 ================================================================
 DIREKTIVE 3: TEST-COUNT-INVARIANT in recipe-content-tracking
@@ -171,7 +274,125 @@ das beim im-finder-run mitlaeuft und:
      TYPE matchen (z.B. "110 sub-agents", "77 tools")
   3. emittiert SD-findung wenn test-count != recipe-count
 
-Output-format:
+KONKRETE SPEZIFIKATION (PHASE 3, R110-84 spec):
+
+  1. NEUE DATEI: mas-engineer/tools/dev_spec_invariant.py
+     Standalone-script, importierbar als modul.
+     Public API:
+       def run_spec_invariant_check(repo_root: Path) -> SpecInvariantResult
+       class SpecInvariantResult:
+           def to_findings(self) -> list[Finding]
+     CLI: `python3 -m dev_spec_invariant --repo-root <path>`
+          exit code 0 wenn alle invariants match, 1 sonst.
+
+  2. EXTRACT-FUNKTIONEN:
+     a) extract_count_assertions_from_tests(tests_dir):
+        Regex auf test-files:
+          COUNT_ASSERT_RE = re.compile(
+            r'''assert\s+["'](\d+)\s+(\w[\w-]*)["']\s+in\s+'''
+          )
+        # matched: ("110", "sub-agents"), ("77", "tools"),
+        #          ("3", "phases"), etc.
+        # min 2 chars im TYPE (um "x" oder "1" zu skippen)
+        TYPE_MIN_LEN = 2
+        TYPE_BLACKLIST = {"tests", "files", "lines", "args",
+                          "items", "keys", "values"}
+
+     b) extract_count_claims_from_recipes(recipes_dir):
+        Regex auf recipe/sub/*.yaml + mas-engineer/recipe/*.yaml:
+          COUNT_CLAIM_RE = re.compile(
+            r'''(\d+)\s+(\w[\w-]*)'''
+          )
+        # alle vorkommen, gefiltert durch TYPE_BLACKLIST
+        # (recipes koennen "2 agents" UND "110 sub-agents" haben,
+        # beide werden extrahiert).
+        # Bei mehrdeutigkeit: GROUP BY TYPE, nehme den mit
+        # hoechster count (z.B. "110 sub-agents" > "2 agents" im
+        # gleichen TYPE-class).
+
+  3. MATCHING:
+     Pro (N, TYPE) tupel aus tests:
+       suche in recipe-claims nach (N', TYPE) mit N' == N.
+       Wenn N' != N: spec-drift.
+       Wenn N' nicht gefunden: spec-drift (TYPE exisitert
+         nirgendwo, vermutlich test ist stale).
+       Wenn N' == N: invariant match, kein finding.
+
+     Spezial-fall: TYPE-collision. Wenn z.B. test sagt
+     "110 sub-agents" und recipe sagt "110 sub-agents" UND
+     "2 sub-agents" (z.B. ein anderes recipe das 2 agents
+     fuer eine andere phase hat) -- dann matched "110"
+     spezifisch. Detection: N-Match in mind. 1 recipe reicht.
+
+  4. OUTPUT-SCHEMA (siehe gewuenschter zustand oben):
+     {<test_name>: {test_asserts, recipe_says, match, fix}}
+
+     Zusaetzlich fuer mas-engineer integration:
+       @dataclass
+       class Finding:
+           code: str          # "SD-INVARIANT-<idx>"
+           severity: str      # "P1" (blocker!)
+           category: str      # "spec-invariant"
+           location: str      # "<test_file>:<line>"
+           description: str
+           suggested_fix: str
+
+  5. INTEGRATION IN IM-VALIDATOR:
+     a) Hook-POINT 1: in sub_mas-im-finder.yaml nach allen
+        anderen checks, VOR final summary. Detection-aufruf:
+          from dev_spec_invariant import run_spec_invariant_check
+          result = run_spec_invariant_check(repo_root=Path("."))
+          for f in result.to_findings():
+              findings.append(f)
+     b) Hook-POINT 2: in sub_mas-pre-push-validator.yaml
+        NACH check_16_pytest_run (von DIREKTIVE 1). Detection-
+        aufruf gleich, aber exit code 1 wenn P1-findings > 0.
+     c) Hook-POINT 3: in tools/dev_pytest_hook.py
+        run_post_test_checks(exit_code). Detection-aufruf
+        wenn exit_code > 0 (tests failed), um zu pruefen
+        ob spec-drift die ursache ist. Output:
+          "FAILED: post-test checks detected spec-drift
+           (run tools/dev_spec_invariant.py for details)"
+
+  6. SEVERITÄT:
+     Spec-invariant MISMATCH ist P1 (blocker) -- nicht MEDIUM.
+     Begruendung: ein mismatch bricht tests permanent, das ist
+     ein blocker-grade problem. SD-* findings (von DIREKTIVE 2)
+     sind MEDIUM weil sie nur "test asserted etwas, recipe hat
+     es nicht" sind -- koennte false-positive sein. Spec-
+     invariant ist deterministisch: test sagt X, recipe sagt Y.
+
+  7. IDEMPOTENZ:
+     a) Wenn tools/dev_spec_invariant.py schon existiert,
+        skip re-create. Detection:
+        `test -f mas-engineer/tools/dev_spec_invariant.py`.
+     b) Wenn die 3 hook-points schon verlinkt sind, skip
+        re-insert. Detection: `grep -q "run_spec_invariant_check"
+        <each-hook-file>`.
+
+  8. WIE TESTEN:
+     a) UNIT: dev_spec_invariant.py mit fixture-tree
+        (tests/test_x.py mit "assert '110 sub-agents' in content",
+         recipe/sub/x.yaml mit "110 sub-agents") -> match=True,
+         keine findings.
+     b) UNIT NEGATIV: gleiche fixture aber recipe hat "120
+        sub-agents" -> mismatch, 1 P1 finding.
+     c) INTEGRATION: nach im-validator-run mit mismatch-fixture
+        in temp-branch, exit code != 0, BLOCKED.
+     d) REGRESSION: existierende 1295 tests duerfen nicht brechen
+        (alle counts die aktuell matchen, muessen auch nach
+        spec-invariant-check noch matchen).
+
+  9. NICHT TUN:
+       - KEINE auto-correction. dev_spec_invariant.py meldet
+         nur, es fixt nicht. Auto-fix waere gefaehrlich weil
+         unklar ist welche seite recht hat (test oder recipe).
+       - KEIN mutable global state. Die funktion ist pure:
+         input = repo_root, output = SpecInvariantResult.
+       - KEINE abhaengigkeit von network/external tools.
+         Pure stdlib (re, pathlib, dataclasses).
+
+Output-format (gewnschter zustand):
   {
     "test_bootstrap_distributes_110_subagents": {
       "test_asserts": "110 sub-agents",
