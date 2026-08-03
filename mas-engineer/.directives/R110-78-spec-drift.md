@@ -19,18 +19,95 @@ Aktueller zustand: recipe/sub/sub_mas-pre-push-validator.yaml macht
 aber KEINEN pytest-run. Das ist die luecke die R110-71 spec-drift
 entstehen liess: validator gruen, tests rot, push geht durch.
 
-Gewuenschter zustand: als Check 16 (oder als sub-step von Check 6
-'YAML parse') soll der validator laufen lassen:
+Gewuenschter zustand: ein neuer Check 16 "pytest-run" wird nach
+Check 15 (oder am ende der check-liste) eingefuegt, der den
+test-tree ausfuehrt und das ergebnis strukturiert festhält.
 
-    cd mas-engineer && python3 -m pytest -q 2>&1 | tail -20
+KONKRETE SPEZIFIKATION (PHASE 1, R110-82 spec):
 
-und das ergebnis in pre_push_validation.yaml unter
-`pytest_summary: {passed: N, failed: M, errors: E, skipped: S}`
-festhalten. Wenn failed > 0 ODER errors > 0, ist der validator-
-output "BLOCKED" (nicht "passed"), auch wenn alle 15 anderen
-checks gruen sind.
+  1. DATEI: mas-engineer/recipe/sub/sub_mas-pre-push-validator.yaml
+     INSERT-POINT: nach dem letzten existierenden check (Check 15
+     -- ermitteln via `grep -c "^Check\|check_nr\|id: check" <file>`),
+     ALS NEUER CHECK MIT id: check_16_pytest_run
 
-Begründung: pytest laeuft in ~10s fuer das mas-engineer-test-tree
+  2. BEFEHL (im neuen check auszufuehren):
+       cd <mas-engineer-cwd> && \
+       python3 -m pytest tests/ -q --tb=line \
+         --color=no 2>&1 | tail -30
+     --tb=line: nur 1-zeile traceback pro failure (schoenere logs)
+     --color=no: keine ANSI codes in pre_push_validation.yaml
+     tail -30: letzte 30 zeilen, reicht fuer fail-summary
+
+  3. OUTPUT-PARSING:
+     Expected pytest output format:
+       ============================= 1295 passed in 8.32s ==============================
+     Parser regex (Python re):
+       PASSED_RE   = r"(\d+) passed"
+       FAILED_RE   = r"(\d+) failed"
+       ERROR_RE    = r"(\d+) error"           # collection errors
+       SKIPPED_RE  = r"(\d+) skipped"
+       TIME_RE     = r"in ([\d.]+)s"
+     Edge cases:
+       "no tests ran" -> failed=0, errors=0, passed=0
+                         (NICHT als failure werten, sondern loggen
+                          "no tests collected")
+       pytest not installed -> errors=1, exit code 127
+                              (BLOCKED weil es ein umgebungsfehler ist)
+
+  4. STRUKTURIERTER OUTPUT (in pre_push_validation.yaml):
+       pytest_summary:
+         passed: <int>
+         failed: <int>
+         errors: <int>
+         skipped: <int>
+         duration_seconds: <float>
+         exit_code: <int>           # 0 = ok, 1 = tests failed, 2 = errors, 5 = no tests
+         last_lines: <list[str>]    # letzte 10 zeilen output
+         timestamp: <iso8601>
+
+  5. BLOCKED-LOGIK:
+       check_16_pytest_run returns BLOCKED iff:
+         failed > 0 OR errors > 0 OR exit_code != 0
+       sonst return PASSED (auch wenn skipped > 0 oder passed=0).
+     Begruendung: skipped tests sind explizit als skip markiert,
+     das ist OK. Aber failed ODER errors bedeuten dass der
+     spec-drift oder ein anderer test-bug existiert.
+
+  6. INTEGRATION IN VALIDATOR-OUTPUT:
+       Im top-level validator-summary:
+         status: BLOCKED  (statt "passed" wenn check_16 BLOCKED)
+         blocking_checks: ["check_16_pytest_run"]
+     Die anderen 15 checks laufen weiter (nicht abgebrochen), damit
+     man alle probleme auf einmal sieht.
+
+  7. IDEMPOTENZ / RE-RUN-SAFETY:
+       Wenn check_16 schon existiert (vorheriger run hat ihn
+       angelegt), kein zweiter insert -- vorheriger beibehalten.
+       Detection: `grep -q "check_16_pytest_run" <file>`
+
+  8. WIE TESTEN:
+       a) POSITIVE: in mas-engineer/, `python3 -m pytest tests/ -q`
+          exit 0, 1295 passed. validator-status: passed.
+       b) NEGATIVE: einen test absichtlich brechen (z.B. in
+          tests/test_sub_mas_bootstrap.py ein `assert False` einbauen,
+          in einem temp-branch, NICHT cleanup). validator-status:
+          BLOCKED. Dann revert, status zurueck auf passed.
+       c) NO-TESTS: ein package ohne tests/ erzeugt
+          exit_code=5, no tests collected. Status: PASSED (das ist
+          OK, kein test-coverage ist KEIN fehler fuer jetzt --
+          spaeter SD-finding faengt das).
+
+  9. NICHT TUN:
+       - KEIN --skip-pytest flag. Wenn jemand den check
+         umgehen will, ist das per design BLOCKED. Pytest ist
+         PFLICHT im validator.
+       - KEINE automatische --collect-only (zu schnell, kann
+         collection-errors uebersehen).
+       - KEIN pytest-xdist (kein -n auto) -- sequenzielle
+         ausfuehrung ist 10s und ermoeglicht deterministische
+         failure-tracebacks.
+
+Begruendung: pytest laeuft in ~10s fuer das mas-engineer-test-tree
 (1295 tests as of 2026-08-03), das ist billig genug um in jeden
 pre-push-validator-run eingebaut zu werden. Es faengt spec-drift
 frueh, BEVOR der 90s+ validator-run verschwendet wird.
