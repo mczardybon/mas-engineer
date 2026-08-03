@@ -9,7 +9,7 @@ set -o pipefail
 # If caller didn't set them, fail fast below.
 export PATH="/root/.local/bin:$PATH"
 export GOOSE_PROVIDER=openai
-export GOOSE_MODEL=deepseek-chat
+export GOOSE_MODEL=deepseek-v4-flash
 export OPENAI_HOST=https://api.deepseek.com
 # Auto-detect available deepseek model
 if curl -sS -m 5 -H "Authorization: Bearer ${DEEPSEEK_API_KEY}" https://api.deepseek.com/v1/models 2>/dev/null | grep -q "deepseek-v4-flash"; then
