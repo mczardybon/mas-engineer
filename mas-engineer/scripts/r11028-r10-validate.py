@@ -52,8 +52,27 @@ def validate_wrapper(path: str, strict: bool = False) -> tuple[bool, list[str]]:
             sub_path = sr.get('path', '')
             if not sub_path:
                 errors.append(f"sub_recipe missing 'path' field: {sr}")
-            elif not os.path.exists(sub_path):
-                errors.append(f"sub_recipe path does not exist: {sub_path} (gotcha #11: relative paths resolve from recipe's own dir, NOT cwd)")
+            else:
+                # gotcha #11: relative paths resolve from recipe's own dir, NOT cwd
+                # Per R10 comment: "relative paths resolve from recipe's own dir"
+                # Bug: previously resolved from cwd (False-positive for ./sub_mas-*.yaml)
+                # Fix: if path is relative (no leading /), prepend recipe's own dir.
+                if not os.path.isabs(sub_path):
+                    recipe_dir = os.path.dirname(os.path.abspath(path))
+                    candidate = os.path.join(recipe_dir, sub_path)
+                    if os.path.exists(candidate):
+                        pass  # OK, path resolves correctly
+                    else:
+                        errors.append(
+                            f"sub_recipe path does not exist: {sub_path} "
+                            f"(gotcha #11: tried {candidate}, neither cwd-relative nor "
+                            f"recipe-dir-relative resolves)"
+                        )
+                elif not os.path.exists(sub_path):
+                    errors.append(
+                        f"sub_recipe path does not exist: {sub_path} "
+                        f"(gotcha #11: absolute path, but file not found)"
+                    )
 
     # 4. Required fields
     for field in ('name', 'version', 'prompt'):
