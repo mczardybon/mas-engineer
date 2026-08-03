@@ -1,0 +1,111 @@
+Loading recipe: 💊 SUB-DEGRADATION-PLANNER — Treatment Planning
+Description: v1.0.0 | MAS-internal: Designs treatment plans for degraded agents (single role)
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260801_64 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ tree
+    path: /tmp/mas-engineer-test/mas-engineer/.state
+    depth: 2
+
+checkpoints/  [0]
+knowledge/  [921]
+  01-architecture.md  [85]
+  02-communication.md  [58]
+  03-installation.md  [58]
+  04-recovery.md  [49]
+  05-rules.md  [84]
+  06-tools.md  [66]
+  07-agents.md  [121]
+  08-build.md  [66]
+  09-im-features.md  [334]
+logs/  [0]
+pipeline/  [1K]
+  README.md  [32]
+  findings_R110-24-pre-framework.yaml  [125]
+  findings_R47_structural.yaml  [56]
+  findings_R49_structural.yaml  [61]
+  findings_R51_consumer.yaml  [42]
+  findings_R55_goose_expert.yaml  [16]
+  patches_R110-24-pre-framework.yaml  [529]
+  ranked_findings_R110-24-pre-framework.yaml  [129]
+  signal_cp_done_20260724_1602.yaml  [13]
+  signal_general_improver_done_20260725_0735.yaml  [26]
+  signal_general_improver_done_20260725_1223.yaml  [28]
+  validation_R110-24-pre-framework.yaml  [63]
+  validation_author_fixes.yaml  [267]
+pre_check_benchmark/  [43]
+  benchmark-20260727_053743.json  [43]
+rules/  [551]
+  hard_rules.yaml  [175]
+  responsibility_matrix.yaml  [174]
+  rules.yaml  [89]
+  rules_2_normal.yaml  [16]
+  rules_4_strong.yaml  [16]
+  rules_5_extreme.yaml  [81]
+templates/  [3K]
+  projects/  [0]
+    generic/  [0]
+    python/  [0]
+    web/  [0]
+  agent_schema.yaml  [3K]
+  agent_schema_generic.yaml  [11]
+  bp_checklist.md  [126]
+  goosehints_generic_template  [28]
+  guidelines.md  [58]
+  user_rules_template.yaml  [42]
+best-practices.yaml  [345]
+changelog.txt  [1]
+changes.archive-2026-07-23.json  [158]
+changes.archive-2026-07-24-r37.json  [107]
+changes.archive-2026-07-24.json  [187]
+changes.unlimited-archive-20260723-222630.json  [61]
+framework-best-practices.yaml  [67]
+goose-defaults.env  [30]
+immune_severity  [1]
+sot_schema.yaml  [110]
+workflows.yaml  [3K]
+✅ **DEGRADATION-PLANNER (v1.0.0) — mode confirmed.**
+
+Role constraints acknowledged:
+- ⛔ NO degradation analysis — that's `degradation-analyzer`'s domain
+- ⛔ NO report writing — that's `degradation-reporter`'s domain
+- 💊 ONLY: receive root cause analysis → design treatment plan → return plan
+
+I checked the state directory for a pending handoff. Current pipeline state (`mas-engineer/.state/pipeline/`) contains prior analyzer artifacts (`findings_*.yaml`, `ranked_findings_*.yaml`) but **no new root cause analysis handed to me yet** — and per my role I do not self-analyze those files.
+
+**Awaiting input.** Please provide the root cause analysis from `degradation-analyzer` for the degraded agent. Minimal required fields for me to produce a treatment plan:
+
+| Field | Purpose |
+|---|---|
+| `agent_id` | Target of the treatment |
+| `degradation_type` | e.g. crash-loop, stuck, silent-failure, config-drift, resource-exhaustion |
+| `root_cause` | Analyzer's conclusion (why it degraded) |
+| `severity` | For prioritization (critical / high / medium / low) |
+| `evidence` | Optional — relevant logs/config snapshot |
+
+---
+
+**Output contract** — once you supply the analysis, I will return a structured treatment plan in this shape:
+
+```yaml
+treatment_plan:
+  agent_id: <target>
+  plan_id: <uuid>
+  based_on_analysis: <analysis_id>
+  steps:
+    - order: 1
+      action: restart | reconfigure | rollback | escalate   # or a composed sequence
+      target: <component/config/file>
+      parameters: {...}
+      validation: <how to confirm step worked>
+      rollback_if_failed: <safety exit>
+  escalation: <trigger conditions for handing to human/other agent>
+  estimated_downtime: ...
+  severity: ...
+```
+
+Send the root cause analysis and I'll design the treatment sequence.

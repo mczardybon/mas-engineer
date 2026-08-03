@@ -1,0 +1,307 @@
+Loading recipe: 🔍 SUB-MAS-CONFIG-AUDITOR — Configuration Consistency Check (Sub-Agent)
+Description: v1.0.0 | MAS-internal: Cross-references config.yaml ↔ core docs ↔ 94 recipes ↔ runtime
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260801_53 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat recipe/instructions/sub_mas-config-auditor.md 2>/dev/null || find . -name "sub_mas-config-auditor.md" 2>/dev/null | head -5
+
+╔══════════════════════════════════════════════╗
+║  SOT WORKFLOW CONTROL                       ║
+║  → workflows.yaml → agents.config-auditor   ║
+║     .task_workflows.CROSS_REF               ║
+╚══════════════════════════════════════════════╝
+
+MAS-Engineer-internal. Runs 16 cross-reference checks. Finds contradictions between config.yaml, core docs, recipes and runtime.
+
+## Input (from MAS-Engineer)
+
+```yaml
+config_auditor_intake:
+  signal: "🟣 HANDOVER"
+  request_id: string
+  from: "dev-mas-engineer"
+  to: "sub_mas-config-auditor"
+  task: "CROSS_REF|CHECK_VALUE|CHECK_DRIFT"
+  workspace: "/path/to/workspace"
+  value: null  # Only at CHECK_VALUE: e.g. "hard_cap"
+```
+
+## ⛔ STEP 0 — DISCOVER STRUCTURE
+I discover the framework structure dynamically — no hardcoded paths.
+find {workspace} -name "config.yaml" -not -path "*_framework*" → CONFIG_PATH
+find {workspace} -name "*.yaml" -not -path "*_framework*" → RECIPE_FILES
+find {workspace} -name "*.md" → DOC_FILES
+All checks use dynamically discovered paths — no hardcoded assumptions.
+
+## 15 CROSS-REFERENCE CHECKS
+
+### CHECK 1 — Tier names
+config.yaml `models:` (5 tiers: almost, balanced, powerful, reasoning, code)
+AGAINST: All recipes `settings:` fields `goose_model:`
+CHECK: Each recipe tier name exists in config.yaml
+
+### CHECK 2 — Provider consistency
+config.yaml `providers.openai.enabled: true`
+AGAINST: All recipes `goose_provider:`
+CHECK: All recipes use `openai` (the only enabled provider)
+
+### CHECK 3 — Mode names
+config.yaml `canonical_modes:` (14 modes)
+AGAINST: find {workspace} -name "*.md" -path "*docs*" | head -10
+CHECK: Each mode name in config has documentation (dynamically via docs/*.md)
+
+### CHECK 4 — max_parallel_agents ≤ hard_cap
+config.yaml `dispatch_control.safe_parallelism.hard_cap: 8`
+AGAINST: config.yaml `canonical_modes.*.max_parallel_agents`
+CHECK: NO mode has max_parallel_agents > 8
+
+### CHECK 5 — MAS sub-agent list: config vs disk
+config.yaml `conflict_resolver.MAS-Sub-Agent_priority_order:` (52 names)
+    AGAINST: find {workspace} -name "MAS-Sub-Agent_*.yaml"
+    CHECK: 1:1 match between both lists
+
+  ### CHECK 6 — Lane assignment: each MAS sub-agent in exactly 1 lane
+    config.yaml `routing_segmentation.lanes.*.MAS-Sub-agents`
+    AGAINST: config.yaml `conflict_resolver.MAS-Sub-Agent_priority_order`
+    CHECK: Sum of lane MAS sub-agents == 52, no MAS sub-agent duplicated
+
+### CHECK 7 — Token budgets ≤ model max tokens
+config.yaml `token_budgets.per_tier.<tier>.max_output`
+AGAINST: config.yaml `models.<tier>.max_tokens`
+CHECK: max_output + 25% buffer <= max_tokens
+
+### CHECK 8 — context_window vs max_tokens (semantic check)
+config.yaml `token_budgets.per_tier.<tier>.context_window`
+AGAINST: config.yaml `models.<tier>.max_tokens`
+CHECK: context_window > max_tokens is documentable (different semantics)
+
+### CHECK 9 — max_input + max_output ≤ context_window
+config.yaml `token_budgets.per_tier.<tier>.max_input + max_output`
+AGAINST: config.yaml `token_budgets.per_tier.<tier>.context_window`
+CHECK: Sum fits into context window
+
+### CHECK 10 — Retry status consistency
+config.yaml `graceful_degradation.retryable_errors:`
+AGAINST: config.yaml `adaptive_tier_gate.upward_retry_on_statuses:`
+CHECK: No contradictory status codes
+
+### CHECK 11 — Memory path existence
+config.yaml `memory_scope_index.store_path:` — read path from config
+AGAINST: existence of the path in workspace
+CHECK: Directory exists or can be created
+
+### CHECK 12 — Docs references existence
+config.yaml comments reference core docs
+AGAINST: find {workspace} -name "<file>.md"
+CHECK: Each referenced file exists
+
+  ### CHECK 13 — Recipe timeout/max_steps consistency
+    All 52 MAS sub-agents + 43 sub-agents + 4 main agents
+    CHECK: Document outliers (Min=300, Max=6000, Recovery=50)
+
+  ### CHECK 14 — Slash commands: only main agents have them
+    CHECK: Only /analyze, /plan, /execute, /fw-monitor have slash_command
+    CHECK: 52 MAS sub-agents and 43 sub-agents have NO slash_command
+
+### CHECK 15 — Version consistency
+config.yaml header: "v1.0.0"
+AGAINST: All recipes `description:` field + all core docs
+CHECK: All files reference the same version
+
+### CHECK 16 — Framework governance exists
+<workspace>/docs/framework-governance.md
+CHECK:
+  a) Does the file exist?
+  b) Does it contain "Rule 1 — MAS maintenance: Python-First"?
+  c) Does it contain the Python-First priority table (⛔ 1: Python tools)?
+  d) Does it contain "Rule 2 — Framework agents: Goose-First"?
+  e) Does it contain the Goose-First priority table (⛔ 1: Goose built-in tools)?
+EXPECTATION: File exists with BOTH rule levels.
+MISSING: ⚠️ WARNING — Framework has no development governance.
+
+## Output (to MAS-Engineer)
+
+```yaml
+mas_result:
+  signal: "🟢 DONE"
+  request_id: string
+  from: "sub_mas-config-auditor"
+  to: "dev-mas-engineer"
+  status: "success"
+  parsed:
+    task: "CROSS_REF|CHECK_VALUE|CHECK_DRIFT"
+    total_checks: 16
+    passed: 13
+    failed: 1
+    warning: 1
+    info: 1
+    observations:
+      - check: 8
+        severity: "info"
+        detail: "context_window > max_tokens in all 5 tiers. Different semantics — no error."
+    score: "13/16 ✅"
+    summary: "12 checks passed. 1 warning, 1 info, 1 info finding."
+```
+
+## Boundaries
+- ⛔ Only cross-reference — patch nothing
+- ⛔ Only config.yaml, core docs, recipes — not runtime
+- ⛔ No inventing or recommending values without user confirmation
+
+CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without confirmation.
+MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain overreach. Reading in other domain OK.
+
+# ⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions. dev_rule_checker.py enforces.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test && pwd && echo "---WORKSPACE TREE (depth 2)---" && ls -la
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test && echo "---CONFIG FILES---" && find . -name "config.yaml" -not -path "*_framework*" 2>/dev/null && echo "---YAML FILES (non-framework)---" && find . -name "*.yaml" -not -path "*_framework*" 2>/dev/null | wc -l && echo "---MD FILES---" && find . -name "*.md" 2>/dev/null | wc -l
+
+/tmp/mas-engineer-test
+---WORKSPACE TREE (depth 2)---
+total 352
+drwxr-xr-x 14 root root   4096 Jul 30 04:16 .
+drwxrwxrwt  1 root root  12288 Aug  1 10:31 ..
+drwxr-xr-x  8 root root   4096 Aug  1 10:31 .git
+-rw-r--r--  1 root root   3809 Jul 29 19:02 .gitignore
+drwxr-xr-x  3 root root   4096 Jul 29 19:02 .mas
+-rw-r--r--  1 root root      4 Jul 29 19:02 .mas-mode
+drwxr-xr-x  3 root root   4096 Jul 30 04:16 .pytest_cache
+drwxr-xr-x  4 root root   4096 Aug  1 10:20 .state
+-rw-r--r--  1 root root  34523 Jul 29 19:02 LICENSE
+-rw-r--r--  1 root root  26356 Jul 29 19:02 README.md
+-rw-r--r--  1 root root  22603 Jul 29 19:02 ai_agent_saas_marketing_report.md
+-rw-r--r--  1 root root  13895 Jul 29 19:02 code-review-report.json
+drwxr-xr-x  2 root root   4096 Aug  1 10:25 dist
+drwxr-xr-x  2 root root   4096 Aug  1 10:20 docs
+drwxr-xr-x  3 root root   4096 Jul 29 19:02 e2e-evidence-gen2
+drwxr-xr-x 38 root root   4096 Jul 29 19:02 e2e-results
+-rwxr-xr-x  1 root root  14364 Jul 29 19:02 install.sh
+drwxr-xr-x 25 root root   4096 Aug  1 08:04 mas-engineer
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 outputs
+-rw-r--r--  1 root root   4978 Jul 29 19:02 recipe_live_test.yaml
+-rw-r--r--  1 root root   3353 Jul 29 19:02 recipe_live_test_FINAL.yaml
+-rw-r--r--  1 root root   9995 Jul 29 19:02 run_security_scanner.py
+-rw-r--r--  1 root root   9447 Jul 29 19:02 run_static_analyzer.py
+-rw-r--r--  1 root root   6974 Jul 29 19:02 security-scan-report.json
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 seo-research-output
+-rw-r--r--  1 root root 118272 Jul 29 19:02 static-analysis-report.json
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 tools---CONFIG FILES---
+---YAML FILES (non-framework)---
+354
+---MD FILES---
+239
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test && echo "---ALL config.yaml---" && find . -name "config.yaml" 2>/dev/null && echo "---.mas contents---" && find .mas -type f | head -20 && echo "---.state contents---" && find .state -type f | head -30
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test && echo "---mas-engineer dir---" && ls mas-engineer/ && echo "---workflows.yaml?---" && find . -name "workflows.yaml" -not -path "*_framework*" 2>/dev/null | head
+
+---ALL config.yaml---
+---.mas contents---
+.mas/start-dashboard.sh
+.mas/mcp/package.json
+.mas/mcp/dashboard.html
+.mas/mcp/mas-dispatch-monitor.html
+.mas/mcp/server.js
+.mas/mcp/package-lock.json
+---.state contents---
+.state/pipeline/validation.yaml
+.state/pipeline/findings_R52_threshold.yaml
+.state/pipeline/im_apply_only_log.yaml
+.state/pipeline/patches.yaml
+.state/pipeline/pre_push_validation.yaml
+.state/backups/germen-remove-2026-08-01/tests/test_sub_mas_e2e_german_fixes_validator.py
+.state/backups/germen-remove-2026-08-01/tests/test_sub_mas_e2e_german_fixes_checker.py
+.state/backups/germen-remove-2026-08-01/tests/test_sub_mas_e2e_german_fixes_director.py
+.state/backups/germen-remove-2026-08-01/tests/test_sub_mas_e2e_german_fixes_runner.py
+.state/backups/germen-remove-2026-08-01/instructions/sub_mas-pre-push-validator.md
+.state/backups/germen-remove-2026-08-01/recipes/e2e-verify-german-fixes.yaml
+.state/backups/germen-remove-2026-08-01/recipes/sub_mas-e2e-german-fixes-runner.yaml
+.state/backups/germen-remove-2026-08-01/recipes/sub_mas-e2e-german-fixes-validator.yaml
+.state/backups/germen-remove-2026-08-01/recipes/sub_mas-e2e-german-fixes-checker.yaml
+.state/backups/germen-remove-2026-08-01/recipes/sub_mas-e2e-german-fixes-director.yaml
+.state/pre-push-e2e-baseline.json---mas-engineer dir---
+DATA-QUALITY-REPORT.md
+README.md
+docs
+e2e-evidence
+e2e-evidence-gen2
+e2e-results
+findings
+mas-engineer
+prompts
+recipe
+run_translators.py
+sample-input
+sample-output
+scripts
+template
+testproject
+tests
+tools
+---workflows.yaml?---
+./e2e-results/2026-07-19/team1/.state/workflows.yaml
+./e2e-results/2026-07-19/team2/.state/workflows.yaml
+./mas-engineer/testproject/workflows.yaml
+./mas-engineer/.state/workflows.yaml
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && echo "===WORKING DIR TREE depth 2===" && ls -la && echo "---config.yaml search---" && find . -name "config.yaml" 2>/dev/null | head && echo "---nested mas-engineer---" && ls mas-engineer/ 2>/dev/null
+
+===WORKING DIR TREE depth 2===
+total 156
+drwxr-xr-x 25 root root  4096 Aug  1 08:04 .
+drwxr-xr-x 14 root root  4096 Jul 30 04:16 ..
+drwxr-xr-x  4 root root  4096 Aug  1 10:19 .backups
+drwxr-xr-x  4 root root  4096 Jul 30 04:56 .dev-team
+-rw-------  1 root root   735 Jul 29 19:12 .env
+-rw-r--r--  1 root root  1333 Jul 29 19:02 .env.example
+drwxr-xr-x  2 root root  4096 Aug  1 09:45 .git
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 .githooks
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 .github
+-rw-r--r--  1 root root  1644 Jul 29 19:02 .gitignore
+-rw-r--r--  1 root root   467 Jul 29 19:02 .goosehints
+drwxr-xr-x  5 root root  4096 Jul 29 20:12 .mas
+-rw-r--r--  1 root root     4 Jul 29 19:02 .mas-mode
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 .pytest_cache
+drwxr-xr-x 12 root root  4096 Aug  1 10:25 .state
+-rw-r--r--  1 root root 13566 Jul 29 19:02 DATA-QUALITY-REPORT.md
+-rw-r--r--  1 root root  6368 Jul 29 19:02 README.md
+drwxr-xr-x  2 root root  4096 Aug  1 10:18 docs
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 e2e-evidence
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 e2e-evidence-gen2
+drwxr-xr-x 48 root root  4096 Aug  1 10:25 e2e-results
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 findings
+drwxr-xr-x  4 root root  4096 Jul 29 19:02 mas-engineer
+drwxr-xr-x  4 root root  4096 Jul 29 19:02 prompts
+drwxr-xr-x  6 root root  4096 Aug  1 10:20 recipe
+-rw-r--r--  1 root root  2413 Jul 29 19:02 run_translators.py
+drwxr-xr-x  2 root root  4096 Jul 29 20:10 sample-input
+drwxr-xr-x  2 root root  4096 Jul 29 20:10 sample-output
+drwxr-xr-x  2 root root  4096 Jul 30 03:57 scripts
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 template
+drwxr-xr-x  6 root root  4096 Aug  1 10:20 testproject
+drwxr-xr-x  2 root root 12288 Aug  1 10:25 tests
+drwxr-xr-x  3 root root  4096 Aug  1 10:25 tools
+---config.yaml search---
+---nested mas-engineer---
+docs

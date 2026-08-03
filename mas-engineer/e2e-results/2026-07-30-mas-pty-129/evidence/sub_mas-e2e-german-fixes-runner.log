@@ -1,0 +1,242 @@
+Loading recipe: 🏃 E2E-GERMAN-FIXES-RUNNER — German Fixes Test Runner (Sub-Agent)
+Description: v1.0.0 | MAS-internal: e2e verification — Runs T3 — workflow invocation test for all 5 wf_recovery_* workflows
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260730_53 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+## T3: All `wf_recovery_*` workflows can be invoked via `dev_workflow_runner`
+
+Let me first discover which recovery workflows exist, then invoke each one.
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls tools/dev_workflow_runner.py 2>/dev/null && echo "EXISTS" || echo "NOT FOUND"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: grep -r "wf_recovery_" tools/ 2>/dev/null | head -20
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls -la wf_recovery_*/ 2>/dev/null; find . -name "wf_recovery_*" -maxdepth 2 2>/dev/null | head -20
+
+tools/dev_workflow_runner.py
+EXISTStools/dev_workflow_runner.py:    - task_workflows: (wf_recovery_*, ...)
+tools/pre_check_lib/auto_repair.py:    "wf_recovery_checkpoint",
+tools/pre_check_lib/auto_repair.py:    "wf_recovery_defib",
+tools/pre_check_lib/auto_repair.py:    "wf_recovery_safezone",
+tools/pre_check_lib/auto_repair.py:    "wf_recovery_timeline",
+tools/pre_check_lib/phoenix.py:  T1: wf_recovery_immune exists
+tools/pre_check_lib/phoenix.py:        recovery = [n for n in twfs if n.startswith("wf_recovery_")]
+tools/pre_check_lib/phoenix.py:        recovery = [n for n in sorted(twfs.keys()) if n.startswith("wf_recovery_")]
+tools/pre_check_lib/phoenix.py:    # T1: wf_recovery_immune exists
+tools/pre_check_lib/phoenix.py:        "name": "wf_recovery_immune exists",
+tools/pre_check_lib/phoenix.py:        **_check_workflow_exists("wf_recovery_immune"),
+tools/pre_check_lib/phoenix.py:        **_check_recovery_workflow("wf_recovery_checkpoint", "restore"),
+tools/pre_check_lib/phoenix.py:        **_check_recovery_workflow("wf_recovery_defib", "defib"),
+tools/pre_check_lib/phoenix.py:        **_check_recovery_workflow("wf_recovery_safezone", "safezone"),
+tools/pre_check_lib/phoenix.py:        **_check_recovery_workflow("wf_recovery_timeline", "timeline"),
+tools/pre_check_lib/german.py:  T2: No placeholder (echo-only) steps in wf_recovery_*
+tools/pre_check_lib/german.py:    """T2: No placeholder (echo-only) steps in wf_recovery_*."""
+tools/pre_check_lib/german.py:        recovery = [n for n in twfs if n.startswith("wf_recovery_")]
+tools/pre_check_lib/german.py:        "name": "No placeholder (echo-only) steps in wf_recovery_*",
+tools/e2e_run_all.py:    wfs = ["wf_recovery_immune", "wf_recovery_checkpoint", "wf_recovery_safezone", "wf_recovery_timeline", "wf_recovery_defib"](no output)Found the 5 recovery workflows. Let me check how `dev_workflow_runner.py` is used, then run each one.
+  ────────────────────────────────────────
+  ▸ shell
+    command: head -40 tools/dev_workflow_runner.py
+
+#!/usr/bin/env python3
+"""
+dev_workflow_runner.py — Workflow CLI
+
+Usage:
+  python3 tools/dev_workflow_runner.py build-test
+  python3 tools/dev_workflow_runner.py build-test --VERSION=2.43.0
+  python3 tools/dev_workflow_runner.py --list
+  python3 tools/dev_workflow_runner.py --help
+"""
+import yaml, os, sys, json, datetime, subprocess, time, re, threading
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TOOLS_DIR = BASE + "/tools"
+WF_FILE = os.path.join(BASE, ".state", "workflows.yaml")
+RUNS_DIR = os.path.join(BASE, ".state", "workflow_runs")
+os.makedirs(RUNS_DIR, exist_ok=True)
+
+def load():
+    """Load workflows from workflows.yaml.
+
+    Returns a merged dict containing BOTH:
+    - workflows: (build-test, si-analyse, knowledge-refresh, ...)
+    - task_workflows: (wf_recovery_*, ...)
+    """
+    with open(WF_FILE) as f:
+        data = yaml.safe_load(f)
+    wfs = data.get("workflows", {}) or {}
+    # Also expose task_workflows (recovery, monitoring, etc.) under same namespace
+    # so the CLI can invoke any registered workflow by name.
+    wfs.update(data.get("task_workflows", {}) or {})
+    return wfs
+
+def list_workflows(wfs):
+    for name, wf in sorted(wfs.items()):
+        p = wf.get("params", {})
+        params = f" ({', '.join(p.keys())})" if p else ""
+        print(f"  {name:20s} {wf.get('desc', '')}{params}")
+
+def resolve_order(steps):Now let me run all 5 recovery workflows:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_immune 2>&1 | tail -5
+    timeout_secs: 30
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_checkpoint 2>&1 | tail -5
+    timeout_secs: 30
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_safezone 2>&1 | tail -5
+    timeout_secs: 30
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_timeline 2>&1 | tail -5
+    timeout_secs: 30
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_defib 2>&1 | tail -5
+    timeout_secs: 30
+
+  ▶  categorize... ✅
+  ▶  auto_repair... ✅
+
+Log: /tmp/mas-engineer-test/mas-engineer/.state/workflow_runs/wf_recovery_immune_20260730_043603.json
+status: ok  ▶  ensure_recipe... ✅
+  ▶  auto_repair... ✅
+
+Log: /tmp/mas-engineer-test/mas-engineer/.state/workflow_runs/wf_recovery_checkpoint_20260730_043602.json
+status: ok  ▶  check_fork... ✅
+  ▶  auto_repair... ✅
+
+Log: /tmp/mas-engineer-test/mas-engineer/.state/workflow_runs/wf_recovery_safezone_20260730_043602.json
+status: ok  ▶  score_latest... ✅
+  ▶  auto_repair... ✅
+
+Log: /tmp/mas-engineer-test/mas-engineer/.state/workflow_runs/wf_recovery_timeline_20260730_043602.json
+status: ok  ▶  verify_immune_timeline... ✅
+  ▶  auto_repair... ✅
+
+Log: /tmp/mas-engineer-test/mas-engineer/.state/workflow_runs/wf_recovery_defib_20260730_043603.json
+status: okAll 5 ran with ✅ status. Let me also verify the full output has the expected `▶ Workflow:` header:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_immune 2>&1
+    timeout_secs: 30
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_checkpoint 2>&1
+    timeout_secs: 30
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_safezone 2>&1
+    timeout_secs: 30
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_timeline 2>&1
+    timeout_secs: 30
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_defib 2>&1
+    timeout_secs: 30
+
+▶ Workflow: wf_recovery_immune
+  ▶  check... ✅
+  ▶  list_violations... ✅
+  ▶  categorize... ✅
+  ▶  auto_repair... ✅
+
+Log: /tmp/mas-engineer-test/mas-engineer/.state/workflow_runs/wf_recovery_immune_20260730_043608.json
+status: ok▶ Workflow: wf_recovery_checkpoint
+  ▶  list_checkpoints... ✅
+  ▶  validate_latest... ✅
+  ▶  ensure_recipe... ✅
+  ▶  auto_repair... ✅
+
+Log: /tmp/mas-engineer-test/mas-engineer/.state/workflow_runs/wf_recovery_checkpoint_20260730_043608.json
+status: ok▶ Workflow: wf_recovery_safezone
+  ▶  list_templates... ✅
+  ▶  validate_templates... ✅
+  ▶  check_fork... ✅
+  ▶  auto_repair... ✅
+
+Log: /tmp/mas-engineer-test/mas-engineer/.state/workflow_runs/wf_recovery_safezone_20260730_043608.json
+status: ok▶ Workflow: wf_recovery_timeline
+  ▶  find_latest... ✅
+  ▶  count_checkpoints... ✅
+  ▶  score_latest... ✅
+  ▶  auto_repair... ✅
+
+Log: /tmp/mas-engineer-test/mas-engineer/.state/workflow_runs/wf_recovery_timeline_20260730_043608.json
+status: ok▶ Workflow: wf_recovery_defib
+  ▶  list_defib... ✅
+  ▶  check_emergency_config... ✅
+  ▶  verify_immune_timeline... ✅
+  ▶  auto_repair... ✅
+
+Log: /tmp/mas-engineer-test/mas-engineer/.state/workflow_runs/wf_recovery_defib_20260730_043608.json
+status: ok## ✅ T3 Results
+
+All **5 recovery workflows** successfully invoked via `dev_workflow_runner.py` — every one shows `▶ Workflow:` header and `status: ok` with all steps ✅.
+
+```json
+{
+  "t3": {
+    "passed": true,
+    "details": "All 5 wf_recovery_* workflows invoked via dev_workflow_runner.py with status: ok. No failures, no skipped steps in this run.",
+    "per_workflow": {
+      "wf_recovery_immune": {
+        "passed": true,
+        "status": "ok",
+        "steps": ["check ✅", "list_violations ✅", "categorize ✅", "auto_repair ✅"]
+      },
+      "wf_recovery_checkpoint": {
+        "passed": true,
+        "status": "ok",
+        "steps": ["list_checkpoints ✅", "validate_latest ✅", "ensure_recipe ✅", "auto_repair ✅"]
+      },
+      "wf_recovery_safezone": {
+        "passed": true,
+        "status": "ok",
+        "steps": ["list_templates ✅", "validate_templates ✅", "check_fork ✅", "auto_repair ✅"]
+      },
+      "wf_recovery_timeline": {
+        "passed": true,
+        "status": "ok",
+        "steps": ["find_latest ✅", "count_checkpoints ✅", "score_latest ✅", "auto_repair ✅"]
+      },
+      "wf_recovery_defib": {
+        "passed": true,
+        "status": "ok",
+        "steps": ["list_defib ✅", "check_emergency_config ✅", "verify_immune_timeline ✅", "auto_repair ✅"]
+      }
+    }
+  }
+}
+```

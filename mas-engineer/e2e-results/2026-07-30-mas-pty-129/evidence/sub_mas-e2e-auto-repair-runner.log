@@ -1,0 +1,35 @@
+Loading recipe: 🏃 E2E-AUTO-REPAIR-RUNNER — Auto Repair Test Runner (Sub-Agent)
+Description: v1.0.0 | MAS-internal: e2e verification — Runs T2-T3 workflow runner tests for auto-repair
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260730_47 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+## Running T2 & T3 Checks
+
+Let me execute both checks in parallel.
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_immune']; print(any('auto_repair' in s.get('id','').lower() for s in wf.get('steps',[])))"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_immune']; steps=wf.get('steps',[]); idx=[i for i,s in enumerate(steps) if s.get('id')=='auto_repair']; print(idx[0]+1 if idx else 'not found')"
+
+True4## E2E Auto Repair — T2 & T3 Results
+
+Both checks passed. Here is the structured report:
+
+```json
+{
+  "t2": {
+    "passed": true,
+    "details": "wf_recovery_immune workflow contains a step with 'auto_repair' in its id (case-insensitive)"
+  },
+  "t3": {
+    "passed": true,
+    "details": "auto_repair step is step 4 in wf_recovery_immune (1-indexed position)"
+  }
+}
+```
