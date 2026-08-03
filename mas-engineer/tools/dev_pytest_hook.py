@@ -28,12 +28,22 @@ def run_pre_test_checks():
     return True
 
 def run_post_test_checks(pytest_exit_code):
-    """Checks ob Tests new Rulen need."""
+    """Checks whether tests need new rules (post-test phase).
+
+    Spec (R110-77-follow-up): when tests fail, the output must contain
+    the keyword 'failed' as an explicit signal — not buried inside a
+    sentence like 'Tests failed' which only matches by substring. The
+    test_tools_framework test_run_post_test_checks_fail_prints_recommendation
+    test currently passes by substring match; making the keyword
+    explicit and uppercase-prefixed makes the log greppable and the
+    contract obvious.
+    """
     if pytest_exit_code > 0:
-        # Tests failed -> Check ob Rule-Anpassung notig
+        # Tests failed -> Check whether rule-adjustment needed
         checker_path = 'tools/dev_rule_checker.py'
         if os.path.exists(checker_path):
-            print("\nDEV-CHECKER: Tests failed — Recommendation:")
+            print("\n[failed] post-test checks flagging rule-adjustment needed")
+            print("DEV-CHECKER: Recommendation:")
             print("  python3 tools/dev_audit_deps.py --target .")
     return True
 

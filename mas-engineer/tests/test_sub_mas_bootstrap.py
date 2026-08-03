@@ -83,18 +83,30 @@ def test_bootstrap_r10_coronashield():
 
 
 def test_bootstrap_python_shell_yaml():
-    """Spec: bootstrap includes Python + Shell + YAML tools."""
+    """Spec: bootstrap must include tools (composition breakdown dropped
+    in R110-71: '50 Python + 6 Shell + 1 YAML' was too brittle and changed
+    on every tools/ commit). The current spec is just 'N tools' aggregate,
+    so this test now only checks the file is reachable and parseable — the
+    detailed Python/Shell/YAML breakdown is verified at the file-system
+    level in mas-engineer/tests/test_tools_count.py instead."""
+    # R110-71 dropped composition breakdown from sub_mas-bootstrap.yaml
+    # because it drifted every commit. The aggregate count ('77 tools')
+    # is what bootstrap now declares. Detailed tool-type breakdown
+    # belongs to test_tools_count.py, not to a recipe-content test.
     content = RECIPE.read_text()
-    assert "Python" in content, \
-        "bootstrap must reference Python tools"
-    assert "Shell" in content, \
-        "bootstrap must reference Shell tools"
-    assert "YAML" in content, \
-        "bootstrap must reference YAML tools"
+    assert "tools" in content.lower(), \
+        "bootstrap must reference tools aggregate"
 
 
-def test_bootstrap_distributes_96_subagents():
-    """Spec: bootstrap distributes 96 sub-agents (snapshot count)."""
+def test_bootstrap_distributes_110_subagents():
+    """Spec: bootstrap distributes 110 sub-agents (R110-71 snapshot).
+
+    R110-71 (commit f6f2f46) corrected the stale '96 sub-agents' count
+    to '110 sub-agents', verified at that time via
+    `ls recipe/sub/sub_mas-*.yaml | grep -v llm-backup | wc -l`. Recipe
+    body now declares 110; this test verifies the spec matches the
+    recipe, not the other way around.
+    """
     content = RECIPE.read_text()
-    assert "96 sub-agents" in content, \
-        "bootstrap must declare 96 sub-agents distribution"
+    assert "110 sub-agents" in content, \
+        "bootstrap must declare 110 sub-agents distribution (R110-71)"
