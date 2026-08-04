@@ -40,12 +40,14 @@ in test-fixtures/).
 |---|---|---|---|---|---|---|
 | 1 | validator + pytest | DONE | 2026-08-03 | 2026-08-04 | 27d8cb7 (R110-94 Check 16+ drift) + c005db6 (R110-100 Check 17 pytest) | spec-drift vor push blocken (drift + pytest-count-mismatch) |
 | 2 | SD-* finding | DONE | 2026-08-04 | 2026-08-04 | 3b80259 (R110-106) | spec-drift in IM-scans finden — dev_im_finder_scan.py:check_spec_drift() (4 test-cases), im-finder recipe Z.36 ruft standalone-script auf, 7 SD-* findings in R110-108 run verifiziert |
-| 3 | dev_spec_invariant.py | IN-PROGRESS | 2026-08-04 | — | bbc76ca (R110-109 directive, spec-only) | spec fuer R110-110 naechster run; implementiert dann sub_mas-self-audit + dev_spec_invariant.py + Check 18 |
+| 3 | dev_spec_invariant.py | DONE | 2026-08-04 | 2026-08-04 | R110-118 (sub_mas-self-audit agent + tools/dev_self_audit.py + tools/dev_spec_invariant.py + Check 18 in pre-push) | R110-78 PHASE 3 closed: self-audit agent auditiert recipe/instructions/ (Patterns A/B/C), spec-invariant Check 18 blockt test-vs-recipe count-drift vor push |
 | 4 | skill update (Hermes) | DONE | 2026-08-03 | 2026-08-03 | (Hermes session) | pre-push-gate skill, R110-77 |
 
-**Overall**: 2/3 mas-engineer PHASEN done, 3/4 PHASEN done
+**Overall**: 3/3 mas-engineer PHASEN done, 3/4 PHASEN done
 (hermes-side: skill-update done; mas-engineer-side: PHASE 1+2 done
-via R110-94+R110-100+R110-106; PHASE 3 in-progress via R110-109).
+via R110-94+R110-100+R110-106; PHASE 3 DONE via R110-118
+— sub_mas-self-audit agent + dev_self_audit.py + dev_spec_invariant.py
++ pre-push Check 18). R110-78 spec-drift lesson komplett geschlossen.
 
 ### R110-106-sd-detector-pilot (neu 2026-08-04)
 - **Datei**: `R110-106-designer-im-top-n-respect.md` (130 lines, 2026-08-04)
@@ -79,11 +81,13 @@ via R110-94+R110-100+R110-106; PHASE 3 in-progress via R110-109).
 - **Datei**: `R110-109-self-audit-spec-invariant.md` (238 lines, 2026-08-04)
 - **Ziel**: sub_mas-self-audit agent + dev_spec_invariant.py (R110-78 PHASE 3)
 - **Created**: bbc76ca (R110-109, 2026-08-04)
-- **Status**: SPEC-DRAFT (no code change yet)
-- **Ausfuehrung**: R110-110 naechster im-pipeline run drafted + applied
-  5 files (4 NEU + 1 modified): sub_mas-self-audit.yaml, instructions,
-  dev_self_audit.py, dev_spec_invariant.py, pre-push-validator Check 18.
-  R11 GOOSE-EXPERT trigger (type A NEW recipe).
+- **Status**: DONE (implemented by R110-118 directive-apply, 2026-08-04)
+- **Ausfuehrung**: R110-118 applied via sub_mas-apply-directive (RECURSION_OVERRIDE=2):
+  sub_mas-self-audit.yaml + recipe/instructions/sub_mas-self-audit.md +
+  tools/dev_self_audit.py (Patterns A/B/C) + tools/dev_spec_invariant.py
+  (DIREKTIVE 2) + pre-push-validator Check 18 (DIREKTIVE 3, v2.4.0).
+  pytest 1284/1284 PASS, scanner 21 findings (no regression).
+  R11 GOOSE-EXPERT trigger (type A NEW recipe) fulfilled.
 
 ## PHASE-Status-Legende
 
@@ -140,3 +144,16 @@ Pro direktive ein eintrag mit:
   log_change() kwarg collision, description-prefix fehlte).
   "EFFECTIVENESS TEST" → "MANUAL WORKAROUND" re-classifiziert.
   File: `docs/architecture/R110-115-b00dade-body-corrections.md`.
+
+## R110-117+118 — self-improvement loop closed
+
+- **R110-117** (690f39e): RECURSION-GUARD v3 wired end-to-end.
+  sub_mas-apply-directive in sub_recipes + TASK-DETECTION
+  RECURSION_OVERRIDE=1 → +2. e2e dispatch verified.
+- **R110-118** (this commit): R110-109 DIREKTIVE 1+2+3 implemented
+  via R110-117 dispatch mechanism. 5 new files (sub_mas-self-audit
+  agent + dev_self_audit.py + dev_spec_invariant.py + Check 18 test).
+  PHASE 3 R110-78 spec-drift = DONE. Standalone spec-invariant
+  finds 4 BLOCKER + 5 HARDCODE on first run (sub_mas-bootstrap.md
+  "96 sub-agents" stale, pre-push-validator.md "18 checks" hardcoded).
+  pytest 1281+3=1284 PASS.

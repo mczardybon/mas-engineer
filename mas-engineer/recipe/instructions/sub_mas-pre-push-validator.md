@@ -23,7 +23,7 @@ everything is healthy.
 
 ## Procedure VALIDATE
 
-Run the following 17 checks IN ORDER. Stop at the first failure if a hard
+Run the following 18 checks IN ORDER. Stop at the first failure if a hard
 block is detected, but always collect all warnings.
 
 ### Check 0: Commit-body disclosure audit (NEW v2.1.0, R110-56)
@@ -855,11 +855,53 @@ PASSED if `skipped > 0` (intentional skip is fine).
 that broke 2 tests), R110-82 (initial spec for Check 16 → renumbered
 to 17 to avoid collision with R110-94 Check 16+).
 
+### Check 18: spec-invariant (NEW v2.4.0, R110-118)
+
+**Goal:** Closes R110-78 PHASE 3 (R110-109 DIREKTIVE 2+3). Test
+count-assertions (`assert "N type" in ...`) MUST match the recipe
+count-declarations. Prevents the R110-71 pattern (a count changed in
+one place while the other drifted) from ever reaching a push again.
+
+**Idempotency:** If `check_18_spec_invariant` already appears in this
+file (previously inserted by an earlier validator run), skip the insert
+and keep the existing block. Detection via
+`grep -q "check_18_spec_invariant"`.
+
+```bash
+# Check 18: spec-invariant (R110-118)
+echo "🔍 Check 18: spec-invariant (R110-118)"
+python3 tools/dev_spec_invariant.py --repo-root . > /tmp/spec_invariant_18.txt 2>&1
+SPEC_INV_RC=$?
+if [ "$SPEC_INV_RC" -ne 0 ]; then
+    echo "  ❌ BLOCK: Check 18 — spec-invariant drift detected (test count-assertions != recipe count-declarations)"
+    sed 's/^/     /' /tmp/spec_invariant_18.txt
+    echo "     Fix: align the test literal OR the recipe declaration (git blame tells you which is canonical)"
+    exit 1
+fi
+echo "  ✅ Check 18 passed: test count-assertions match recipe count-declarations"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 18: spec-invariant (R110-118)
+  ✅ Check 18 passed: test count-assertions match recipe count-declarations
+```
+
+**Output block on BLOCK:**
+```
+🔍 Check 18: spec-invariant (R110-118)
+  ❌ BLOCK: Check 18 — spec-invariant drift detected (test count-assertions != recipe count-declarations)
+     ❌ INVARIANT-sub-agents [BLOCKER]: Test asserts [6, 110] 'sub-agents' but recipe declares [110]
+     Fix: align the test literal OR the recipe declaration (git blame tells you which is canonical)
+```
+
+**Reference:** R110-118 (DIREKTIVE 3), R110-109 (spec), R110-78 (PHASE 3 closure).
+
 ## Boundaries
 
 - ⛔ NEVER modify any source file — this agent is read-only
 - ⛔ NEVER run `git push` itself — only validate
-- ⛔ NEVER skip a check — all 17 must run (Check 0 + Checks 1-15 + Check 16+ + Check 17)
+- ⛔ NEVER skip a check — all 18 must run (Check 0 + Checks 1-15 + Check 16+ + Check 17 + Check 18)
 - ⛔ Max 300s timeout total (5 minutes)
 
 **R01 NON-INTERACTIVE BYPASS (current implementation):** R01
