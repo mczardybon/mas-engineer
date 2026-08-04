@@ -29,6 +29,9 @@ in test-fixtures/).
 
 ### R110-78-spec-drift
 - **Datei**: `R110-78-spec-drift.md` (528 lines, 2026-08-03)
+- **Status**: ARCHIVED-READY (alle 5 PHASEN done, PHASE 4 hermes
+  done, R110-78 lesson komplett geschlossen, R110-123 entries
+  updated + this closure summary added)
 - **Ziel**: mas-engineer spec-drift-resistent machen
 - **Created**: 04afe4a (R110-79)
 - **Refactoring**: 5f9418e (R110-80), b8f8bc7 (R110-81),
@@ -45,11 +48,23 @@ in test-fixtures/).
 | 3c | STALE-LITERAL Pattern B fix | DONE | 2026-08-04 | 2026-08-04 | R110-121 (sales→dev-team in 3 files + Pattern B bug-fix + 1 Test) | PHASE 3c closed: 0 STALE-LITERAL findings, im-finder L146 false positive fixed |
 | 4 | skill update (Hermes) | DONE | 2026-08-03 | 2026-08-03 | (Hermes session) | pre-push-gate skill, R110-77 |
 
-**Overall**: 3/3 mas-engineer PHASEN done, 3/4 PHASEN done
-(hermes-side: skill-update done; mas-engineer-side: PHASE 1+2 done
-via R110-94+R110-100+R110-106; PHASE 3 DONE via R110-118
-— sub_mas-self-audit agent + dev_self_audit.py + dev_spec_invariant.py
-+ pre-push Check 18). R110-78 spec-drift lesson komplett geschlossen.
+**Overall**: 5/5 mas-engineer PHASEN done, 1/1 hermes PHASE done.
+mas-engineer-side: PHASE 1 (R110-94+R110-100) + PHASE 2
+(R110-106) + PHASE 3 (R110-118 sub_mas-self-audit + dev_self_audit
++ dev_spec_invariant + Check 18) + PHASE 3b (R110-120 STEP 0.6
+self-audit in IM-pipeline) + PHASE 3c (R110-121 STALE-LITERAL
+Pattern B fix).
+hermes-side: PHASE 4 (R110-77 pre-push-gate skill).
+**Status: ARCHIVED-READY** — R110-78 spec-drift lesson komplett
+geschlossen. Total: 7 R-Nummern (R110-77, R110-94, R110-100,
+R110-106, R110-118, R110-120, R110-121), 7 commits auf
+origin/cleanup (R110-118 + R110-119 in PHASE 3a, R110-120 in
+3b, R110-121 in 3c; plus R110-117 dispatch mechanism + R110-116
+commit-hygiene + R110-115 RECURSION-GUARD v3). pytest 1284→1286
+(+2 net tests: test_step_0_6 in R110-120 + test_pattern_b in
+R110-121; R110-118 added +3 incl. Check 18 — 1281→1286 = +5
+total, verified 2026-08-04 via pytest --collect-only). 4 BLOCKER
++ 6 STALE-LITERAL + 5 simple-stale HARDCODE = 15 findings gefixt.
 
 ### R110-106-sd-detector-pilot (neu 2026-08-04)
 - **Datei**: `R110-106-designer-im-top-n-respect.md` (130 lines, 2026-08-04)
@@ -191,3 +206,57 @@ Pro direktive ein eintrag mit:
   finds 4 BLOCKER + 5 HARDCODE on first run (sub_mas-bootstrap.md
   "96 sub-agents" stale, pre-push-validator.md "18 checks" hardcoded).
   pytest 1281+3=1284 PASS.
+
+## R110-78 lesson — spec-drift = ARCHIVED
+
+R110-78 spec-drift lesson (created 04afe4a R110-79, 528 lines
+spec, 2026-08-03) is now FULLY CLOSED with all 6 PHASEN done:
+
+- **PHASE 1** (validator + pytest gate, R110-94 + R110-100):
+  27d8cb7 (Check 16+ drift) + c005db6 (Check 17 pytest-count-
+  mismatch). spec-drift in commits blockt pre-push.
+- **PHASE 2** (SD-* finding type, R110-106): 3b80259.
+  dev_im_finder_scan.py:check_spec_drift() findet 7 SD-*
+  findings in R110-108 run. im-finder recipe Z.36 ruft
+  standalone-script auf.
+- **PHASE 3** (sub_mas-self-audit + dev_self_audit +
+  dev_spec_invariant + Check 18, R110-118): f4277fc.
+  Pattern A (HARDCODE stale literals) + Pattern B (STALE-
+  LITERAL no-twin references) + Pattern C (count-assertion
+  drift). 4 BLOCKER + 5 simple-stale HARDCODE on first run.
+- **PHASE 3b** (self-audit in IM-pipeline, R110-120): 4050394.
+  STEP 0.6 in sub_mas-im-finder.md (between 0.5 goose-consult
+  and 0.7 write findings), MM9-EXT findings, BLOCKER fail-fast
+  vor findings-write. +1 test.
+- **PHASE 3c** (STALE-LITERAL Pattern B fix, R110-121): 83e4ce7.
+  sales→dev-team examples in 3 files, dev_self_audit.py Pattern
+  B bug-fix (YAML bare-name detection), 0 STALE-LITERAL
+  findings. +1 test.
+- **PHASE 4** (hermes-side skill, R110-77): pre-push-gate skill
+  with R110-78 lesson documented.
+
+**Total impact (R110-78 lesson):**
+- 7 R-Nummern, 7 commits auf origin/cleanup (R110-118+119 in
+  PHASE 3a, R110-120 in 3b, R110-121 in 3c; plus R110-117
+  dispatch mechanism + R110-116 commit-hygiene + R110-115
+  RECURSION-GUARD v3)
+- pytest 1281→1286 (+5 tests across R110-118+120+121: +3 in
+  R110-118 incl. Check 18, +1 test_step_0_6 in R110-120,
+  +1 test_pattern_b in R110-121; verified 2026-08-04 via
+  `pytest --collect-only`: 1286 tests collected)
+- 15 findings gefixt: 4 BLOCKER + 6 STALE-LITERAL + 5 simple-
+  stale HARDCODE
+- 0 STALE-LITERAL findings, 0 BLOCKER in dev_spec_invariant
+  (clean), 20 HARDCODE-WARN (canonical/context-dependent, both
+  documented per R110-119 context-comment + R110-121 Pattern B
+  improvement)
+
+**R110-78 spec-drift lesson = KOMPLETT GESCHLOSSEN + ARCHIVED.**
+Future drift will be caught by:
+- pre-push Check 16+ (5-cat-drift), Check 17 (pytest-count),
+  Check 18 (count-assertion drift)
+- im-finder STEP 0.6 (auto-invoke sub_mas-self-audit vor
+  findings-write, MM9-EXT findings attached)
+- dev_self_audit.py (standalone-invokable for ad-hoc checks)
+- dev_im_finder_scan.py:check_spec_drift() (called from im-
+  finder recipe Z.36 for SD-* finding type)
