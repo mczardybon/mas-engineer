@@ -129,3 +129,14 @@ Pro direktive ein eintrag mit:
   oder in user-side notes, nicht hier)
 - "Was hat NICHT funktioniert" retros (die gehoeren in
   commit messages der jeweiligen fix-commits)
+
+## R110-115 follow-up: R110-116 (commit-hygiene corrections)
+
+- **R110-115** (b00dade): sub_mas-apply-directive + RECURSION-GUARD v3
+  + 2 directive tools. pytest 1281/1281 PASS. 6 files +455/-1.
+- **R110-116** (this commit): non-breaking follow-up mit ehrlicher
+  body-korrektur. b00dade bleibt unveraendert. 3 bugs im detail
+  dokumentiert (yaml-parse-error von `<path>` in single-quote,
+  log_change() kwarg collision, description-prefix fehlte).
+  "EFFECTIVENESS TEST" → "MANUAL WORKAROUND" re-classifiziert.
+  File: `docs/architecture/R110-115-b00dade-body-corrections.md`.
