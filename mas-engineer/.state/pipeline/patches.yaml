@@ -1,604 +1,109 @@
 stage: 3
 agent: im-designer
-timestamp: '2026-07-29T16:47:01.155192+00:00'
-request_id: im-designer-2026-07-29-001
+timestamp: '2026-08-04T12:17:06.540457+00:00'
+request_id: c11373b4-3fbd-40a7-a08f-22ee79115fd8
 from: im-designer
 to: sub_mas-im-validator
 status: success
-input_file: .state/pipeline/findings.yaml
+input_file: .state/pipeline/ranked_findings.yaml
 data:
-  patches:
-  - id: F-PTY-001
-    type: S1
-    severity: high
-    file: tools/mas_e2e_pty_all.sh
-    field: status_detection_regex (line 81)
-    from: elif grep -qE "(Traceback|^Error\b|Exception:)" "\$log"; then
-    to: elif grep -qE "(Traceback|^Error:(?! unsupported image format)|Exception:)"
-      "\$log"; then
-    reason: "Why: Status detector false-positive \u2014 ^Error\\b matches \"Error:\
-      \ unsupported image format\" (goose read_image noise). All 8 FAIL_ERROR entries\
-      \ in latest run are false positives. Use negative lookahead to exclude known\
-      \ goose-tooling noise while catching real errors (Traceback, Exception). Goose-expert\
-      \ verdict: CONFORM \u2014 Goose has zero native mechanism for post-hoc grep-based\
-      \ log classification. This is pure shell-level orchestration."
-    priority: 1.0
-    current_chars: 61
-    target_chars: 89
-    goose_verdict: CONFORM
-  - id: F-001
-    type: MM2
-    severity: medium
-    file: recipe/multi-arch-30/multi-arch-30.yaml
-    field: add prompt field
-    from: 'prompt: (missing)'
-    to: "prompt: \"\U0001F9E0 multi-arch-30 (v1.0.0)\n\u26D4 ONLY orchestration \u2014\
-      \ NO direct changes\n\u2192 Delegate to teams via delegate()\""
-    reason: "Why: Missing prompt: field \u2014 Goose requires prompt: for headless\
-      \ (non-interactive) mode. All 130 installed MAS recipes (100%) have prompt:\
-      \ field. Without it, headless execution may fail for the 30-agent master orchestrator.\
-      \ Goose-expert verdict: CONFORM \u2014 matches established MAS pattern (root_recipe.yaml,\
-      \ dev-mas-engineer.yaml)."
-    priority: 0.82
-    current_chars: 0
-    target_chars: 98
-    goose_verdict: CONFORM
-  - id: F-002
-    type: A5
-    severity: medium
-    file: recipe/multi-arch-30/multi-arch-30.yaml
-    field: add settings block
-    from: "settings: (missing \u2014 Goose defaults: timeout=300, max_steps=25)"
-    to: 'settings: timeout=1200, max_steps=200'
-    reason: "Why: Missing settings: block \u2014 master orchestrator managing 30 sub-agents\
-      \ across 6 teams needs significantly higher timeout and steps than Goose defaults\
-      \ (300s/25). 1200s timeout and 200 max_steps are within proven range (dev-mas-engineer-30agents.yaml\
-      \ uses timeout:1800, max_steps:200). Goose-expert verdict: CONFORM \u2014 Goose\
-      \ fully supports per-recipe settings overrides with clear precedence chain."
-    priority: 0.82
-    current_chars: 0
-    target_chars: 47
-    goose_verdict: CONFORM
-  - id: F-093
-    type: Q1
-    severity: medium
-    file: recipe/sub/sub_mas-clone.yaml
-    field: add name field
-    from: 'name: (missing)'
-    to: 'name: sub_mas-clone'
-    reason: "Why: Missing required name: field at top-level YAML \u2014 schema validators\
-      \ may reject recipe without it. The name is only embedded inside the instructions\
-      \ YAML string but not at the top level."
-    priority: 0.82
-    current_chars: 0
-    target_chars: 22
-    goose_verdict: "N/A \u2014 Q1 not in mandatory consultation scope"
+  patches: []
   skipped:
-  - id: F-094
+  - finding_id: F-001
     type: NN1
-    why_skipped: "Precondition check failed (R52): instruction section is only 8 lines\
-      \ (364 chars), well below the required \u2265200 line threshold for NN1 split.\
-      \ No viable split needed for dev-mas-engineer-30agents.yaml."
-    reason: 'Line threshold precondition failed: 8 lines < 200 lines minimum'
-    file: recipe/dev-mas-engineer-30agents.yaml
-  - id: F-003
-    type: MM2
-    why_skipped: "Out of IM_TOP_N scope (top 5 only). Finding F-001 covers same type\
-      \ (MM2) for root multi-arch-30.yaml \u2014 all sub-agents follow same pattern."
-    reason: "Deferred \u2014 covered by F-001 pattern; apply after root patch verified"
-  - id: F-004
-    type: A5
-    why_skipped: "Out of IM_TOP_N scope (top 5 only). Finding F-002 covers same type\
-      \ (A5) for root orchestrator \u2014 sub-agent settings are lower priority."
-    reason: "Deferred \u2014 sub-agent A5 patches depend on root orchestrator A5 patch\
-      \ first"
-  - id: F-005
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-006
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-007
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-008
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-009
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-010
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-011
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-012
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-013
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-014
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-015
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-016
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-017
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-018
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-019
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-020
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-021
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-022
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-023
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-024
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-025
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-026
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-027
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-028
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-029
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-030
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-031
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-032
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-033
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-034
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-035
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-036
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-037
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-038
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-039
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-040
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-041
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-042
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-043
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-044
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-045
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-046
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-047
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-048
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-049
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-050
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-051
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-052
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-053
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-054
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-055
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-056
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-057
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-058
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-059
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-060
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-061
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-062
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-063
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-064
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-065
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-066
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-067
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-068
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-069
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-070
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-071
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-072
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-073
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-074
-    type: MM2/A5
-    why_skipped: Out of IM_TOP_N scope (top 5 only). These are sub-agent prompt+settings
-      patches following the same pattern as F-001/F-002.
-    reason: "Deferred \u2014 apply after root orchestrator patches verified"
-  - id: F-075
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-076
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-077
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-078
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-079
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-080
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-081
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-082
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-083
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-084
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-085
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-086
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-087
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-088
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-089
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-090
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-091
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-092
-    type: MM4
-    why_skipped: "Low severity (temperature optional \u2014 Goose uses provider default\
-      \ when omitted). Out of IM_TOP_N scope."
-    reason: "Deferred \u2014 low priority cosmetic improvement"
-  - id: F-095
+    reason: "R52 NN1 preconditions: #1 FAIL (instructions block ~8L < 200-line threshold);\
+      \ #2 PASS (skip_recently_split.yaml absent); #3 FAIL (no flagged_by: intention-parser\
+      \ / already_split: false in findings.yaml). verified_note: dev-mas-engineer-30agents\
+      \ is an E2E demo recipe that BUILDS a 30-agent MAS (6 teams, master orchestrator\
+      \ routes tasks) \u2014 it IS the orchestrator; splitting breaks the demo."
+    why_skipped: by-design E2E multi-arch orchestrator (demo)
+  - finding_id: F-002
     type: NN1
-    why_skipped: NN1 precondition failed or out of IM_TOP_N scope. Line threshold
-      for instruction sections is below 200 lines.
-    reason: "Deferred \u2014 NN1 preconditions not met (R52)"
-  - id: F-096
+    reason: "R52 preconditions: #3 FAIL (no flagged_by/already_split metadata). verified_note:\
+      \ static-analyzer.yaml carries architecture_split: 'orchestrator + 3 sub-agents:\
+      \ sub_mas-static-analyzer-syntax-checker/lint-scanner/type-checker' \u2014 ALREADY\
+      \ SPLIT by design."
+    why_skipped: already_split (architecture_split metadata present)
+  - finding_id: F-003
     type: NN1
-    why_skipped: NN1 precondition failed or out of IM_TOP_N scope. Line threshold
-      for instruction sections is below 200 lines.
-    reason: "Deferred \u2014 NN1 preconditions not met (R52)"
-  - id: F-097
+    reason: "R52 preconditions: #1 FAIL (60L total); #3 FAIL. verified_note: sub_mas-test-director\
+      \ title reads 'Test Orchestrator (NN1 Enhanced)' \u2014 delegation map + sub_recipes\
+      \ (sub_mas-test-executor, sub_mas-test-reporter): '7 roles split into 4 focused\
+      \ subs' already done."
+    why_skipped: already_split orchestrator (NN1 Enhanced)
+  - finding_id: F-004
     type: NN1
-    why_skipped: NN1 precondition failed or out of IM_TOP_N scope. Line threshold
-      for instruction sections is below 200 lines.
-    reason: "Deferred \u2014 NN1 preconditions not met (R52)"
-  - id: F-098
+    reason: "R52 precondition #1 FAIL: instructions 88L (< 200). verified_note: sub_mas-recovery-immune\
+      \ is a single-purpose leaf (CORONASHIELD R10 YAML validation) \u2014 no distinct\
+      \ roles to split."
+    why_skipped: micro-split guard (88L < 200)
+  - finding_id: F-005
     type: NN1
-    why_skipped: NN1 precondition failed or out of IM_TOP_N scope. Line threshold
-      for instruction sections is below 200 lines.
-    reason: "Deferred \u2014 NN1 preconditions not met (R52)"
-  - id: F-099
+    reason: "R52 preconditions: #1 FAIL (66L total); #3 FAIL. verified_note: sub_mas-dev-director\
+      \ is the orchestrator of the dev team \u2014 delegation map to sub_mas-dev-analyzer/builder/observer/tester\
+      \ (all present on disk). Already split."
+    why_skipped: already_split orchestrator
+  - finding_id: F-006
     type: NN1
-    why_skipped: NN1 precondition failed or out of IM_TOP_N scope. Line threshold
-      for instruction sections is below 200 lines.
-    reason: "Deferred \u2014 NN1 preconditions not met (R52)"
-  - id: F-100
+    reason: 'R52 precondition #1 FAIL: 65L total, instructions outsourced (8L). Micro-split
+      of a 65-line leaf agent = anti-pattern (R98).'
+    why_skipped: micro-split guard (<200)
+  - finding_id: F-007
     type: NN1
-    why_skipped: NN1 precondition failed or out of IM_TOP_N scope. Line threshold
-      for instruction sections is below 200 lines.
-    reason: "Deferred \u2014 NN1 preconditions not met (R52)"
-  - id: F-101
+    reason: 'R52 precondition #1 FAIL: instructions 90L (< 200). Single domain (session
+      analysis); role-verbs are workflow sub-steps, not distinct roles.'
+    why_skipped: micro-split guard (<200)
+  - finding_id: F-008
     type: NN1
-    why_skipped: NN1 precondition failed or out of IM_TOP_N scope. Line threshold
-      for instruction sections is below 200 lines.
-    reason: "Deferred \u2014 NN1 preconditions not met (R52)"
-  - id: F-102
+    reason: "R04/R08: NEVER edit sub_mas-general-improver.yaml (no recursion). verified_note:\
+      \ it IS the master pipeline orchestrator (routes find\u2192rank\u2192design\u2192\
+      validate\u2192apply). Splitting = recursion."
+    why_skipped: R04 protected + already master orchestrator
+  - finding_id: F-009
     type: NN1
-    why_skipped: NN1 precondition failed or out of IM_TOP_N scope. Line threshold
-      for instruction sections is below 200 lines.
-    reason: "Deferred \u2014 NN1 preconditions not met (R52)"
-  - id: F-103
+    reason: "R52 preconditions: #1 FAIL (62L total); #3 FAIL. verified_note: sub_mas-test-fix-failures-director\
+      \ is an orchestrator \u2014 'You are the orchestrator... Delegate to specialized\
+      \ sub-agents' with sub_recipes (finder, ranker)."
+    why_skipped: already_split orchestrator
+  - finding_id: F-010
     type: NN1
-    why_skipped: NN1 precondition failed or out of IM_TOP_N scope. Line threshold
-      for instruction sections is below 200 lines.
-    reason: "Deferred \u2014 NN1 preconditions not met (R52)"
-  - id: F-104
+    reason: 'R52 precondition #1 FAIL: 68L total, instructions 21L (< 200). Leaf agent
+      (team packaging).'
+    why_skipped: micro-split guard (<200)
+  - finding_id: F-011
     type: NN1
-    why_skipped: NN1 precondition failed or out of IM_TOP_N scope. Line threshold
-      for instruction sections is below 200 lines.
-    reason: "Deferred \u2014 NN1 preconditions not met (R52)"
-  - id: F-105
+    reason: 'R52 precondition #1 FAIL: instructions 13L (outsourced to recipe/instructions/sub_mas-intention-parser.md);
+      file bulk is the patterns: list. Already delegates via sub_recipes (sub_mas-generic-init,
+      sub_mas-team-packager) + generator call.'
+    why_skipped: micro-split guard (<200) + already delegating
+  - finding_id: F-012
     type: NN1
-    why_skipped: NN1 precondition failed or out of IM_TOP_N scope. Line threshold
-      for instruction sections is below 200 lines.
-    reason: "Deferred \u2014 NN1 preconditions not met (R52)"
-  - id: F-106
+    reason: 'R52 precondition #1 FAIL: 63L total, instructions 6L (outsourced). Degradation
+      domain already split: sub_mas-degradation-director + analyzer/planner/reporter
+      exist on disk.'
+    why_skipped: micro-split guard (<200) + domain already split
+  - finding_id: F-013
     type: NN1
-    why_skipped: NN1 precondition failed or out of IM_TOP_N scope. Line threshold
-      for instruction sections is below 200 lines.
-    reason: "Deferred \u2014 NN1 preconditions not met (R52)"
-  - id: F-107
+    reason: "R52 preconditions: #1 FAIL (60L total); #3 FAIL. verified_note: security-scanner.yaml\
+      \ is 'SECURITY-SCANNER-DIRECTOR \u2014 Security Operations Orchestrator' with\
+      \ delegation map + sub_recipes (sub_mas-security-sqli/secrets/deserialize/cmd-injection-scanner).\
+      \ Already split."
+    why_skipped: already_split orchestrator
+  - finding_id: F-014
     type: NN1
-    why_skipped: NN1 precondition failed or out of IM_TOP_N scope. Line threshold
-      for instruction sections is below 200 lines.
-    reason: "Deferred \u2014 NN1 preconditions not met (R52)"
-  - id: F-108
-    type: NN1
-    why_skipped: NN1 precondition failed or out of IM_TOP_N scope. Line threshold
-      for instruction sections is below 200 lines.
-    reason: "Deferred \u2014 NN1 preconditions not met (R52)"
+    reason: "R52 precondition #1 borderline PASS (instructions 201L) but #3 FAIL (no\
+      \ flagged_by/already_split=false metadata). verified_note: sub_mas-git-operator\
+      \ is a single-domain leaf (git v2.0.0 clean-commit); the 7 detected role-verbs\
+      \ (validate/report/design/find/read) are sub-steps of git ops (validate YAML,\
+      \ report status, design commit msg, find files, read log) \u2014 not distinct\
+      \ roles. Split would create N micro-agents duplicating the 201-line workflow\
+      \ (R98 anti-pattern: '5+ role-verbs is normal for small focused agents')."
+    why_skipped: "false positive \u2014 single-domain leaf, role-verbs = workflow\
+      \ sub-steps"
+  summary: "0 patches designed, 14 findings skipped (all NN1). All 14 verified as\
+    \ either already-split orchestrators (F-001/002/003/005/008/009/013), micro-split\
+    \ guard failures <200 instruction lines (F-004/006/007/010/011/012), or single-domain\
+    \ leaf false positives (F-014). R52 NN1 precondition #3 (flagged_by: intention-parser\
+    \ OR already_split: false in findings.yaml) fails for ALL 14 (no such metadata\
+    \ this round). goose-expert: 0 consulted \u2014 NN1 not in mandatory prefix list\
+    \ (A/B/D/MM/JJ/S/HH/LL); no patches designed."
