@@ -7,6 +7,26 @@ eine PHASE effektiv abschliessen.
 
 ## Aktive Direktiven
 
+### R110-94-historical-drift-check
+- **Datei**: `R110-94-historical-drift-check.md` (211 lines, 2026-08-04)
+- **Ziel**: dev_category_drift.py als pre-push-validator Check 16+ integrieren
+- **Created**: 27d8cb7 (R110-94, 2026-08-04)
+- **Refs**: R110-92 (standalone detector, ee0b242), R110-90 (rebase precedent),
+  R110-89 (validator evidence), R110-78 (spec-drift lesson)
+
+| PHASE | DIREKTIVE | Status | Started | Completed | Commit | Effekt |
+|---|---|---|---|---|---|---|
+| 1 | validator Check 16+ + dev_category_drift.py | DONE | 2026-08-04 | 2026-08-04 | 27d8cb7 | 5-cat-drift in last 30d blockt pre-push |
+
+**Overall**: 1/1 PHASE done (R110-94 komplett). Status: ARCHIVED-READY
+(alle 6 acceptance-kriterien 206-212 erfuellt; validator v2.2.0,
+Check 16+ in instructions L714-777, drift detector exits 0 mit
+drift_count=0 + 4 conform + 479 exempt + 490 total).
+
+Test-fixture-template: `.directives/test-fixtures/test_check_16_drift_template.py`
+(5 skip-tests, optional CI-integration, nicht pytest-discoverable solange
+in test-fixtures/).
+
 ### R110-78-spec-drift
 - **Datei**: `R110-78-spec-drift.md` (528 lines, 2026-08-03)
 - **Ziel**: mas-engineer spec-drift-resistent machen
