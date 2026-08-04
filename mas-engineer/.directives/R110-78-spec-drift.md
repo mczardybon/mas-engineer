@@ -19,16 +19,24 @@ Aktueller zustand: recipe/sub/sub_mas-pre-push-validator.yaml macht
 aber KEINEN pytest-run. Das ist die luecke die R110-71 spec-drift
 entstehen liess: validator gruen, tests rot, push geht durch.
 
-Gewuenschter zustand: ein neuer Check 16 "pytest-run" wird nach
-Check 15 (oder am ende der check-liste) eingefuegt, der den
+Gewuenschter zustand: ein neuer Check "pytest-run" wird nach
+Check 16+ (oder am ende der check-liste) eingefuegt, der den
 test-tree ausfuehrt und das ergebnis strukturiert festhält.
 
-KONKRETE SPEZIFIKATION (PHASE 1, R110-82 spec):
+NAMING-UPDATE (R110-99, 2026-08-04): die urspruengliche DIREKTIVE
+sagte "Check 16 pytest-run" (eingefuegt NACH Check 15). R110-94
+(2026-08-04) hat aber zwischenzeitlich Check 16+ (historical
+category drift) implementiert. Um Naming-Collision zu vermeiden
+wird der neue pytest-run-check als **Check 17** nummeriert (nach
+Check 16+, in der implementierungs-Reihenfolge). Validator wird
+auf v2.3.0 angehoben.
+
+KONKRETE SPEZIFIKATION (PHASE 1, R110-82 spec + R110-99 update):
 
   1. DATEI: mas-engineer/recipe/sub/sub_mas-pre-push-validator.yaml
-     INSERT-POINT: nach dem letzten existierenden check (Check 15
+     INSERT-POINT: nach dem letzten existierenden check (Check 16+
      -- ermitteln via `grep -c "^Check\|check_nr\|id: check" <file>`),
-     ALS NEUER CHECK MIT id: check_16_pytest_run
+     ALS NEUER CHECK MIT id: check_17_pytest_run
 
   2. BEFEHL (im neuen check auszufuehren):
        cd <mas-engineer-cwd> && \
@@ -66,7 +74,7 @@ KONKRETE SPEZIFIKATION (PHASE 1, R110-82 spec):
          timestamp: <iso8601>
 
   5. BLOCKED-LOGIK:
-       check_16_pytest_run returns BLOCKED iff:
+       check_17_pytest_run returns BLOCKED iff:
          failed > 0 OR errors > 0 OR exit_code != 0
        sonst return PASSED (auch wenn skipped > 0 oder passed=0).
      Begruendung: skipped tests sind explizit als skip markiert,
@@ -75,15 +83,15 @@ KONKRETE SPEZIFIKATION (PHASE 1, R110-82 spec):
 
   6. INTEGRATION IN VALIDATOR-OUTPUT:
        Im top-level validator-summary:
-         status: BLOCKED  (statt "passed" wenn check_16 BLOCKED)
-         blocking_checks: ["check_16_pytest_run"]
+         status: BLOCKED  (statt "passed" wenn check_17 BLOCKED)
+         blocking_checks: ["check_17_pytest_run"]
      Die anderen 15 checks laufen weiter (nicht abgebrochen), damit
      man alle probleme auf einmal sieht.
 
   7. IDEMPOTENZ / RE-RUN-SAFETY:
-       Wenn check_16 schon existiert (vorheriger run hat ihn
+       Wenn check_17 schon existiert (vorheriger run hat ihn
        angelegt), kein zweiter insert -- vorheriger beibehalten.
-       Detection: `grep -q "check_16_pytest_run" <file>`
+       Detection: `grep -q "check_17_pytest_run" <file>`
 
   8. WIE TESTEN:
        a) POSITIVE: in mas-engineer/, `python3 -m pytest tests/ -q`

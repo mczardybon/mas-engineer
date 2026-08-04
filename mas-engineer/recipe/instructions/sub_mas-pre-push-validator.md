@@ -773,11 +773,87 @@ a flag override — edit the script's default or use a wrapper if needed.
 **Reference:** R110-92 (drift detector), R110-90 (rebase precedent),
 R110-78 (spec-drift lesson — counts must be verified).
 
+### Check 17: pytest-run (NEW v2.3.0, R110-78)
+
+**Goal:** Catches test failures BEFORE the push is allowed. This is the
+direct response to the R110-71 spec-drift incident where a recipe-count
+change (96 → 110) was committed and pushed, breaking 2 tests
+permanently because the validator never ran pytest. Check 17 makes
+"validator green + tests red" impossible.
+
+**Idempotency:** If `check_17_pytest_run` already appears in this file
+(previously inserted by an earlier validator run), skip the insert and
+keep the existing block. Detection via `grep -q "check_17_pytest_run"`.
+
+```bash
+# Check 17: pytest-run
+echo "🔍 Check 17: pytest-run (R110-78)"
+if [ ! -d "tests" ]; then
+    echo "  ⚠️  WARN: no tests/ directory found — skipping pytest-run (no coverage to verify)"
+    echo "PYTEST_SUMMARY: {\"passed\": 0, \"failed\": 0, \"errors\": 0, \"skipped\": 0, \"exit_code\": 5, \"note\": \"no tests dir\"}"
+    echo "  ✅ Check 17 passed: no tests/ dir (PASSED, WARN-only)"
+else
+    # Run pytest; use 'set -o pipefail' so $? reflects pytest's exit code, not tail's.
+    PYTEST_OUTPUT=$(python3 -m pytest tests/ -q --tb=line --color=no 2>&1 | tail -30)
+    (set -o pipefail; python3 -m pytest tests/ -q --tb=line --color=no >/dev/null 2>&1)
+    PYTEST_RC=$?
+    # Parse summary line: e.g. "===== 1277 passed in 8.12s ====="
+    PASSED=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ passed" | grep -oE "[0-9]+" | head -1)
+    FAILED=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ failed" | grep -oE "[0-9]+" | head -1)
+    ERRORS=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ error" | grep -oE "[0-9]+" | head -1)
+    SKIPPED=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ skipped" | grep -oE "[0-9]+" | head -1)
+    DURATION=$(echo "$PYTEST_OUTPUT" | grep -oE "in [0-9.]+s" | grep -oE "[0-9.]+" | head -1)
+    PASSED=${PASSED:-0}; FAILED=${FAILED:-0}; ERRORS=${ERRORS:-0}; SKIPPED=${SKIPPED:-0}
+    DURATION=${DURATION:-0.0}
+    if [ "$PYTEST_RC" -eq 127 ]; then
+        echo "  ❌ BLOCK: pytest not installed (exit 127). Install with: pip install pytest"
+        exit 1
+    fi
+    if [ "$FAILED" -gt 0 ] || [ "$ERRORS" -gt 0 ] || [ "$PYTEST_RC" -ne 0 ]; then
+        echo "  ❌ BLOCK: Check 17 — pytest failed: $FAILED failed, $ERRORS errors, exit=$PYTEST_RC"
+        echo "     Last lines of pytest output:"
+        echo "$PYTEST_OUTPUT" | tail -10 | sed 's/^/     /'
+        echo "     Run: python3 -m pytest tests/ -q --tb=short   (for full traceback)"
+        echo "PYTEST_SUMMARY: {\"passed\": $PASSED, \"failed\": $FAILED, \"errors\": $ERRORS, \"skipped\": $SKIPPED, \"duration_seconds\": $DURATION, \"exit_code\": $PYTEST_RC}"
+        exit 1
+    fi
+    echo "  ✅ Check 17 passed: $PASSED passed, $FAILED failed, $ERRORS errors, $SKIPPED skipped in ${DURATION}s"
+    echo "PYTEST_SUMMARY: {\"passed\": $PASSED, \"failed\": $FAILED, \"errors\": $ERRORS, \"skipped\": $SKIPPED, \"duration_seconds\": $DURATION, \"exit_code\": $PYTEST_RC}"
+fi
+```
+
+**Output block on PASS:**
+```
+🔍 Check 17: pytest-run (R110-78)
+  ✅ Check 17 passed: 1277 passed, 0 failed, 0 errors, 0 skipped in 8.12s
+PYTEST_SUMMARY: {"passed": 1277, "failed": 0, "errors": 0, "skipped": 0, "duration_seconds": 8.12, "exit_code": 0}
+```
+
+**Output block on BLOCK:**
+```
+🔍 Check 17: pytest-run (R110-78)
+  ❌ BLOCK: Check 17 — pytest failed: 2 failed, 0 errors, exit=1
+     Last lines of pytest output:
+     FAILED tests/test_sub_mas_bootstrap.py::test_bootstrap_distributes_96_subagents
+     FAILED tests/test_sub_mas_recipes.py::test_recipe_count_matches_subagents
+     ...
+PYTEST_SUMMARY: {"passed": 1275, "failed": 2, "errors": 0, "skipped": 0, "duration_seconds": 8.12, "exit_code": 1}
+```
+
+**Block logic:** BLOCKED iff `failed > 0` OR `errors > 0` OR `exit_code != 0`.
+PASSED (with WARN) if `tests/` directory is missing — coverage is a
+separate concern (D2 SD-finding), not a gate.
+PASSED if `skipped > 0` (intentional skip is fine).
+
+**Reference:** R110-78 (spec-drift incident), R110-71 (count change
+that broke 2 tests), R110-82 (initial spec for Check 16 → renumbered
+to 17 to avoid collision with R110-94 Check 16+).
+
 ## Boundaries
 
 - ⛔ NEVER modify any source file — this agent is read-only
 - ⛔ NEVER run `git push` itself — only validate
-- ⛔ NEVER skip a check — all 16 must run (Check 0 + Checks 1-15)
+- ⛔ NEVER skip a check — all 17 must run (Check 0 + Checks 1-15 + Check 16+ + Check 17)
 - ⛔ Max 300s timeout total (5 minutes)
 
 **R01 NON-INTERACTIVE BYPASS (current implementation):** R01
