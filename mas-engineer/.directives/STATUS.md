@@ -260,3 +260,32 @@ Future drift will be caught by:
 - dev_self_audit.py (standalone-invokable for ad-hoc checks)
 - dev_im_finder_scan.py:check_spec_drift() (called from im-
   finder recipe Z.36 for SD-* finding type)
+
+## R110-124 — scanner Pattern A+B (MM9-EXT scanner support)
+
+- **Datei**: `R110-124-scanner-pattern-ab.md` (357 lines, 2026-08-04)
+- **Ziel**: dev_im_finder_scan.py erkennt HARDCODE-STALE-* (Pattern A)
+  + STALE-LITERAL-* (Pattern B) — scanner als single source of truth
+  fuer recipe-drift, nicht nur sub_mas-self-audit-agent
+- **Applied**: 2026-08-04 via sub_mas-apply-directive (RECURSION_OVERRIDE=2,
+  R110-117 per-directive dispatch)
+- **Ausfuehrung**: DIREKTIVE 1+2 = check_hardcode_stale() + check_stale_literal()
+  in tools/dev_im_finder_scan.py (lazy-import dev_self_audit, reuse
+  PATTERN_A_RE/PATTERN_A_ACCEPT_CTX/_is_in_fence/_strip_inline_code/
+  _scan_pattern_b/_build_repo_literal_index — kein Reimplementieren,
+  R02 consumer/producer); DIREKTIVE 3 = 2 try/except call-sites im
+  main flow (nach check_spec_drift_reverse); DIREKTIVE 4 = +2 tests.
+- **Abweichungen (R110-116 ehrlich dokumentiert, commit body)**:
+  1. STALE-LITERAL severity 'warn' → 'medium' (R28 SEVERITY_FILTER
+     default medium,high,blocker wuerde 'warn' still droppen)
+  2. STALE-LITERAL e2e-test auf synthetisches Fixture umgestellt
+     (Repo hat post-R110-121 0 STALE-LITERAL — Acceptance ">=1" war
+     stale, kopiert vom Pre-Fix-Stand "6 STALE-LITERAL")
+  3. Helper-Name `_strip_inline_code_inline` (directive-Draft) →
+     `_strip_inline_code` (tatsaechlicher Name in dev_self_audit)
+- **Status**: DONE. pytest 1288/1288 PASS, registry 9/9 PASS,
+  scanner --scope=recipe/instructions/ emittiert HARDCODE-STALE-*
+  (>=1; Repo hat 18 Kandidaten) + 0 STALE-LITERAL (korrekt, da
+  R110-121 alle gefixt hat; Wrapper verifiziert per synthetischem
+  Fixture), dev_self_audit 20 WARN (unveraendert), dev_spec_invariant
+  0 BLOCKER.

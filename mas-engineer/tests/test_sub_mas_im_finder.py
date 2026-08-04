@@ -117,3 +117,63 @@ def test_step_0_6_self_audit_attaches_mm9_ext():
     codes = {f.code for f in result.findings}
     assert any(c.startswith('HARDCODE') for c in codes), \
         f"expected HARDCODE findings, got: {sorted(codes)}"
+
+
+# --- R110-124: scanner Pattern A + B (MM9-EXT support) --------------------
+def test_scanner_detects_hardcode_stale():
+    """R110-124: scanner emits HARDCODE-STALE-* findings (Pattern A)."""
+    import subprocess
+    import json
+    result = subprocess.run(
+        ['python3', 'tools/dev_im_finder_scan.py',
+         '--scope=recipe/instructions/'],
+        capture_output=True, text=True, cwd='.')
+    # Parse JSON output (after ---JSON_START---)
+    out = result.stdout
+    assert '---JSON_START---' in out
+    j = out.split('---JSON_START---')[1]
+    data = json.loads(j)
+    types = {f['type'] for f in data['findings']}
+    hardcode_findings = [t for t in types if t.startswith('HARDCODE-STALE')]
+    assert len(hardcode_findings) >= 1, \
+        f"scanner should emit >=1 HARDCODE-STALE-* finding, got: {types}"
+
+
+def test_scanner_detects_stale_literal(tmp_path):
+    """R110-124: scanner emits STALE-LITERAL-* findings (Pattern B).
+
+    R110-124-ADAPTATION (honest, R110-116): the real repo currently has
+    0 stale literals (R110-121 fixed all 6; dev_self_audit pre-condition
+    "20 WARN, 0 STALE-LITERAL"). The directive's e2e assertion (>=1
+    STALE-LITERAL-* on the real repo) is therefore not satisfiable.
+    Instead we prove the wiring on a synthetic repo: a path-like
+    literal that appears only in recipe/instructions/ (and nowhere else
+    in recipe/tools/docs/tests) must be emitted as STALE-LITERAL-*.
+
+    R110-124-ADAPTATION 2 (R110-116): the directive's draft fixture used
+    a quoted numeric count-anchor (forty-two checks). Quoted
+    "N checks" literals in test source pollute test_combined and trip
+    the reverse spec-drift check (R110-111 L26: recipe "18 checks" vs
+    test anchor mismatch => spurious BLOCKER). The fixture literal is
+    therefore a digit-free path (still matches Pattern B's
+    _B_PATH_LIKE_RE), which cannot match _RECIPE_NUMERIC_RE.
+    """
+    import subprocess
+    import json
+    # Synthetic repo: one instruction file with an unmatched path literal
+    instr = tmp_path / "recipe" / "instructions"
+    instr.mkdir(parents=True)
+    (instr / "sub_mas-synthetic.md").write_text(
+        "Use 'tools/sub_mas-stale-literal-sentinel.py' as canonical path.\n")
+    result = subprocess.run(
+        ['python3', str(REPO_ROOT / 'tools' / 'dev_im_finder_scan.py'),
+         f'--scope={tmp_path}/recipe/instructions/'],
+        capture_output=True, text=True, cwd=str(tmp_path))
+    out = result.stdout
+    assert '---JSON_START---' in out
+    j = out.split('---JSON_START---')[1]
+    data = json.loads(j)
+    types = {f['type'] for f in data['findings']}
+    stale_findings = [t for t in types if t.startswith('STALE-LITERAL')]
+    assert len(stale_findings) >= 1, \
+        f"scanner should emit >=1 STALE-LITERAL-* finding, got: {types}"

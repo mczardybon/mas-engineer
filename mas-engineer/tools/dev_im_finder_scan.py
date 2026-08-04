@@ -906,6 +906,154 @@ def check_spec_drift_reverse(findings, repo_root='.'):
                     f"matches different value: recipe is stale")
 
 
+# --- R110-124: Pattern A + B sister-functions -----------------------------
+# Wrap dev_self_audit detectors (producer) as scanner findings (consumer).
+# R02: scanner is consumer, self_audit is producer — do NOT duplicate the
+# detection logic; lazy-import the module and reuse PATTERN_A_RE /
+# PATTERN_A_ACCEPT_CTX / _is_in_fence / _strip_inline_code / _scan_pattern_b
+# / _build_repo_literal_index. See: .directives/R110-124-scanner-pattern-ab.md
+
+def check_hardcode_stale(findings, repo_root='.'):
+    """R110-124: wrap dev_self_audit Pattern A (HARDCODE-* detection).
+
+    Detects hardcoded counts (e.g. "18 checks", "112 sub-agents") in
+    recipe/instructions/ that lack env-var/default/config context.
+    Mirrors dev_self_audit._scan_pattern_a() but emits scanner findings.
+    """
+    # Import here to avoid circular import at module load.
+    import importlib.util as _ilu
+    _path = os.path.join(os.path.dirname(__file__) or '.',
+                         'dev_self_audit.py')
+    _spec = _ilu.spec_from_file_location('dev_self_audit', _path)
+    _mod = _ilu.module_from_spec(_spec)
+    try:
+        _spec.loader.exec_module(_mod)
+    except Exception as e:
+        add_finding('HARDCODE-STALE-err', 'low',
+                    'tools/dev_im_finder_scan.py',
+                    f'pattern_a_import error: {e}',
+                    'HARDCODE-STALE findings may be incomplete',
+                    'Inspect traceback')
+        return
+
+    scope = os.path.join(repo_root, 'recipe', 'instructions')
+    if not os.path.isdir(scope):
+        return
+
+    per_file_idx = {}
+    for root, _, files in os.walk(scope):
+        if _is_pycache_or_backup(root):
+            continue
+        for fn in sorted(files):
+            if not fn.endswith('.md'):
+                continue
+            fp = os.path.join(root, fn)
+            if _is_pycache_or_backup(fp):
+                continue
+            rel = os.path.relpath(fp, repo_root)
+            try:
+                with open(fp, errors='ignore') as fh:
+                    lines = fh.readlines()
+            except Exception:
+                continue
+            per_file_idx[rel] = 0
+            for ln, line in enumerate(lines, start=1):
+                stripped = line.lstrip()
+                if stripped.startswith('#'):
+                    continue
+                if _mod._is_in_fence(lines, ln - 1):
+                    continue
+                inline = _mod._strip_inline_code(line)
+                for m in _mod.PATTERN_A_RE.finditer(inline):
+                    if _mod.PATTERN_A_ACCEPT_CTX.search(inline):
+                        continue
+                    num, word = m.group(1), m.group(2)
+                    per_file_idx[rel] += 1
+                    add_finding(
+                        f'HARDCODE-STALE-{per_file_idx[rel]:03d}',
+                        'medium',
+                        f'{rel}:{ln}',
+                        f"hardcoded '{num} {word}' without env-var/"
+                        f"default/config context",
+                        f"Reference env var (e.g. IM_TOP_N), document "
+                        f"'default {num}', or derive from source of truth.",
+                        f"Run: grep -rn '{num} {word}' recipe/ ; if all "
+                        f"matches lack env/default context: hardcode is "
+                        f"stale (R110-78 spec-drift lesson).")
+
+
+def check_stale_literal(findings, repo_root='.'):
+    """R110-124: wrap dev_self_audit Pattern B (STALE-LITERAL detection).
+
+    Detects quoted literals in recipe/instructions/ that don't appear
+    anywhere else in recipe/tools/docs/tests. Mirrors
+    dev_self_audit._scan_pattern_b() but emits scanner findings.
+
+    R110-124-ADAPTATION (R110-116 honest): directive draft used severity
+    'warn', but the scanner's R28 SEVERITY_FILTER (default medium,high,
+    blocker) silently drops 'warn' — findings would be invisible. Emit
+    'medium' instead (documented in commit body).
+    """
+    # [same import dance as check_hardcode_stale]
+    import importlib.util as _ilu
+    _path = os.path.join(os.path.dirname(__file__) or '.',
+                         'dev_self_audit.py')
+    _spec = _ilu.spec_from_file_location('dev_self_audit', _path)
+    _mod = _ilu.module_from_spec(_spec)
+    try:
+        _spec.loader.exec_module(_mod)
+    except Exception as e:
+        add_finding('STALE-LITERAL-err', 'low',
+                    'tools/dev_im_finder_scan.py',
+                    f'pattern_b_import error: {e}',
+                    'STALE-LITERAL findings may be incomplete',
+                    'Inspect traceback')
+        return
+
+    scope = os.path.join(repo_root, 'recipe', 'instructions')
+    if not os.path.isdir(scope):
+        return
+
+    per_file_idx = {}
+    for root, _, files in os.walk(scope):
+        if _is_pycache_or_backup(root):
+            continue
+        for fn in sorted(files):
+            if not fn.endswith('.md'):
+                continue
+            fp = os.path.join(root, fn)
+            rel = os.path.relpath(fp, repo_root)
+            try:
+                with open(fp, errors='ignore') as fh:
+                    lines = fh.readlines()
+            except Exception:
+                continue
+            file_stem = Path(fp).stem
+            per_file_idx[rel] = 0
+            # Index excludes THIS file (dev_self_audit.run_self_audit
+            # semantics). R110-124-ADAPTATION (R110-116 honest): the
+            # directive draft passed the scope DIRECTORY as exclude_path,
+            # but _build_repo_literal_index compares file-abspaths against
+            # the exclude-abspath — a file never equals the dir, so
+            # nothing was excluded and every literal self-indexed (Pattern
+            # B became a silent no-op). Per-file exclusion restores the
+            # producer semantics.
+            repo_index = _mod._build_repo_literal_index(
+                Path(repo_root), Path(fp))
+            # Use dev_self_audit._scan_pattern_b directly
+            for f in _mod._scan_pattern_b(
+                    lines, rel, repo_index, file_stem):
+                per_file_idx[rel] += 1
+                add_finding(
+                    f'STALE-LITERAL-{per_file_idx[rel]:03d}',
+                    'medium',
+                    f'{rel}:{f.description.split(":")[1].split(":")[0]}',
+                    f.description.replace(file_stem + ':', ''),
+                    f.suggested_fix,
+                    f"Pattern B (R110-78): literal {f.description!r} "
+                    f"appears nowhere in repo.")
+
+
 # IDEMPOTENZ (spec section 7): grep-based check avoids re-inserting
 # check_spec_drift body if a previous run already wrote it.
 # (Unconditional call below is safe; function is module-scope and only
@@ -924,6 +1072,24 @@ except Exception as _sd_rev_err:
     add_finding('SD-rev-err', 'low', 'tools/dev_im_finder_scan.py',
                 f'spec_drift_reverse_check errored: {_sd_rev_err}',
                 'SD-recipe findings may be incomplete', 'Inspect traceback')
+
+# R110-124: Pattern A + B drift detection
+try:
+    check_hardcode_stale(findings, '.')
+except Exception as _ha_err:
+    add_finding('HARDCODE-STALE-err', 'low',
+                'tools/dev_im_finder_scan.py',
+                f'hardcode_check errored: {_ha_err}',
+                'HARDCODE-STALE findings may be incomplete',
+                'Inspect traceback')
+try:
+    check_stale_literal(findings, '.')
+except Exception as _sl_err:
+    add_finding('STALE-LITERAL-err', 'low',
+                'tools/dev_im_finder_scan.py',
+                f'stale_literal_check errored: {_sl_err}',
+                'STALE-LITERAL findings may be incomplete',
+                'Inspect traceback')
 
 # --- Summary ---
 by_type = Counter(f['type'] for f in findings)
