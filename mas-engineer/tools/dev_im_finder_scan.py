@@ -594,6 +594,162 @@ for _pt in PY_TOOLS:
                         'Log mode compares confidence by string match; hardcoded values differ between run modes',
                         'Read confidence from session metadata, not from pattern tuples')
 
+# --- SD: Spec-Drift detection (R110-78 PHASE 2, R110-105) ---
+# Detects test-files in tests/ that assert literals which no longer
+# appear anywhere in recipe/, tools/, or docs/ (R110-71 spec-drift
+# incident pattern). Emits SD-<test-basename>-<idx> findings.
+# Spec: .directives/R110-78-spec-drift.md PHASE 2 (R110-83 sub-spec).
+_SD_STRING_IN_RE = re.compile(
+    r'''assert\s+["']([^"']{4,80})["']\s+in\s+''')
+_SD_INT_EQ_RE = re.compile(
+    r'''assert\s+\(?(\d+)\)?\s*==\s*[\w\.\(]''')
+_SD_INT_CMP_RE = re.compile(
+    r'''assert\s+[\w\.\(\)]+\s*(?:==|!=|>|<|>=|<=)\s*(\d+)''')
+_SD_URL_RE = re.compile(r'https?://', re.IGNORECASE)
+_SD_WS_ONLY_RE = re.compile(r'^\s*$')
+
+def _is_pycache_or_backup(path: str) -> bool:
+    return ('__pycache__' in path or path.endswith('.pyc')
+            or '/llm-backup/' in path)
+
+def _is_self_reference(literal: str, line: str) -> bool:
+    # Heuristic: a true self-reference is when the assert checks a literal
+    # against itself (e.g. assert "test_foo" in __name__ — the literal
+    # IS the container). Pattern: extract the container (right of `in`)
+    # and skip if it equals the literal.
+    # Simpler: skip if literal is identical to the right-side of `in`.
+    m = re.search(r'''in\s+(.+)$''', line)
+    if m:
+        rhs = m.group(1).strip().rstrip(',').strip()
+        # strip quotes if present
+        if (rhs.startswith('"') and rhs.endswith('"')) or \
+           (rhs.startswith("'") and rhs.endswith("'")):
+            rhs_inner = rhs[1:-1]
+            if rhs_inner == literal:
+                return True
+    return False
+
+def _is_common_value(literal: str, search_dirs) -> bool:
+    # If a literal matches in 3+ files anywhere, treat as common value
+    # (prevents "True", "False", etc. from triggering SD).
+    hits = 0
+    for d in search_dirs:
+        if not os.path.isdir(d):
+            continue
+        for root, _, files in os.walk(d):
+            if _is_pycache_or_backup(root):
+                continue
+            for f in files:
+                p = os.path.join(root, f)
+                try:
+                    with open(p, errors='ignore') as fh:
+                        if literal in fh.read():
+                            hits += 1
+                            if hits >= 3:
+                                return True
+                except Exception:
+                    continue
+    return False
+
+def _is_in_docstring(src_lines: str, line_idx: int) -> bool:
+    # crude: count """ before line; if odd, we're inside docstring
+    before = '\n'.join(src_lines[:line_idx + 1])
+    return before.count('"""') % 2 == 1
+
+def check_spec_drift(findings, repo_root='.'):
+    """R110-78 PHASE 2: detect test literals not in repo."""
+    tests_dir = os.path.join(repo_root, 'tests')
+    if not os.path.isdir(tests_dir):
+        return
+    search_dirs = [
+        os.path.join(repo_root, 'recipe'),
+        os.path.join(repo_root, 'tools'),
+        os.path.join(repo_root, 'docs'),
+    ]
+    per_file_idx = {}
+    for tf in sorted(glob.glob(os.path.join(tests_dir, '**', 'test_*.py'),
+                              recursive=True)):
+        if _is_pycache_or_backup(tf):
+            continue
+        try:
+            with open(tf, errors='ignore') as fh:
+                lines = fh.readlines()
+        except Exception:
+            continue
+        base = os.path.basename(tf).replace('.py', '').replace('test_', '')
+        per_file_idx[base] = 0
+        for ln, line in enumerate(lines, start=1):
+            stripped = line.lstrip()
+            if stripped.startswith('#'):
+                continue
+            if _is_in_docstring(lines, ln - 1):
+                continue
+            literals = []
+            for m in _SD_STRING_IN_RE.finditer(line):
+                literals.append(m.group(1))
+            for m in _SD_INT_EQ_RE.finditer(line):
+                literals.append(m.group(1))
+            for m in _SD_INT_CMP_RE.finditer(line):
+                literals.append(m.group(1))
+            for L in literals:
+                # filter rules per spec section 4
+                if len(L) < 4:
+                    continue
+                if _SD_URL_RE.search(L):
+                    continue
+                if _SD_WS_ONLY_RE.match(L):
+                    continue
+                if _is_self_reference(L, line):
+                    continue
+                if _is_common_value(L, search_dirs):
+                    continue
+                # actual spec-drift: literal not in recipe/tools/docs
+                hit = False
+                for d in search_dirs:
+                    if not os.path.isdir(d):
+                        continue
+                    for root, _, files in os.walk(d):
+                        if _is_pycache_or_backup(root):
+                            continue
+                        for f in files:
+                            p = os.path.join(root, f)
+                            try:
+                                with open(p, errors='ignore') as fh:
+                                    if L in fh.read():
+                                        hit = True
+                                        break
+                            except Exception:
+                                continue
+                        if hit:
+                            break
+                    if hit:
+                        break
+                if hit:
+                    continue
+                per_file_idx[base] += 1
+                add_finding(
+                    f'SD-test_{base}-{per_file_idx[base]}', 'medium',
+                    f'{tf}:{ln}',
+                    f"spec_drift: test asserts literal '{L}' but it is absent "
+                    f'from recipe/, tools/, docs/ (literal-only-in-tests = '
+                    f'test is stale or recipe was updated without test fix)',
+                    f'Test will fail until the literal is restored or the test '
+                    f'is updated to the new value (R110-71/R110-78 pattern)',
+                    f"Run: grep -rn '{L}' tests/ recipe/ tools/ docs/ ; "
+                    f'if only tests/ matches: update test to current value; '
+                    f'if recipe/ matches different value: test is stale')
+
+# IDEMPOTENZ (spec section 7): grep-based check avoids re-inserting
+# check_spec_drift body if a previous run already wrote it.
+# (Unconditional call below is safe; function is module-scope and only
+# defined once per file.)
+try:
+    check_spec_drift(findings, '.')
+except Exception as _sd_err:
+    add_finding('SD-err', 'low', 'tools/dev_im_finder_scan.py',
+                f'spec_drift_check errored: {_sd_err}',
+                'SD findings may be incomplete', 'Inspect traceback')
+
 # --- Summary ---
 by_type = Counter(f['type'] for f in findings)
 by_sev = Counter(f['severity'] for f in findings)
