@@ -39,12 +39,51 @@ in test-fixtures/).
 | PHASE | DIREKTIVE | Status | Started | Completed | Commit | Effekt |
 |---|---|---|---|---|---|---|
 | 1 | validator + pytest | DONE | 2026-08-03 | 2026-08-04 | 27d8cb7 (R110-94 Check 16+ drift) + c005db6 (R110-100 Check 17 pytest) | spec-drift vor push blocken (drift + pytest-count-mismatch) |
-| 2 | SD-* finding | OPEN | — | — | — | spec-drift in IM-scans finden |
-| 3 | dev_spec_invariant.py | OPEN | — | — | — | invariant immer garantiert |
+| 2 | SD-* finding | DONE | 2026-08-04 | 2026-08-04 | 3b80259 (R110-106) | spec-drift in IM-scans finden — dev_im_finder_scan.py:check_spec_drift() (4 test-cases), im-finder recipe Z.36 ruft standalone-script auf, 7 SD-* findings in R110-108 run verifiziert |
+| 3 | dev_spec_invariant.py | IN-PROGRESS | 2026-08-04 | — | bbc76ca (R110-109 directive, spec-only) | spec fuer R110-110 naechster run; implementiert dann sub_mas-self-audit + dev_spec_invariant.py + Check 18 |
 | 4 | skill update (Hermes) | DONE | 2026-08-03 | 2026-08-03 | (Hermes session) | pre-push-gate skill, R110-77 |
 
-**Overall**: 1/3 mas-engineer PHASEN done, 2/4 PHASEN done
-(hermes-side: skill-update done; mas-engineer-side: PHASE 1 done via R110-94+R110-100).
+**Overall**: 2/3 mas-engineer PHASEN done, 3/4 PHASEN done
+(hermes-side: skill-update done; mas-engineer-side: PHASE 1+2 done
+via R110-94+R110-100+R110-106; PHASE 3 in-progress via R110-109).
+
+### R110-106-sd-detector-pilot (neu 2026-08-04)
+- **Datei**: `R110-106-designer-im-top-n-respect.md` (130 lines, 2026-08-04)
+- **Ziel**: SD-detection logic (check_spec_drift) + IM_TOP_N=30 e2e-pilot
+- **Created**: 3b80259 (R110-106, 2026-08-04)
+- **Effekt**: 2 spec-drifts fixed (F-001 Q4 path, F-022 SD test-literal
+  "14 critical checks" -> "17 critical checks"); 4 SD-detector fixture-
+  tests; 130 lines follow-up spec fuer im-designer Z.164 hardcoded
+  "TOP-5" (R110-107 directive, commit 9136778)
+
+### R110-107-im-designer-top-n-fix (neu 2026-08-04)
+- **Datei**: `R110-107-im-designer-top-n-fix.md` (167 lines, 2026-08-04)
+- **Ziel**: im-designer Z.164 hardcoded "TOP-5" -> "TOP-N" fix
+- **Created**: 9136778 (R110-107, 2026-08-04)
+- **Status**: SPEC-DRAFT (no code change yet)
+- **Ergebnis R110-107 run**: 0 patches drafted — mas-engineer kann
+  recipe-self-bugs nicht selbst fixen (finder sucht code-defects,
+  improver lehnt per R06 direct file-writes ab). Architectural fix
+  in R110-109 (sub_mas-self-audit).
+
+### R110-108-sd-detector-integration (neu 2026-08-04)
+- **Datei**: `R110-108-sd-detector-integration.md` (202 lines, 2026-08-04)
+- **Ziel**: SD-detector in sub_mas-im-finder integrieren (R110-78 PHASE 2 spec-compliance)
+- **Created**: 391be5b (R110-108, 2026-08-04)
+- **Status**: SPEC-DRAFT (DONE confirmed in R110-108 run 2026-08-04 10:53Z:
+  recipe/instructions/sub_mas-im-finder.md Z.36 ruft dev_im_finder_scan.py
+  auf, 7 SD-* findings in run emittiert). DIREKTIVE 1 (integration) ist
+  bereits durch R110-106 commit 3b80259 erfuellt.
+
+### R110-109-self-audit-spec-invariant (neu 2026-08-04)
+- **Datei**: `R110-109-self-audit-spec-invariant.md` (238 lines, 2026-08-04)
+- **Ziel**: sub_mas-self-audit agent + dev_spec_invariant.py (R110-78 PHASE 3)
+- **Created**: bbc76ca (R110-109, 2026-08-04)
+- **Status**: SPEC-DRAFT (no code change yet)
+- **Ausfuehrung**: R110-110 naechster im-pipeline run drafted + applied
+  5 files (4 NEU + 1 modified): sub_mas-self-audit.yaml, instructions,
+  dev_self_audit.py, dev_spec_invariant.py, pre-push-validator Check 18.
+  R11 GOOSE-EXPERT trigger (type A NEW recipe).
 
 ## PHASE-Status-Legende
 
@@ -55,6 +94,8 @@ in test-fixtures/).
   (z.B. findet eine abhaengigkeit die nicht erfuellt ist)
 - `CANCELLED` -- spec wurde verworfen, dokumentiert in commit
   message warum
+- `SPEC-DRAFT` -- directive committet, implementation wartet auf
+  naechsten im-pipeline run
 
 ## Wann wird aktualisiert
 
