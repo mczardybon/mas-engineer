@@ -62,7 +62,7 @@ of MAS-Engineer. The directory contains everything the team needs:
 
 ## DIFFERENCE FROM BOOTSTRAP
 
-- `sub_mas-bootstrap` (DEPLOY): copies all 96 MAS-Engineer sub-agents + 57 tools
+- `sub_mas-bootstrap` (DEPLOY): copies all 112 MAS-Engineer sub-agents + 58 tools
   into a new directory. Result is a full MAS-Engineer instance.
 - `sub_mas-team-packager` (PACKAGE_TEAM): copies ONLY the team agents
   (typically 3-7 files). Result is a lightweight team package.
@@ -361,7 +361,7 @@ Return the mas_result with:
 - DEEPSEEK_API_KEY not set: warn, do not block
 - Multiple teams with same name: append -2, -3, ...
 - Team has 0 sub-agents: error, cannot package empty team
-- Team has more than 20 sub-agents: warn, large team, may be slow
+- Team has more than 20 sub-agents: warn, large team, may be slow <!-- (threshold, update to 112 if mas-team-typical-size increases) -->
 
 ## INVOCATION EXAMPLE
 

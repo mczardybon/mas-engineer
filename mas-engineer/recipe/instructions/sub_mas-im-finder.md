@@ -468,7 +468,7 @@ data:
       type: A1
       severity: 🔴 high
       file: recipe/sub/sub_mas-im-validator.yaml
-      issue: timeout=120s too low for 47 sub-agents to validate
+      issue: timeout=120s too low for 47 sub-agents to validate <!-- (historical, 2026-07-18: example finding F-001 from 87322ec — count was 47 at writing; NOT the current mas-self registry count 112) -->
       impact: validator times out → improvement cycle breaks
       fix: set timeout=300
       goose_verdict:  # only if STEP 0.5 triggered

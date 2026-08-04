@@ -27,7 +27,7 @@ Run the following 18 checks IN ORDER. Stop at the first failure if a hard
 block is detected, but always collect all warnings.
 
 ### Check 0: Commit-body disclosure audit (NEW v2.1.0, R110-56)
-**Why:** A commit body that says "Adds 3 new tests" but git diff shows
+**Why:** A commit body that says "Adds 4 new tests" but git diff shows
 zero new test functions is **dishonest disclosure**. It corrupts the
 audit trail, makes R-numbered findings un-trustable, and lets actors
 hide regressions behind plausible-sounding text. The validator's
@@ -528,7 +528,7 @@ print(json.dumps({'refs': total, 'broken': len(broken), 'pct': round(100*(1-len(
 
 ### Check 12 — test coverage gate (sub-agents vs tests, 80% minimum)
 
-**Why:** With 120 sub-agents and only ~2 dedicated test files, mas's framework is critically undertested. The pre-push gate must enforce a minimum test-to-sub-agent ratio to prevent shipping unbacked code. This is the structural test-coverage gate.
+**Why:** With 112 sub-agents and only ~2 dedicated test files (historical rationale at R110-56, 2026-07-25; test files now: 124), mas's framework was critically undertested. The pre-push gate must enforce a minimum test-to-sub-agent ratio to prevent shipping unbacked code. This is the structural test-coverage gate.
 
 **User requirement (2026-07-25):** tests/test_*.py count must be >= recipe/sub/*.yaml count × 0.8
 

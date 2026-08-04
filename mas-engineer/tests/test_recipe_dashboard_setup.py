@@ -65,9 +65,8 @@ def test_dashboard_data_refresh_role():
     content = path.read_text()
     assert "Dashboard" in content or "dashboard" in content, \
         "dashboard-data-refresh must reference Dashboard"
-    assert "5 Min" in content or "5 min" in content \
-        or "5min" in content or "5minut" in content.lower() \
-        or "interval" in content.lower() \
+    assert re.search(r"5\s+[Mm]in", content) or "5min" in content \
+        or "5minut" in content.lower() or "interval" in content.lower() \
         or "Interval" in content, \
         "dashboard-data-refresh must declare 5-minute interval"
     assert "guardian" in content.lower() or "Guardian" in content, \

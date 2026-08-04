@@ -55,6 +55,8 @@ def test_self_auditor_architecture_split():
 def test_self_auditor_4_subagents():
     """Spec: validator, evidence-scanner, report-builder, claim-matcher."""
     content = RECIPE.read_text()
+    assert "4 sub-agents" in content, \
+        "self-auditor must declare 4 sub-agents (architecture_split)"
     for sub in ("validator", "evidence-scanner", "report-builder", "claim-matcher"):
         assert sub in content, \
             f"self-auditor must declare sub-agent: {sub}"

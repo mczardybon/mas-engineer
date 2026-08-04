@@ -89,12 +89,13 @@ AGAINST: find {workspace} -name "<file>.md"
 CHECK: Each referenced file exists
 
   ### CHECK 13 — Recipe timeout/max_steps consistency
+    <!-- (historical, 2026-07-18: the "43" sub-agents count (also L98) = opaque legacy grouping from 87322ec, NOT the mas-self registry; registry = 112 sub_mas-*.yaml, canonical 2026-08-04 — do NOT update to 112) -->
     All 52 MAS sub-agents + 43 sub-agents + 4 main agents
     CHECK: Document outliers (Min=300, Max=6000, Recovery=50)
 
   ### CHECK 14 — Slash commands: only main agents have them
     CHECK: Only /analyze, /plan, /execute, /fw-monitor have slash_command
-    CHECK: 52 MAS sub-agents and 43 sub-agents have NO slash_command
+    CHECK: 52 MAS sub-agents and 43 sub-agents have NO slash_command <!-- (historical 43 — same opaque legacy grouping as CHECK 13, NOT the 112 mas-self registry) -->
 
 ### CHECK 15 — Version consistency
 config.yaml header: "v1.0.0"
@@ -133,7 +134,7 @@ mas_result:
         severity: "info"
         detail: "context_window > max_tokens in all 5 tiers. Different semantics — no error."
     score: "13/16 ✅"
-    summary: "12 checks passed. 1 warning, 1 info, 1 info finding."
+    summary: "13 checks passed. 1 warning, 1 info, 1 failed."
 ```
 
 ## Boundaries

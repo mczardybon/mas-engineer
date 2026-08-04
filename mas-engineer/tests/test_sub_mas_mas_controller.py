@@ -77,6 +77,8 @@ def test_mas_controller_prohibition_boundary():
 def test_mas_controller_3_sub_agents():
     """Spec: 3 sub-agents — health-monitor, runtime-monitor, recovery-monitor."""
     content = RECIPE.read_text()
+    assert "3 sub-agents" in content, \
+        "mas-controller must declare 3 sub-agents (architecture_split)"
     for sub in ("sub_mas-mas-controller-health-monitor",
                 "sub_mas-mas-controller-runtime-monitor",
                 "sub_mas-mas-controller-recovery-monitor"):
