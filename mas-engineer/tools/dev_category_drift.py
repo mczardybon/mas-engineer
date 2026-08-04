@@ -82,7 +82,17 @@ def run_git_log(repo_path, since_days, cutoff_date=None):
 
 
 def classify_drift(commits, cutoff_date=None):
-    """Walk all commits, return {drift: [...], conform: [...], exempt: [...]}."""
+    """Walk all commits; return dict with drift/conform/exempt lists AND counts.
+
+    Output schema (R110-94 enhancement):
+      - drift:        list of violating commit dicts
+      - conform:      list of protocol-following commit dicts
+      - exempt:       list of exempt commit dicts (pre-protocol / merge / revert / auto / bot / noise)
+      - drift_count:   int -- len(drift)  (convenience for cron/CI exit-code checks)
+      - conform_count: int -- len(conform)
+      - exempt_count:  int -- len(exempt)
+      - total:         int -- len(commits)
+    """
     drift, conform, exempt = [], [], []
     for c in commits:
         subj = c["subject"].strip()
@@ -101,7 +111,15 @@ def classify_drift(commits, cutoff_date=None):
             continue
         # Else: drift
         drift.append(c)
-    return {"drift": drift, "conform": conform, "exempt": exempt}
+    return {
+        "drift": drift,
+        "conform": conform,
+        "exempt": exempt,
+        "drift_count": len(drift),
+        "conform_count": len(conform),
+        "exempt_count": len(exempt),
+        "total": len(commits),
+    }
 
 
 def format_human(report, since_days, cutoff_date="<unset>"):

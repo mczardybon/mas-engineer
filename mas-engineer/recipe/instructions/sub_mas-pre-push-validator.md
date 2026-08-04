@@ -23,7 +23,7 @@ everything is healthy.
 
 ## Procedure VALIDATE
 
-Run the following 15 checks IN ORDER. Stop at the first failure if a hard
+Run the following 16 checks IN ORDER. Stop at the first failure if a hard
 block is detected, but always collect all warnings.
 
 ### Check 0: Commit-body disclosure audit (NEW v2.1.0, R110-56)
@@ -711,12 +711,73 @@ PYEOF
 - ❌ BLOCK: any behavior fail OR any structure fail
 - WARN: structure has warnings (informational only)
 
+### Check 16+: Historical commit-subject category drift (NEW v2.2.0, R110-94)
+
+**Goal:** Catches drift across the LAST 30 days that Check 1.5 cannot see
+(Check 1.5 validates only the LATEST commit at push time).
+
+**What it does:** Invokes the standalone drift detector
+`tools/dev_category_drift.py` (R110-92) and BLOCKS the push if any
+non-conforming subject is found in the last 30 days (post-cutoff,
+default `--convention-since 2026-08-04`).
+
+```bash
+# Check 16+: Historical category drift
+echo "🔍 Check 16+: Historical commit-subject category drift (R110-94)"
+if [ ! -f "tools/dev_category_drift.py" ]; then
+    echo "  ❌ BLOCK: tools/dev_category_drift.py missing (R110-92 drift detector required)"
+    echo "     This check cannot run without it. Add it via R110-92 or disable this check."
+    exit 1
+fi
+python3 tools/dev_category_drift.py --since 30 --json > /tmp/drift_check_16.json
+DRIFT_RC=$?
+if [ $DRIFT_RC -eq 2 ]; then
+    echo "  ❌ BLOCK: Check 16+ usage error (exit 2). See /tmp/drift_check_16.json"
+    cat /tmp/drift_check_16.json
+    exit 1
+fi
+DRIFT_COUNT=$(python3 -c "import json; d=json.load(open('/tmp/drift_check_16.json')); print(d['drift_count'])" 2>/dev/null || echo "0")
+if [ "$DRIFT_RC" -eq 1 ] || [ "${DRIFT_COUNT:-0}" -gt 0 ]; then
+    echo "  ❌ BLOCK: Check 16+ — $DRIFT_COUNT historical commit(s) violate the 5-category convention"
+    echo "     Run: python3 tools/dev_category_drift.py --since 30   (for details)"
+    echo "     For the historical view (pre-cutoff): --convention-since YYYY-MM-DD"
+    echo "     Reference: mas-engineer-commit-protocol skill, R110-90 rebase precedent"
+    exit 1
+fi
+echo "  ✅ Check 16+ passed: no category drift in last 30 days (post-cutoff 2026-08-04)"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 16+: Historical commit-subject category drift (R110-94)
+  ✅ Check 16+ passed: no category drift in last 30 days (post-cutoff 2026-08-04)
+```
+
+**Output block on BLOCK:**
+```
+🔍 Check 16+: Historical commit-subject category drift (R110-94)
+  ❌ BLOCK: Check 16+ — 3 historical commit(s) violate the 5-category convention
+     Run: python3 tools/dev_category_drift.py --since 30   (for details)
+     For the historical view (pre-cutoff): --convention-since YYYY-MM-DD
+     Reference: mas-engineer-commit-protocol skill, R110-90 rebase precedent
+```
+
+**Additive to Check 1.5:** Check 1.5 catches the LATEST commit. Check 16+
+catches the WINDOW. Both are needed; neither replaces the other.
+
+**Override:** To pass on intentional historical drift (e.g. before the
+5-category convention was enforced), update the cutoff in the script via
+`--convention-since 2026-07-27` (or earlier). This check does NOT accept
+a flag override — edit the script's default or use a wrapper if needed.
+
+**Reference:** R110-92 (drift detector), R110-90 (rebase precedent),
+R110-78 (spec-drift lesson — counts must be verified).
 
 ## Boundaries
 
 - ⛔ NEVER modify any source file — this agent is read-only
 - ⛔ NEVER run `git push` itself — only validate
-- ⛔ NEVER skip a check — all 15 must run (Check 0 + Checks 1-14)
+- ⛔ NEVER skip a check — all 16 must run (Check 0 + Checks 1-15)
 - ⛔ Max 300s timeout total (5 minutes)
 
 **R01 NON-INTERACTIVE BYPASS (current implementation):** R01
