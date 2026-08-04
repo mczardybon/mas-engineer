@@ -16,7 +16,7 @@ from collections import Counter
 # (e.g. "session cleanup missing", "no retry logic" — best-practice opinions,
 # not bugs). Set SEVERITY_FILTER=low,medium,high (or pass
 # --severity-filter=low,medium,high) to see all findings.
-SEVERITY_FILTER = {'medium', 'high'}
+SEVERITY_FILTER = {'medium', 'high', 'blocker'}
 for _a in sys.argv[1:]:
     if _a.startswith('--severity-filter='):
         SEVERITY_FILTER = {s.strip() for s in _a.split('=', 1)[1].split(',') if s.strip()}
@@ -739,6 +739,154 @@ def check_spec_drift(findings, repo_root='.'):
                     f'if only tests/ matches: update test to current value; '
                     f'if recipe/ matches different value: test is stale')
 
+# --- R110-112 reverse-mode: detect recipe count-assertions not in tests/ ---
+# Targeted: only detect count-assertions like "N checks", "N tests",
+# "N critical X", "N rules" that are load-bearing spec-anchors (the
+# R110-111 L26 pattern). Descriptive numeric prose ("30 seconds",
+# "100 files") is NOT a count-assertion and is correctly skipped.
+_RECIPE_NUMERIC_RE = re.compile(r'\b(\d{2,})\s+(\w[\w-]*)')
+_RECIPE_CHECKS_RE = re.compile(r'(\d+)\s+(critical\s+)?checks?\b')
+_COUNT_ANCHOR_NEXT = {'check', 'checks', 'test', 'tests', 'assert',
+                      'asserts', 'rule', 'rules', 'finding', 'findings',
+                      'validator', 'validators'}
+
+
+def _is_in_code_block(lines, line_idx):
+    """Return True if line_idx is inside a fenced code block (``` markers)."""
+    count = 0
+    for i in range(line_idx + 1):
+        stripped = lines[i].lstrip()
+        if stripped.startswith('```'):
+            count += 1
+    return count % 2 == 1
+
+
+def _is_in_table_or_example(lines, line_idx):
+    """Return True if line_idx is inside a markdown table or example block.
+    Heuristic: previous/next non-blank line starts with '|' (table) or
+    'Example:'/'```' (example block). Conservative -- false-negatives OK."""
+    if line_idx + 1 < len(lines) and lines[line_idx + 1].lstrip().startswith('|'):
+        return True
+    if line_idx > 0 and lines[line_idx - 1].lstrip().startswith('|'):
+        return True
+    if line_idx + 1 < len(lines) and 'Example' in lines[line_idx + 1]:
+        return True
+    return False
+
+
+def check_spec_drift_reverse(findings, repo_root='.'):
+    """R110-112: detect recipe count-assertions not asserted in tests/.
+
+    Reverse direction of check_spec_drift(): instead of "test asserts
+    literal that recipe/tools/docs lacks", this catches "recipe/instructions
+    asserts a count-anchor (e.g. '16 checks') that tests/ doesn't assert"
+    (recipe-side drift = R110-111 L26 pattern).
+
+    SCOPE (intentionally narrow):
+      - only "N <count-anchor>" patterns (e.g. "16 checks", "N tests")
+      - skip descriptive numeric prose ("30 seconds", "100 files")
+      - count-anchors: check, checks, test, tests, assert, asserts,
+        rule, rules, finding, findings, validator, validators
+    """
+    recipe_dirs = [
+        os.path.join(repo_root, 'recipe', 'instructions'),
+    ]
+    tests_dir = os.path.join(repo_root, 'tests')
+    if not os.path.isdir(tests_dir):
+        return
+    test_files = sorted(glob.glob(os.path.join(tests_dir, '**', 'test_*.py'),
+                                  recursive=True))
+    if not test_files:
+        return
+    # Pre-load all test file contents into one combined string (fast lookup)
+    test_combined = ''
+    for tf in test_files:
+        try:
+            with open(tf, errors='ignore') as fh:
+                test_combined += '\n' + fh.read()
+        except Exception:
+            continue
+    recipe_sources = []
+    for d in recipe_dirs:
+        if os.path.isdir(d):
+            for root, _, files in os.walk(d):
+                if _is_pycache_or_backup(root):
+                    continue
+                for f in files:
+                    if f.endswith('.md'):
+                        recipe_sources.append(os.path.join(root, f))
+    per_file_idx = {}
+    for src in recipe_sources:
+        try:
+            with open(src, errors='ignore') as fh:
+                lines = fh.readlines()
+        except Exception:
+            continue
+        base = os.path.basename(src).replace('.md', '').replace('.py', '')
+        per_file_idx[base] = 0
+        for ln, line in enumerate(lines):
+            stripped = line.lstrip()
+            if stripped.startswith('#'):
+                continue
+            if _is_in_code_block(lines, ln):
+                continue
+            if _is_in_table_or_example(lines, ln):
+                continue
+            for m in _RECIPE_NUMERIC_RE.finditer(line):
+                num, word = m.group(1), m.group(2).lower()
+                # Only count-anchor patterns (R110-111 L26 trigger)
+                if word not in _COUNT_ANCHOR_NEXT:
+                    continue
+                # Skip "16 critical checks" or "17 critical checks" (test-anchor
+                # is "X critical checks" not "X checks")
+                literal_full = m.group(0)
+                # Check for "N checks" pattern (R110-111 L26 trigger)
+                checks_match = _RECIPE_CHECKS_RE.search(literal_full)
+                if checks_match and test_combined:
+                    test_anchor = re.search(
+                        r'["\'](\d+)\s+(?:critical\s+)?checks?["\']',
+                        test_combined)
+                    if test_anchor:
+                        if test_anchor.group(1) != checks_match.group(1):
+                            per_file_idx[base] += 1
+                            add_finding(
+                                f'SD-recipe_{base}-{per_file_idx[base]}',
+                                'blocker',
+                                f'{src}:{ln + 1}',
+                                f"spec_drift_reverse: recipe asserts "
+                                f"'{literal_full}' (line {ln + 1}) but test "
+                                f"asserts '{test_anchor.group(0)}' — "
+                                f"BLOCKER (R110-78 PHASE 1: pytest-count-"
+                                f"mismatch)",
+                                f"Test will pass but recipe contradicts "
+                                f"itself. Update recipe OR test to match "
+                                f"(R110-78 canonical = pytest-count-anchor).",
+                                f"Run: grep -rn '{literal_full}' tests/ "
+                                f"recipe/ ; if only recipe/ matches: test is "
+                                f"stale; if tests/ matches different value: "
+                                f"recipe is stale. R110-111 L26 pattern: "
+                                f"'16 checks' -> '17 checks'")
+                            continue
+                # Generic count-anchor check: "N tests" / "N rules" etc.
+                # Look for the same number with the same word in tests/
+                pattern = re.compile(rf'\b{re.escape(num)}\s+{re.escape(word)}')
+                if pattern.search(test_combined):
+                    continue  # test-anchor present, OK
+                per_file_idx[base] += 1
+                add_finding(
+                    f'SD-recipe_{base}-{per_file_idx[base]}', 'medium',
+                    f'{src}:{ln + 1}',
+                    f"spec_drift_reverse: recipe asserts "
+                    f"'{literal_full}' (count-anchor) but tests/ has no "
+                    f"matching assertion (recipe-side drift)",
+                    f"Test will pass but recipe count-anchor has no test-"
+                    f"support. Either add test-assertion for '{num} "
+                    f"{word}' OR update recipe to match existing test count.",
+                    f"Run: grep -rn '{num} {word}' tests/ recipe/ ; if "
+                    f"only recipe/ matches: add test-anchor; if tests/ "
+                    f"matches different value: recipe is stale")
+
+
 # IDEMPOTENZ (spec section 7): grep-based check avoids re-inserting
 # check_spec_drift body if a previous run already wrote it.
 # (Unconditional call below is safe; function is module-scope and only
@@ -749,6 +897,14 @@ except Exception as _sd_err:
     add_finding('SD-err', 'low', 'tools/dev_im_finder_scan.py',
                 f'spec_drift_check errored: {_sd_err}',
                 'SD findings may be incomplete', 'Inspect traceback')
+
+# R110-112: run reverse-mode check
+try:
+    check_spec_drift_reverse(findings, '.')
+except Exception as _sd_rev_err:
+    add_finding('SD-rev-err', 'low', 'tools/dev_im_finder_scan.py',
+                f'spec_drift_reverse_check errored: {_sd_rev_err}',
+                'SD-recipe findings may be incomplete', 'Inspect traceback')
 
 # --- Summary ---
 by_type = Counter(f['type'] for f in findings)
