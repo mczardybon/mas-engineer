@@ -32,6 +32,15 @@ from datetime import datetime, timedelta, timezone
 # The 5 canonical categories. Matches the commit-protocol + pre-push-validator Check 1.5.
 ALLOWED_CATEGORIES = ("chore:", "docs:", "fix:", "wrench:", "book:")
 
+# R-sprint emoji prefixes (R110-126): validator Check 1.5 explicitly allows
+# 🔧|📝|📚|📊 R<round>-<num> [follow-up] — desc. To stay aligned with the
+# authoritative pre-push-validator (which is the actual gate), we accept the
+# same emoji prefixes as conform here. Otherwise a commit that passes the
+# validator's Check 1.5 would still show up as DRIFT in this historical scan,
+# which is misleading. (R110-78 lesson: 3 different format definitions
+# between skill/detector/validator -- the validator is source-of-truth.)
+ALLOWED_EMOJI_PREFIXES = ("🔧", "📝", "📚", "📊")
+
 # Default cutoff: when the 5-category commit-protocol was EFFECTIVELY enforced.
 # Timeline:
 #   2026-07-27 -- R108-10 (e2c4501): protocol introduced + Check 1.5 added to validator (formal)
@@ -107,6 +116,11 @@ def classify_drift(commits, cutoff_date=None):
             continue
         # Conform: starts with one of the 5 allowed categories
         if any(subj.startswith(p) for p in ALLOWED_CATEGORIES):
+            conform.append(c)
+            continue
+        # Conform (R-sprint emoji): validator Check 1.5 allows 🔧|📝|📚|📊
+        # R<round>-<num> [follow-up] — desc. Accept the same here.
+        if any(subj.startswith(e) for e in ALLOWED_EMOJI_PREFIXES):
             conform.append(c)
             continue
         # Else: drift
