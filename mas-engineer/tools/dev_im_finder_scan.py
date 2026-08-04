@@ -837,6 +837,25 @@ def check_spec_drift_reverse(findings, repo_root='.'):
                 # Only count-anchor patterns (R110-111 L26 trigger)
                 if word not in _COUNT_ANCHOR_NEXT:
                     continue
+                # Skip descriptive prose: lines that are clarifications,
+                # collision-avoidance comments, or summary statistics
+                # (R110-114 lesson: "1,961 findings" is descriptive, not
+                # a count-anchor; "R110-94 Check 16+" is a code reference;
+                # "1000 findings" in "12 days to clear 1000 findings" is
+                # a workload estimate, not an assertion).
+                if re.search(r'\b(Last\s+regenerated|to\s+avoid|days?\s+to\s+clear|'
+                             r'found\s+in|via\s+|version|tracking|~)\b', line,
+                             re.IGNORECASE):
+                    continue
+                # Skip if line is a comment/code reference (e.g. "R110-94 Check 16+")
+                if re.search(r'R\d+-\d+\s+Check', line):
+                    continue
+                # Skip if the number is preceded by "~" (approximation)
+                if '~' in line and re.search(rf'~\s*{re.escape(num)}', line):
+                    continue
+                # Skip if the number has comma-thousands ("1,961" not a test-anchor)
+                if f'{int(num):,}' in line and f'{int(num):,}' != num:
+                    continue
                 # Skip "16 critical checks" or "17 critical checks" (test-anchor
                 # is "X critical checks" not "X checks")
                 literal_full = m.group(0)
