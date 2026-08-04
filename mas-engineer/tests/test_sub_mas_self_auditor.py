@@ -91,3 +91,31 @@ def test_self_auditor_uses_deepseek():
     model = data.get("settings", {}).get("goose_model", "")
     assert "deepseek" in model, \
         f"self-auditor should use deepseek (R36+), got: {model}"
+
+
+def test_pattern_b_stale_literal_detected():
+    """R110-121: Pattern B detects stale references."""
+    import sys
+
+    # R110-120 adaptation (same pattern as test_step_0_6): import tools
+    # modules via TOOLS sys.path entry — a site-packages 'tools' package
+    # would shadow the repo tools/ dir.
+    TOOLS = REPO_ROOT / "tools"
+    if str(TOOLS) not in sys.path:
+        sys.path.insert(0, str(TOOLS))
+
+    from dev_self_audit import run_self_audit  # noqa: E402
+
+    result = run_self_audit(
+        scope=REPO_ROOT / "recipe" / "instructions",
+        repo_root=REPO_ROOT,
+    )
+    # R110-121 adaptation: Finding field is `code`, not `type` (directive
+    # draft used f.type — Finding has no type attribute; file:line info is
+    # embedded in f.description, see tools/dev_self_audit.py).
+    stale_findings = [f for f in result.findings
+                      if 'STALE-LITERAL' in f.code]
+    # After R110-121 DIREKTIVE 1: should be 0 stale
+    # (sales replaced, im-finder false positive fixed)
+    assert len(stale_findings) == 0, \
+        f"Stale findings remain: {[f.description for f in stale_findings]}"

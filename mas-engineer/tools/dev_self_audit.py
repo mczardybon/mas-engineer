@@ -58,11 +58,22 @@ _B_PUNCT = re.compile(r'^[\W_]+$')
 # Only "load-bearing" literals are audited (the R110-71/R110-111 drift
 # patterns): repo-object paths and numeric count anchors. Prose phrases
 # ('Good to know') are NOT stale-literal candidates.
+# R110-121 PART B: `(?:\./)?` recognizes './'-prefixed relative paths;
+# re.MULTILINE makes finditer() match per-line in _build_repo_literal_index
+# (without it the ^...$ anchors make the index loop dead code — im-finder
+# L146 'recipe/sub/sub_mas-goose-expert.yaml' false positive, R110-78 3c).
 _B_PATH_LIKE_RE = re.compile(
-    r'^[\w./\-]+/[\w./\-]+\.(?:yaml|py|md|json|sh|txt)$')
+    r'^(?:\./)?[\w./\-]+/[\w./\-]+\.(?:yaml|py|md|json|sh|txt)$',
+    re.MULTILINE)
 _B_COUNT_PHRASE_RE = re.compile(
     r'^\d{2,}\s+(?:critical\s+)?(?:checks?|tests?|sub-agents|tools|'
     r'phases|rules?|findings?|stages|agents|steps)$', re.IGNORECASE)
+
+# R110-121 PART B: YAML bare-name references ('- name: sub_mas-goose-expert'
+# in sub_recipes lists). The file that IS the definition must not count its
+# own `name:` field as a reference (excluded in _build_repo_literal_index).
+_B_YAML_BARE_NAME_RE = re.compile(
+    r'\bname:\s*(sub_mas-[\w-]+)\b')
 
 # Files that are allowed to contain literals without a repo-wide twin:
 # the file itself is the definition (self-references, spec docs).
@@ -150,6 +161,14 @@ def _build_repo_literal_index(repo_root, exclude_path):
                 index[phrase] = index.get(phrase, 0) + 1
             for m in _B_PATH_LIKE_RE.finditer(text):
                 index[m.group(0)] = index.get(m.group(0), 0) + 1
+            for m in _B_YAML_BARE_NAME_RE.finditer(text):
+                name = m.group(1)
+                if Path(f).stem == name:
+                    # The file that IS the definition: its own `name:`
+                    # field is a self-reference, not evidence (R110-121
+                    # DIREKTIVE 2 exclusion).
+                    continue
+                index[name] = index.get(name, 0) + 1
     return index
 
 

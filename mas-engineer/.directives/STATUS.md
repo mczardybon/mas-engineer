@@ -42,6 +42,7 @@ in test-fixtures/).
 | 2 | SD-* finding | DONE | 2026-08-04 | 2026-08-04 | 3b80259 (R110-106) | spec-drift in IM-scans finden — dev_im_finder_scan.py:check_spec_drift() (4 test-cases), im-finder recipe Z.36 ruft standalone-script auf, 7 SD-* findings in R110-108 run verifiziert |
 | 3 | dev_spec_invariant.py | DONE | 2026-08-04 | 2026-08-04 | R110-118 (sub_mas-self-audit agent + tools/dev_self_audit.py + tools/dev_spec_invariant.py + Check 18 in pre-push) | R110-78 PHASE 3 closed: self-audit agent auditiert recipe/instructions/ (Patterns A/B/C), spec-invariant Check 18 blockt test-vs-recipe count-drift vor push |
 | 3b | self-audit in IM-pipeline | DONE | 2026-08-04 | 2026-08-04 | R110-120 (STEP 0.6 in sub_mas-im-finder.md + sub_mas-self-audit in im-finder sub_recipes + test_step_0_6) | PHASE 3b closed: sub_mas-self-audit auto-invoked in improvement-pipeline (im-finder STEP 0.6, MM9-EXT findings, BLOCKER fail-fast vor findings-write) |
+| 3c | STALE-LITERAL Pattern B fix | DONE | 2026-08-04 | 2026-08-04 | R110-121 (sales→dev-team in 3 files + Pattern B bug-fix + 1 Test) | PHASE 3c closed: 0 STALE-LITERAL findings, im-finder L146 false positive fixed |
 | 4 | skill update (Hermes) | DONE | 2026-08-03 | 2026-08-03 | (Hermes session) | pre-push-gate skill, R110-77 |
 
 **Overall**: 3/3 mas-engineer PHASEN done, 3/4 PHASEN done
@@ -104,6 +105,23 @@ via R110-94+R110-100+R110-106; PHASE 3 DONE via R110-118
 - **Status**: R110-78 PHASE 3b = DONE. pytest 1285/1285 PASS,
   registry 9/9 PASS, dev_spec_invariant 0 BLOCKER,
   dev_self_audit 27 WARN (unchanged, 0 NEW findings).
+
+### R110-121-stale-literal-fix (neu 2026-08-04)
+- **Datei**: `R110-121-stale-literal-fix.md` (2026-08-04)
+- **Ziel**: STALE-LITERAL Pattern B findings fixen — sales-Beispiele →
+  dev-team in 3 files + Pattern B Bug-Fix (R110-78 PHASE 3c closure)
+- **Applied**: 2026-08-04 via sub_mas-apply-directive (RECURSION_OVERRIDE=2,
+  R110-117 per-directive dispatch, HEAD 4050394)
+- **Ausfuehrung**: DIREKTIVE 1 sales→dev-team in sub_mas-team-packager.md
+  (Package-Tree L16-25 + Invocation-Example L368-397 inkl. agent_count
+  6→5) + HOWTO-TEAM-STANDALONE.md (6 refs) + HOWTO-PACKAGE-TEAM.md
+  (8 refs); DIREKTIVE 2 Pattern B fix in dev_self_audit.py (MULTILINE
+  path-like index + `./`-prefix + YAML bare-name index mit self-definition
+  exclusion); DIREKTIVE 3 +1 Test (test_pattern_b_stale_literal_detected,
+  Finding.code statt draft-f.type, R110-120 import-pattern).
+- **Status**: R110-78 PHASE 3c = DONE. pytest 1286/1286 PASS,
+  registry 9/9 PASS, dev_spec_invariant 0 BLOCKER, dev_self_audit
+  20 HARDCODE + 0 STALE-LITERAL, grep 'sub_mas-sales' recipe/+docs/ = 0.
 
 ## PHASE-Status-Legende
 

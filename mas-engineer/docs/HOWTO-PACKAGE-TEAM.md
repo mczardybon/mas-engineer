@@ -38,7 +38,7 @@ Do NOT use this when:
 Inside a goose session with MAS-Engineer running:
 
 ```text
-"Package the sales team for distribution. Output to /tmp."
+"Package the dev team for distribution. Output to /tmp."
 ```
 
 The intention-parser detects the team name, then delegates to
@@ -48,8 +48,8 @@ You can also call the agent directly:
 
 ```text
 "Delegate to sub_mas-team-packager with task PACKAGE_TEAM,
-team_name=sales, output_path=/tmp,
-root_recipe=recipe/sub/sub_mas-sales-director.yaml,
+team_name=dev, output_path=/tmp,
+root_recipe=recipe/sub/sub_mas-dev-director.yaml,
 sub_recipes=[list of paths]."
 ```
 
@@ -58,14 +58,16 @@ sub_recipes=[list of paths]."
 After PACKAGE_TEAM runs, you have a directory like:
 
 ```
-/tmp/sales-team/
+/tmp/dev-team/
 ├── recipe/
-│   ├── sales-root.yaml                 # standalone root
+│   ├── dev-root.yaml                   # standalone root
 │   ├── sub_mas-master-constitution-team.yaml
 │   └── sub/
-│       ├── sub_mas-sales-director.yaml
-│       ├── sub_mas-sales-prospector.yaml
-│       ├── sub_mas-sales-proposal.yaml
+│       ├── sub_mas-dev-director.yaml
+│       ├── sub_mas-dev-analyzer.yaml
+│       ├── sub_mas-dev-builder.yaml
+│       ├── sub_mas-dev-observer.yaml
+│       ├── sub_mas-dev-tester.yaml
 │       └── ... (one per agent)
 ├── .state/
 │   ├── workflows.yaml                  # team-local SOT
@@ -76,7 +78,7 @@ After PACKAGE_TEAM runs, you have a directory like:
 ├── install.sh                          # standalone install
 ├── uninstall.sh                        # remove from goose
 ├── README.md                           # team documentation
-└── .mas-mode                           # mode = sales
+└── .mas-mode                           # mode = dev
 ```
 
 ## How to install
@@ -85,17 +87,17 @@ On the target system (the one without MAS-Engineer):
 
 ```bash
 # 1. Copy the package to the target
-scp -r /tmp/sales-team user@server:/opt/
+scp -r /tmp/dev-team user@server:/opt/
 
 # 2. SSH in and install
 ssh user@server
-cd /opt/sales-team
+cd /opt/dev-team
 ./install.sh
 ```
 
 The install script copies:
 
-- Root recipe to `~/.config/goose/recipes/sales-root.yaml`
+- Root recipe to `~/.config/goose/recipes/dev-root.yaml`
 - Sub-agents to `~/.config/goose/recipes/sub/`
 - Team SOT to `~/.config/goose/recipes/.state/workflows.yaml`
 - Knowledge base to `~/.config/goose/recipes/.state/knowledge/`
@@ -110,7 +112,7 @@ On the target system:
 export DEEPSEEK_API_KEY=sk-...
 
 # Run the team
-goose run --recipe ~/.config/goose/recipes/sales-root.yaml
+goose run --recipe ~/.config/goose/recipes/dev-root.yaml
 ```
 
 Then talk to the team as you would inside MAS-Engineer. The team
@@ -120,7 +122,7 @@ knowledge base.
 ## How to uninstall
 
 ```bash
-cd /opt/sales-team
+cd /opt/dev-team
 ./uninstall.sh
 ```
 

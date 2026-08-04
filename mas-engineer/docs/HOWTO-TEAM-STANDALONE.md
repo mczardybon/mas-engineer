@@ -6,7 +6,7 @@ document explains what works without MAS-Engineer, what does not, and why.
 
 ## What a MAS-Engineer team looks like
 
-When you ask MAS-Engineer to "build a sales team" with the AUTO-SPLIT
+When you ask MAS-Engineer to "build a dev team" with the AUTO-SPLIT
 workflow, you get a set of YAML files. Each agent file contains:
 
 - A role description (who I am, what I do).
@@ -15,7 +15,7 @@ workflow, you get a set of YAML files. Each agent file contains:
 - An input/output schema (HANDOVER signal in, DONE/BLOCKED/ERROR out).
 - A delegation map (which keywords trigger which sub-agent).
 
-The orchestrator (for example, `sub_mas-sales-director.yaml`) has a
+The orchestrator (for example, `sub_mas-dev-director.yaml`) has a
 `sub_recipes` list that points to each specialist.
 
 ## What a team has
@@ -92,8 +92,8 @@ cd /tmp/mas-engineer/mas-engineer
 goose run --recipe recipe/dev-mas-engineer.yaml
 ```
 
-Tell the root: "ask the sales team to qualify this list of prospects."
-The root delegates to `sub_mas-sales-director.yaml`, which delegates to
+Tell the root: "ask the dev team to review this list of issues."
+The root delegates to `sub_mas-dev-director.yaml`, which delegates to
 the specialists. All SOT, audit, and knowledge lookups work because the
 parent MAS-Engineer is running.
 
@@ -115,7 +115,7 @@ runtime.
 ## What the cleanup commit changed
 
 The cleanup commit (`b9ceac4`) removed test-team artifacts: the
-`sub_mas-sales-*` and `sub_mas-marketing-*` YAML files, plus their SOT
+test-output YAML files created by the E2E test runs, plus their SOT
 entries and `sub_recipes` entries. These files were test outputs from
 the E2E test runs. They were not framework components.
 
@@ -149,7 +149,7 @@ This means:
 
 ### What this means for orchestrator recipes
 
-Orchestrator recipes (e.g., `sales-orchestrator.yaml`) MUST:
+Orchestrator recipes (e.g., `dev-orchestrator.yaml`) MUST:
 
 1. **Have the `summon` extension listed** in their `extensions:` field:
    ```yaml

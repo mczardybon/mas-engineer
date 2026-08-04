@@ -13,16 +13,16 @@ team elsewhere, you must package it.
 TEAM-PACKAGER produces a directory like:
 
 ```
-sales-team/
+dev-team/
 ├── recipe/
-│   ├── sales-root.yaml                # standalone root (no MAS-Engineer deps)
+│   ├── dev-root.yaml                  # standalone root (no MAS-Engineer deps)
 │   ├── sub/
-│   │   ├── sub_mas-sales-director.yaml
-│   │   ├── sub_mas-sales-prospector.yaml
-│   │   ├── sub_mas-sales-proposal.yaml
-│   │   ├── sub_mas-sales-pipeline.yaml
-│   │   ├── sub_mas-sales-analyst.yaml
-│   │   └── sub_mas-sales-crm.yaml
+│   │   ├── sub_mas-dev-director.yaml
+│   │   ├── sub_mas-dev-analyzer.yaml
+│   │   ├── sub_mas-dev-builder.yaml
+│   │   ├── sub_mas-dev-observer.yaml
+│   │   ├── sub_mas-dev-tester.yaml
+│   │   └── ... (one per agent)
 │   └── sub_mas-master-constitution.yaml
 ├── .state/
 │   ├── workflows.yaml                  # team-local SOT
@@ -34,14 +34,14 @@ sales-team/
 ├── install.sh                          # standalone install
 ├── uninstall.sh                        # remove from goose
 ├── README.md                           # team documentation
-└── .mas-mode                           # mode = sales
+└── .mas-mode                           # mode = dev
 ```
 
 After `./install.sh`, the team is registered in goose at
-`~/.config/goose/recipes/sales-root.yaml`. Run it with:
+`~/.config/goose/recipes/dev-root.yaml`. Run it with:
 
 ```bash
-goose run --recipe ~/.config/goose/recipes/sales-root.yaml
+goose run --recipe ~/.config/goose/recipes/dev-root.yaml
 ```
 
 ## WHY THIS EXISTS
@@ -79,7 +79,7 @@ agent_intake:
   from: 'sub_mas-intention-parser' | 'sub_mas-generic-init'
   to: 'sub_mas-team-packager'
   task: 'PACKAGE_TEAM'
-  team_name: string                    # e.g. "sales"
+  team_name: string                    # e.g. "dev"
   output_path: string                  # e.g. "/tmp"
   root_recipe: string                  # path to team root
   sub_recipes: list of strings         # paths to team agents
@@ -365,7 +365,7 @@ Return the mas_result with:
 
 ## INVOCATION EXAMPLE
 
-After intention-parser creates a sales team:
+After intention-parser creates a dev team:
 
 ```yaml
 # Caller (intention-parser) sends to team-packager:
@@ -374,27 +374,26 @@ agent_intake:
   from: 'sub_mas-intention-parser'
   to: 'sub_mas-team-packager'
   task: 'PACKAGE_TEAM'
-  team_name: 'sales'
+  team_name: 'dev'
   output_path: '/tmp'
-  root_recipe: 'recipe/sub/sub_mas-sales-director.yaml'
+  root_recipe: 'recipe/sub/sub_mas-dev-director.yaml'
   sub_recipes:
-    - 'recipe/sub/sub_mas-sales-prospector.yaml'
-    - 'recipe/sub/sub_mas-sales-proposal.yaml'
-    - 'recipe/sub/sub_mas-sales-pipeline.yaml'
-    - 'recipe/sub/sub_mas-sales-analyst.yaml'
-    - 'recipe/sub/sub_mas-sales-crm.yaml'
+    - 'recipe/sub/sub_mas-dev-analyzer.yaml'
+    - 'recipe/sub/sub_mas-dev-builder.yaml'
+    - 'recipe/sub/sub_mas-dev-observer.yaml'
+    - 'recipe/sub/sub_mas-dev-tester.yaml'
 
 # team-packager returns:
 mas_result:
   signal: 'DONE'
   status: 'success'
   data:
-    package_path: '/tmp/sales-team'
-    team_name: 'sales'
-    agent_count: 6
-    install_command: 'cd /tmp/sales-team && ./install.sh'
-    run_command: 'goose run --recipe ~/.config/goose/recipes/sales-root.yaml'
-  summary: 'Packaged sales team (6 agents) at /tmp/sales-team'
+    package_path: '/tmp/dev-team'
+    team_name: 'dev'
+    agent_count: 5
+    install_command: 'cd /tmp/dev-team && ./install.sh'
+    run_command: 'goose run --recipe ~/.config/goose/recipes/dev-root.yaml'
+  summary: 'Packaged dev team (5 agents) at /tmp/dev-team'
 ```
 
 ## RELATION TO OTHER AGENTS
