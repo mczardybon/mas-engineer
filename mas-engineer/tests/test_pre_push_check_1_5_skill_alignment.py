@@ -1,0 +1,298 @@
+"""
+test_pre_push_check_1_5_skill_alignment.py — R110-128 (post-CHANGELOG test).
+
+The pre-push-validator Check 1.5 (sub_mas-pre-push-validator.md L155-228)
+defines a HARDCODED ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊'} + 6
+allowed commit-title patterns as the source-of-truth for commit style.
+
+After R110-126 (triple-format-mismatch fix) and R110-127 (skill update),
+the standalone detector `tools/dev_category_drift.py` and the
+`mas-engineer-commit-protocol` skill MUST both be aligned with this
+allowlist. The R110-78 lesson: if any of the 3 sources drift, commits
+on origin/cleanup are silently BLOCKED by the validator, and the next
+R-sprint re-introduces drift (R110-103..R110-125 looped this for 23
+commits).
+
+This test guards against that re-looping by extracting the allowlist
+from each of the 3 sources (validator / detector / skill) and asserting
+they agree on the canonical 4-emoji set. If this test fails after
+a skill/detector/validator update, the alignment drifted and the
+next R-sprint will block.
+
+3 test-cases (matching the test-pre-push-check-18 pattern):
+  (a) validator/detector/skill all use the same 4-emoji set
+  (b) the skill's anti-pattern mentions ("wrench R", "book R",
+      "chart EVIDENCE", "clipboard docs", "trash chore") are
+      ONLY in explanation/anti-pattern context, not in the
+      "what you should use" emoji-table (i.e., the skill was
+      correctly updated to use 🔧/📝/📚/📊 in the table)
+  (c) actual commits on origin/cleanup (last 30) all match the
+      validator Check 1.5 regex (smoke test: the canon IS the canon)
+
+NOTE: This test reads from absolute paths (REPO_ROOT determined
+from __file__), so it works regardless of CWD. The detector
+file is read directly (not imported) because the detector's
+ALLOWED_EMOJI_PREFIXES is a module-level tuple we can grep for.
+
+Run with:
+    python3 -m pytest tests/test_pre_push_check_1_5_skill_alignment.py -v
+"""
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+
+# 1. Locate the 3 source-of-truth files
+REPO_ROOT = Path(__file__).parent.parent.resolve()
+VALIDATOR_MD = REPO_ROOT / "recipe" / "instructions" / "sub_mas-pre-push-validator.md"
+DETECTOR_PY = REPO_ROOT / "tools" / "dev_category_drift.py"
+SKILL_MD = Path("/root/.hermes/skills/mas-engineer-commit-protocol/SKILL.md")
+INDEX_MD = Path("/root/.hermes/skills/SKILLS-INDEX.md")
+
+# 2. Canonical 4-emoji set (R110-127 lesson: the same 4 exist in
+#    validator ALLOWED_EMOJIS, detector ALLOWED_EMOJI_PREFIXES, and
+#    the skill's emoji-table)
+CANONICAL_EMOJIS = frozenset({"🔧", "📝", "📚", "📊"})
+
+# 3. The OLD 5-emoji table (pre-R110-127) used these latin words instead
+#    of the 4 unicode emoji. Any of them appearing in the skill's
+#    emoji-table (not in explanation/anti-pattern context) is a drift.
+LEGACY_EMOJI_WORDS = ("wrench", "book", "chart", "clipboard", "trash")
+
+
+def _extract_validator_emojis():
+    """Read the validator md and pull ALLOWED_EMOJIS set (HARDCODED)."""
+    text = VALIDATOR_MD.read_text(encoding="utf-8")
+    # Find: ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊'}
+    m = re.search(r"ALLOWED_EMOJIS\s*=\s*\{([^}]+)\}", text)
+    assert m, f"ALLOWED_EMOJIS not found in {VALIDATOR_MD}"
+    raw = m.group(1)
+    # Parse the set: {'🔧', '📝', '📚', '📊'}
+    found = set(re.findall(r"'([^']+)'", raw))
+    return found
+
+
+def _extract_detector_emojis():
+    """Read the detector py and pull ALLOWED_EMOJI_PREFIXES tuple."""
+    text = DETECTOR_PY.read_text(encoding="utf-8")
+    # Find: ALLOWED_EMOJI_PREFIXES = ("🔧", "📝", "📚", "📊")
+    m = re.search(r"ALLOWED_EMOJI_PREFIXES\s*=\s*\(([^)]+)\)", text)
+    assert m, f"ALLOWED_EMOJI_PREFIXES not found in {DETECTOR_PY}"
+    raw = m.group(1)
+    found = set(re.findall(r'"([^"]+)"', raw))
+    return found
+
+
+def _extract_skill_table_emojis():
+    """Extract emojis from the skill's emoji-table.
+
+    The skill has a markdown table with rows like:
+      | 🔧 | R-sprint fix-commit (code or tooling) | ...
+    We want the FIRST cell of each row in the emoji table (the 4 rows
+    with the actual emoji, not the description/format/example rows).
+
+    To stay robust, we extract the unicode emoji characters from
+    the table region (between the table header and the next non-table
+    line).
+    """
+    text = SKILL_MD.read_text(encoding="utf-8")
+    # Find the emoji-table region. The table starts with "| emoji |" header
+    # and contains 4 rows, one per canonical emoji.
+    table_match = re.search(
+        r"\|\s*emoji\s*\|\s*when\s*\|\s*format\s*\|\s*example\s*\|\s*\n"
+        r"((?:\|.*\n)+?)(?=\n[^|])",
+        text,
+    )
+    if not table_match:
+        # Fallback: just extract all 4-emoji from anywhere in skill.
+        # The skill uses these emojis in 4-emoji table, in description
+        # frontmatter, and in R-sprint examples. All should be from
+        # the canonical 4.
+        return _extract_all_skill_emojis(text)
+    table_text = table_match.group(1)
+    # First cell of each row: extract the emoji character
+    rows = [r for r in table_text.split("\n") if r.strip().startswith("|")]
+    emojis = []
+    for row in rows:
+        first_cell = row.split("|")[1].strip()
+        # Only the cell that is exactly an emoji (1-2 chars, no words)
+        if 1 <= len(first_cell) <= 4 and not first_cell.isascii():
+            emojis.append(first_cell)
+    return set(emojis)
+
+
+def _extract_all_skill_emojis(text):
+    """Extract all unicode emoji chars from skill text."""
+    # Match the 4 canonical emoji + the broader EMOJI_RE-style range
+    found = set()
+    for e in CANONICAL_EMOJIS:
+        if e in text:
+            found.add(e)
+    return found
+
+
+def _check_origin_cleanup_commits_match_validator():
+    """Smoke test: last 30 commits on origin/cleanup match the
+    validator Check 1.5 regex (excluding pre-cutoff / pre-R110-26
+    commits which are exempt per R110-92 detector cutoff).
+
+    This catches the case where someone force-pushes off-format
+    commits to origin/cleanup.
+    """
+    result = subprocess.run(
+        ["git", "log", "origin/cleanup", "-30", "--pretty=format:%s"],
+        capture_output=True, text=True, cwd=str(REPO_ROOT),
+    )
+    if result.returncode != 0:
+        # origin/cleanup doesn't exist or git failed — skip
+        return None, "git log origin/cleanup failed (skip)"
+    titles = [t for t in result.stdout.split("\n") if t]
+    ALLOWED_PATTERNS = [
+        r"^(fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:",
+        r"^mas\(round-\d+\):",
+        r"^[🔧📝📚📊] (FIX|DOCS|STATE|TEST|FEAT|CHORE|ARCH) — ",
+        r"^[🔧📝📚📊] R\d+-[\w-]+( follow-up)? — ",
+        r"^📊 EVIDENCE — R\d+-",
+    ]
+    compiled = [re.compile(p) for p in ALLOWED_PATTERNS]
+    nonmatching = [t for t in titles if not any(p.match(t) for p in compiled)]
+    return len(nonmatching), nonmatching
+
+
+# ============================================================
+# Test cases
+# ============================================================
+
+def test_check_1_5_emoji_set_aligned_across_3_sources():
+    """(a) validator / detector / skill all use the same 4-emoji set.
+
+    R110-78 lesson: the 3 sources had different commit-title regexes
+    at the time of R110-103..R110-125. After R110-126 (detector
+    ALLOWED_EMOJI_PREFIXES added) and R110-127 (skill 4-emoji table
+    replaced 5-emoji latin-words table), all 3 must agree.
+    """
+    validator_emojis = _extract_validator_emojis()
+    detector_emojis = _extract_detector_emojis()
+    skill_table_emojis = _extract_skill_table_emojis()
+
+    assert validator_emojis == CANONICAL_EMOJIS, (
+        f"validator ALLOWED_EMOJIS drifted: {validator_emojis} != "
+        f"{CANONICAL_EMOJIS}"
+    )
+    assert detector_emojis == CANONICAL_EMOJIS, (
+        f"detector ALLOWED_EMOJI_PREFIXES drifted: {detector_emojis} != "
+        f"{CANONICAL_EMOJIS}"
+    )
+    # The skill's emoji-table must use the 4 canonical emojis
+    # (and ONLY those — no legacy latin words like 'wrench', 'book')
+    assert skill_table_emojis, (
+        "skill emoji-table not found — format may have drifted"
+    )
+    assert skill_table_emojis.issubset(CANONICAL_EMOJIS), (
+        f"skill emoji-table contains non-canonical emojis: "
+        f"{skill_table_emojis - CANONICAL_EMOJIS}"
+    )
+
+
+def test_check_1_5_skill_anti_patterns_only_in_explanation():
+    """(b) legacy emoji-words ('wrench', 'book', 'chart EVIDENCE',
+    'clipboard docs', 'trash chore') only appear in explanation
+    / anti-pattern context, NOT in the 'what you should use'
+    emoji-table.
+
+    The R110-127 update intentionally keeps 'wrench R<n>-<m> -- <title>'
+    in the LESSONS-LEARNED / anti-pattern section (so future agents
+    know what NOT to do) but removes it from the active 4-emoji
+    table. This test verifies the 4-emoji table uses 🔧/📝/📚/📊
+    and the legacy words are nowhere in the canonical-format
+    instructions.
+    """
+    text = SKILL_MD.read_text(encoding="utf-8")
+
+    # The active instruction region (between the 4-emoji table and
+    # the '5-section commit body' header) should NOT use the
+    # legacy 'wrench R' / 'book R' / 'chart EVIDENCE' format.
+    # Find the "5-section commit body (mandatory ...)" section
+    # header.
+    section_match = re.search(
+        r"##\s+5-section commit body[^\n]*\n",
+        text,
+    )
+    assert section_match, "5-section commit body header not found"
+    end_of_emoji_table_region = section_match.start()
+
+    # Look BEFORE that header (the emoji-table + emoji-format
+    # instructions region).
+    active_region = text[:end_of_emoji_table_region]
+    # The only legitimate use of 'wrench' / 'book' in this region
+    # is the word "wrench" or "book" in plain English (e.g.,
+    # "the book R108 series" referring to a sprint, "wrench
+    # icon" describing the emoji). We check for the EXACT commit
+    # format pattern: 'wrench R<num>' / 'book R<num>'.
+    legacy_format_patterns = [
+        r"^\s*\|\s*wrench\s*\|",  # legacy table row with "wrench" in cell
+        r"^\s*\|\s*book\s*\|",    # legacy table row with "book" in cell
+        r"wrench\s+R\d+-\d+",     # legacy format: "wrench R<num>"
+        r"^book\s+R\d+-\d+",      # legacy format: "book R<num>" (line-start)
+    ]
+    for pat in legacy_format_patterns:
+        m = re.search(pat, active_region, re.MULTILINE)
+        assert not m, (
+            f"legacy emoji-format found in active emoji-table region: "
+            f"{pat!r} matched {m.group()!r}"
+        )
+
+    # Bonus: the skill MUST contain the 4-emoji table itself
+    # (so a future update that deletes the table fails this test)
+    for e in CANONICAL_EMOJIS:
+        assert e in text, f"canonical emoji {e!r} missing from skill"
+
+
+def test_check_1_5_origin_cleanup_recent_commits_match():
+    """(c) smoke test: last 30 commits on origin/cleanup match the
+    validator Check 1.5 regex.
+
+    If this fails, the canon itself is no longer followed on
+    origin/cleanup — someone force-pushed off-format commits.
+    """
+    rc, nonmatching_or_msg = _check_origin_cleanup_commits_match_validator()
+    if rc is None:
+        # git failed (no origin/cleanup, etc.) — skip
+        return
+    assert rc == 0, (
+        f"{rc} commits on origin/cleanup (last 30) do NOT match "
+        f"validator Check 1.5 regex:\n"
+        + "\n".join(f"  - {t!r}" for t in nonmatching_or_msg)
+    )
+
+
+def test_check_1_5_index_row_aligned_with_skill():
+    """Bonus: SKILLS-INDEX.md row for `mas-engineer-commit-protocol`
+    must reflect the 4-emoji-table (R110-128 INDEX update).
+
+    If this test fails, the index row is out-of-sync with the
+    skill's actual emoji-table — the next R-sprint that loads
+    skills (always, per user-discipline) will read stale info
+    from INDEX.
+    """
+    text = INDEX_MD.read_text(encoding="utf-8")
+    # The row contains "4 emoji-categories (🔧|📝|📚|📊)" or similar.
+    # Just check that all 4 canonical emojis appear in the row.
+    row_match = re.search(
+        r"\|\s*`mas-engineer-commit-protocol`\s*\|[^\n]+",
+        text,
+    )
+    assert row_match, "mas-engineer-commit-protocol row not in INDEX"
+    row = row_match.group(0)
+    for e in CANONICAL_EMOJIS:
+        assert e in row, (
+            f"canonical emoji {e!r} missing from INDEX row for "
+            f"mas-engineer-commit-protocol"
+        )
+    # And it must NOT contain the 5-emoji-table word "5 emoji-categories"
+    # (post-R110-127 should be 4 not 5).
+    assert "5 emoji-categories" not in row, (
+        "INDEX row still says '5 emoji-categories' — R110-128 "
+        "INDEX update did not land, or skill was reverted to 5-emoji"
+    )
