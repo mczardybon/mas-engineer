@@ -1,8 +1,9 @@
 # R110-91 — Re-format R110-78..R110-88 commit titles to 5-category
 
-**Status:** DRAFT (2026-08-04)
+**Status:** DRAFT-ARCHIVED (2026-08-04, decision log below)
 **Author:** Hermes (R110-89 Finding A follow-up)
 **Target:** 11 commits in range R110-78..R110-88 (commit-title convention drift)
+**Decision:** A. Nichts tun (cutoff-Mechanik R110-92 löst enforcement).
 
 ## Goal
 
@@ -136,3 +137,31 @@ should return 0 lines after rebase.
 - [ ] Post-rebase: 11 commits still present, hashes changed (expected)
 - [ ] Commit body of the R110-91 commit itself cites: 11 commits
       rewritten, numstat per category, dev_category_drift.py exit
+
+## Decision log (2026-08-04, R110-103)
+
+R110-91 was DRAFT (rebase-11-commits plan) when R110-92 introduced the
+`pre-protocol cutoff` mechanism in `dev_category_drift.py`. With the
+cutoff default at 2026-08-04, all 11 R110-78..R110-88 commits are
+pre-cutoff = exempt from enforcement. `dev_category_drift.py --since 30`
+is RC=0 (0 DRIFT, 0 REGRESSIONS) as of 2026-08-04. The Check 16+
+pre-push-validator passes. So the **enforcement-pressure** that
+motivated R110-91 no longer exists.
+
+**Decision: A. Nichts tun** (default-decision per mas-engineer-discipline,
+since user was not available to confirm). Reasons:
+- R110-92 cutoff-Mechanik löst enforcement → rebase ist nicht mehr
+  block-relevant, nur history-cleanup
+- Force-push-Rebase riskiert externe refs (R110-sprint-archive,
+  evidence-docs die commit-hashes zitieren)
+- `dev_category_drift.py --convention-since 2026-07-27` zeigt weiterhin
+  145 historical-drift-commits, aber das ist **inventory-mode**,
+  nicht enforcement-mode → keine aktion erforderlich
+- A ist reversibel: wenn der user später doch B (rebase) will, kann
+  er es jederzeit auslösen
+
+**Status:** DRAFT-ARCHIVED. Re-activate (= DRAFT) by:
+- (a) user explicitly requests R110-91 rebase, OR
+- (b) the cutoff default is moved earlier than 2026-07-27, bringing
+      the 11 R110-78..R110-88 commits back into the enforcement
+      window (Check 16+ would then start failing again).
