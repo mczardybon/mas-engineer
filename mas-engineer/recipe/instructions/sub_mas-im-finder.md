@@ -186,6 +186,81 @@ validate the design approach.**
 
 ⛔ FAILING TO SUMMON GOOSE-EXPERT = finding is REJECTED downstream by im-validator.
 
+## ⛔ STEP 0.6 — SELF-AUDIT SPEC-DRIFT CHECK (NEW IN R110-120)
+
+**🚨 THIS IS NOT OPTIONAL. sub_mas-self-audit runs BEFORE writing
+findings.yaml. R110-78 PHASE 3b. 🚨**
+
+After STEP 0.5 (goose-consult) and 0.5b (im-designer liaison), BEFORE
+STEP 0.7 (write findings.yaml), I run sub_mas-self-audit to catch
+spec-drift findings that the scanner does NOT detect.
+
+**Why this is mandatory:**
+- The scanner detects YAML structure issues (MM1-9) but NOT stale
+  count literals in recipe-instructions (e.g. default 96 sub-agents
+  when the actual count is 112 — R110-71/R110-78 lesson).
+- Without STEP 0.6, the im-finder can MISS a whole class of drift
+  that the pre-push validator (Check 18) would later block.
+- This is a CIRCULAR-PROOF gate: every improvement-pipeline run
+  ALSO scans the recipes for drift, not just runs the user-prompted
+  improvement.
+
+**EXECUTE:**
+
+```python
+# 1. Run self-audit
+shell(cmd="cd {workspace} && python3 tools/dev_self_audit.py --scope recipe/instructions/ --repo-root {workspace} --output {workspace}/.state/pipeline/self_audit.yaml")
+shell(cmd="cd {workspace} && python3 tools/dev_spec_invariant.py --repo-root {workspace} --output {workspace}/.state/pipeline/spec_invariant.yaml")
+
+# 2. Read both outputs
+import yaml
+sa = yaml.safe_load(open('{workspace}/.state/pipeline/self_audit.yaml'))
+si = yaml.safe_load(open('{workspace}/.state/pipeline/spec_invariant.yaml'))
+
+# 3. Convert findings to MM9-EXTENSION entries
+mm9_ext = []
+for finding in sa.get('findings', []):
+    if finding.get('severity') in ('BLOCKER',):
+        # BLOCKER → fail-fast STOP, do NOT write findings.yaml
+        print(f"FATAL: self-audit BLOCKER: {finding['file']}:{finding.get('line','?')} - {finding.get('description','')}")
+        raise SystemExit(1)
+    if finding.get('type','').startswith('HARDCODE') or finding.get('type','').startswith('INVARIANT'):
+        mm9_ext.append({
+            'id': f"MM9-EXT-{len(mm9_ext)+1:03d}",
+            'type': 'MM9-EXT',
+            'subtype': finding.get('type', 'UNKNOWN'),
+            'severity': finding.get('severity', 'WARN'),
+            'file': finding.get('file', ''),
+            'line': finding.get('line', 0),
+            'issue': finding.get('description', '')[:200],
+            'fix': finding.get('suggested_fix', ''),
+            'source': 'sub_mas-self-audit',
+            'pipeline_stage': 0.6
+        })
+
+# 4. Attach to findings list BEFORE STEP 0.7
+findings.extend(mm9_ext)
+print(f"STEP 0.6 ATTACHED: {len(mm9_ext)} MM9-EXT findings (total findings now: {len(findings)})")
+```
+
+**R01 BYPASS FOR self-audit output:**
+- self_audit.yaml + spec_invariant.yaml are the agent's own output,
+  same as findings.yaml (R01 lesson L82-95).
+
+**After this step:**
+- Proceed to STEP 0.7 (write findings.yaml) with the augmented
+  findings list.
+- If a BLOCKER was found, the agent STOPS — do NOT write findings.yaml.
+- If 0 findings → proceed silently (no MM9-EXT attachments).
+
+**Why MM9-EXT (not MM9):**
+- MM9 is the existing type for "YAML field missing". We use MM9-EXT
+  to signal an extension type (spec-drift in instruction text, not
+  YAML structure).
+- This preserves backward compat with the 53 Feature-Type matrix.
+- The scanner does not detect MM9-EXT; only sub_mas-self-audit does.
+- See also: `recipe/instructions/sub_mas-self-audit.md` Pattern A/B/C.
+
  ## Input (from Pipeline-Orchestrator)
 - task: FIND
 - request_id: string (UUID)

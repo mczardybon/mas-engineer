@@ -84,3 +84,36 @@ def test_im_finder_mentions_feature_types():
     # Either "Feature Types" or "feature_type" or similar
     assert "Feature" in content or "feature" in content, \
         "im-finder must mention feature-type coverage (R36+)"
+
+
+def test_step_0_6_self_audit_attaches_mm9_ext():
+    """R110-120: STEP 0.6 wires sub_mas-self-audit as MM9-EXT findings."""
+    # 1. Run self-audit
+    import sys
+
+    # R110-120 adaptation: import tools modules via TOOLS sys.path entry
+    # (site-packages 'tools' package would shadow the repo tools/ dir —
+    # same pattern as test_pre_push_check_18_spec_invariant.py).
+    TOOLS = REPO_ROOT / "tools"
+    if str(TOOLS) not in sys.path:
+        sys.path.insert(0, str(TOOLS))
+
+    from dev_self_audit import run_self_audit  # noqa: E402
+
+    result = run_self_audit(
+        scope=REPO_ROOT / "recipe" / "instructions",
+        repo_root=REPO_ROOT,
+    )
+    # 2. Verify findings list is non-empty
+    assert len(result.findings) > 0, "self-audit should find drift"
+    # 3. Verify all are WARN (not BLOCKER, since R110-119 fixed them)
+    severities = {f.severity for f in result.findings}
+    assert 'BLOCKER' not in severities, \
+        f"BLOCKER found after R110-119: {severities}"
+    # 4. Verify codes are HARDCODE-*/INVARIANT-* (STEP 0.6 MM9-EXT sources)
+    #    R110-120 adaptation: Finding field is `code` (directive draft
+    #    used `type`). INVARIANT codes are legitimately absent — the
+    #    delegated dev_spec_invariant scan is clean after R110-119.
+    codes = {f.code for f in result.findings}
+    assert any(c.startswith('HARDCODE') for c in codes), \
+        f"expected HARDCODE findings, got: {sorted(codes)}"

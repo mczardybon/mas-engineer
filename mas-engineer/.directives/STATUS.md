@@ -41,6 +41,7 @@ in test-fixtures/).
 | 1 | validator + pytest | DONE | 2026-08-03 | 2026-08-04 | 27d8cb7 (R110-94 Check 16+ drift) + c005db6 (R110-100 Check 17 pytest) | spec-drift vor push blocken (drift + pytest-count-mismatch) |
 | 2 | SD-* finding | DONE | 2026-08-04 | 2026-08-04 | 3b80259 (R110-106) | spec-drift in IM-scans finden — dev_im_finder_scan.py:check_spec_drift() (4 test-cases), im-finder recipe Z.36 ruft standalone-script auf, 7 SD-* findings in R110-108 run verifiziert |
 | 3 | dev_spec_invariant.py | DONE | 2026-08-04 | 2026-08-04 | R110-118 (sub_mas-self-audit agent + tools/dev_self_audit.py + tools/dev_spec_invariant.py + Check 18 in pre-push) | R110-78 PHASE 3 closed: self-audit agent auditiert recipe/instructions/ (Patterns A/B/C), spec-invariant Check 18 blockt test-vs-recipe count-drift vor push |
+| 3b | self-audit in IM-pipeline | DONE | 2026-08-04 | 2026-08-04 | R110-120 (STEP 0.6 in sub_mas-im-finder.md + sub_mas-self-audit in im-finder sub_recipes + test_step_0_6) | PHASE 3b closed: sub_mas-self-audit auto-invoked in improvement-pipeline (im-finder STEP 0.6, MM9-EXT findings, BLOCKER fail-fast vor findings-write) |
 | 4 | skill update (Hermes) | DONE | 2026-08-03 | 2026-08-03 | (Hermes session) | pre-push-gate skill, R110-77 |
 
 **Overall**: 3/3 mas-engineer PHASEN done, 3/4 PHASEN done
@@ -88,6 +89,21 @@ via R110-94+R110-100+R110-106; PHASE 3 DONE via R110-118
   (DIREKTIVE 2) + pre-push-validator Check 18 (DIREKTIVE 3, v2.4.0).
   pytest 1284/1284 PASS, scanner 21 findings (no regression).
   R11 GOOSE-EXPERT trigger (type A NEW recipe) fulfilled.
+
+### R110-120-im-finder-step-0-6 (neu 2026-08-04)
+- **Datei**: `R110-120-im-finder-step-0-6.md` (2026-08-04)
+- **Ziel**: sub_mas-self-audit in improvement-pipeline auto-invoken —
+  im-finder STEP 0.6 (R110-78 PHASE 3b closure)
+- **Applied**: 2026-08-04 via sub_mas-apply-directive (RECURSION_OVERRIDE=2,
+  R110-117 per-directive dispatch, HEAD 0d3317f)
+- **Ausfuehrung**: STEP 0.6 "SELF-AUDIT SPEC-DRIFT CHECK" (~78 lines)
+  zwischen STEP 0.5b und STEP 0.7 in sub_mas-im-finder.md (R01 BYPASS,
+  MM9-EXT mapping, BLOCKER fail-fast) + sub_mas-self-audit in im-finder
+  sub_recipes (3 entries: goose-expert + im-designer + self-audit) +
+  test_step_0_6_self_audit_attaches_mm9_ext.
+- **Status**: R110-78 PHASE 3b = DONE. pytest 1285/1285 PASS,
+  registry 9/9 PASS, dev_spec_invariant 0 BLOCKER,
+  dev_self_audit 27 WARN (unchanged, 0 NEW findings).
 
 ## PHASE-Status-Legende
 
