@@ -38,13 +38,13 @@ in test-fixtures/).
 
 | PHASE | DIREKTIVE | Status | Started | Completed | Commit | Effekt |
 |---|---|---|---|---|---|---|
-| 1 | validator + pytest | OPEN | — | — | — | spec-drift vor push blocken |
+| 1 | validator + pytest | DONE | 2026-08-03 | 2026-08-04 | 27d8cb7 (R110-94 Check 16+ drift) + c005db6 (R110-100 Check 17 pytest) | spec-drift vor push blocken (drift + pytest-count-mismatch) |
 | 2 | SD-* finding | OPEN | — | — | — | spec-drift in IM-scans finden |
 | 3 | dev_spec_invariant.py | OPEN | — | — | — | invariant immer garantiert |
 | 4 | skill update (Hermes) | DONE | 2026-08-03 | 2026-08-03 | (Hermes session) | pre-push-gate skill, R110-77 |
 
-**Overall**: 0/3 mas-engineer PHASEN done, 1/4 PHASEN done
-(hermes-side).
+**Overall**: 1/3 mas-engineer PHASEN done, 2/4 PHASEN done
+(hermes-side: skill-update done; mas-engineer-side: PHASE 1 done via R110-94+R110-100).
 
 ## PHASE-Status-Legende
 
