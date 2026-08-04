@@ -442,23 +442,40 @@ Aggregate: 1 doc + 19 evidence logs. Total 84 KB on disk.
    set.** Either via `git rebase -i` with `reword` (rewrite history,
    force-push) or via a "format normalization" commit that adds a
    mapping table. Decision: with the user. See Finding A.
+   Status: DIREKTIVE-FILE EXISTS (R110-91-commit-title-reformat.md,
+   2026-08-04). Implementation pending.
 
-3. **R110-92 — re-format R110-78..R110-88 commit bodies to 5-section
-   structure.** Same fix-path as R110-91. See Finding B.
+3. **R110-92 — UPDATE 2026-08-04 (R110-99 retroactive):** R110-92 was
+   re-purposed from "re-format commit bodies" (this evidence-doc's
+   original scope) to **standalone commit-subject category drift
+   detector** (`tools/dev_category_drift.py`, ee0b242, +241/-0). The
+   "re-format commit bodies" task is now covered by R110-78 DIREKTIVE
+   2 / DIREKTIVE 3 (uncommitted, post-Check 17 followups). See
+   `R110-92-standalone-drift-detector.md` for actual scope. Finding B
+   in this evidence-doc is now R110-78 DIREKTIVE 2/3 territory.
 
 4. **R110-93 — install goose CLI in this environment** so that the
    pre-push-validator step can run live. See Finding E. Note: the
    pre-commit and pre-push hooks are ALREADY active
    (`.githooks/pre-commit`, `.githooks/pre-push`), they just don't
    include the full 15-check validator.
+   Status: DONE 2026-08-04 (discovered during T5e acceptance:
+   `/root/.local/bin/goose` v1.45.0 already installed). See
+   `R110-93-goose-cli-installation.md`.
 
-5. **R110-94 — extend R110-89 audit pattern to a recurring cron job.**
-   The 12-test battery here takes ~30s; a weekly cron with the same
-   log directory structure would catch drift early. Optional.
+5. **R110-94 — UPDATE 2026-08-04 (R110-99 retroactive):** R110-94 was
+   re-purposed from "extend R110-89 audit pattern to a recurring
+   cron job" (this evidence-doc's original scope) to **integrate
+   `dev_category_drift.py` as Check 16+ in the pre-push-validator**
+   (27d8cb7, validator v2.2.0). The "recurring cron" task is now
+   future-R-NR (low priority, optional). See
+   `R110-94-historical-drift-check.md` for actual scope.
 
 6. **R110-95 — re-measure pytest timing 5x and re-set the 8.12s spec
    value** to median ± range (currently 7.46s to 8.12s observed).
    See Finding F.
+   Status: DIREKTIVE-FILE EXISTS (R110-95-pytest-timing-remeasure.md,
+   2026-08-04). Implementation pending (cosmetic spec-update).
 
 These are **not** in this commit. They are listed here so the next
 session can pick them up without re-discovering the findings.
