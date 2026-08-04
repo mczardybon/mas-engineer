@@ -46,6 +46,7 @@ in test-fixtures/).
 | 3 | dev_spec_invariant.py | DONE | 2026-08-04 | 2026-08-04 | R110-118 (sub_mas-self-audit agent + tools/dev_self_audit.py + tools/dev_spec_invariant.py + Check 18 in pre-push) | R110-78 PHASE 3 closed: self-audit agent auditiert recipe/instructions/ (Patterns A/B/C), spec-invariant Check 18 blockt test-vs-recipe count-drift vor push |
 | 3b | self-audit in IM-pipeline | DONE | 2026-08-04 | 2026-08-04 | R110-120 (STEP 0.6 in sub_mas-im-finder.md + sub_mas-self-audit in im-finder sub_recipes + test_step_0_6) | PHASE 3b closed: sub_mas-self-audit auto-invoked in improvement-pipeline (im-finder STEP 0.6, MM9-EXT findings, BLOCKER fail-fast vor findings-write) |
 | 3c | STALE-LITERAL Pattern B fix | DONE | 2026-08-04 | 2026-08-04 | R110-121 (sales→dev-team in 3 files + Pattern B bug-fix + 1 Test) | PHASE 3c closed: 0 STALE-LITERAL findings, im-finder L146 false positive fixed |
+| 3d | scanner Pattern A+B | DONE | 2026-08-04 | 2026-08-04 | 5b82fab (R110-124) | PHASE 3d closed: dev_im_finder_scan.py:check_hardcode_stale() + check_stale_literal() wrap dev_self_audit Patterns A+B (lazy importlib import), 6 HARDCODE-STALE-* types emit (18 occurrences on recipe/instructions/), 2 new tests pass (1286→1288) |
 | 4 | skill update (Hermes) | DONE | 2026-08-03 | 2026-08-03 | (Hermes session) | pre-push-gate skill, R110-77 |
 
 **Overall**: 5/5 mas-engineer PHASEN done, 1/1 hermes PHASE done.
@@ -53,11 +54,12 @@ mas-engineer-side: PHASE 1 (R110-94+R110-100) + PHASE 2
 (R110-106) + PHASE 3 (R110-118 sub_mas-self-audit + dev_self_audit
 + dev_spec_invariant + Check 18) + PHASE 3b (R110-120 STEP 0.6
 self-audit in IM-pipeline) + PHASE 3c (R110-121 STALE-LITERAL
-Pattern B fix).
+Pattern B fix) + PHASE 3d (R110-124 scanner Pattern A+B
+detection in dev_im_finder_scan.py).
 hermes-side: PHASE 4 (R110-77 pre-push-gate skill).
 **Status: ARCHIVED-READY** — R110-78 spec-drift lesson komplett
-geschlossen. Total: 7 R-Nummern (R110-77, R110-94, R110-100,
-R110-106, R110-118, R110-120, R110-121), 7 commits auf
+geschlossen. Total: 8 R-Nummern (R110-77, R110-94, R110-100,
+R110-106, R110-118, R110-120, R110-121, R110-124), 7 commits auf
 origin/cleanup (R110-118 + R110-119 in PHASE 3a, R110-120 in
 3b, R110-121 in 3c; plus R110-117 dispatch mechanism + R110-116
 commit-hygiene + R110-115 RECURSION-GUARD v3). pytest 1284→1286
