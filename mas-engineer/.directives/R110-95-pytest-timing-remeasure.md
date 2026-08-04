@@ -1,6 +1,6 @@
 # R110-95 — Re-measure pytest timing 5x and re-set the 8.12s spec value
 
-**Status:** DRAFT (2026-08-04)
+**Status:** DONE (2026-08-04) — implementation shipped in R110-101
 **Author:** Hermes (R110-89 Finding F follow-up)
 **Target:** `mas-engineer/recipe/instructions/sub_mas-pre-push-validator.md`
 (Check 17 spec value: 8.12s)
