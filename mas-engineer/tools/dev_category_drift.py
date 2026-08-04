@@ -29,8 +29,32 @@ import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 
-# The 5 canonical categories. Matches the commit-protocol + pre-push-validator Check 1.5.
-ALLOWED_CATEGORIES = ("chore:", "docs:", "fix:", "wrench:", "book:")
+# Conventional commit types. Matches the pre-push-validator Check 1.5
+# (recipe/instructions/sub_mas-pre-push-validator.md L194):
+#   r'^(fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:'
+# 12 canonical types, no scope or with-scope both allowed.
+# R110-130: the legacy ALLOWED_CATEGORIES = ("chore:", "docs:", "fix:",
+# "wrench:", "book:") was removed because wrench:/book: are NOT real
+# conventional-commit types — they were pre-R110-127 emoji-substitutes
+# (wrench=🔧, book=📚) that the validator REJECTS. The detector
+# accepting them was an "accept more than validator" mismatch
+# (R110-78 lesson in reverse): a commit with title "wrench: R110-130 — X"
+# passed the detector as conform, then FAILED the validator as DRIFT.
+# Now the detector mirrors the validator's 12-type allowlist exactly.
+ALLOWED_CATEGORIES = (
+    "fix:",
+    "feat:",
+    "chore:",
+    "docs:",
+    "test:",
+    "refactor:",
+    "arch:",
+    "perf:",
+    "style:",
+    "build:",
+    "ci:",
+    "revert:",
+)
 
 # R-sprint emoji prefixes (R110-126): validator Check 1.5 explicitly allows
 # 🔧|📝|📚|📊 R<round>-<num> [follow-up] — desc. To stay aligned with the

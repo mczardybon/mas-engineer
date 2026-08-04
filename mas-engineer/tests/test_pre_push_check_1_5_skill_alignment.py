@@ -74,14 +74,31 @@ def _extract_validator_emojis():
 
 
 def _extract_detector_emojis():
-    """Read the detector py and pull ALLOWED_EMOJI_PREFIXES tuple."""
+    """Read the detector py and pull ALLOWED_EMOJI_PREFIXES tuple.
+
+    R110-130 lesson: same AST approach as _extract_detector_categories
+    (regex on multi-line tuples is fragile). The current tuple is
+    single-line so the regex still works, but AST is the robust
+    long-term answer and we use it for both for consistency.
+    """
+    import ast
     text = DETECTOR_PY.read_text(encoding="utf-8")
-    # Find: ALLOWED_EMOJI_PREFIXES = ("🔧", "📝", "📚", "📊")
-    m = re.search(r"ALLOWED_EMOJI_PREFIXES\s*=\s*\(([^)]+)\)", text)
-    assert m, f"ALLOWED_EMOJI_PREFIXES not found in {DETECTOR_PY}"
-    raw = m.group(1)
-    found = set(re.findall(r'"([^"]+)"', raw))
-    return found
+    tree = ast.parse(text)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if (isinstance(target, ast.Name)
+                        and target.id == "ALLOWED_EMOJI_PREFIXES"):
+                    if isinstance(node.value, ast.Tuple):
+                        return {
+                            elt.value
+                            for elt in node.value.elts
+                            if isinstance(elt, ast.Constant)
+                            and isinstance(elt.value, str)
+                        }
+    raise AssertionError(
+        f"ALLOWED_EMOJI_PREFIXES tuple not found in {DETECTOR_PY}"
+    )
 
 
 def _extract_skill_table_emojis():
@@ -295,4 +312,77 @@ def test_check_1_5_index_row_aligned_with_skill():
     assert "5 emoji-categories" not in row, (
         "INDEX row still says '5 emoji-categories' — R110-128 "
         "INDEX update did not land, or skill was reverted to 5-emoji"
+    )
+
+
+# R110-130 — Detector ALLOWED_CATEGORIES must mirror validator Check 1.5
+# exactly. The validator allows 12 conventional types
+# (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert),
+# the detector must match — and must NOT have legacy
+# 'wrench:'/'book:' (pre-R110-127 emoji-substitutes that the
+# validator REJECTS).
+VALIDATOR_CONVENTIONAL_TYPES = frozenset({
+    "fix:", "feat:", "chore:", "docs:", "test:", "refactor:",
+    "arch:", "perf:", "style:", "build:", "ci:", "revert:",
+})
+
+
+def _extract_detector_categories():
+    """Read the detector py and pull ALLOWED_CATEGORIES tuple.
+
+    R110-130 lesson: regex-based extraction is fragile when the
+    tuple is multi-line AND has a comment that contains `)` and
+    `"..."` strings. The comment
+        # "wrench:", "book:")
+    is captured by the greedy regex even though it's not part
+    of the tuple. Use Python's `ast` module instead — it
+    correctly parses the file, ignores comments, and gives us
+    the actual AST node for the tuple.
+    """
+    import ast
+    text = DETECTOR_PY.read_text(encoding="utf-8")
+    tree = ast.parse(text)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if (isinstance(target, ast.Name)
+                        and target.id == "ALLOWED_CATEGORIES"):
+                    if isinstance(node.value, ast.Tuple):
+                        # Extract the string values from the tuple
+                        return {
+                            elt.value
+                            for elt in node.value.elts
+                            if isinstance(elt, ast.Constant)
+                            and isinstance(elt.value, str)
+                        }
+    raise AssertionError(f"ALLOWED_CATEGORIES tuple not found in {DETECTOR_PY}")
+
+
+def test_check_1_5_detector_conventional_types_match_validator():
+    """(e) R110-130: detector ALLOWED_CATEGORIES mirrors validator
+    Check 1.5 conventional-types regex (12 types).
+
+    R110-78 lesson (in reverse): previously the detector
+    accepted MORE than the validator (legacy 'wrench:'/'book:'
+    were emoji-substitutes that the validator REJECTS). A
+    commit like 'wrench: R110-N — X' would pass the detector
+    as conform, then FAIL the validator as DRIFT — silent
+    mismatch in the gate chain. Now the detector mirrors the
+    validator exactly.
+    """
+    detector_cats = _extract_detector_categories()
+
+    # 1. Detector must have the same 12 types as the validator
+    assert detector_cats == VALIDATOR_CONVENTIONAL_TYPES, (
+        f"detector ALLOWED_CATEGORIES drifted from validator: "
+        f"detector={sorted(detector_cats)}, "
+        f"validator={sorted(VALIDATOR_CONVENTIONAL_TYPES)}"
+    )
+
+    # 2. Detector must NOT have legacy 'wrench:' / 'book:'
+    #    (these are NOT in the validator's 12-type allowlist)
+    legacy = {"wrench:", "book:"}
+    assert not (detector_cats & legacy), (
+        f"detector has legacy emoji-substitutes {detector_cats & legacy} "
+        f"that the validator REJECTS — pre-R110-127 R110-78 mismatch"
     )
