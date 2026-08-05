@@ -164,6 +164,21 @@ else
     echo "   💡 To run scheduler manually: $MAS_WORKSPACE/.mas/scheduler.sh"
 fi
 
+# ─── 2.8. Install hermes skills (R110-133) — delegate to skills-install.sh ───
+# skills-install.sh is hermes-free and takes its target path as a CLI arg
+# (no env-var, no hardcoded runtime path). When called without args it is
+# a no-op (target = repo's own mas-engineer/skills/).
+echo "🧠  Step 2.8/7: Install hermes skills..."
+if [ -f "$MAS_WORKSPACE/scripts/skills-install.sh" ]; then
+    if bash "$MAS_WORKSPACE/scripts/skills-install.sh"; then
+        echo "   ✅ Skills installer exited 0"
+    else
+        echo "   ⚠️  Skills installer failed (continuing — recipes are still installed)"
+    fi
+else
+    echo "   ⚠️  skills-install.sh not found in $MAS_WORKSPACE/scripts — skipping"
+fi
+
 # ─── Done ───
 echo ""
 echo "╔══════════════════════════════════════════════╗"
@@ -173,6 +188,7 @@ echo "║  Dashboard:  MCP stdio (.mas/mcp/server.js)  ║"
 echo "║  Dispatch:   130 entries                     ║"
 echo "║  Agents:     50 sub-agents                   ║"
 echo "║  Tools:      47 active                        ║"
+echo "║  Skills:     18 mas-engineer-flavored        ║"
 echo "╚══════════════════════════════════════════════╝"
 
 # ─── 7. Deploy Goose App ───

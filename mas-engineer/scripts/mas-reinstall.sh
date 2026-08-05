@@ -124,10 +124,24 @@ fi
 echo "  ✅ all recipes installed"
 
 # -----------------------------------------------------------------
-# Step 4: Goose binary check (do NOT modify, just verify)
+# Step 4: Install hermes skills (R110-133) — delegate to skills-install.sh
+# skills-install.sh is hermes-free; no env-vars, no hardcoded runtime path.
 # -----------------------------------------------------------------
 echo ""
-echo "[4/4] Verify goose binary (read-only — do not modify)"
+echo "[4/5] Install hermes skills (R110-133 self-contained mode)..."
+INSTALLED_SKILLS=0
+if [ -f "$ROOT/scripts/skills-install.sh" ]; then
+    INSTALLED_SKILLS=$(bash "$ROOT/scripts/skills-install.sh" 2>&1 | grep -oE 'installed [0-9]+ skills' | grep -oE '[0-9]+' || echo 0)
+    echo "  installed $INSTALLED_SKILLS skills"
+else
+    echo "  ⚠️  skills-install.sh not found in $ROOT/scripts — skipping"
+fi
+
+# -----------------------------------------------------------------
+# Step 5: Goose binary check (do NOT modify, just verify)
+# -----------------------------------------------------------------
+echo ""
+echo "[5/5] Verify goose binary (read-only — do not modify)"
 if command -v goose >/dev/null 2>&1; then
   echo "  ✅ goose installed: $(goose --version)"
 else
@@ -140,5 +154,6 @@ echo "================================================================"
 echo "MAS REINSTALL COMPLETE"
 echo "  Root recipes: $INSTALLED_ROOT → $RECIPES_DIR"
 echo "  Sub recipes:  $INSTALLED_SUB → $SUB_RECIPES_DIR"
+echo "  Skills:       $INSTALLED_SKILLS → $HERMES_SKILLS_DIR"
 echo "  Goose binary: $(goose --version 2>/dev/null || echo 'NOT FOUND') (untouched)"
 echo "================================================================"
