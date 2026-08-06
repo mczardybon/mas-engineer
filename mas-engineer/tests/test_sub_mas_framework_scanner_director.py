@@ -83,12 +83,21 @@ def test_framework_scanner_director_no_direct_analysis():
         "framework-scanner-director must forbid direct framework analysis"
 
 
-def test_framework_scanner_director_is_duplicate_of_scanner():
-    """EVIDENCE: framework-scanner-director.yaml is identical to
-    framework-scanner.yaml (both are Framework Scanner Director).
-    Possible refactoring target — but tests are for sanity, not fix.
+def test_framework_scanner_director_is_canonical():
+    """R110-137 (2026-08-06): The legacy `sub_mas-framework-scanner.yaml`
+    was a byte-identical duplicate of `sub_mas-framework-scanner-director.yaml`
+    (R106 EVIDENCE: 1749==1749 bytes, MD5 bf425946). Keeping both created
+    a 2-node dispatch cycle in scan tasks
+    (scanner-director -> scan-agent -> scanner). The legacy scanner.yaml
+    was REMOVED in R110-137 and scanner-director is now the canonical
+    Framework Scanner Director.
+
+    This test enforces that:
+    1. scanner-director.yaml still exists
+    2. The legacy scanner.yaml does NOT exist (would recreate the cycle)
+    3. The canonical file is the only one
     """
     my_content = RECIPE.read_text()
-    scanner_content = SCANNER.read_text()
-    assert my_content == scanner_content, \
-        "framework-scanner-director.yaml must match framework-scanner.yaml (R106 EVIDENCE: same orchestrator)"
+    assert len(my_content) > 0, "scanner-director.yaml must be non-empty"
+    assert not SCANNER.exists(), \
+        f"Legacy {SCANNER.name} must NOT exist (would create dispatch cycle per R110-137)"

@@ -1,8 +1,15 @@
 """
 test_sub_mas_framework_scanner.py — sanity tests for framework-scanner.
 
-Note: framework-scanner.yaml is the orchestrator that delegates to
-3 framework sub-agents: scan-agent, audit-agent, harden-agent.
+R110-137 (2026-08-06): The legacy `sub_mas-framework-scanner.yaml` was
+removed because it was a byte-identical duplicate of
+`sub_mas-framework-scanner-director.yaml` (R106 EVIDENCE, 1749==1749
+bytes, MD5 bf425946). Keeping both created a 2-node dispatch cycle
+(scanner-director -> scan-agent -> scanner). Tests now point to the
+canonical scanner-director file.
+
+Note: framework-scanner-director.yaml is the orchestrator that
+delegates to 3 framework sub-agents: scan-agent, audit-agent, harden-agent.
 
 Run with:
     python3 -m pytest tests/test_sub_mas_framework_scanner.py -v
@@ -11,7 +18,7 @@ import yaml
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.resolve()
-RECIPE = REPO_ROOT / "recipe" / "sub" / "sub_mas-framework-scanner.yaml"
+RECIPE = REPO_ROOT / "recipe" / "sub" / "sub_mas-framework-scanner-director.yaml"
 
 
 def test_framework_scanner_recipe_exists():
