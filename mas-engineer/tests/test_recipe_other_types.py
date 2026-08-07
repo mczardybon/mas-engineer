@@ -19,6 +19,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 TESTPROJECT = REPO_ROOT.parent / "archive" / "testproject"
 DOCS_DIR = REPO_ROOT.parent / "docs"
+# Historic timestamped reports (health/test/evidence/changelog) moved to
+# archive/docs/ on 2026-08-07 (R110-143 cleanup) — docs/ holds only real docs.
+ARCHIVE_DOCS_DIR = REPO_ROOT.parent / "archive" / "docs"
 
 
 # === testproject/ ===
@@ -91,8 +94,8 @@ def test_docs_minimum_count():
 
 
 def test_docs_have_architecture():
-    """Must have ARCHITECTURE doc."""
-    arch = DOCS_DIR / "ARCHITECTURE-E2E-TESTING.md"
+    """Must have architecture doc (docs/architecture.md, current doc)."""
+    arch = DOCS_DIR / "architecture.md"
     assert arch.exists(), f"Missing: {arch}"
 
 
@@ -115,17 +118,17 @@ def test_docs_have_manifest():
 
 
 def test_docs_health_reports_present():
-    """Health reports for monitoring — at least 3 present."""
-    health = list(DOCS_DIR.glob("health-report-*.md"))
+    """Health reports for monitoring — at least 3 present (archived)."""
+    health = list(ARCHIVE_DOCS_DIR.glob("health-report-*.md"))
     assert len(health) >= 3, \
-        f"Expected >= 3 health-reports, got {len(health)}"
+        f"Expected >= 3 health-reports in archive/docs/, got {len(health)}"
 
 
 def test_docs_test_reports_present():
-    """Test reports — at least 3 present."""
-    reports = list(DOCS_DIR.glob("TEST-REPORT-*.md"))
+    """Test reports — at least 3 present (archived)."""
+    reports = list(ARCHIVE_DOCS_DIR.glob("TEST-REPORT-*.md"))
     assert len(reports) >= 3, \
-        f"Expected >= 3 test-reports, got {len(reports)}"
+        f"Expected >= 3 test-reports in archive/docs/, got {len(reports)}"
 
 
 def test_docs_howto_present():

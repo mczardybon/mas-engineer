@@ -112,7 +112,7 @@ run_recipe() {
   # 5-min hard timeout (safety net) but kill early once "Loading recipe" appears.
   # R110-48: without early-kill, a 128-recipe run takes 128*300s = 6.4h worst case
   # because goose waits for stdin in PTY mode. Once the recipe is *loaded* and
-  # the session is up, we have proven what the test plan (E2E-TESTPLAN.md L86-92)
+  # the session is up, we have proven what the test plan (archive/docs/E2E-TESTPLAN.md L86-92)
   # needs to prove. Then move on.
   # Disable set -e locally: kill -KILL on already-dead process returns non-zero
   # and would abort the loop before status detection.
@@ -155,10 +155,10 @@ run_recipe() {
   end_time=$(date +%s)
   local duration=$((end_time - start_time))
 
-  # pass/fail detection — Phase 1.3 of docs/E2E-TESTPLAN.md is the source of truth.
+  # pass/fail detection — Phase 1.3 of archive/docs/E2E-TESTPLAN.md is the source of truth.
   # A recipe passes if goose could load it and start a session, evidenced by
   # the "Loading recipe:" line that goose prints at startup. This matches the
-  # official test in E2E-TESTPLAN.md L86-92 (the only reliable invariant we
+  # official test in archive/docs/E2E-TESTPLAN.md L86-92 (the only reliable invariant we
   # have across all 130+ recipes — completion markers vary wildly: "completed
   # successfully" / "JSON {passed:true}" / "Awaiting your instruction" / etc.).
   #
@@ -221,7 +221,7 @@ PCTA=$(( PASS * 100 / (TOTAL - 0) ))
 cat > "$RUN_DIR/SUMMARY.txt" <<EOF
 mas-engineer e2e PTY test — $TEST_DATE
 =========================================
-Pass criterion: docs/E2E-TESTPLAN.md Phase 1.3 — "Loading recipe" line present.
+Pass criterion: archive/docs/E2E-TESTPLAN.md Phase 1.3 — "Loading recipe" line present.
 Total recipes:    $TOTAL
 PASS:             $PASS  (${PCTA}%)
 FAIL_AUTH:        $FAIL_AUTH
