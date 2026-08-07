@@ -1,8 +1,8 @@
 # MAS-Engineer
 
 **Version:** v1.0.0  
-**Sub-Agents:** 96
-**Tools:** 57 total (50 Python, 6 Shell, 1 YAML)
+**Sub-Agents:** 112
+**Tools:** 65 total (58 Python, 6 Shell, 1 YAML)
 
 > **Latest verified results (2026-07-24):** 9/9 demo-team generation runs (R38) · 8/8 e2e infrastructure tests (R39) · 11/11 pre-push validation (every commit) · 2 dogfooded user-bug fixes (R37). Full evidence under `logs/e2e-results/2026-07-24-*/` and the commit graph.
 
@@ -12,7 +12,7 @@
 
 MAS-Engineer is a **Goose-based Multi-Agent System generator** and **self-improving framework builder**. It helps you create, maintain, improve, monitor, and distribute multi-agent systems — all through natural language conversation.
 
-You talk to the Engineer. The Engineer delegates to its 96 specialized sub-agents across 9 categories (Framework Builders, Improvement Pipeline, Monitoring, Analysis, Recovery, Utility, Management, Testing & E2E, Special). This is **production-ready** (8/8 e2e tests, 11/11 pre-push checks at every commit as of 2026-07-24).
+You talk to the Engineer. The Engineer delegates to its 112 specialized sub-agents across 9 categories (Framework Builders, Improvement Pipeline, Monitoring, Analysis, Recovery, Utility, Management, Testing & E2E, Special). This is **production-ready** (verified by pytest 1373 + e2e_run_all 131/131 as of 2026-08-07).
 
 ## Three Operating Modes
 
@@ -45,7 +45,7 @@ goose run --recipe recipe/dev-mas-engineer.yaml
 | "Fix this agent's prompt" | `sub_mas-prompt-engineer` | Optimized prompt |
 | "Show me the health status" | `sub_mas-monitor-*` | Health report |
 | "Set up a dashboard" | Setup dashboard recipe | MCP dashboard app |
-| "Deploy MAS-Engineer standalone" | `sub_mas-bootstrap` | Complete distribution with all 96 sub-agents |
+| "Deploy MAS-Engineer standalone" | `sub_mas-bootstrap` | Complete distribution with all 112 sub-agents |
 
 ## Architecture
 
@@ -61,7 +61,7 @@ flowchart TD
     ENGINEER --> MG["Management\n5 agents"]
     ENGINEER --> TEST["Testing & E2E\n24 agents"]
     ENGINEER --> SPEC["Special\n11 agents"]
-    FB & IP & MON & AN & REC & UT & MG & TEST & SPEC --> TOOLS["96 sub-agents + 57 tools"]
+    FB & IP & MON & AN & REC & UT & MG & TEST & SPEC --> TOOLS["112 sub-agents + 65 tools"]
 ```
 
 ## Key Concepts
@@ -95,7 +95,7 @@ flowchart TD
 | [installation.md](installation.md) | Install, update, uninstall |
 | [architecture.md](architecture.md) | Complete system architecture |
 | [usage.md](usage.md) | How to create, improve, monitor |
-| [agents.md](agents.md) | Catalog of all 96 sub-agents (catalog entry covers 52 with 2026-07-19 snapshot; canonical 96 in 9 categories as of 2026-07-24) |
+| [agents.md](agents.md) | Catalog of all 112 sub-agents in 9 categories (as of 2026-08-07) |
 | [improvement-pipeline.md](improvement-pipeline.md) | 8-stage self-improvement (S1-S8 with S0 prerequisites; 5 im-* sub-agents: im-session-reader, im-finder, im-rank, im-designer, im-validator, plus general-improver dispatcher) |
 | [recovery-system.md](recovery-system.md) | 5-stage Phoenix recovery |
 | [dashboard.md](dashboard.md) | Framework dashboard setup |

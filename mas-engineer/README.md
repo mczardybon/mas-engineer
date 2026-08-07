@@ -3,12 +3,12 @@
 A Multi-Agent System for **developing, improving, monitoring, and operating
 Multi-Agent Systems (MAS)** for the User.
 
-MAS-Engineer itself is a MAS: 117 sub-agents (recipe/sub/sub_mas-*.yaml; 170 including demo-team examples) and 65 tools (57 Python, 7 Shell, 1 YAML) that work together to build other MAS frameworks.
+MAS-Engineer itself is a MAS: 112 sub-agents (recipe/sub/sub_mas-*.yaml) and 65 tools (58 Python, 6 Shell, 1 YAML) that work together to build other MAS frameworks.
 
 ## What you get
 
-- 117 specialized sub-agents (designer, finder, rank, validator, health-reporter, ...; 170 with demo-team examples)
-- 65 tools (57 Python, 7 Shell, 1 YAML)
+- 112 specialized sub-agents (designer, finder, rank, validator, health-reporter, ...)
+- 65 tools (58 Python, 6 Shell, 1 YAML)
 - A complete dashboard (MCP server + 2 HTML webapps — note: requires `npm install` to start; not run during e2e tests)
 - Full audit trail in `.mase/`
 - Single-source-of-truth workflows in `.mase/workflows.yaml`
@@ -108,7 +108,7 @@ dev-mas-engineer  (root orchestrator)
   +-- delegate(generic-init)   create new framework skeleton
   +-- delegate(demo-runner)    run the research-team demo
   +-- delegate(pre-push-validator)  block bad pushes
-  +-- ... 117 sub-agents (170 with demo-team)
+  +-- ... 112 sub-agents
 ```
 
 ## Documentation
@@ -130,18 +130,26 @@ dev-mas-engineer  (root orchestrator)
 
 ```
 mas-engineer/
-  recipe/
-    dev-mas-engineer.yaml       # root orchestrator
-    sub/                        # 117 sub-agent recipes (170 with demo-team)
-    instructions/               # detailed instructions per agent
-    setup-dashboard.yaml        # dashboard setup
-    dashboard-data-refresh.yaml # data.json refresher
-    tools/                        # 65 tools (57 Python, 7 Shell, 1 YAML)
-  .mase/mcp/                     # MCP dashboard server
-  .mase/                       # SOT, audit trail, findings
-  ../docs/                    # documentation (repo root)
-  tests/                        # test suite
-  sub/                          # legacy sub-agents
+  recipe/                       # all agent recipes (YAML)
+    dev-mas-engineer.yaml       # root orchestrator (thin delegator)
+    sub/                        # 112 sub-agent recipes
+    instructions/               # detailed instructions per agent (.md)
+    template/                   # agent + recovery templates
+  .mase/                        # Single Source of Truth (SOT)
+    workflows.yaml              # the SOT: agents, rules, workflows, signals
+    knowledge/                  # 9 knowledge files
+    rules/                      # rule definitions + hardness levels
+    templates/                  # agent schema + guidelines
+    skills/                     # 20 bundled skills (SKILL.md)
+    mcp/                        # MCP dashboard server
+    config/                     # cost.yaml
+    directives/                 # R110-* spec docs
+    pipeline/                   # IM-pipeline outputs
+  tools/                        # 65 tools (58 Python, 6 Shell, 1 YAML)
+  tests/                        # test suite (pytest)
+  scripts/                      # core ops: e2e-test.sh, skills-install.sh, ...
+  ../docs/                      # documentation (repo root)
+  ../logs/                      # central log/evidence destination (repo root)
 ```
 
 ## Rules (always active)

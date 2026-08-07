@@ -1,11 +1,11 @@
 # MAS-Engineer SKILLS-INDEX (subset of hermes)
 
-This is the mas-engineer-flavored subset of the hermes skills directory
-(default install location: `~/.hermes/skills/` on the host). It contains only
-the 20 skills mas-engineer needs to operate.
+This is the mas-engineer-flavored subset of the hermes skills directory.
+It lives in the repo at `mas-engineer/.mase/skills/` and contains the
+20 skills mas-engineer needs to operate.
 
-For details on how these skills are installed, see `scripts/skills-install.sh`
-in the repo root.
+For details on how these skills are installed, see
+`mas-engineer/scripts/skills-install.sh` (target: the Goose runtime skills dir).
 
 ## Skills in this repo (.mase/skills/)
 

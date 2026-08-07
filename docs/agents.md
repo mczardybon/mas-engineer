@@ -1,37 +1,44 @@
 # Agent Catalog
 
-MAS-Engineer contains 96 sub-agents, organized into functional categories. The detailed listing below covers 52 of them (snapshot as of 2026-07-19); for the full 96-agent catalog, run `ls mas-engineer/recipe/sub/sub_mas-*.yaml` or see `logs/e2e-results/2026-07-24-demo-team-generation-rate/`.
+MAS-Engineer contains **112 sub-agents**, organized into functional categories.
+The detailed listing below covers the core/representative agents; for the full
+catalog, run `ls mas-engineer/recipe/sub/sub_mas-*.yaml` or read the SOT
+(`mas-engineer/.mase/workflows.yaml` → `configs.mas-self.sub_agents`), which is
+the authoritative registry.
 
 ```mermaid
-pie title Sub-Agents by Category — 2026-07-19 snapshot (52 total; current canonical: 96 in 9 categories, see Current Counts below)
-    "Framework Builders" : 6
-    "Improvement Pipeline" : 7
+pie title Sub-Agents by Category (112 total, 9 categories, 2026-08-07)
+    "Testing & E2E" : 27
+    "Framework Builders" : 14
+    "Analysis" : 17
+    "Utility" : 11
+    "Special" : 10
+    "Management" : 8
     "Monitoring" : 7
-    "Recovery" : 5
-    "Analysis" : 7
-    "Utility" : 10
-    "Management" : 7
-    "Internal POC Tools" : 3
+    "Improvement Pipeline" : 6
+    "Recovery" : 6
+    "Dashboard" : 6
 ```
 
-**Current Counts (2026-07-24 canonical, 96 sub-agents across 9 categories):**
+**Current Counts (2026-08-07 canonical, 112 sub-agents across 9 categories):**
 
 | Category | Count |
 |----------|------:|
 | Framework Builders | 14 |
-| Improvement Pipeline (8-stage S1-S8 + S0 prerequisites) | 8 |
-| Monitoring | 8 |
-| Analysis | 10 |
-| Recovery (Phoenix 5-stage) | 5 |
+| Improvement Pipeline (8-stage S1-S8 + S0 prerequisites) | 6 |
+| Monitoring | 7 |
+| Analysis | 17 |
+| Recovery (Phoenix 5-stage) | 6 |
 | Utility | 11 |
-| Management | 5 |
-| Testing & E2E | 24 |
-| Special (master-constitution, generic-init, docs, content, code-review team) | 11 |
-| **Total** | **96** |
+| Management | 8 |
+| Testing & E2E | 27 |
+| Dashboard | 6 |
+| Special (master-constitution, dev-*, degradation-*, ...) | 10 |
+| **Total** | **112** |
 
 ---
 
-## Framework Builders (6 agents)
+## Framework Builders
 
 Create, initialize, and deploy multi-agent systems.
 
@@ -63,7 +70,7 @@ flowchart LR
 | Agent | Task | Delegates To |
 |-------|------|:------------:|
 | `sub_mas-generic-init` | Initialize new projects (lightweight, symlink-based) | recipe-designer, web-researcher |
-| `sub_mas-bootstrap` | Deploy MAS-Engineer as standalone distribution (all 96 sub-agents — snapshot 2026-07-19 listed 52) | dev_generic_init.py |
+| `sub_mas-bootstrap` | Deploy MAS-Engineer as standalone distribution (all 112 sub-agents) | dev_generic_init.py |
 | `sub_mas-intention-parser` | Parse natural language → agent YAML | dev_template_generator.py |
 | `sub_mas-recipe-designer` | Create new sub-agents from template | recovery-checkpoint |
 | `sub_mas-recipe-manager` | Install/uninstall/list recipes | dev_recipe_manager.py |
@@ -71,7 +78,7 @@ flowchart LR
 
 ---
 
-## Improvement Pipeline (7 agents)
+## Improvement Pipeline
 
 The self-improvement system. Analyzes sessions, detects issues, designs patches, validates.
 
@@ -87,7 +94,7 @@ The self-improvement system. Analyzes sessions, detects issues, designs patches,
 
 ---
 
-## Monitoring (7 agents)
+## Monitoring
 
 Continuous health monitoring and reporting.
 
@@ -103,7 +110,7 @@ Continuous health monitoring and reporting.
 
 ---
 
-## Analysis (7 agents)
+## Analysis
 
 Framework understanding, scanning, and verification.
 
@@ -119,7 +126,7 @@ Framework understanding, scanning, and verification.
 
 ---
 
-## Recovery (5 agents)
+## Recovery
 
 The Phoenix Recovery system — 5 stages of protection.
 
@@ -133,7 +140,7 @@ The Phoenix Recovery system — 5 stages of protection.
 
 ---
 
-## Utility Tools (10 agents)
+## Utility Tools
 
 Operational workhorses for common tasks.
 
@@ -152,7 +159,7 @@ Operational workhorses for common tasks.
 
 ---
 
-## Management (7 agents)
+## Management
 
 Administration and system operation.
 
@@ -160,7 +167,7 @@ Administration and system operation.
 |-------|------|:------------:|
 | `sub_mas-goose-admin` | Manage Goose components (sessions, skills, logs) | dev_goose_manager.py |
 | `sub_mas-workflow-engine` | Execute SOT workflows (11 action types) | ANY sub-agent |
-| `sub_mas-master-constitution` | Central rules for ALL 96 sub-agents (11 articles) | (none) |
+| `sub_mas-master-constitution` | Central rules for ALL 112 sub-agents (11 articles) | (none) |
 | `sub_mas-system-knowledge` | Auto-loaded system knowledge at startup | (none) |
 | `sub_mas-dashboard-refresh` | On-demand dashboard data generation | dev_dashboard_refresh.py |
 | `sub_mas-doc-generator` | Framework documentation currency checker | yaml-editor |
@@ -206,7 +213,7 @@ graph TD
 | Metric | Value |
 |--------|-------|
 | **Total sub-agents (2026-07-19 snapshot, this catalog)** | 52 |
-| **Total sub-agents (2026-07-24 canonical, current)** | 96 (in 9 categories) |
+| **Total sub-agents (2026-08-07 canonical, current)** | 112 (in 9 categories) |
 | **Agents that delegate (R18)** | ~15 |
 | **Agents that work via direct execution** | ~37 |
 | **Mode-aware agents** | 11 (all others are internal-only) |

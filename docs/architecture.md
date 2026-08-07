@@ -1,6 +1,6 @@
 # Architecture
 
-MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 96 specialized sub-agents, 57 tools (50 Python, 6 Shell, 1 YAML), and a workflow engine driven by a Single Source of Truth (SOT).
+MAS-Engineer is a **hierarchical, rule-governed, self-improving multi-agent system** running inside Goose (Anthropic's MCP-based agent framework). It contains 112 specialized sub-agents, 65 tools (58 Python, 6 Shell, 1 YAML), and a workflow engine driven by a Single Source of Truth (SOT).
 
 ```mermaid
 flowchart TB
@@ -13,8 +13,8 @@ flowchart TB
     end
     subgraph ENGINEER["MAS-Engineer"]
         E1["dev-mas-engineer.yaml\nNatural Language Interface"]
-        E2["96 Sub-Agents\n8 categories"]
-        E3["57 Tools\n50 Python + 6 Shell + 1 YAML"]
+        E2["112 Sub-Agents\n9 categories"]
+        E3["65 Tools\n58 Python + 6 Shell + 1 YAML"]
         E4[".mase/\nSOT · Rules · Knowledge"]
     end
     subgraph USER["User Framework"]
@@ -63,7 +63,7 @@ MAS-Engineer (dev-mas-engineer)
 │   └── sub_mas-health-reporter  — Daily health report generation
 │
 ├── ANALYSIS (understanding & verification)
-│   ├── sub_mas-framework-scanner        — Framework scanning/auditing
+│   ├── sub_mas-framework-scanner-director — Framework scanning/auditing
 │   ├── sub_mas-framework-knowledge      — Dynamic structure discovery
 │   ├── sub_mas-config-auditor           — 16 cross-reference checks
 │   ├── sub_mas-prompt-engineer          — Prompt quality (10 criteria)
@@ -102,6 +102,12 @@ MAS-Engineer (dev-mas-engineer)
 └── TEMPLATES
     └── agent_template.yaml       — Base template for new agents
 ```
+
+> **Note:** The hierarchy above lists ~49 representative sub-agents. The full
+> **112 sub-agents** are defined in the SOT — `mas-engineer/.mase/workflows.yaml`
+> → `configs.mas-self.sub_agents` (each entry names the recipe file under
+> `recipe/sub/`). Sub-agents are discovered automatically by the Engineer, so
+> the authoritative registry is always the SOT, not this document.
 
 ---
 
@@ -237,7 +243,7 @@ flowchart TD
 
 ---
 
-## The 57 Tools (50 Python, 6 Shell, 1 YAML)
+## The 65 Tools (58 Python, 6 Shell, 1 YAML)
 
 All Python and shell tools live in `tools/` and are managed by `dev_workspace.py`. Key categories:
 
@@ -248,7 +254,7 @@ flowchart LR
         A2["general-improver\ndoc-writer\ndashboard-refresh"]
         A3["session-analyst\ngoose-admin\nworkflow-engine"]
     end
-    subgraph TOOLS["57 Tools by Category"]
+    subgraph TOOLS["65 Tools by Category"]
         T1["⚙️ Hardening\ndev_rule_checker\ndev_rule_refresh\ndev_haerte_propagation"]
         T2["🔨 Build\ndev_build.sh\ndev_autobuild.sh\ndev_mode.sh"]
         T3["🔍 Analysis\ndev_observer\ndev_architect\ndev_analyst"]
