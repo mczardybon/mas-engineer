@@ -60,6 +60,9 @@ import shutil
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Central logs/ folder at the git repo root (single destination for all
+# generated artifacts). ROOT is mas-engineer/, so the repo root is ROOT.parent.
+LOGS_ROOT = os.path.join(os.path.dirname(ROOT), "logs")
 
 # Team recipes live at the goose user config (not in this repo).
 # R110-43: use os.path.expanduser so $HOME is honored (works for any user, not just root).
@@ -518,11 +521,11 @@ def main():
     levels = [args.level] if args.level else ["easy", "medium", "hard"]
 
     today = datetime.now().strftime("%Y-%m-%d")
-    existing = sorted(glob.glob(f"logs/e2e-results/{today}-teams-*"))
+    existing = sorted(glob.glob(os.path.join(LOGS_ROOT, "e2e-results", f"{today}-teams-*")))
     run_n = len(existing) + 1
-    out_dir = f"logs/e2e-results/{today}-teams-{run_n}"
+    out_dir = os.path.join(LOGS_ROOT, "e2e-results", f"{today}-teams-{run_n}")
     os.makedirs(out_dir, exist_ok=True)
-    os.makedirs(f"{out_dir}/logs", exist_ok=True)
+    os.makedirs(os.path.join(out_dir, "logs"), exist_ok=True)
     log(f"results dir: {out_dir}")
 
     all_results = {"started": datetime.now().isoformat(), "tests": {}}

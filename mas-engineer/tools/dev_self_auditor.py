@@ -342,6 +342,14 @@ def main():
     args = parser.parse_args()
 
     workspace = args.workspace
+    # Path-spill guard: if the CWD is a repo root with a mas-engineer/ subdir,
+    # operate on mas-engineer/ so relative `.state/...` outputs land in the
+    # canonical state dir, not a root-level spill (2026-08-07 cleanup).
+    if workspace == '.':
+        cwd = Path('.').resolve()
+        if (cwd / 'mas-engineer').is_dir():
+            workspace = str(cwd / 'mas-engineer')
+            print(f'ℹ️  workspace auto-detected: {workspace}', file=sys.stderr)
 
     if args.file:
         target_files = [Path(args.file)]

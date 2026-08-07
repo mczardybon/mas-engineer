@@ -39,6 +39,9 @@ from collections import defaultdict
 from datetime import datetime
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Central logs/ folder at the git repo root (single destination for all
+# generated artifacts). ROOT is mas-engineer/, so the repo root is ROOT.parent.
+LOGS_ROOT = os.path.join(os.path.dirname(ROOT), "logs")
 REQUIRED_TOP_RECIPE_FIELDS = ["name", "version", "title", "description", "instructions", "prompt", "settings", "extensions"]
 REQUIRED_SUB_RECIPE_FIELDS = ["name", "title", "description", "instructions", "prompt", "settings", "extensions"]
 
@@ -275,13 +278,13 @@ def main():
         print(r.stdout)
         sys.exit(0 if "status: ok" in r.stdout else 1)
 
-    # Set up output dir
+    # Set up output dir (absolute path into the central logs/ at repo root)
     today = datetime.now().strftime("%Y-%m-%d")
-    existing = sorted(glob.glob(f"logs/e2e-results/{today}-run-*"))
+    existing = sorted(glob.glob(os.path.join(LOGS_ROOT, "e2e-results", f"{today}-run-*")))
     run_n = len(existing) + 1
-    out_dir = f"logs/e2e-results/{today}-run-{run_n}"
+    out_dir = os.path.join(LOGS_ROOT, "e2e-results", f"{today}-run-{run_n}")
     os.makedirs(out_dir, exist_ok=True)
-    os.makedirs(f"{out_dir}/logs", exist_ok=True)
+    os.makedirs(os.path.join(out_dir, "logs"), exist_ok=True)
     log(f"results dir: {out_dir}")
 
     start = time.time()
