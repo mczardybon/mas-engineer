@@ -393,7 +393,7 @@ chain has drifted and R110-90+ needs to re-tighten.
 
 | File | Purpose | Bytes | Lines |
 |---|---|---|---|
-| `mas-engineer/docs/EVIDENCE-R110-89-HONEST-REPOFMT-AND-EVIDENCE-AUDIT.md` | this document | ~9k | ~210 |
+| `docs/EVIDENCE-R110-89-HONEST-REPOFMT-AND-EVIDENCE-AUDIT.md` | this document | ~9k | ~210 |
 | `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T1_pytest.log` | pytest 1277 PASS 8.01s | 633 | n/a |
 | `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T2_collect_count.log` | 1277 collect-only | 96 | n/a |
 | `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T3_sub_recipe_ref_audit.log` | 76/76 100% | 147 | n/a |

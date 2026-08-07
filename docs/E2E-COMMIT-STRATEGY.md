@@ -23,7 +23,7 @@ This way:
 
 ```
 ?? mas-engineer/.mase/pipeline/signal_apply_only_done_20260724_1746.yaml
-?? mas-engineer/docs/E2E-SELF-IMPROVEMENT-REPORT-2026-07-24.md
+?? docs/E2E-SELF-IMPROVEMENT-REPORT-2026-07-24.md
 ?? mas-engineer/logs/e2e-evidence-gen2/                         (4 logs)
 ```
 

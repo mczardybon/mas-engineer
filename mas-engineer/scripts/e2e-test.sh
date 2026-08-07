@@ -244,7 +244,7 @@ PY
 echo ""
 echo "[6/10] German words scan (scope: $SCOPE_DESC)"
 GERMAN_WORDS="ich nicht auch noch schon sehr ueber jedoch jedem eines einer einem einen waere funktionieren funktioniert geht machen gemacht erstellen erstellt benoetigt braucht verwendet benutzen benutzt kannst solltest wuerde sollte eigentlich natuerlich endlich normalerweise anschliessend beim uebrigens lediglich einige mehrere allerdings trotzdem deshalb deswegen folglich somit zunaechst zuerst daraufhin hierbei dabei davon dazu dafuer dagegen darueber darunter danach davor dazwischen gleichzeitig inzwischen zwischendurch einher einhergehend mittels anhand mithilfe zuhilfenahme kraft vermoege gemaess entsprechend betreffend hinsichtlich bezueglich"
-EXCLUDE_FILES="docs/lessons-learned.md"
+EXCLUDE_FILES="../docs/lessons-learned.md"
 python3 <<PY && check_pass "German words — 0 hits" || check_fail "German words — see above"
 import re, os, sys
 scope = "$SCOPE"

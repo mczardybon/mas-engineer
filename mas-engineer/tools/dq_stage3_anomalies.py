@@ -52,14 +52,15 @@ def _resolve_data_path():
     import glob
     candidates.extend(sorted(glob.glob("logs/e2e-results/*/sample-input/data.csv"),
                               reverse=True))   # latest first
-    candidates.extend(["./sample-input/data.csv", "../sample-input/data.csv"])
+    candidates.extend(["./sample-input/data.csv", "../sample-input/data.csv",
+                        "../archive/sample-input/data.csv"])
     for c in candidates:
         if c and os.path.isfile(c):
             return os.path.abspath(c)
     raise FileNotFoundError(
         "data.csv not found. Tried: CLI --data, env DQ_DATA_PATH, "
         "logs/e2e-results/*/sample-input/data.csv, ./sample-input/data.csv, "
-        "../sample-input/data.csv"
+        "../sample-input/data.csv, ../archive/sample-input/data.csv"
     )
 
 DATA_PATH = _resolve_data_path()

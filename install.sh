@@ -31,11 +31,11 @@ if [ -f "$INSTALL_DIR/recipe/dev-mas-engineer.yaml" ]; then
     SRC_MAS_DOCS="$INSTALL_DIR/docs"
     SRC_MAS_STATE="$INSTALL_DIR/.mase"
 else
-    # Traditional: MAS under mas-engineer/
+    # Traditional: MAS under mas-engineer/ (docs/ liegt seit 2026-08-07 im Root)
     SRC_MAS_RECIPE="$INSTALL_DIR/mas-engineer/recipe/dev-mas-engineer.yaml"
     SRC_MAS_SUB="$INSTALL_DIR/mas-engineer/recipe/sub"
     SRC_MAS_TOOLS="$INSTALL_DIR/mas-engineer/tools"
-    SRC_MAS_DOCS="$INSTALL_DIR/mas-engineer/docs"
+    SRC_MAS_DOCS="$INSTALL_DIR/docs"
     SRC_MAS_STATE="$INSTALL_DIR/mas-engineer/.mase"
 fi
 

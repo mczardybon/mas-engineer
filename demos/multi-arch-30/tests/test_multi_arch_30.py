@@ -34,8 +34,8 @@ REPO_ROOT = DEMO_DIR.parent.parent               # repo root (parents[2] from te
 MULTI_ARCH_DIR = DEMO_DIR
 MULTI_ARCH_MASTER = MULTI_ARCH_DIR / "multi-arch-30.yaml"
 MULTI_ARCH_TEAMS_DIR = MULTI_ARCH_DIR / "teams"
-# logs/ liegt auf dem Git-Repo-Root (parent von mas-engineer/)
-E2E_RESULTS_DIR = REPO_ROOT.parent / "logs" / "e2e-results"
+# logs/ liegt auf dem Git-Repo-Root (demos/ liegt seit 2026-08-07 direkt im Root)
+E2E_RESULTS_DIR = REPO_ROOT / "logs" / "e2e-results"
 
 # classify_domain lives next to this test file (demos/multi-arch-30/tests/_helpers.py).
 # pytest adds the test's parent dir to sys.path automatically (rootdir conftest),

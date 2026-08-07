@@ -365,7 +365,7 @@ b662e83 R108-8 — Pre-push YAML validation (hook)
 | Conventional commit body | ❌ NEIN — nur stil | (kein hook) |
 | pre-push-validator Check 1.5 | ❌ NEIN — operator-tool | `mas-engineer/recipe/sub/sub_mas-pre-push-validator.yaml` |
 | GitHub branch-protection | ❌ NEIN — nicht konfiguriert | (repo-settings) |
-| CHANGELOG-update pro sprint | ❌ NEIN — manuell | `mas-engineer/docs/CHANGELOG-*.md` |
+| CHANGELOG-update pro sprint | ❌ NEIN — manuell | `docs/CHANGELOG-*.md` |
 
 **Folgerung:** Die R-Disziplin entsteht nicht durch enforcement, sondern durch **1) hook-automation für sensible scopes (secrets + YAML) + 2) operator-disziplin für R-Format**. Beide schichten zusammen ergeben die beobachtbare konsistenz. v1 hat die hook-schicht übersehen.
 
@@ -373,9 +373,9 @@ b662e83 R108-8 — Pre-push YAML validation (hook)
 
 | Artefakt | Vorhanden? | Funktion |
 |---|---|---|
-| `mas-engineer/docs/CHANGELOG-2026-07-19-e2e-success.md` (865B) | ✅ | Self-dokumentation des 2026-07-19 e2e-success |
-| `mas-engineer/docs/CHANGELOG-2026-07-25.md` (132B) | ✅ | Self-dokumentation des 2026-07-25 events |
-| 11 docs in `mas-engineer/docs/` (architecture, agents, recovery, etc.) | ✅ | Self-dokumentation des systems |
+| `docs/CHANGELOG-2026-07-19-e2e-success.md` (865B) | ✅ | Self-dokumentation des 2026-07-19 e2e-success |
+| `docs/CHANGELOG-2026-07-25.md` (132B) | ✅ | Self-dokumentation des 2026-07-25 events |
+| 11 docs in `docs/` (architecture, agents, recovery, etc.) | ✅ | Self-dokumentation des systems |
 | Auto-generated protokoll pro push | ❌ | (operator schreibt) |
 
 **Folgerung:** Self-dokumentation gibt es für **ereignis-basierte snapshots** (CHANGELOG files), aber **nicht** für **routine-protokolle** (commit+push prozess). Mein bericht ist operator-geschrieben.
@@ -409,6 +409,6 @@ Geraten ist hier 3× in 26 zeilen falsch gewesen. v2 basiert auf echter verifika
 - `.githooks/pre-push` (secrets + YAML, exit 1 = block)
 - `core.hooksPath=.githooks` (system-level, persistent in `.git/config`)
 - 2 CHANGELOG files (`2026-07-19-e2e-success.md`, `2026-07-25.md`)
-- 11 docs in `mas-engineer/docs/`
+- 11 docs in `docs/`
 **Quellen v2:** alle v1-quellen + `git config`, `git ls-files .githooks/`, `cat .githooks/pre-commit`, `cat .githooks/pre-push`, `git log --all -- .githooks/`
 **⚠️ Wichtige selbst-korrektur v2:** v1 behauptete 3× fälschlich "kein self-enforcement, kein pre-commit-hook, kein system-feature". v2 korrigiert mit verifikations-befehlen + output.

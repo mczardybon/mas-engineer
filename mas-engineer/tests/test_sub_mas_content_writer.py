@@ -21,7 +21,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 # R110-55: content-writer is a demo-team agent, lives in
 # demos/demo-team/recipes/ (not recipe/sub/)
-RECIPE = REPO_ROOT / "demos" / "demo-team" / "recipes" / "sub_mas-content-writer.yaml"
+RECIPE = REPO_ROOT.parent / "demos" / "demo-team" / "recipes" / "sub_mas-content-writer.yaml"
 
 
 def test_content_writer_recipe_exists():
