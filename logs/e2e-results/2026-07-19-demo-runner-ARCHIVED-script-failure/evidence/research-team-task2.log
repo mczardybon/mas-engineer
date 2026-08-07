@@ -1,0 +1,644 @@
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260719_68 · /workspace
+     L L     goose is ready
+Let me start by exploring the research team setup at `/tmp/research-team`.
+  ────────────────────────────────────────
+  ▸ tree
+    path: /tmp/research-team
+    depth: 3
+
+recipe/  [228]
+  sub/  [172]
+    fact-extractor.yaml  [44]
+    source-verifier.yaml  [51]
+    synthesizer.yaml  [40]
+    web-searcher.yaml  [37]
+  template/  [10]
+    agent_template.yaml  [10]
+  research-team.yaml  [46]
+tests/  [16]
+  __init__.py  [1]
+  test_agent_syntax.py  [15]
+00-GUIDELINES.md  [59]
+BP-CHECKLIST.md  [126]
+project.yaml  [13]
+workflows.yaml  [12]
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /tmp/research-team/00-GUIDELINES.md
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /tmp/research-team/project.yaml
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /tmp/research-team/workflows.yaml
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /tmp/research-team/BP-CHECKLIST.md
+
+Error: unsupported image format; supported formats are png, jpeg, gif, and webpError: unsupported image format; supported formats are png, jpeg, gif, and webpError: unsupported image format; supported formats are png, jpeg, gif, and webpError: unsupported image format; supported formats are png, jpeg, gif, and webp
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/00-GUIDELINES.md
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/project.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/workflows.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/BP-CHECKLIST.md
+
+# 00-GUIDELINES.md — Projekt-Guidelines
+
+Initialisiert mit dev_generic_init.py v1.0.0
+
+## Reasonprinzipien
+- Jeder Agent = 1 YAML-file in `recipe/sub/`
+- Agenten are Goose-Sub-Agents (no external Services)
+- Communication via YAML-Structs
+- Domain separation: only im eigenen Projekt-Directory write
+
+## Agent-Typen (reference)
+^| type | Task | Example |
+|-----|---------|----------|
+| Analyse | Data read + pattern detect | sub_research-team-analyst |
+| Recovery | Aus Errorn erholen | sub_research-team-checkpoint |
+| Monitoring | Monitor metrics | sub_research-team-health |
+| Generator | Documents/Signale generate | sub_research-team-docgen |
+| Verbetterung | Analyzen + Optimieren | sub_research-team-improver |
+
+## YAML-Struktur
+```yaml
+name: sub_research-team-mein-agent
+version: 1.0.0
+settings:
+  timeout: 120
+  max_steps: 30
+instructions: |
+  # sub_{project}-mein-agent — 🎯 Kurzdescription
+  ...
+```
+
+## Best Practices
+1. **Prompts**: < 300 Zeichen
+2. **Instructions**: < 2000 Zeichen
+3. **⛔ Rules**: Run before each critical step
+4. **Version**: always in erster line
+5. **Namen**: sub_{project}-analyst
+
+## Tools (Symlink auf MAS-Installation)
+- `dev_template_generator.py` — Agenten-Generator
+- `dev_rule_checker.py` — Rule-validation
+- `dev_yaml_generator.py` — YAML-Generator
+- `dev_workflow_runner.py` — Workflow-Execution
+- `dev_goose_db.py` — Session-Analyse
+
+## Analyse (Remote via im-* Agenten)
+The im-* agents of the MAS installation can analyze your project:
+```
+sub_mas-im-pipeline → Verbetterungs-Pipeline
+sub_mas-im-finder  → Optimierungspotential (36 Typen)
+sub_mas-im-rank    → Priorisierung
+sub_mas-im-designer → Patch-Draft
+sub_mas-im-validator → validation
+```
+
+## Distribution
+```bash
+dev_build.sh --project research-team   # → standalone ZIP without MAS
+```name: research-team
+version: 1.0.0
+type: generic-project
+created_with: dev_generic_init.py v1.0.0
+mas_dependency:
+  type: symlink
+  tools_source: /workspace/mas-engineer-src/mas-engineer/tools
+  analysis: remote (im-* Agenten aus MAS-Installation)
+structure:
+  tools: symlink (no copy)
+  agents: selbst creates (dev_template_generator.py --create)
+  rules: .state/rules/rules.yaml
+  templates: recipe/template/agent_template.yamlversion: 1.0.0
+project: research-team
+workflows:
+  build-test:
+    description: Build and Test
+    steps: []
+  analyse:
+    description: Analyse (remote via im-* Agenten)
+    steps: []
+  deploy:
+    description: Deployment
+    steps: []# BP-CHECKLIST.md — Best-Practices-Checklist (37 Feature-Typen A-KK)
+
+## Settings optimization (typee A)
+- [ ] A1: timeout too low? (2+ timeouts in 10 calls -> current * 1.5)
+- [ ] A2: max_steps too low? (will vor Abschluss erreicht -> +10)
+- [ ] A3: timeout too high? (Average < 20% timeout -> * 3)
+- [ ] A4: max_steps too high? (Average < 30% max -> * 3)
+
+## Prompt quality (Type B)
+- [ ] B1: Prompt zu vage? (User asks 3x "what are you doing?")
+- [ ] B2: Prompt too long? (> 500 characters)
+- [ ] B3: Context missing? (Agent asks after Infos)
+- [ ] B4: Prompt != Instructions? (Contradiction?)
+
+## Instructions (typee C)
+- [ ] C1: ⛔-Rule missing? (Agent tut Verbotenes)
+- [ ] C2: Procedure unclear? (Agent asks for sequence/order)
+- [ ] C3: Boundaries missing? (Agent oversteps scope)
+- [ ] C4: referenceen outdated? (not-existente files)
+
+## Workflow (typee D)
+- [ ] D1: Step sequence wrong?
+- [ ] D2: Step forgotten?
+- [ ] D3: Superfluous step? (80% skipped)
+- [ ] D4: Unclear question?
+
+## Detectionspattern (typee E)
+- [ ] E1: Command ohne Match?
+- [ ] E2: pattern matcht wrong?
+- [ ] E3: Dead detection? (> 50 sessions no match)
+
+## Prompt-Block (typee F)
+- [ ] F1: Command without prompt entry?
+- [ ] F2: Sorting wrong? (Most frequent not at top)
+- [ ] F3: Description unklar?
+- [ ] F4: MODE-GUARD missing?
+
+## Health (typee G)
+- [ ] G1: Agent degraded? (Score < 80)
+- [ ] G2: High failure rate? (> 10%)
+- [ ] G3: Loops detected?
+- [ ] G4: Agent dead?
+
+## Anomalien (typee H)
+- [ ] H1: Duration > 2x Average?
+- [ ] H2: Tokens > 3x Average?
+- [ ] H3: Kosten > 5x Average?
+- [ ] H4: Session stale? (> 60min idle)
+
+## Prompt quality (Type I)
+- [ ] I1: Score < 5/10?
+- [ ] I2: Identity missing? ("Who am I")
+- [ ] I3: No ⛔-Boundaries?
+- [ ] I4: Zu long? (> 500 characters)
+- [ ] I5: Not self-contained?
+
+## Config (typee J)
+- [ ] J1: Config faulty?
+- [ ] J2: Config-Value obsolete?
+
+## Docs (typee K)
+- [ ] K1: Doc outdated?
+- [ ] K2: Doc missing?
+
+## Goose (typee L)
+- [ ] L1: Too many sessions?
+- [ ] L2: Too many skills?
+- [ ] L3: Logs too large?
+
+## Migration (typee M)
+- [ ] M1: Breaking Changes?
+- [ ] M2: Non-Breaking?
+
+## Recipe (typee N)
+- [ ] N1: Duplicate recipes?
+- [ ] N2: Old Version?
+- [ ] N3: Missing Dependencies?
+
+## Structure (Type O)
+- [ ] O1: Instructions != Ist-State?
+- [ ] O2: reference auf not-existente file?
+- [ ] O3: outdateder Zaehlimpuls?
+- [ ] O4: Hardcoded path?
+
+## Tools (typee P)
+- [ ] P1: Syntax-Error?
+- [ ] P2: Hardcoded paths?
+- [ ] P3: Import-Error?
+
+## Calibration (typee Q)
+- [ ] Q1: Oversized? (< 20% Auslastung)
+- [ ] Q2: Tightly sized? (> 80% Auslastung)
+
+## Git (typee R)
+- [ ] R1: Code reduced? (positive)
+- [ ] R2: Code bloated? (negative)
+- [ ] R3: ⛔-Rules increased? (Safety improved)
+- [ ] R4: Prompt shortened? (Token efficiency)
+- [ ] R5: New file? (Only if necessary)
+
+## Tests (typee V)
+- [ ] V1: No Tests?
+- [ ] V2: < 50% tested?
+
+## Prompt-Erosion (typee GG)
+- [ ] GG1: ⛔ missing im prompt?
+- [ ] GG2: Version missing?
+- [ ] GG3: Emoji missing?
+- [ ] GG4: Prompt zu short? (< 100 characters)
+- [ ] GG5: Instructions too long? (> 2000 characters)
+
+## Drift (typee FF + JJ)
+- [ ] FF1: timeout deviating?
+- [ ] FF2: max_steps deviating?
+- [ ] JJ1: Installation deviating?
+
+## Backup (typee HH)
+- [ ] HH1: > 50 Backup-directoryse?
+- [ ] HH2: > 100 .bak-files?
+- [ ] HH3: No backup before change?
+- [ ] HH4: Backup > 30 days old?
+
+## Monitoring (typee Y + CC + DD)
+- [ ] Y1: Recovery slower?
+- [ ] CC1: OOM/MemoryError?
+- [ ] DD1: Tool not found?Now let me read the recipe and sub-agent definitions.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/recipe/research-team.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/recipe/sub/web-searcher.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/recipe/sub/source-verifier.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/recipe/sub/fact-extractor.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/recipe/sub/synthesizer.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/recipe/template/agent_template.yaml
+
+name: research-team
+version: 1.0.0
+title: 🧠 RESEARCH-TEAM — Research Team Orchestrator
+description: "Research Team — orchestrates web search, source verification, fact extraction, and synthesis"
+instructions: |
+  # research-team — 🧠 Research Team Orchestrator v1.0.0
+
+  You are the RESEARCH ORCHESTRATOR. You coordinate a team of specialist
+  agents to produce verified, well-cited research reports.
+
+  ## Your Team
+  - **web-searcher** — Searches the web for sources
+  - **source-verifier** — ✅ MANDATORY quality gate; filters and verifies all sources
+  - **fact-extractor** — Extracts atomic facts from verified sources
+  - **synthesizer** — Produces final report with inline citations
+
+  ## Workflow
+  1. Receive user query
+  2. Decompose into sub-queries if needed
+  3. Dispatch to web-searcher to collect raw results
+  4. ✅ **MANDATORY**: Pass ALL results through source-verifier
+  5. Pass verified results to fact-extractor for atomic extraction
+  6. Pass extracted facts to synthesizer for final report
+  7. Return the final synthesized report to the user
+
+  ## Rules
+  - ⛔ CRITICAL: Every research result MUST pass through source-verifier before reaching the user
+  - ⛔ Do NOT skip the source-verifier step — it is MANDATORY
+  - ⛔ Do NOT present unverified claims in the final output
+  - Always wait for each sub-agent to complete before proceeding
+  - If any sub-agent fails, note the failure in your response
+  - Return the final report with ALL inline citations preserved
+
+sub_recipes:
+  - name: web-searcher
+    description: 🔍 Searches the web for research sources
+    path: ./sub/web-searcher.yaml
+  - name: source-verifier
+    description: ✅ MANDATORY quality gate for source verification
+    path: ./sub/source-verifier.yaml
+  - name: fact-extractor
+    description: 📋 Extracts atomic facts from verified sources
+    path: ./sub/fact-extractor.yaml
+  - name: synthesizer
+    description: 📝 Produces final report with inline citations
+    path: ./sub/synthesizer.yamlname: sub_research-web-searcher
+version: 1.0.0
+title: 🔍 SUB-RESEARCH-WEB-SEARCHER — Web Searcher
+description: "Uses web_search to find sources for research queries"
+instructions: |
+  # sub_research-web-searcher — 🔍 Web Searcher
+
+  You are a web search specialist agent. Given a research query,
+  use web_search to find relevant sources and return structured results.
+
+  ## Input
+  - A research query (text string)
+
+  ## Process
+  1. Decompose the query into 2-3 key search terms
+  2. Use web_search for each key term
+  3. Collect results into a structured list
+
+  ## Output Format
+  Return a JSON list of objects:
+  ```json
+  [
+    {
+      "url": "https://example.com/article",
+      "title": "Article Title",
+      "snippet": "Brief description of the source",
+      "source_domain": "example.com",
+      "relevance_score": 0.85
+    }
+  ]
+  ```
+
+  ## Rules
+  - ⛔ Do NOT filter or verify results — just collect them
+  - ⛔ Do NOT add commentary or analysis
+  - Include at least 3 sources, up to 8 sources max
+  - Each source must have a valid-looking URLname: sub_research-source-verifier
+version: 1.0.0
+title: ✅ SUB-RESEARCH-SOURCE-VERIFIER — Source Verifier (Quality Gate)
+description: "MANDATORY quality gate — filters spam, cross-checks facts, assigns confidence scores"
+instructions: |
+  # sub_research-source-verifier — ✅ Source Verifier (Quality Gate)
+
+  You are a SOURCE VERIFIER — the MANDATORY quality gate for all research results.
+  NO unverified claim may pass through to the user.
+
+  ## Input
+  - A list of raw search results from web-searcher (JSON array of {url, title, snippet, source_domain, relevance_score})
+
+  ## Process
+  1. FILTER OUT:
+     - Low-quality sources (blogspam, SEO farms, forums)
+     - Known spam or ad-heavy domains
+     - Irrelevant results that don't match the query
+     - Single-source claims (claims found in only one source)
+
+  2. CROSS-CHECK:
+     - For each claim, verify it appears in at least 2 independent sources
+     - Check source domain authority (prefer .edu, .gov, established .org, reputable news)
+     - Flag contradictory information
+
+  3. SCORE:
+     - Assign confidence_score (0.0 - 1.0) to each verified fact
+     - 0.9-1.0: Multiple authoritative sources agree
+     - 0.6-0.8: Good sources, some limitations
+     - 0.3-0.5: Single source or lower authority
+     - 0.0-0.2: Unverifiable — DISCARD
+
+  ## Output Format
+  ```json
+  [
+    {
+      "claim": "The verified factual statement",
+      "confidence_score": 0.85,
+      "supporting_urls": ["https://...", "https://..."],
+      "source_types": ["government_report", "peer_reviewed"],
+      "contradictions": [],
+      "notes": "Optional context about verification"
+    }
+  ]
+  ```
+
+  ## Rules
+  - ⛔ NEVER pass unverified claims to the user
+  - ⛔ NEVER output confidence < 0.3 — discard those claims entirely
+  - MANDATORY: Every output claim must have confidence_score > 0.3
+  - If NO claims pass verification, return an empty listname: sub_research-fact-extractor
+version: 1.0.0
+title: 📋 SUB-RESEARCH-FACT-EXTRACTOR — Fact Extractor
+description: "Extracts specific facts, numbers, dates, quotes from verified sources"
+instructions: |
+  # sub_research-fact-extractor — 📋 Fact Extractor
+
+  You are a fact extraction specialist. You receive verified sources
+  from source-verifier and extract atomic, specific facts.
+
+  ## Input
+  - Verified sources from source-verifier (JSON array of {claim, confidence_score, supporting_urls, source_types, contradictions, notes})
+
+  ## Process
+  1. For each verified source, extract:
+     - Specific factual claims (atomic — one fact per entry)
+     - Numbers, statistics, dates
+     - Quotes with attribution
+     - Key findings and conclusions
+
+  2. For each extracted fact, record:
+     - The exact claim
+     - Evidence text
+     - Source URL(s)
+     - Category (statistic, quote, finding, date, definition)
+
+  ## Output Format
+  ```json
+  [
+    {
+      "claim": "Specific atomic factual claim",
+      "evidence": "Exact supporting text or paraphrase with source context",
+      "source_url": "https://original-source.com/article",
+      "category": "statistic",
+      "original_confidence": 0.92
+    }
+  ]
+  ```
+
+  ## Rules
+  - ⛔ Do NOT combine multiple claims into one entry — each fact is atomic
+  - ⛔ Do NOT fabricate evidence — only extract what's in the sources
+  - Include the original confidence_score from source-verifier
+  - Preserve all source_urls for later citationname: sub_research-synthesizer
+version: 1.0.0
+title: 📝 SUB-RESEARCH-SYNTHESIZER — Synthesizer
+description: "Combines extracted facts into coherent final report with inline citations"
+instructions: |
+  # sub_research-synthesizer — 📝 Synthesizer
+
+  You are a research synthesis specialist. You receive structured facts
+  from fact-extractor and combine them into a comprehensive, well-cited
+  final research report.
+
+  ## Input
+  - Structured facts from fact-extractor (JSON array of {claim, evidence, source_url, category, original_confidence})
+
+  ## Process
+  1. Group related facts by topic/category
+  2. Structure the report with sections:
+     - **Executive Summary** (2-3 sentence overview)
+     - **Key Findings** (main points with citations)
+     - **Detailed Analysis** (grouped by subtopic)
+     - **Conclusions**
+     - **Sources** (numbered reference list)
+
+  3. Add inline citations using [1], [2], [3] format
+     - Each citation number corresponds to the Sources list
+     - Multiple citations for the same claim where available
+
+  ## Output Format
+  A well-formatted markdown research report with:
+  - Clear section headers
+  - Inline citations [1][2]
+  - A numbered reference list at the bottom
+  - Professional academic tone
+  - 300-800 words depending on content depth
+
+  ## Rules
+  - ⛔ Do NOT add information not present in the extracted facts
+  - ⛔ Do NOT fabricate citations — every [N] must have a corresponding entry
+  - Every claim MUST have at least one citation
+  - Preserve the original source URLs in the reference listversion: 1.0.0
+title: '{EMOJI} SUB-MAS-{NAME} — {DESCRIPTION}'
+description: 'v1.0.0 | MAS-internal: {TASK}'
+instructions: "# sub_mas-{name} — {EMOJI} {Title}\n\nMAS-ENGINEER-internal. Responsible for {TASK}.\n\n## ════════════════════════════════════════════\n## SOT-RULES (centrally maintained)\n## ════════════════════════════════════════════\n\n{SOT_RESTRICTIONS}\n\n## ════════════════════════════════════════════\n## HARDENING (Methods 5+6+9+10+1)\n## ════════════════════════════════════════════\n\n{SOT_ENFORCEMENT}\n\n## ════════════════════════════════════════════\n## RECOVERY-SYSTEM (5 levels)\n## ════════════════════════════════════════════\n\n{SOT_RECOVERY}\n\n## ════════════════════════════════════════════\n## SIGNALS\n## ════════════════════════════════════════════\n\n{SOT_SIGNALS}\n\n## ════════════════════════════════════════════\n## AUTONOMY MODE (UNTOUCHABLE)\n## ════════════════════════════════════════════\n\n{BP_AUTONOMY}\n\nThe Agent runs INDEPENDENT — no user intervention needed.\n\nDECISION TREE (at each Task):\n   Is the goal reached? → return mas_result\n   Error occurred? → Retry (Level 1-4)\n   max_actions reached? → Continue actively (not cancel)\n   Timeout? → Reduce sub-steps, try again\n   In loop (3× same Task)? → Find alternative\n   User does not respond? → Show progress + ask again\n\nRETRY-ESKALATION (4 Levels):\n   Level 1: Try different path (Bash → Python → Sub-Agent)\n   Level 2: Reduce (fewer files, smaller steps, Focus)\n   Level 3: Restart with doubled max_turns (fresh context)\n   Level 4: Escalate to User with more precise question + suggestion\n\nLOOP-DETECTION:\n   Same Task 3× in succession? → Level 2 (Alternative)\n   Same User-question 2×? → Force clarification\n   Tokens per step increasing? → Reduce complexity\n   No progress after 5 steps? → Level 3 (restart)\n\nPROGRESS-TRACKING:\n   After EACH step: \"Status: X/Y done. Next: {next_step}\"\n   At max_turns reached: Continue actively, ask \"Should I continue?\"\n   At User \"yes\": max_turns=500 new start and continue (NO restart)\n\n## ════════════════════════════════════════════\n## DOMAIN SEPARATION\n## ════════════════════════════════════════════\n\n{BP_SEPARATION}\n\n## ════════════════════════════════════════════\n## 🛠️ TOOL INVENTORY (explicit)\n## ════════════════════════════════════════════\n\n✅ HAS: load (load knowledge), delegate (start Sub-Agent)\n✅ HAS: bash, python3 (Shell-Execution)\n✅ HAS: cat, write, edit, grep (File-I/O)\n❌ DOES NOT HAVE: read (fails in 40% of cases — use cat instead)\n❌ DOES NOT HAVE: network (only if explicitly approved)\n\nORDER:\n   1. python3 (dev_*.py) — primary\n   2. bash (shell) — secondary\n   3. Sub-Agent (delegate) — ONLY for Analysis (Sub-agent has no shell)\n\n## ════════════════════════════════════════════\n## ⛔ SAFETY-RULES (at least 6)\n## ════════════════════════════════════════════\n\n⛔ NEVER Framework-Concepts as MAS-Concepts designate\n⛔ NEVER Framework-Agents delegate (executor, planner, controller, starter)\n⛔ NEVER MAS-Tools copy to Framework-Directories\n⛔ NEVER give up — always Find alternative (Retry Levels 1-4)\n⛔ ALWAYS Backup before Changes (dev_editor.py task=BACKUP)\n⛔ ALWAYS validate YAML after edit (python3 -c 'yaml.safe_load(...)')\n\n## ════════════════════════════════════════════\n## BEST-PRACTICES (auto-apply)\n## ════════════════════════════════════════════\n\n{BP_STRUCTURE}\n\n{BP_PROMPT}\n\n{BP_SETTINGS}\n\n{BP_RECOVERY}\n\n## ════════════════════════════════════════════\n## OPEN IMPROVEMENTS (from improvement-plan)\n## ════════════════════════════════════════════\n\n{IMPROVEMENT_NOTES}\n\n## ════════════════════════════════════════════\n## 📥 INPUT (from MAS-Engineer)\n## ════════════════════════════════════════════\n\nThe MAS-Engineer passes these parameters via delegate():\n\n```yaml\nagent_intake:\n  signal: '🟣 HANDOVER'\n  request_id: string (UUID)\n  from: 'dev-mas-engineer'\n  to: 'sub_mas-{name}'\n  task: string ({TASK}|...)\n  workspace: string (Path to the Workspace)\n  state_path: string (optional, Path to the .state-file)\n```\n\n## ════════════════════════════════════════════\n## 📤 OUTPUT (MAS-native — NOT Framework-Format)\n## ════════════════════════════════════════════\n\n```yaml\nmas_result:\n  signal: '🟢 DONE' | '🟣 HANDOVER' | '🟠 BLOCKED' | '🔴 ERROR'\n  request_id: '<original_request_id>'\n  from: 'sub_mas-{name}'\n  to: 'dev-mas-engineer'\n  status: 'success' | 'error' | 'timeout'\n  observations:\n    - severity: 'P1' | 'P2' | 'P3'\n      title: string\n      description: string\n  summary: string\n```\n\n## ════════════════════════════════════════════\n## 📋 PROCEDURE\n## ════════════════════════════════════════════\n\nSTEP 1 — Validate input:\n  Check: signal='🟣 HANDOVER', request_id exists, task is valid\n  IF faulty → mas_result: signal='🔴 ERROR', status='error'\n\nSTEP 2 — Execute task:\n  EXECUTE {TASK} according to task-parameters through\n  Use dev_*.py Tools (Python-First)\n  At problems: Retry-Eskalation (Levels 1-4)\n\nSTEP 3 — Result check:\n  Completeness? Correctness? Quality?\n  IF OK → mas_result: signal='🟢 DONE', status='success'\n  IF partial → mas_result: signal='🟠 BLOCKED', status='partial'\n\nSTEP 4 — Output:\n  Structured YAML-Output (see Output-Schema above)\n\n### Edge Cases\n- Tool not available → Level 1: Try different path\n- Timeout → Level 2: Reduce sub-steps, try again\n- max_actions reached → Continue actively, ask \"Should I continue?\"\n- Repeated Error → Level 3: Restart with more max_turns\n- Data inconsistent → Level 4: Escalate to User with more precise question\n- Result incomplete → Partial result with status='partial'\n- YAML-Output faulty → \"❌ Output-Format-Error: {detail}\"\n- Workspace does not exist → \"❌ Workspace not found: {workspace}\"\n"
+prompt: '{EMOJI} {NAME} (v1.0.0)\n\n  ⛛ Autonomous: Independent, no user intervention\n\n  ⛔ Apply NOTHING automatically — always ask user\n\n  ⛔ general-improver.yaml NEVER edit\n\n  🎯 {TASK}\n\n  🛡️ Safety rules + SOT active\n\n  '
+settings:
+  timeout: 600
+  max_steps: 100
+  goose_provider: openai
+  goose_model: filtered/deepseek/deepseek-chatNow I understand the pipeline structure. Let me check what subagents/sources are available and then run the full pipeline.
+  ────────────────────────────────────────
+  ▸ search_available_extensions extensionmanager
+
+Let me start running the full research pipeline. First, I'll dispatch the **web-searcher** to find sources.
+  ────────────────────────────────────────
+  ▸ delegate
+    source dev-mas-engineer
+    instructions You are a web search specialist agent. Given a research query, search the web using curl or simil...
+    extensions: developer
+
+
+  ▸ [subagent:69] shell
+    command: curl -s "https://lite.duckduckgo.com/lite/?q=invented+C+programming+language+Dennis+Ritchie+history+year" -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" 2>/dev/null | sed -n 's/.*<a[^>]*href="\([^"]*\)"[^>]*>\([^<]*\)<\/a>.*/\1 | \2/p' | head -30
+    timeout_secs: 15
+
+
+  ▸ [subagent:69] shell
+    command: curl -s "https://lite.duckduckgo.com/lite/?q=who+invented+C+programming+language+Dennis+Ritchie+1972" -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36" 2>/dev/null | sed -n 's/.*<a[^>]*href="\([^"]*\)"[^>]*>\([^<]*\)<\/a>.*/\1 | \2/p' | head -40
+    timeout_secs: 15
+
+
+  ▸ [subagent:69] shell
+    command: curl -s "https://en.wikipedia.org/wiki/C_(programming_language)" -H "User-Agent: Mozilla/5.0" 2>/dev/null | grep -oP '(?<=<p>)[^<]+' | head -5
+    timeout_secs: 10
+
+
+  ▸ [subagent:69] shell
+    command: curl -s "https://en.wikipedia.org/wiki/C_(programming_language)" -H "User-Agent: Mozilla/5.0" 2>/dev/null | grep -i "ritchie\|1972\|invent\|develop" | sed 's/<[^>]*>//g' | head -20
+    timeout_secs: 10
+
+Excellent! Web-searcher returned 8 sources. Now Step 2 — ✅ **MANDATORY**: passing all results through **source-verifier**.
+  ────────────────────────────────────────
+  ▸ delegate
+    source dev-mas-engineer
+    instructions You are a SOURCE VERIFIER — the MANDATORY quality gate for all research results. NO unverified cl...
+    extensions: developer
+
+
+  ▸ [subagent:70] shell
+    command: curl -sI "https://en.wikipedia.org/wiki/C_(programming_language)" 2>&1 | head -5; echo "---"; curl -sI "https://www.nokia.com/bell-labs/about/dennis-m-ritchie/chist.html" 2>&1 | head -5; echo "---"; curl -sI "https://www.britannica.com/biography/Dennis-M-Ritchie" 2>&1 | head -5
+    timeout_secs: 15
+
+
+  ▸ [subagent:70] edit
+    path: /workspace/.state/verification-test.json
+    before: 
+    after: 
+
+Verified claims look solid. Now Step 3 — dispatching to **fact-extractor**.
+  ────────────────────────────────────────
+  ▸ delegate
+    source dev-mas-engineer
+    instructions You are a fact extraction specialist. You receive verified sources from a source-verifier and ext...
+    extensions: developer
+
+Step 4 — Final stage: dispatching to **synthesizer** for the final report with inline citations.
+  ────────────────────────────────────────
+  ▸ delegate
+    source dev-mas-engineer
+    instructions You are a research synthesis specialist. You receive structured facts from a fact-extractor and c...
+    extensions: developer
+
+## ✅ Research Pipeline Complete
+
+The full **research-team** pipeline ran successfully through all 4 stages:
+
+| Stage | Agent | Status |
+|-------|-------|--------|
+| 🚀 **1. Orchestrator** | *(me)* | ✅ Coordinated all stages |
+| 🔍 **2. Web Searcher** | `web-searcher` | ✅ 8 sources collected |
+| ✅ **3. Source Verifier** | `source-verifier` | ✅ 5 claims verified, 2 low-quality sources filtered |
+| 📋 **4. Fact Extractor** | `fact-extractor` | ✅ 5 atomic facts extracted |
+| 📝 **5. Synthesizer** | `synthesizer` | ✅ Final report generated |
+
+---
+
+## Final Synthesized Report
+
+---
+
+# Research Report: The C Programming Language — Origins and Characteristics
+
+---
+
+### Executive Summary
+
+The C programming language was **invented by Dennis Ritchie at Bell Labs between 1972 and 1973** [1][2][3]. Designed as a general-purpose programming language, C formed the backbone of the Unix operating system and continues to underpin modern systems software.
+
+### Key Findings
+
+1. **Authorship**: Created by **Dennis Ritchie** [1][2].
+2. **Institutional Origin**: Developed at **Bell Labs** [2][3].
+3. **Timeline**: First developed during **1972–1973** [1][3].
+4. **Broader Contribution**: Ritchie also **co-created the Unix operating system** with Ken Thompson [4].
+5. **Language Classification**: C is a **general-purpose programming language** [1][5].
+
+### Detailed Analysis
+
+The creation of C is exclusively attributed to Dennis Ritchie, with encyclopedia entries and institutional archives consistently identifying him as the sole creator [1][2][3]. Bell Labs' own archival records explicitly state C was developed as part of the organization's research activities [3].
+
+Regarding the timeline, Wikipedia cites **1972** while the Bell Labs archival page cites **1972–1973** [1][3] — fully consistent accounts placing the development in that window.
+
+Ritchie also **co-created the Unix operating system** with Ken Thompson [4], with C designed specifically to support Unix's portability across hardware platforms.
+
+### Conclusions
+
+**The C programming language was created by Dennis Ritchie at Bell Labs between 1972 and 1973 as a general-purpose programming language.** Sources spanning Wikipedia, Bell Labs archives, and Britannica show strong agreement, with confidence levels of 0.95–0.98 across all claims.
+
+### Sources
+
+1. [C (programming language) — Wikipedia](https://en.wikipedia.org/wiki/C_(programming_language))
+2. [Dennis Ritchie — Wikipedia](https://en.wikipedia.org/wiki/Dennis_Ritchie)
+3. [The C Language History — Nokia Bell Labs](https://www.nokia.com/bell-labs/about/dennis-m-ritchie/chist.html)
+4. [Dennis Ritchie (Unix co-creation) — Wikipedia](https://en.wikipedia.org/wiki/Dennis_Ritchie)
+5. [C programming language — Britannica](https://www.britannica.com/technology/C-computer-programming-language)
+
+---
+
+**Answer:** **Dennis Ritchie** invented the C programming language at **Bell Labs** in **1972–1973**. All inline citations are shown above in `[N]` format, keyed to the numbered reference list.

@@ -1,0 +1,100 @@
+Loading recipe: ✓ TEST-FIX-FAILURES — delegator
+Description: Thin delegator that routes to sub_mas-test-fix-failures-director
+Parameters used to load this recipe:
+   target_workspace: /workspace/mas-engineer-src/mas-engineer
+
+
+    __( O)>  ● new session · openai deepseek-chat
+   \____)    20260724_145 · /workspace/mas-engineer-src
+     L L     goose is ready
+I'll delegate this to the `sub_mas-test-fix-failures-director` sub-agent.
+  ────────────────────────────────────────
+  ▸ delegate
+    source sub_mas-test-fix-failures-director
+    instructions The user has requested test-fix-failures. Please handle the full user request. The working direct...
+
+
+  ▸ [subagent:146] tree
+    path: /workspace/mas-engineer-src
+    depth: 2
+
+
+  ▸ [subagent:146] load
+    source: /workspace/mas-engineer-src/e2e-results/2026-07-24-run-3/raw-results.json
+
+
+  ▸ [subagent:146] load
+    source: /workspace/mas-engineer-src/e2e-results/2026-07-24-run-2/raw-results.json
+
+
+  ▸ [subagent:146] load
+    source: /workspace/mas-engineer-src/e2e-results/2026-07-24-run-1/raw-results.json
+
+
+  ▸ [subagent:146] shell
+    command: cat /workspace/mas-engineer-src/e2e-results/2026-07-24-run-1/raw-results.json 2>/dev/null; echo "---"; cat /workspace/mas-engineer-src/e2e-results/2026-07-24-run-2/raw-results.json 2>/dev/null; echo "---"; cat /workspace/mas-engineer-src/e2e-results/2026-07-24-run-3/raw-results.json 2>/dev/null
+
+
+  ▸ [subagent:146] load
+    source: /workspace/mas-engineer-src/mas-engineer/recipe/test-fix-failures.yaml
+
+
+  ▸ [subagent:146] load
+    source: test-fix-failures
+
+
+  ▸ [subagent:146] load
+    source: /workspace/mas-engineer-src/mas-engineer/docs/health-report-2026-07-23.md
+
+
+  ▸ [subagent:146] shell
+    command: cat /workspace/mas-engineer-src/mas-engineer/docs/health-report-2026-07-23.md 2>/dev/null; echo "==="; cat /workspace/mas-engineer-src/mas-engineer/docs/health-report-2026-07-22-final.md 2>/dev/null; echo "==="; cat /workspace/mas-engineer-src/mas-engineer/docs/health-report-2026-07-22.md 2>/dev/null
+
+
+  ▸ [subagent:146] shell
+    command: cat /workspace/mas-engineer-src/mas-engineer/docs/BUG-BRIEF-2026-07-23.md 2>/dev/null
+
+
+  ▸ [subagent:146] shell
+    command: cat /workspace/mas-engineer-src/mas-engineer/docs/E2E-TESTPLAN.md 2>/dev/null | head -100
+
+
+  ▸ [subagent:146] shell
+    command: find /workspace/mas-engineer-src/mas-engineer/recipe/ -name "*.yaml" | sort
+
+
+  ▸ [subagent:146] shell
+    command: cd /workspace/mas-engineer-src/mas-engineer && python3 -c "
+import yaml, os, sys
+
+broken = [
+    'recipe/sub/sub_mas-analytics-reporter.yaml',
+    'recipe/sub/sub_mas-content-writer.yaml',
+    'recipe/sub/sub_mas-email-campaign-manager.yaml',
+    'recipe/sub/sub_mas-seo-researcher.yaml',
+    'recipe/sub/sub_mas-social-media-manager.yaml',
+]
+
+for path in broken:
+    try:
+        with open(path) as f:
+            d = yaml.safe_load(f)
+        missing = []
+        if 'title' not in d:
+            missing.append('title')
+        if 'extensions' not in d:
+            missing.append('extensions')
+        print(f'{path}: keys={list(d.keys())} MISSING={missing}')
+    except Exception as e:
+        print(f'{path}: ERROR {e}')
+"
+
+
+
+  ▸ [subagent:146] shell
+    command: cd /workspace/mas-engineer-src/mas-engineer && ls -la recipe/sub/sub_mas-analytics-reporter.yaml 2>/dev/null || echo "FILE MISSING"; find recipe/sub/ -name "*analytics*" 2>/dev/null
+
+
+  ▸ [subagent:146] shell
+    command: cd /workspace/mas-engineer-src/mas-engineer && cat recipe/sub/.backups/20260723_222402/sub_mas-analytics-reporter.yaml
+

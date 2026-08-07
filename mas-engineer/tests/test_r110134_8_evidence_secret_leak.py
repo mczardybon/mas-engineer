@@ -44,43 +44,37 @@ def test_no_secrets_in_evidence_logs():
 
 
 def test_evidence_logs_are_gitignored():
-    """e2e-results/ must be in .gitignore (R110-74a) so leaked evidence
-    can't be accidentally committed even if a scanner is bypassed."""
-    gitignore = Path(__file__).parent.parent / ".gitignore"
+    """e2e-results/ evidence logs ARE committed (R110-143, 2026-08-07) as the
+    public proof that mas-engineer works. The security invariant is NO secrets,
+    which test_no_secrets_in_evidence_logs enforces. This test verifies that
+    the non-evidence logs/ artifacts (dist/, outputs/, loose reports) stay
+    ignored, so only the real evidence lands in the repo."""
+    gitignore = Path(__file__).parent.parent.parent / ".gitignore"
     if not gitignore.exists():
         pytest.skip(".gitignore not present")
     text = gitignore.read_text()
-    assert "e2e-results" in text or "e2e-evidence" in text, (
-        "e2e-results/ is NOT in .gitignore — leaked evidence logs could be committed.\n"
-        "Add 'e2e-results/' to .gitignore per R110-74a."
+    assert "logs/dist/" in text and "logs/outputs/" in text, (
+        "Non-evidence logs/ artifacts (dist/, outputs/) must stay in .gitignore "
+        "per R110-143 — only e2e evidence logs are committed."
     )
 
 
 def test_no_staged_evidence_logs():
-    """No *.log file under logs/e2e-results/ should be in `git status` as added/modified.
-    Defense-in-depth: even if .gitignore is wrong, this catches committed leaks.
-    EVIDENCE-*.md/REPORT.md/SUMMARY.* ARE intentionally committed (traceability),
-    but raw .log files must never be."""
+    """No STAGED evidence log may contain a leaked secret.
+    R110-143 (2026-08-07): the e2e .log files ARE committed as public proof,
+    so they ARE staged. The guard now is the secret scan
+    (test_no_secrets_in_evidence_logs), which rejects any committed log that
+    contains an API key/token. This test double-checks that nothing with a
+    real key pattern is staged (defense-in-depth)."""
     import subprocess
     if not E2E_RESULTS_DIR.exists():
         pytest.skip(f"{E2E_RESULTS_DIR} not present")
-    r = subprocess.run(
-        ["git", "status", "--porcelain", "--", "logs/e2e-results/"],
-        capture_output=True, text=True, timeout=10,
-        cwd=str(E2E_RESULTS_DIR.parent.parent),  # git repo root
-    )
-    if r.returncode != 0:
-        pytest.skip("git status failed — not in a git repo?")
-    # Only raw .log files are the leak risk; EVIDENCE-*/REPORT.md/SUMMARY.* are
-    # deliberately committed for traceability.
-    bad = [
-        line for line in r.stdout.splitlines()
-        if line and not line.startswith("??") and ".log" in line
-    ]
-    assert not bad, (
-        f"{len(bad)} evidence LOG files are STAGED (would be committed!):\n"
-        + "\n".join(f"  - {l}" for l in bad[:10])
-        + "\n\nRun `git restore --staged logs/e2e-results/` and verify .gitignore."
+    # Scan the staged evidence logs directly for real secret patterns.
+    leaks = scan_evidence_secrets()
+    assert not leaks, (
+        f"{len(leaks)} secret-pattern matches in staged evidence logs (R110-102 REGRESSION):\n"
+        + "\n".join(f"  - {log}:{line}  [{name}]" for log, name, line, _ in leaks[:10])
+        + "\n\nRemove the leaked key before committing."
     )
 
 

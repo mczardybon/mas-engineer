@@ -1,0 +1,2528 @@
+
+    __( O)>  ● new session · openai deepseek-chat
+   \____)    20260724_65 · /workspace/mas-engineer-src
+     L L     goose is ready
+I'll build the complete "sales-team" Multi-Agent System. Let me start step by step.
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Sales Team MAS - Build Checklist
+
+## Step 1: Initialize project skeleton
+- [ ] Run dev_generic_init.py
+
+## Step 2: Create 5 agents
+- [ ] sales-orchestrator.yaml
+- [ ] lead-scraper.yaml
+- [ ] lead-verifier.yaml
+- [ ] outreach-drafter.yaml
+- [ ] deal-closer.yaml
+
+## Step 3: Create root sales-team.yaml
+- [ ] sales-team.yaml with sub_recipes
+
+## Step 4: Live tests
+- [ ] a) goose run sales-team.yaml --explain
+- [ ] b) goose run lead-scraper.yaml --explain
+- [ ] c) goose run lead-verifier.yaml --explain
+- [ ] d) goose run outreach-drafter.yaml --explain
+- [ ] e) goose run deal-closer.yaml --explain
+- [ ] f) Python YAML validation
+
+## Step 5: Report
+- [ ] File listing with line counts
+- [ ] PASS/FAIL per check
+- [ ] YAML errors
+
+## STEP 1 — Initialize the project skeleton
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 ~/.config/goose/recipes/tools/dev_generic_init.py --init /tmp/sales-team --components all 2>&1
+    timeout_secs: 30
+
+python3: can't open file '/root/.config/goose/recipes/tools/dev_generic_init.py': [Errno 2] No such file or directory
+
+Command exited with code 2Let me find the init script:
+  ────────────────────────────────────────
+  ▸ shell
+    command: find ~/.config/goose/recipes -name "dev_generic_init*" -o -name "*dev*init*" 2>/dev/null | head -20
+    timeout_secs: 10
+
+/root/.config/goose/recipes/mas-engineer-tools/dev_generic_init.py
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 ~/.config/goose/recipes/mas-engineer-tools/dev_generic_init.py --init /tmp/sales-team --components all 2>&1
+    timeout_secs: 30
+
+
+[0;34m[1m━━━ Initialisiere Projekt 'sales-team' ━━━[0m
+  Path: /tmp/sales-team
+  [0;32m✅[0m MAS-Installation found (5 IM-Agenten, 0 Tools)
+
+[0;34m[1m━━━ 1. Symlink ━━━[0m
+  [0;32m✅[0m Symlink: /tmp/sales-team/tools → /root/.config/goose/recipes/tools
+
+[0;34m[1m━━━ 2. Projekt-Configuration ━━━[0m
+  [0;32m✅[0m project.yaml (414 bytes)
+
+[0;34m[1m━━━ 3. Wissen ━━━[0m
+  [0;32m✅[0m 00-GUIDELINES.md (1769 bytes)
+  [0;32m✅[0m BP-CHECKLIST.md (Template, 3514 bytes)
+
+[0;34m[1m━━━ 4. Rule-System ━━━[0m
+  [0;32m✅[0m rules.yaml (Template)
+
+[0;34m[1m━━━ 5. Agent-Templates ━━━[0m
+  [1;33m⚠️[0m agent_template.yaml not found in /root/.config/goose/recipes/recipe/template/agent_template.yaml
+
+[0;34m[1m━━━ 6. Test scaffold ━━━[0m
+  [0;32m✅[0m tests/__init__.py
+  [0;32m✅[0m tests/test_agent_syntax.py
+
+[0;34m[1m━━━ 7. Workflow-Skelett ━━━[0m
+  [0;32m✅[0m workflows.yaml (3 empty Workflows)
+
+[0;34m[1m━━━ 8. Git-Infrastruktur ━━━[0m
+  [0;32m✅[0m .gitignore
+  [0;32m✅[0m .gitattributes
+  [0;32m✅[0m .goosehints
+  [0;32m✅[0m .mas/dashboards/ (data.json + history.json)
+  [0;32m✅[0m .mas-mode = sales-team
+
+[0;34m[1m━━━ 13. MAS-Components ━━━[0m
+  [0;32m✅[0m Rulen: 0/6 files copyrt
+  [0;32m✅[0m State: changes.json, guardian.yaml, schedule.yaml, audit.log, health, checkpoints/
+  [0;34mℹ️[0m Knowledge-Source not found — skipped
+  [0;34mℹ️[0m Constitution-template not found — skipped
+  [0;34mℹ️[0m Recovery-Templates not found — skipped
+  [0;32m✅[0m Monitoring: health-report.json + health-history.json
+
+[0;34m[1m━━━ FINISHED ━━━[0m
+  [0;32m✅[0m Projekt 'sales-team' initialized (/tmp/sales-team)
+  [0;32m✅[0m 0 Agenten copyrt — Symlink + Guidelines statt copy
+  [0;32m✅[0m tools/ → Symlink to MAS installation
+  [0;34mℹ️[0m Analyse: remote via sub_mas-im-pipeline
+  [0;34mℹ️[0m Distribution: dev_build.sh --project → standalone ZIP
+  [0;34mℹ️[0m Dashboard: .mas/dashboards/ mit data.json for MCP App
+  [0;34mℹ️[0m .mas-mode:  mode file with project name
+  [0;34mℹ️[0m Setup:  goose run --recipe setup-dashboard.yaml (1x after Init)
+
+  [0;34mℹ️[0m Next Steps:
+  [0;34mℹ️[0m   1. Create Agenten mit dev_template_generator.py --create
+  [0;34mℹ️[0m   2. Optimiere mit sub_mas-im-pipeline (task=FULL_IMPROVEMENT)
+  [0;34mℹ️[0m   3. Distribuiere mit dev_build.sh --project
+  [0;34mℹ️[0m   4. Dashboard: goose session --with-extension 'node .mas/mcp/server.js'
+  [0;34mℹ️[0m   5. Install components: --components rules,state,knowledge,constitution,recovery,monitoring
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Sales Team MAS - Build Checklist
+
+## Step 1: Initialize project skeleton
+- [x] Run dev_generic_init.py
+
+## Step 2: Create 5 agents
+- [ ] sales-orchestrator.yaml
+- [ ] lead-scraper.yaml
+- [ ] lead-verifier.yaml
+- [ ] outreach-drafter.yaml
+- [ ] deal-closer.yaml
+
+## Step 3: Create root sales-team.yaml
+- [ ] sales-team.yaml with sub_recipes
+
+## Step 4: Live tests
+- [ ] a) goose run sales-team.yaml --explain
+- [ ] b) goose run lead-scraper.yaml --explain
+- [ ] c) goose run lead-verifier.yaml --explain
+- [ ] d) goose run outreach-drafter.yaml --explain
+- [ ] e) goose run deal-closer.yaml --explain
+- [ ] f) Python YAML validation
+
+## Step 5: Report
+- [ ] File listing with line counts
+- [ ] PASS/FAIL per check
+- [ ] YAML errors
+
+Let me check the project structure and the sub directory:
+  ────────────────────────────────────────
+  ▸ tree
+    path: /tmp/sales-team
+    depth: 3
+
+tests/  [16]
+  __init__.py  [1]
+  test_agent_syntax.py  [15]
+00-GUIDELINES.md  [59]
+BP-CHECKLIST.md  [126]
+project.yaml  [13]
+workflows.yaml  [12]
+Good. The init script created the skeleton but there's no `recipe/` or `recipe/sub/` dir yet. Let me check the `rules.yaml` and `project.yaml`:
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls -la /tmp/sales-team/ && echo "---" && ls -la /tmp/sales-team/.mas/ 2>/dev/null && echo "---" && cat /tmp/sales-team/project.yaml
+    timeout_secs: 10
+
+total 88
+drwxr-xr-x 5 root root  4096 Jul 24 09:00 .
+drwxrwxrwt 1 root root 36864 Jul 24 09:00 ..
+-rw-r--r-- 1 root root    90 Jul 24 09:00 .gitattributes
+-rw-r--r-- 1 root root   100 Jul 24 09:00 .gitignore
+-rw-r--r-- 1 root root   544 Jul 24 09:00 .goosehints
+drwxr-xr-x 3 root root  4096 Jul 24 09:00 .mas
+-rw-r--r-- 1 root root    10 Jul 24 09:00 .mas-mode
+drwxr-xr-x 4 root root  4096 Jul 24 09:00 .state
+-rw-r--r-- 1 root root  1800 Jul 24 09:00 00-GUIDELINES.md
+-rw-r--r-- 1 root root  3514 Jul 19 16:18 BP-CHECKLIST.md
+-rw-r--r-- 1 root root   414 Jul 24 09:00 project.yaml
+drwxr-xr-x 2 root root  4096 Jul 24 09:00 tests
+lrwxrwxrwx 1 root root    33 Jul 24 09:00 tools -> /root/.config/goose/recipes/tools
+-rw-r--r-- 1 root root   234 Jul 24 09:00 workflows.yaml
+---
+total 12
+drwxr-xr-x 3 root root 4096 Jul 24 09:00 .
+drwxr-xr-x 5 root root 4096 Jul 24 09:00 ..
+drwxr-xr-x 2 root root 4096 Jul 24 09:00 dashboards
+---
+name: sales-team
+version: 1.0.0
+type: generic-project
+created_with: dev_generic_init.py v1.0.0
+mas_dependency:
+  type: symlink
+  tools_source: /root/.config/goose/recipes/tools
+  analysis: remote (im-* Agenten aus MAS-Installation)
+structure:
+  tools: symlink (no copy)
+  agents: selbst creates (dev_template_generator.py --create)
+  rules: .state/rules/rules.yaml
+  templates: recipe/template/agent_template.yamlNow I need to create the `recipe/` and `recipe/sub/` directories and all 5 agent files. Let me create them all:
+
+## STEP 2 — Create all 5 agents + root recipe
+  ────────────────────────────────────────
+  ▸ shell
+    command: mkdir -p /tmp/sales-team/recipe/sub
+    timeout_secs: 5
+
+(no output)Now let me check the goose recipe format - what fields are valid:
+  ────────────────────────────────────────
+  ▸ load_skill
+    name: goose-doc-guide
+    args: I need to create goose recipe YAML files. What is the correct format for recipes with sub_recipes? I need fields like name, description, instructions, tools, and sub_recipes. Show me the YAML schema.
+
+Let me fetch the official docs for recipe format:
+  ────────────────────────────────────────
+  ▸ shell
+    command: curl -sSL https://goose-docs.ai/goose-docs-map.md 2>/dev/null | grep -i -E "recipe|agent|yaml|schema" | head -30
+    timeout_secs: 15
+
+    * Option 2: Configure goose as a Custom Agent
+  * Cursor Agent
+  * Cursor Agent
+  * Cursor Agent Configuration
+* Recipe Command Configuration
+### [Custom Agents](docs/guides/context-engineering/custom-agents.md)
+* Create an Agent File
+* Use an Agent
+  * List available agents
+  * Delegate work to an agent
+  * Load an agent's instructions into the current conversation
+* Example Agents
+* When to Use Agents, Skills, or Recipes
+  * Can custom agents be scheduled to run?
+  * Do custom agents have workflows?
+  * Can custom agents use skills?
+  * Can custom agents run recipes?
+  * Can custom agents use MCP servers?
+  * Can custom agents call subagents?
+  * Can one custom agent call another custom agent?
+### [Subagents](docs/guides/context-engineering/subagents.md)
+* How to Use Subagents
+* Monitoring Subagent Activity
+* Internal Subagents
+  * Recipes
+* External Subagents
+### [Agent Skills](docs/guides/context-engineering/using-skills.md)
+* Recipe Configuration
+    * recipe
+### [Recipes](docs/guides/recipes/index.md)
+  ────────────────────────────────────────
+  ▸ shell
+    command: curl -sSL https://goose-docs.ai/goose-docs-map.md 2>/dev/null | grep -E "recipes" | head -20
+    timeout_secs: 15
+
+  * Can custom agents run recipes?
+### [Recipes](docs/guides/recipes/index.md)
+### [Recipe Reference Guide](docs/guides/recipes/recipe-reference.md)
+  * Subrecipes
+### [Reusable Recipes](docs/guides/recipes/session-recipes.md)
+### [Saving Recipes](docs/guides/recipes/storing-recipes.md)
+### [Subrecipes For Specialized Tasks](docs/guides/recipes/subrecipes.md)
+* How Subrecipes Work
+  ────────────────────────────────────────
+  ▸ shell
+    command: curl -sSL https://goose-docs.ai/docs/guides/recipes/recipe-reference.md 2>/dev/null > /tmp/recipe_ref.md && cat /tmp/recipe_ref.md
+    timeout_secs: 15
+
+Recipes are reusable goose configurations that package up instructions and settings so the setup can be easily shared and launched by others.
+
+## Recipe File Format
+
+Recipes can be defined in:
+- `.yaml` (recommended) and `.yml` files
+- `.json` files
+
+:::info
+`.yml` files aren't supported by goose CLI.
+:::
+
+See [Reusable Recipes](/docs/guides/recipes/session-recipes) to learn how to create, use, and manage recipes.
+
+## Recipe Location
+
+Recipes can be loaded from:
+
+1. Local filesystem:
+   - Current directory
+   - Directories specified in [`GOOSE_RECIPE_PATH`](/docs/guides/environment-variables#recipe-configuration) environment variable
+   
+2. GitHub repositories:
+   - Configure using [`GOOSE_RECIPE_GITHUB_REPO`](/docs/guides/environment-variables#recipe-configuration) configuration key
+   - Requires GitHub CLI (`gh`) to be installed and authenticated
+
+## Core Recipe Schema
+
+Recipes follow this schema structure:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `description` | String | ✅ | A detailed description of what the recipe does |
+| `instructions` | String | ✅*  | Template instructions that can include parameter substitutions |
+| `prompt` | String| ✅*   | A template prompt that can include parameter substitutions. Required in [headless](/docs/tutorials/headless-goose) (non-interactive) mode. |
+| `title` | String | ✅ | A short title describing the recipe |
+| [`activities`](#activities) | Array | - | List of example prompts that can include parameter substitutions. Activities appear as clickable bubbles in goose Desktop. |
+| [`extensions`](#extensions) | Array | - | List of extension configurations |
+| [`parameters`](#parameters) | Array | - | List of parameter definitions for dynamic recipes |
+| [`response`](#response) | Object | - | Structured output schema for automation workflows |
+| [`retry`](#retry) | Object | - | Configuration for automated retry logic with success validation |
+| [`settings`](#settings) | Object | - | Configuration for model provider, model name, and other settings |
+| [`sub_recipes`](#subrecipes) | Array | - | List of subrecipes |
+| `version` | String | - | The recipe format version, defaults to "1.0.0" if omitted |
+
+*At least one of `instructions` or `prompt` must be provided.
+
+## Field Specifications
+
+### Activities
+
+The `activities` field defines an optional message and clickable activity bubbles (buttons) that appears when a recipe is opened in goose Desktop.
+
+:::info Desktop only
+Activities are a Desktop-only feature. When recipes with activities are run via the CLI or as a scheduled job, the `activities` field is ignored and has no effect on recipe execution.
+:::
+
+#### Activity Types
+
+Activities can be defined in two ways:
+
+1. **Message Activity**: Displays the markdown-formatted activity text in an info box above the activity bubbles. For example:
+   
+   ```
+   activities:
+     - "message: **Welcome!** Here's what I can help with:\n\n• 📊 Data analysis\n• 🔍 Code review\n• 📝 Documentation\n\nSelect an option below to begin."
+   ```
+   
+   Only include one `message:` prefixed activity. Additional `message:` prefixed activities become regular clickable bubbles (and display the literal "message:" text).
+
+2. **Button Activities**: Text to display in activity bubbles, which send the activity text as a prompt when clicked
+
+#### Parameter Substitution
+
+Activities support [parameter substitution](#parameters), allowing you to create dynamic, personalized activity bubbles. After users provide parameter values in the **Recipe Parameters** dialog, the values are substituted into the activity text before the bubbles are displayed.
+
+#### Example Configuration
+
+<Tabs groupId="format">
+  <TabItem value="yaml" label="YAML" default>
+    ```yaml
+    version: "1.0.0"
+    title: "Code Review Assistant"
+    description: "Review code with customizable focus areas"
+    parameters:
+      - key: language
+        input_type: string
+        requirement: required
+        description: "Programming language to review"
+      - key: focus
+        input_type: string
+        requirement: optional
+        default: "best practices"
+        description: "Review focus area"
+
+    activities:
+      - "message: Click an option below to start reviewing {{ language }} code with a focus on {{ focus }}."
+      - "Review the current file for {{ focus }}"
+      - "Suggest improvements for {{ language }} code quality"
+      - "Check for security vulnerabilities"
+      - "Generate unit tests"
+    ```
+  </TabItem>
+  <TabItem value="json" label="JSON">
+    ```json
+    {
+      "version": "1.0.0",
+      "title": "Code Review Assistant",
+      "description": "Review code with customizable focus areas",
+      "parameters": [
+        {
+          "key": "language",
+          "input_type": "string",
+          "requirement": "required",
+          "description": "Programming language to review"
+        },
+        {
+          "key": "focus",
+          "input_type": "string",
+          "requirement": "optional",
+          "default": "best practices",
+          "description": "Review focus area"
+        }
+      ],
+      "activities": [
+        "message: Click an option below to start reviewing {{ language }} code with a focus on {{ focus }}.",
+        "Review the current file for {{ focus }}",
+        "Suggest improvements for {{ language }} code quality",
+        "Check for security vulnerabilities",
+        "Generate unit tests"
+      ]
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+In this example:
+- The message activity displays instructions with substituted parameter values, for example: "Click an option below to start reviewing rust code with a focus on best practices."
+- The first two activity bubbles use parameter substitution, for example: "Review the current file for best practices"
+- The last two activity bubbles are static prompts that work regardless of parameters
+
+### Extensions
+
+The `extensions` field allows you to specify which Model Context Protocol (MCP) servers and other extensions the recipe needs to function. Each extension in the `extensions` array has the following schema:
+
+#### Extension Schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | String | Type of extension (e.g., "stdio") |
+| `name` | String | Unique name for the extension |
+| `cmd` | String | Command to run the extension |
+| `args` | Array | List of arguments for the command |
+| `env_keys` | Array | (Optional) Names of environment variables required by the extension |
+| `timeout` | Number | Timeout in seconds |
+| `bundled` | Boolean | (Optional) Whether the extension is bundled with goose |
+| `description` | String | Description of what the extension does |
+| `available_tools` | Array | List of tool names within the extension that will be available. When not specified all will be available |
+
+#### Extension Types
+
+- **`stdio`**: Standard I/O client with command and arguments
+- **`builtin`**: Built-in extension that is part of the bundled goose MCP server
+- **`platform`**: Platform extensions that run in the agent process
+- **`streamable_http`**: Streamable HTTP client with URI endpoint
+- **`frontend`**: Frontend-provided tools called through the frontend
+- **`inline_python`**: Inline Python code executed using uvx. Requires `code` field; optional `dependencies` for packages.
+
+:::note Summon Extension and Subagents
+The `delegate` and `load` tools are provided by the `summon` platform extension. When a recipe specifies an explicit `extensions` block, only the listed extensions are available — default platform extensions like `summon` are not automatically included. If your recipe needs subagent delegation, add `summon` to your extensions list:
+
+```yaml
+extensions:
+  - type: platform
+    name: summon
+```
+
+Recipes that define [`sub_recipes`](/docs/guides/recipes/subrecipes) have `summon` auto-injected and do not need to list it explicitly.
+:::
+
+#### Example Extensions Configuration
+
+<Tabs groupId="format">
+  <TabItem value="yaml" label="YAML" default>
+
+```yaml
+extensions:
+  - type: stdio
+    name: codesearch
+    cmd: uvx
+    args:
+      - mcp_codesearch@latest
+    timeout: 300
+    bundled: true
+    description: "Query https://codesearch.sqprod.co/ directly from goose"
+  
+  - type: stdio
+    name: presidio
+    timeout: 300
+    cmd: uvx
+    args:
+      - 'mcp_presidio@latest'
+    available_tools:
+      - query_logs
+
+  - type: stdio
+    name: github-mcp
+    cmd: github-mcp-server
+    args: []
+    env_keys:
+      - GITHUB_PERSONAL_ACCESS_TOKEN
+    timeout: 60
+    description: "GitHub MCP extension for repository operations"
+    
+  - type: inline_python
+    name: data_processor
+    code: |
+      import pandas as pd
+      print("Processing data...")
+    dependencies:
+      - pandas
+      - numpy
+    timeout: 120
+    description: "Process data using pandas"
+```
+
+  </TabItem>
+  <TabItem value="json" label="JSON">
+
+```json
+{
+  "extensions": [
+    {
+      "type": "stdio",
+      "name": "codesearch",
+      "cmd": "uvx",
+      "args": ["mcp_codesearch@latest"],
+      "timeout": 300,
+      "bundled": true,
+      "description": "Query https://codesearch.sqprod.co/ directly from goose"
+    },
+    {
+      "type": "stdio",
+      "name": "presidio",
+      "timeout": 300,
+      "cmd": "uvx",
+      "args": ["mcp_presidio@latest"],
+      "available_tools": ["query_logs"]
+    },
+    {
+      "type": "stdio",
+      "name": "github-mcp",
+      "cmd": "github-mcp-server",
+      "args": [],
+      "env_keys": ["GITHUB_PERSONAL_ACCESS_TOKEN"],
+      "timeout": 60,
+      "description": "GitHub MCP extension for repository operations"
+    },
+    {
+      "type": "inline_python",
+      "name": "data_processor",
+      "code": "import pandas as pd\nprint(\"Processing data...\")",
+      "dependencies": ["pandas", "numpy"],
+      "timeout": 120,
+      "description": "Process data using pandas"
+    }
+  ]
+}
+```
+
+  </TabItem>
+</Tabs>
+
+#### Extension Secrets
+
+This feature is only available through the CLI.
+
+If a recipe uses an extension that requires a secret, goose can prompt users to provide the secret when running the recipe:
+
+1. When a recipe is loaded, goose scans all extensions (including those in subrecipes) for `env_keys` fields
+2. If any required environment variables are missing from the secure keyring, goose prompts the user to enter them
+3. Values are stored securely in the system keyring and reused for subsequent runs
+
+To update a stored secret, remove it from the system keyring and run the recipe again to be re-prompted.
+
+:::info
+This feature is designed to prompt for and securely store secrets (such as API keys), but `env_keys` can include any environment variable needed by the extension (such as API endpoints, configuration values, etc.).
+
+Users can press `ESC` to skip entering a variable if it's optional for the extension. 
+:::
+
+### Parameters
+
+The `parameters` field allows you to create dynamic, reusable recipes that can be customized for different contexts. Parameters define placeholders that users fill in when running the recipe, making the recipe more flexible and adaptable.
+
+Parameter substitution uses Jinja-style template syntax with `{{ parameter_name }}` placeholders. Each parameter in the `parameters` array has the following schema:
+
+#### Parameter Schema
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `key` | String | ✅ | Unique identifier for the parameter |
+| `input_type` | String | ✅ | Type of input: `"string"` (default), `"number"`, `"boolean"`, `"date"`, `"file"`, or `"select"` |
+| `requirement` | String | ✅ | One of: "required", "optional", or "user_prompt" |
+| `description` | String | ✅ | Human-readable description of the parameter |
+| `default` | String | - | Default value for optional parameters |
+| `options` | Array | - | List of available choices (required for `select` input type) |
+
+#### Parameter Requirements
+
+- `required`: Parameter must be provided when using the recipe
+- `optional`: Can be omitted if a default value is specified
+- `user_prompt`: Will interactively prompt the user for input if not provided
+
+The `required` and `optional` parameters work best for recipes opened in goose Desktop. If a value isn't provided for a `user_prompt` parameter, the parameter won't be substituted and may appear as literal `{{ parameter_name }}` text in the recipe output.
+
+#### Input Types
+
+- `string`: Default type. The parameter value is used as-is in template substitution
+- `number`: Numeric values. Desktop UI provides number input validation
+- `boolean`: True/false values. Desktop UI shows dropdown with "True"/"False" options
+- `date`: Date values. Currently renders as text input
+- `file`: The parameter value should be a file path. goose reads the file contents and substitutes the actual content (not the path) into the template
+- `select`: Dropdown selection with predefined options. Requires `options` field
+
+**Example:**
+```yaml
+parameters:
+  - key: max_files
+    input_type: number
+    requirement: optional
+    default: "10"
+    description: "Maximum files to process"
+  
+  - key: output_format
+    input_type: select
+    requirement: required
+    description: "Choose output format"
+    options:
+      - json
+      - markdown
+      - csv
+  
+  - key: enable_debug
+    input_type: boolean
+    requirement: optional
+    default: "false"
+    description: "Enable debug mode"
+  
+  - key: source_code
+    input_type: file
+    requirement: required
+    description: "Path to the source code file to analyze"
+
+prompt: "Process {{ max_files }} files in {{ output_format }} format. Debug: {{ enable_debug }}. Code:\n\n{{ source_code }}"
+```
+
+:::important
+- Optional parameters MUST have a default value specified
+- Required parameters cannot have default values
+- File parameters cannot have default values regardless of requirement type to prevent unintended importing of sensitive files
+- Select parameters MUST have an `options` field with available choices
+- Parameter keys must match any template variables used in instructions, prompt, or activities
+:::
+
+#### Parameter Substitution in Desktop
+
+When a recipe with parameters is opened in goose Desktop, users are presented with a **Recipe Parameters** dialog where they can:
+- Provide values for required parameters
+- Modify or accept default values for optional parameters  
+- Enter values for `user_prompt` parameters
+
+Once parameter values are submitted, they are substituted into the recipe's `instructions`, `prompt`, and `activities` fields before the recipe starts.
+
+### Response
+
+The `response` field enables recipes to enforce a final structured JSON output. When you specify a `json_schema`, goose will:
+
+1. **Validate the output**: Validates the output JSON against your JSON schema with basic JSON schema validations
+2. **Final structured output**: Ensure the final output of the agent is a response matching your JSON structure
+
+This feature is designed for **non-interactive automation** to ensure consistent, parseable output. Recipes can produce structured output when run from either the goose CLI or goose Desktop. See [use cases and ideas for automation workflows](/docs/guides/recipes/session-recipes#structured-output-for-automation).
+
+#### Response Schema
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `json_schema` | Object | ✅ | [JSON schema](https://json-schema.org/) for output validation |
+
+#### Basic Structure
+
+```yaml
+response:
+  json_schema:
+    type: object
+    properties:
+      # Define your fields here, with their type and description
+    required:
+      # List required field names
+```
+
+#### Simple Example
+
+```yaml
+version: "1.0.0"
+title: "Task Summary"
+description: "Summarize completed tasks"
+prompt: "Summarize the tasks you completed"
+response:
+  json_schema:
+    type: object
+    properties:
+      summary:
+        type: string
+        description: "Brief summary of work done"
+      tasks_completed:
+        type: number
+        description: "Number of tasks finished"
+      next_steps:
+        type: array
+        items:
+          type: string
+        description: "Recommended next actions"
+    required:
+      - summary
+      - tasks_completed
+```
+
+### Retry
+
+The `retry` field enables recipes to automatically retry execution if success criteria are not met. This is useful for recipes that might need multiple attempts to achieve their goal, or for implementing automated validation and recovery workflows.
+
+#### Retry Schema
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `max_retries` | Number | ✅ | Maximum number of retry attempts |
+| `checks` | Array | ✅ | List of success check configurations |
+| `timeout_seconds` | Number | - | Timeout for success check commands (default: 300 seconds) |
+| `on_failure_timeout_seconds` | Number | - | Timeout for on_failure commands (default: 600 seconds) |
+| `on_failure` | String | - | Shell command to run when a retry attempt fails |
+
+#### Success Check Configuration
+
+Each success check in the `checks` array has the following schema:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `type` | String | ✅ | Type of check - currently only "shell" is supported |
+| `command` | String | ✅ | Shell command to execute for validation (must exit with code 0 for success) |
+
+#### How Retry Logic Works
+
+1. **Recipe Execution**: The recipe runs normally with the provided instructions
+2. **Success Validation**: After completion, all success checks are executed in order
+3. **Retry Decision**: If any success check fails and retry attempts remain:
+   - Execute the on_failure command (if configured)
+   - Reset the agent's message history to initial state
+   - Increment retry counter and restart execution
+4. **Completion**: Process stops when either:
+   - All success checks pass (success)
+   - Maximum retry attempts are reached (failure)
+
+#### Basic Retry Example
+
+```yaml
+version: "1.0.0"
+title: "Counter Increment Task"
+description: "Increment a counter until it reaches target value"
+prompt: "Increment the counter value in /tmp/counter.txt by 1."
+
+retry:
+  max_retries: 5
+  timeout_seconds: 10
+  checks:
+    - type: shell
+      command: "test $(cat /tmp/counter.txt 2>/dev/null || echo 0) -ge 3"
+  on_failure: "echo 'Counter is at:' $(cat /tmp/counter.txt 2>/dev/null || echo 0) '(need 3 to succeed)'"
+```
+
+#### Advanced Retry Example
+
+```yaml
+version: "1.0.0"
+title: "Service Health Check"
+description: "Start service and verify it's running properly"
+prompt: "Start the web service and verify it responds to health checks"
+
+retry:
+  max_retries: 3
+  timeout_seconds: 30
+  on_failure_timeout_seconds: 60
+  checks:
+    - type: shell
+      command: "curl -f http://localhost:8080/health"
+    - type: shell  
+      command: "pgrep -f 'web-service' > /dev/null"
+  on_failure: "systemctl stop web-service || killall web-service"
+```
+
+#### Environment Variables
+
+You can configure retry behavior globally using environment variables:
+
+- `GOOSE_RECIPE_RETRY_TIMEOUT_SECONDS`: Global timeout for success check commands
+- `GOOSE_RECIPE_ON_FAILURE_TIMEOUT_SECONDS`: Global timeout for on_failure commands
+
+These environment variables are overridden by recipe-specific timeout configurations.
+
+### Settings
+
+The `settings` field allows you to configure the AI model and provider settings for the recipe. This overrides the default configuration when the recipe is executed.
+
+#### Settings Schema
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `goose_provider` | String | - | The AI provider to use (e.g., "anthropic", "openai") |
+| `goose_model` | String | - | The specific model name to use |
+| `temperature` | Number | - | The temperature setting for the model (typically 0.0-1.0) |
+| `max_turns` | Number | - | Maximum number of turns for subagent tasks created by this recipe |
+
+#### Understanding max_turns
+
+The `max_turns` setting controls how many iterations an agent can perform before stopping. When set in a recipe's settings, it applies to that recipe's execution and any subagents or subrecipes it creates (unless they specify their own value).
+
+**Configuration precedence (highest to lowest):**
+1. Subagent tool call override
+2. Recipe `settings.max_turns`
+3. `GOOSE_SUBAGENT_MAX_TURNS` environment variable
+4. Default value (1000 for main recipes, 25 for subagents)
+
+**Common use cases:** Limit execution time for automated workflows, prevent runaway subagents, control resource usage in scheduled jobs.
+
+#### Example Settings Configuration
+
+```yaml
+settings:
+  goose_provider: "anthropic"
+  goose_model: "claude-sonnet-4-20250514"
+  temperature: 0.7
+  max_turns: 50
+```
+
+```yaml
+settings:
+  goose_provider: "openai"
+  goose_model: "gpt-4o"
+  temperature: 0.3
+```
+
+:::note
+Settings specified in a recipe will override your default goose configuration when that recipe is executed. If no settings are specified, goose will use your configured defaults.
+:::
+
+### Subrecipes
+
+The `sub_recipes` field specifies the [subrecipes](/docs/guides/recipes/subrecipes) that the main recipe calls to perform specific tasks. Each subrecipe in the `sub_recipes` array has the following schema:
+
+#### Subrecipe Schema
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | String | ✅ | Unique identifier for the subrecipe |
+| `path` | String | ✅ | Relative or absolute path to the subrecipe file |
+| `values` | Object | - | Pre-configured parameter values that are passed to the subrecipe |
+| `sequential_when_repeated` | Boolean | - | Forces sequential execution of multiple subrecipe instances. See [Running Subrecipes In Parallel](/docs/tutorials/subrecipes-in-parallel) for details |
+| `description` | String | - | Optional description of the subrecipe |
+
+#### Example Subrecipe Configuration
+
+```yaml
+sub_recipes:
+  - name: "security_scan"
+    path: "./subrecipes/security-analysis.yaml"
+    values:  # in key-value format: {parameter_name}: {parameter_value}
+      scan_level: "comprehensive"
+      include_dependencies: "true"
+  
+  - name: "quality_check"
+    path: "./subrecipes/quality-analysis.yaml"
+    description: "Performs code quality analysis"
+```
+
+## Desktop Metadata Fields
+
+Recipes saved from goose Desktop include additional metadata fields. These fields are used by the Desktop app for organization and management but are ignored by CLI operations. 
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `recipe` | Object | ✅ |  Contains all recipe fields (`title`, `description`, `instructions`, etc.) |
+| `name` | String | ✅ |  Display name used in Recipe Library |
+| `isGlobal` | Boolean | ✅ |  Whether the recipe is available globally or locally to a project |
+| `lastModified` | String | ✅ |  ISO timestamp of when the recipe was last modified |
+| `isArchived` | Boolean | ✅ |  Whether the recipe is archived in the Desktop interface |
+
+<details>
+<summary>CLI and Desktop Format Examples</summary>
+
+**CLI Format**
+
+<Tabs groupId="format">
+  <TabItem value="yaml" label="YAML" default>
+
+```yaml
+version: "1.0.0"
+title: "Code Review Assistant"
+description: "Automated code review with best practices"
+instructions: "You are a code reviewer..."
+prompt: "Review the code in this repository"
+extensions: []
+```
+
+  </TabItem>
+  <TabItem value="json" label="JSON">
+
+```json
+{
+  "version": "1.0.0",
+  "title": "Code Review Assistant",
+  "description": "Automated code review with best practices",
+  "instructions": "You are a code reviewer...",
+  "prompt": "Review the code in this repository",
+  "extensions": []
+}
+```
+
+  </TabItem>
+</Tabs>
+
+**Desktop Format**
+
+<Tabs groupId="format">
+  <TabItem value="yaml" label="YAML" default>
+
+```yaml
+name: "Code Review Assistant"
+recipe:
+  version: "1.0.0"
+  title: "Code Review Assistant"
+  description: "Automated code review with best practices"
+  instructions: "You are a code reviewer..."
+  prompt: "Review the code in this repository"
+  extensions: []
+isGlobal: true
+lastModified: 2025-07-02T03:46:46.778Z
+isArchived: false
+```
+
+  </TabItem>
+  <TabItem value="json" label="JSON">
+
+```json
+{
+  "name": "Code Review Assistant",
+  "recipe": {
+    "version": "1.0.0",
+    "title": "Code Review Assistant",
+    "description": "Automated code review with best practices",
+    "instructions": "You are a code reviewer...",
+    "prompt": "Review the code in this repository",
+    "extensions": []
+  },
+  "isGlobal": true,
+  "lastModified": "2025-07-02T03:46:46.778Z",
+  "isArchived": false
+}
+```
+
+  </TabItem>
+</Tabs>
+
+</details>
+
+## Template Support
+
+Recipes support Jinja-style template syntax in `instructions`, `prompt`, and `activities` fields for parameter substitution:
+
+```yaml
+instructions: "Follow these steps with {{ parameter_name }}"
+prompt: "Your task is to {{ action }}"
+activities:
+  - "Process {{ parameter_name }} with {{ action }}"
+```
+
+Advanced template features include:
+- [Escaping template variables](#escaping-template-variables) for literal output
+- [Template inheritance](#template-inheritance) using `{% extends "parent.yaml" %}`
+- Blocks that can be defined and overridden:
+  ```yaml
+  {% block content %}
+  Default content
+  {% endblock %}
+  ```
+- [`indent()` template filter](#indent-filter-for-multi-line-values)
+
+### Escaping Template Variables
+
+To include literal template syntax (like `{{ variable }}`) in your recipe without parameter substitution, wrap it in single quotes:
+
+```yaml
+prompt: |
+  This will be substituted: {{ actual_parameter }}
+  This will appear literally: {{'{{example_variable}}'}}
+```
+
+**Example:** Generate a configuration file template
+
+```yaml
+version: "1.0.0"
+title: "Generate Config Template"
+description: "Generate a template with placeholder values"
+parameters:
+  - key: app_name
+    input_type: string
+    requirement: required
+    description: "Application name"
+
+prompt: |
+  Create a config.yaml file for {{ app_name }} with these placeholder variables:
+  - {{'{{API_KEY}}'}} for the API key
+  - {{'{{DATABASE_URL}}'}} for the database connection
+  - {{'{{PORT}}'}} for the server port
+```
+
+### Template Inheritance
+
+Use `{% extends "parent.yaml" %}` for template inheritance:
+
+**Parent recipe (`parent.yaml`):**
+```yaml
+version: "1.0.0"
+title: "Parent Recipe"
+description: "Base recipe template"
+prompt: |
+  {% block prompt %}
+  Default prompt text
+  {% endblock %}
+```
+
+**Child recipe:**
+```yaml
+{% extends "parent.yaml" %}
+{% block prompt %}
+Modified prompt text
+{% endblock %}
+```
+
+### indent() Filter For Multi-Line Values
+
+Use the `indent()` filter to ensure multi-line parameter values are properly indented and can be resolved as valid JSON or YAML format. This example uses `{{ raw_data | indent(2) }}` to specify an indentation of two spaces when passing data to a subrecipe:
+
+```yaml
+sub_recipes:
+  - name: "analyze"
+    path: "./analyze.yaml"
+    values:
+      content: |
+        {{ raw_data | indent(2) }}
+```
+
+### Built-in Parameters
+
+Built-in template parameters are automatically supported and don't need to be defined in the `parameters` array.
+
+| Parameter | Description |
+|-----------|-------------|
+| `recipe_dir` | Automatically set to the directory containing the recipe file. Use it to reference companion files, for example: `{{ recipe_dir }}/style-guide.md` |
+
+## Validation Rules
+
+Validation rules from [`validate_recipe.rs`](https://github.com/aaif-goose/goose/blob/main/crates/goose/src/recipe/validate_recipe.rs) are enforced when loading recipes and used by the [`goose recipe validate`](/docs/guides/goose-cli-commands#recipe) subcommand:
+
+### Recipe-Level Validation
+
+- `validate_prompt_or_instructions` - At least one of `instructions` or `prompt` must be present
+- `validate_json_schema` - JSON response schema must be valid if `response.json_schema` is specified
+
+### Parameter Validation
+
+- `validate_parameters_in_template` - All template variables must have corresponding parameter definitions, and all defined parameters must be used (no unused parameters)
+- `validate_optional_parameters` - Optional parameters must have default values
+- `validate_optional_parameters` - File parameters cannot have default values to prevent importing sensitive files
+
+:::info
+Basic field requirements (required fields, types, character limits) are documented in the [Core Recipe Schema](#core-recipe-schema) table.
+:::
+
+## Complete Recipe Example
+
+<Tabs groupId="format">
+  <TabItem value="yaml" label="YAML" default>
+
+```yaml
+version: "1.0.0"
+title: "Example Recipe"
+description: "A sample recipe demonstrating the format"
+instructions: "Process {{ file_count }} files using {{ required_param }} and output in {{ output_format }} format. Configuration: {{ config_file }}"
+prompt: "Start processing with the provided parameters"
+parameters:
+  - key: required_param
+    input_type: string
+    requirement: required
+    description: "A required text parameter"
+  
+  - key: file_count
+    input_type: number
+    requirement: optional
+    default: 10
+    description: "Maximum number of files to process"
+  
+  - key: output_format
+    input_type: select
+    requirement: required
+    description: "Choose the output format"
+    options:
+      - json
+      - markdown
+      - csv
+  
+  - key: config_file
+    input_type: file
+    requirement: required
+    description: "Path to configuration file"
+
+extensions:
+  - type: stdio
+    name: codesearch
+    cmd: uvx
+    args:
+      - mcp_codesearch@latest
+    timeout: 300
+    bundled: true
+    description: "Query codesearch directly from goose"
+
+settings:
+  goose_provider: "anthropic"
+  goose_model: "claude-sonnet-4-20250514"
+  temperature: 0.7
+  max_turns: 100
+
+retry:
+  max_retries: 3
+  timeout_seconds: 30
+  checks:
+    - type: shell
+      command: "echo 'Task validation check passed'"
+  on_failure: "echo 'Retry attempt failed, cleaning up...'"
+
+response:
+  json_schema:
+    type: object
+    properties:
+      result:
+        type: string
+        description: "The main result of the task"
+      details:
+        type: array
+        items:
+          type: string
+        description: "Additional details of steps taken"
+    required:
+      - result
+      - details
+```
+
+  </TabItem>
+  <TabItem value="json" label="JSON">
+
+```json
+{
+  "version": "1.0.0",
+  "title": "Example Recipe",
+  "description": "A sample recipe demonstrating the format",
+  "instructions": "Process {{ file_count }} files using {{ required_param }} and output in {{ output_format }} format. Configuration: {{ config_file }}",
+  "prompt": "Start processing with the provided parameters",
+  "parameters": [
+    {
+      "key": "required_param",
+      "input_type": "string",
+      "requirement": "required",
+      "description": "A required text parameter"
+    },
+    {
+      "key": "file_count",
+      "input_type": "number",
+      "requirement": "optional",
+      "default": "10",
+      "description": "Maximum number of files to process"
+    },
+    {
+      "key": "output_format",
+      "input_type": "select",
+      "requirement": "required",
+      "description": "Choose the output format",
+      "options": ["json", "markdown", "csv"]
+    },
+    {
+      "key": "config_file",
+      "input_type": "file",
+      "requirement": "required",
+      "description": "Path to configuration file"
+    }
+  ],
+  "extensions": [
+    {
+      "type": "stdio",
+      "name": "codesearch",
+      "cmd": "uvx",
+      "args": ["mcp_codesearch@latest"],
+      "timeout": 300,
+      "bundled": true,
+      "description": "Query codesearch directly from goose"
+    }
+  ],
+  "settings": {
+    "goose_provider": "anthropic",
+    "goose_model": "claude-sonnet-4-20250514",
+    "temperature": 0.7,
+    "max_turns": 100
+  },
+  "retry": {
+    "max_retries": 3,
+    "timeout_seconds": 30,
+    "checks": [
+      {
+        "type": "shell",
+        "command": "echo 'Task validation check passed'"
+      }
+    ],
+    "on_failure": "echo 'Retry attempt failed, cleaning up...'"
+  },
+  "response": {
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "string",
+          "description": "The main result of the task"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Additional details of steps taken"
+        }
+      },
+      "required": ["result", "details"]
+    }
+  }
+}
+```
+
+  </TabItem>
+</Tabs>
+
+## Error Handling
+
+Common errors to watch for:
+
+- Missing required parameters
+- Optional parameters without default values
+- Template variables without parameter definitions
+- Invalid YAML/JSON syntax
+- Missing required fields
+- Invalid extension configurations
+- Invalid retry configuration (missing required fields, invalid shell commands)
+
+When these occur, goose will provide helpful error messages indicating what needs to be fixed.
+
+### Retry-Specific Errors
+
+- **Invalid success checks**: Shell commands that cannot be executed or have syntax errors
+- **Timeout errors**: Success checks or on_failure commands that exceed their timeout limits
+- **Max retries exceeded**: When all retry attempts are exhausted without success
+- **Missing required retry fields**: When `max_retries` or `checks` are not specified
+
+## Learn More
+Check out the [Recipes](/docs/guides/recipes) guide for more docs, tools, and resources to help you master goose recipes.Excellent! Now I have the full recipe schema. Let me also check the subrecipes docs:
+  ────────────────────────────────────────
+  ▸ shell
+    command: curl -sSL https://goose-docs.ai/docs/guides/recipes/subrecipes.md 2>/dev/null > /tmp/subrecipes.md && cat /tmp/subrecipes.md
+    timeout_secs: 15
+
+Subrecipes are recipes that are used by another recipe to perform specific tasks. They enable:
+- **Multi-step workflows** - Break complex tasks into distinct phases with specialized expertise
+- **Reusable components** - Create common tasks that can be used in various workflows
+
+:::warning Experimental Feature
+Subrecipes are an experimental feature in active development. Behavior and configuration may change in future releases.
+:::
+
+## How Subrecipes Work
+
+The "main recipe" registers its subrecipes in the `sub_recipes` field, which contains the following fields:
+
+- `name`: Unique identifier for the subrecipe, used to generate the tool name
+- `path`: File path to the subrecipe file (relative or absolute)
+- `values`: (Optional) Pre-configured parameter values that are always passed to the subrecipe
+
+When the main recipe is run, goose generates a tool for each subrecipe that:
+- Accepts parameters defined by the subrecipe
+- Executes the subrecipe in a separate session with its own context
+- Returns output to the main recipe
+
+Sub-recipe sessions run in isolation - they don't share conversation history, memory, or state with the main recipe or other subrecipes. Additionally, subrecipes cannot define their own subrecipes (no nesting allowed).
+
+:::note
+Recipes that define `sub_recipes` automatically get the `summon` platform extension injected, so the `delegate` tool is available without needing to list it in `extensions`.
+:::
+
+### Parameter Handling
+
+Parameters received by subrecipes can be used in prompts and instructions using `{{ parameter_name }}` syntax. Subrecipes receive parameters in two ways:
+
+1. **Pre-set values**: Fixed parameter values defined in the `values` field are automatically provided and cannot be overridden at runtime
+2. **Context-based parameters**: The AI agent can extract parameter values from the conversation context, including results from previous subrecipes
+
+Pre-set values take precedence over context-based parameters. If both the conversation context and `values` field provide the same parameter, the `values` version is used.
+
+:::tip
+Use the `indent()` filter to maintain valid YAML format when passing multi-line parameter values to subrecipes, for example: `{{ content | indent(2) }}`. See [Template Support](/docs/guides/recipes/recipe-reference#template-support) for more details.
+:::
+
+## Examples
+
+### Sequential Processing
+
+This Code Review Pipeline example shows a main recipe that uses two subrecipes to perform a comprehensive code review:
+
+**Usage:**
+```bash
+goose run --recipe code-review-pipeline.yaml --params repository_path=/path/to/repo
+```
+
+**Main Recipe:**
+
+```yaml
+# code-review-pipeline.yaml
+version: "1.0.0"
+title: "Code Review Pipeline"
+description: "Automated code review using subrecipes"
+instructions: |
+  Perform a code review using the available subrecipe tools.
+  Run security analysis first, then code quality analysis.
+
+parameters:
+  - key: repository_path
+    input_type: string
+    requirement: required
+    description: "Path to the repository to review"
+
+sub_recipes:
+  - name: "security_scan"
+    path: "./subrecipes/security-analysis.yaml"
+    values:
+      scan_level: "comprehensive"
+  
+  - name: "quality_check"
+    path: "./subrecipes/quality-analysis.yaml"
+
+extensions:
+  - type: builtin
+    name: developer
+    timeout: 300
+    bundled: true
+
+prompt: |
+  Review the code at {{ repository_path }} using the subrecipe tools.
+  Run security scan first, then quality analysis.
+```
+
+**Subrecipes:**
+
+<details>
+  <summary>security_scan</summary>
+  ```yaml
+  # subrecipes/security-analysis.yaml
+  version: "1.0.0"
+  title: "Security Scanner"
+  description: "Analyze code for security vulnerabilities"
+  instructions: |
+    You are a security expert. Analyze the provided code for security issues.
+    Focus on common vulnerabilities like SQL injection, XSS, and authentication flaws.
+
+  parameters:
+    - key: repository_path
+      input_type: string
+      requirement: required
+      description: "Path to the code to analyze"
+    
+    - key: scan_level
+      input_type: string
+      requirement: optional
+      default: "standard"
+      description: "Depth of security scan (basic, standard, comprehensive)"
+
+  extensions:
+    - type: builtin
+      name: developer
+      timeout: 300
+      bundled: true
+
+  prompt: |
+    Perform a {{ scan_level }} security analysis on the code at {{ repository_path }}.
+    Report any security vulnerabilities found with severity levels and recommendations.
+  ```
+</details>
+
+<details>
+  <summary>quality_check</summary>
+  ```yaml
+  # subrecipes/quality-analysis.yaml
+  version: "1.0.0"
+  title: "Code Quality Analyzer"
+  description: "Analyze code quality and best practices"
+  instructions: |
+    You are a code quality expert. Review code for maintainability, 
+    readability, and adherence to best practices.
+
+  parameters:
+    - key: repository_path
+      input_type: string
+      requirement: required
+      description: "Path to the code to analyze"
+
+  extensions:
+    - type: builtin
+      name: developer
+      timeout: 300
+      bundled: true
+
+  prompt: |
+    Analyze the code quality at {{ repository_path }}.
+    Check for code smells, complexity issues, and suggest improvements.
+  ```
+</details>
+
+:::tip
+For faster execution when subrecipes are independent, see [Running Subrecipes In Parallel](/docs/tutorials/subrecipes-in-parallel) to execute multiple subrecipes concurrently.
+:::
+
+### Conditional Processing
+
+This Smart Project Analyzer example shows conditional logic that chooses between different subrecipes based on analysis:
+
+**Usage:**
+```bash
+goose run --recipe smart-analyzer.yaml --params repository_path=/path/to/project
+```
+
+**Main Recipe:**
+
+```yaml
+# smart-analyzer.yaml
+version: "1.0.0"
+title: "Smart Project Analyzer"
+description: "Analyze project and choose appropriate processing based on type"
+instructions: |
+  First examine the repository to determine the project type (web app, CLI tool, library, etc.).
+  Based on what you find:
+  - If it's a web application, use the web_security_audit subrecipe
+  - If it's a CLI tool or library, use the api_documentation subrecipe
+  Only run one subrecipe based on your analysis.
+
+parameters:
+  - key: repository_path
+    input_type: string
+    requirement: required
+    description: "Path to the repository to analyze"
+
+sub_recipes:
+  - name: "web_security_audit"
+    path: "./subrecipes/web-security.yaml"
+    values:
+      check_cors: "true"
+      check_csrf: "true"
+  
+  - name: "api_documentation"
+    path: "./subrecipes/api-docs.yaml"
+    values:
+      format: "markdown"
+
+extensions:
+  - type: builtin
+    name: developer
+    timeout: 300
+    bundled: true
+
+prompt: |
+  Analyze the project at {{ repository_path }} and determine its type.
+  Then run the appropriate subrecipe tool based on your findings.
+```
+
+**Subrecipes:**
+
+<details>
+  <summary>web_security_audit</summary>
+  ```yaml
+  # subrecipes/web-security.yaml
+  version: "1.0.0"
+  title: "Web Security Auditor"
+  description: "Security audit for web applications"
+  instructions: |
+    You are a web security specialist. Audit web applications for 
+    security vulnerabilities specific to web technologies.
+
+  parameters:
+    - key: repository_path
+      input_type: string
+      requirement: required
+      description: "Path to the web application code"
+    
+    - key: check_cors
+      input_type: string
+      requirement: optional
+      default: "false"
+      description: "Whether to check CORS configuration"
+    
+    - key: check_csrf
+      input_type: string
+      requirement: optional
+      default: "false"
+      description: "Whether to check CSRF protection"
+
+  extensions:
+    - type: builtin
+      name: developer
+      timeout: 300
+      bundled: true
+
+  prompt: |
+    Perform a web security audit on {{ repository_path }}.
+    {% if check_cors == "true" %}Check CORS configuration for security issues.{% endif %}
+    {% if check_csrf == "true" %}Verify CSRF protection is properly implemented.{% endif %}
+    Focus on web-specific vulnerabilities like XSS, authentication flaws, and session management.
+  ```
+</details>
+
+<details>
+  <summary>api_documentation</summary>
+  ```yaml
+  # subrecipes/api-docs.yaml
+  version: "1.0.0"
+  title: "API Documentation Generator"
+  description: "Generate documentation for APIs and libraries"
+  instructions: |
+    You are a technical writer specializing in API documentation.
+    Create comprehensive documentation for code libraries and APIs.
+
+  parameters:
+    - key: repository_path
+      input_type: string
+      requirement: required
+      description: "Path to the code to document"
+    
+    - key: format
+      input_type: string
+      requirement: optional
+      default: "markdown"
+      description: "Output format for documentation (markdown, html, rst)"
+
+  extensions:
+    - type: builtin
+      name: developer
+      timeout: 300
+      bundled: true
+
+  prompt: |
+    Generate {{ format }} documentation for the code at {{ repository_path }}.
+    Include API endpoints, function signatures, usage examples, and installation instructions.
+    Focus on making it easy for developers to understand and use this code.
+  ```
+</details>
+
+### Context-Based Parameter Passing
+
+This Travel Planner example shows how subrecipes can receive parameters from conversation context, including results from previous subrecipes:
+
+**Usage:**
+```bash
+goose run --recipe travel-planner.yaml
+```
+
+**Main Recipe:**
+
+```yaml
+# travel-planner.yaml
+version: "1.0.0"
+title: "Travel Activity Planner"
+description: "Get weather data and suggest appropriate activities"
+instructions: |
+  Plan activities by first getting weather data, then suggesting activities based on conditions.
+
+prompt: |
+  Plan activities for Sydney by first getting weather data, then suggesting activities based on the weather conditions we receive.
+
+sub_recipes:
+  - name: weather_data
+    path: "./subrecipes/weather-data.yaml"
+    # No values - location parameter comes from prompt context
+  
+  - name: activity_suggestions
+    path: "./subrecipes/activity-suggestions.yaml"
+    # weather_conditions parameter comes from conversation context
+
+extensions:
+  - type: builtin
+    name: developer
+    timeout: 300
+    bundled: true
+```
+
+**Subrecipes:**
+
+<details>
+  <summary>weather_data</summary>
+  ```yaml
+  # subrecipes/weather-data.yaml
+  version: "1.0.0"
+  title: "Weather Data Collector"
+  description: "Fetch current weather conditions for a location"
+  instructions: |
+    You are a weather data specialist. Gather current weather information
+    including temperature, conditions, and seasonal context.
+
+  parameters:
+    - key: location
+      input_type: string
+      requirement: required
+      description: "City or location to get weather data for"
+
+  extensions:
+    - type: stdio
+      name: weather
+      cmd: uvx
+      args:
+        - mcp_weather@latest
+      timeout: 300
+      description: "Weather data for trip planning"
+    - type: builtin
+      name: developer
+      timeout: 300
+      bundled: true
+
+  prompt: |
+    Get the current weather conditions for {{ location }}.
+    Include temperature, weather conditions (sunny, rainy, etc.), 
+    and any relevant seasonal information.
+  ```
+</details>
+
+<details>
+  <summary>activity_suggestions</summary>
+  ```yaml
+  # subrecipes/activity-suggestions.yaml
+  version: "1.0.0"
+  title: "Activity Recommender"
+  description: "Suggest activities based on weather conditions"
+  instructions: |
+    You are a travel expert. Recommend appropriate activities and attractions
+    based on current weather conditions.
+
+  parameters:
+    - key: weather_conditions
+      input_type: string
+      requirement: required
+      description: "Current weather conditions to base recommendations on"
+
+  extensions:
+    - type: builtin
+      name: developer
+      timeout: 300
+      bundled: true
+
+  prompt: |
+    Based on these weather conditions: {{ weather_conditions }}, 
+    suggest appropriate activities, attractions, and travel tips.
+    Include both indoor and outdoor options as relevant.
+  ```
+</details>
+
+In this example:
+- The `weather_data` subrecipe gets the location from the prompt context (the AI extracts "Sydney" from the natural language prompt)
+- The `activity_suggestions` subrecipe gets weather conditions from the conversation context (the AI uses the weather results from the first subrecipe)
+
+## Best Practices
+- **Single responsibility**: Each subrecipe should have one clear purpose
+- **Clear parameters**: Use descriptive names and descriptions
+- **Pre-set fixed values**: Use `values` for parameters that don't change
+- **Test independently**: Verify subrecipes work alone before combining
+
+:::tip Controlling Subrecipe Execution
+Each subrecipe can specify its own `settings.max_turns` value to control execution limits. If not specified, the subrecipe inherits the parent recipe's `max_turns` setting. See [Recipe Settings](/docs/guides/recipes/recipe-reference#settings) for details.
+
+```yaml
+# subrecipes/quick-scan.yaml
+version: "1.0.0"
+title: "Quick Security Scan"
+settings:
+  max_turns: 10  # Limit this subrecipe to 10 turns
+instructions: "Perform a quick security scan"
+prompt: "Scan for common vulnerabilities"
+```
+:::
+
+## Learn More
+Check out the [Recipes](/docs/guides/recipes) guide for more docs, tools, and resources to help you master goose recipes.Now I have all the info I need. Let me create all 5 agent files and the root recipe. I'll create them all in parallel.
+
+## Create all recipe files
+  ────────────────────────────────────────
+  ▸ write
+    path /tmp/sales-team/recipe/sub/lead-scraper.yaml
+    content: version: "1.0.0"
+title: "Lead Scraper"
+description: "Finds B2B leads matching ICP criteria using web search and returns structured lead data"
+instructions: |
+  You are a Lead Scraper agent in a Sales Team MAS.
+
+  Your job:
+  1. Receive an ICP (Ideal Customer Profile) description
+  2. Use web_search (or equivalent) to find B2B companies matching that ICP
+  3. Return a structured JSON list of leads
+
+  Rules:
+  - ALWAYS search the web for actual current data — do NOT fabricate leads
+  - Search across multiple sources (Crunchbase, LinkedIn, company directories)
+  - Return a minimum of 5 leads, maximum of 15
+  - Each lead must include: company name, website URL, brief snippet, and source domain
+  - Do NOT filter or verify — that is handled by lead-verifier
+
+  Output format:
+  ```json
+  {
+    "leads": [
+      {
+        "company": "Company Name",
+        "url": "https://company.com",
+        "snippet": "Short description from search results",
+        "source_domain": "crunchbase.com"
+      }
+    ]
+  }
+  ```
+parameters:
+  - key: icp_description
+    input_type: string
+    requirement: required
+    description: "Ideal Customer Profile description — industry, size, location, tech stack, etc."
+  - key: max_leads
+    input_type: number
+    requirement: optional
+    default: "10"
+    description: "Maximum number of leads to return"
+extensions:
+  - type: builtin
+    name: developer
+    bundled: true
+    timeout: 300
+prompt: |
+  Find B2B leads matching this ICP: {{ icp_description }}
+
+  Return up to {{ max_leads }} leads as a JSON object with company, url, snippet, and source_domain for each lead.
+  Use web search to find real companies. Do not fabricate data.
+
+
+
+  ────────────────────────────────────────
+  ▸ write
+    path /tmp/sales-team/recipe/sub/lead-verifier.yaml
+    content: version: "1.0.0"
+title: "Lead Verifier"
+description: "Quality gate that filters and verifies leads — removes spam, irrelevant companies, and scores confidence"
+instructions: |
+  You are a Lead Verifier agent — the QUALITY GATE in the Sales Team MAS.
+
+  Your job:
+  1. Receive raw leads (from lead-scraper or user input)
+  2. For EACH lead, verify:
+     - Is the company real? (check website, LinkedIn, Crunchbase)
+     - Is the industry/sector a match for the stated ICP?
+     - Is the company size appropriate?
+     - Is the information current and accurate?
+     - Remove any spam, outdated, or irrelevant entries
+  3. Assign a confidence score (0.0 - 1.0) to each verified lead
+  4. Include source URLs used for verification
+
+  RULES (MANDATORY):
+  - Every lead MUST pass through this verification step before reaching outreach-drafter
+  - No unverified leads pass through
+  - At least 2 independent sources per lead
+  - Cross-check company size, industry, and funding against multiple sources
+  - Confidence score < 0.5 = REJECT the lead
+  - Add a "verified" boolean and "confidence" score to each lead output
+
+  Output format:
+  ```json
+  {
+    "verified_leads": [
+      {
+        "company": "Company Name",
+        "url": "https://company.com",
+        "industry": "SaaS / Fintech",
+        "size": "50-200 employees",
+        "confidence": 0.85,
+        "verified": true,
+        "sources": ["https://crunchbase.com/org/...", "https://linkedin.com/company/..."],
+        "notes": "Matches ICP: B2B SaaS, Series A funded, 100+ employees"
+      }
+    ],
+    "rejected_leads": [
+      {
+        "company": "Bad Company",
+        "reason": "No verifiable website or social presence",
+        "confidence": 0.1
+      }
+    ],
+    "summary": {
+      "total_received": 10,
+      "verified": 7,
+      "rejected": 3,
+      "avg_confidence": 0.82
+    }
+  }
+  ```
+parameters:
+  - key: raw_leads_json
+    input_type: string
+    requirement: required
+    description: "JSON string of raw leads from lead-scraper — array of {company, url, snippet, source_domain}"
+  - key: icp_description
+    input_type: string
+    requirement: required
+    description: "The original ICP description for cross-checking fit"
+extensions:
+  - type: builtin
+    name: developer
+    bundled: true
+    timeout: 300
+prompt: |
+  Verify these leads against the ICP: {{ icp_description }}
+
+  Raw leads: {{ raw_leads_json }}
+
+  For each lead, check company existence, industry fit, company size, and data freshness.
+  Use web search to verify each lead against at least 2 independent sources.
+  Output verified leads with confidence scores, rejected leads with reasons, and a summary.
+
+
+
+  ────────────────────────────────────────
+  ▸ write
+    path /tmp/sales-team/recipe/sub/outreach-drafter.yaml
+    content: version: "1.0.0"
+title: "Outreach Drafter"
+description: "Drafts personalized outreach emails/LinkedIn messages per verified lead"
+instructions: |
+  You are an Outreach Drafter agent in the Sales Team MAS.
+
+  Your job:
+  1. Receive verified leads (from lead-verifier)
+  2. For EACH verified lead, draft a personalized outreach message
+  3. Return structured output with lead details and message content
+
+  RULES:
+  - Messages must be personalized — reference the company's specific context, industry, and recent news
+  - Use a professional but warm tone
+  - Keep emails under 200 words
+  - Include a clear Call To Action
+  - Do NOT use generic templates — every message must be tailored
+  - Include the source_url from where you gathered context for personalization
+  - LinkedIn messages should be shorter (< 100 words)
+
+  Output format:
+  ```json
+  {
+    "drafts": [
+      {
+        "lead_company": "Company Name",
+        "channel": "email",
+        "subject_line": "Personalized subject line",
+        "body": "Full email body...",
+        "source_url": "https://company.com/about",
+        "personalization_hooks": ["Series B funding", "New CTO hire", "Expanding to EU"]
+      },
+      {
+        "lead_company": "Company Name",
+        "channel": "linkedin",
+        "subject_line": null,
+        "body": "Shorter LinkedIn message...",
+        "source_url": "https://linkedin.com/company/...",
+        "personalization_hooks": ["Shared industry connection"]
+      }
+    ],
+    "generated_at": "timestamp"
+  }
+  ```
+parameters:
+  - key: verified_leads_json
+    input_type: string
+    requirement: required
+    description: "JSON string of verified leads from lead-verifier"
+extensions:
+  - type: builtin
+    name: developer
+    bundled: true
+    timeout: 300
+prompt: |
+  Draft personalized outreach messages for these verified leads:
+  {{ verified_leads_json }}
+
+  For each lead, create one email draft and optionally one LinkedIn message.
+  Research each company to personalize effectively. Output as JSON.
+
+
+
+  ────────────────────────────────────────
+  ▸ write
+    path /tmp/sales-team/recipe/sub/deal-closer.yaml
+    content: version: "1.0.0"
+title: "Deal Closer"
+description: "Suggests follow-up cadence, objection handling, and next-step playbook per lead"
+instructions: |
+  You are a Deal Closer agent — the final stage in the Sales Team MAS pipeline.
+
+  Your job:
+  1. Receive outreach drafts (from outreach-drafter or user input)
+  2. For EACH lead, produce a structured closing playbook with:
+     - Follow-up cadence (timeline, channels, touch points)
+     - Anticipated objections + handling strategies
+     - Next concrete steps for the sales rep
+     - Deal stage assessment
+
+  RULES:
+  - Be realistic and actionable — not generic sales advice
+  - Base objections on the company's profile (industry, size, likely pain points)
+  - Include timing recommendations (best days/times to follow up)
+  - Suggest specific talking points for follow-up calls
+  - Always include a "best next action" as the most important step
+
+  Output format:
+  ```json
+  {
+    "playbooks": [
+      {
+        "lead_company": "Company Name",
+        "deal_stage": "initial_outreach",
+        "follow_up_cadence": {
+          "day_1": "Send initial email (see outreach draft)",
+          "day_3": "LinkedIn connection request with note",
+          "day_7": "Follow-up email referencing value prop",
+          "day_14": "Phone call attempt + case study share",
+          "day_30": "Final re-engagement email"
+        },
+        "objections": [
+          {
+            "objection": "We already use a competitor",
+            "handling_strategy": "Acknowledge + differentiate on [specific feature]. Offer migration support.",
+            "talking_points": ["Our switching cost is lower", "We integrate with your existing stack"]
+          }
+        ],
+        "best_next_action": "Send personalized email referencing their Series B announcement",
+        "notes": "High priority lead — CTO is active on LinkedIn"
+      }
+    ],
+    "pipeline_summary": {
+      "total_leads": 5,
+      "recommended_priority": ["Company A (High)", "Company B (Medium)", "Company C (Low)"]
+    }
+  }
+  ```
+parameters:
+  - key: outreach_drafts_json
+    input_type: string
+    requirement: required
+    description: "JSON string of outreach drafts from outreach-drafter"
+extensions:
+  - type: builtin
+    name: developer
+    bundled: true
+    timeout: 300
+prompt: |
+  Create closing playbooks for these outreach drafts:
+  {{ outreach_drafts_json }}
+
+  For each lead, produce a follow-up cadence, anticipate objections with handling strategies,
+  and recommend the next best action. Output as structured JSON.
+
+
+Created /tmp/sales-team/recipe/sub/lead-scraper.yaml (51 lines)Created /tmp/sales-team/recipe/sub/lead-verifier.yaml (77 lines)Created /tmp/sales-team/recipe/sub/outreach-drafter.yaml (60 lines)Created /tmp/sales-team/recipe/sub/deal-closer.yaml (68 lines)Now create the sales-orchestrator sub-recipe and the root sales-team.yaml:
+  ────────────────────────────────────────
+  ▸ write
+    path /tmp/sales-team/recipe/sub/sales-orchestrator.yaml
+    content: version: "1.0.0"
+title: "Sales Orchestrator"
+description: "Orchestrates the full sales pipeline — decomposes queries, dispatches to specialists, collects results, and synthesizes recommendations"
+instructions: |
+  You are the Sales Orchestrator — the main orchestrator agent of the Sales Team MAS.
+
+  Your workflow:
+  1. RECEIVE a sales query (one of: lead qualification, outreach strategy, deal close assistance, pipeline review)
+  2. DECOMPOSE the query into sub-tasks
+  3. DISPATCH to specialist sub-recipes in the correct order:
+     a) lead-scraper — to find potential leads matching the ICP
+     b) lead-verifier — to verify and score the leads (QUALITY GATE)
+     c) outreach-drafter — to draft personalized messages for verified leads
+     d) deal-closer — to create closing playbooks
+  4. COLLECT results from each specialist
+  5. SYNTHESIZE a final sales recommendation WITH SOURCES
+
+  CRITICAL RULES:
+  - The pipeline MUST run in order: scraper → verifier → drafter → closer
+  - Every lead MUST pass through lead-verifier before reaching outreach-drafter
+  - If no leads found, stop and report back — do not proceed to later stages
+  - Always include source attributions in the final recommendation
+  - If lead-verifier rejects all leads, inform the user and do not proceed
+
+  Output format:
+  ```json
+  {
+    "query_type": "lead_qualification",
+    "lead_pipeline": {
+      "leads_found": 10,
+      "leads_verified": 7,
+      "leads_rejected": 3,
+      "drafts_created": 7,
+      "playbooks_ready": 7
+    },
+    "recommendation": "Overall sales recommendation...",
+    "sources": {
+      "lead_scraper": ["Crunchbase", "LinkedIn"],
+      "lead_verifier": ["Company websites verified"],
+      "outreach_drafts": ["7 personalized emails"],
+      "deal_playbooks": ["7 closing strategies"]
+    },
+    "next_steps": ["Immediate: Send emails to 3 high-priority leads", "Medium: Follow up with 4 mid-priority leads"]
+  }
+  ```
+parameters:
+  - key: sales_query
+    input_type: string
+    requirement: required
+    description: "The sales query — lead qualification, outreach strategy, deal close assistance, or pipeline review"
+  - key: icp_description
+    input_type: string
+    requirement: optional
+    default: "B2B SaaS companies, 50-500 employees, Series A or later, US-based"
+    description: "Ideal Customer Profile description"
+extensions:
+  - type: builtin
+    name: developer
+    bundled: true
+    timeout: 300
+prompt: |
+  Process this sales query: {{ sales_query }}
+
+  ICP: {{ icp_description }}
+
+  Run the full pipeline:
+  1. Find leads matching the ICP
+  2. Verify each lead (quality gate — no unverified leads pass through)
+  3. Draft personalized outreach messages for verified leads
+  4. Create closing playbooks
+  5. Synthesize final recommendation with sources
+
+  Output a structured JSON result with pipeline summary, recommendation, and next steps.
+
+
+Created /tmp/sales-team/recipe/sub/sales-orchestrator.yaml (73 lines)## STEP 3 — Create root sales-team.yaml with sub_recipes
+  ────────────────────────────────────────
+  ▸ write
+    path /tmp/sales-team/recipe/sales-team.yaml
+    content: version: "1.0.0"
+title: "Sales Team MAS"
+description: "Full Sales Multi-Agent System — lead scraping, verification, outreach drafting, and deal closing. Every lead passes through a mandatory quality gate (lead-verifier) before reaching outreach."
+instructions: |
+  You are the Sales Team Orchestrator — a multi-agent system for B2B sales.
+
+  Your workflow:
+  1. RECEIVE a sales query from the user
+  2. Use the available sub-recipe tools to run the pipeline
+  3. The pipeline order is:
+     a) lead-scraper — find potential leads matching the ICP
+     b) lead-verifier — verify and score leads (MANDATORY quality gate)
+     c) outreach-drafter — draft personalized messages for verified leads
+     d) deal-closer — create closing playbooks per lead
+  4. Synthesize final results with sources
+
+  CRITICAL RULE — QUALITY GATE:
+  Every lead MUST pass through lead-verifier before reaching outreach-drafter.
+  Do NOT skip verification. If lead-verifier rejects all leads, stop and inform the user.
+
+  IMPORTANT — DELEGATION:
+  You do NOT have the lead-scraper, lead-verifier, outreach-drafter, or deal-closer tools directly.
+  Instead, use the sub-recipe tools generated automatically from the sub_recipes field below.
+  Call them in the correct order by passing the right parameters from the output of each step.
+
+parameters:
+  - key: sales_query
+    input_type: string
+    requirement: required
+    description: "The sales query — lead qualification, outreach strategy, deal closing, or pipeline review"
+  - key: icp_description
+    input_type: string
+    requirement: optional
+    default: "B2B SaaS companies, 50-500 employees, Series A or later, US-based"
+    description: "Ideal Customer Profile description"
+
+sub_recipes:
+  - name: "lead-scraper"
+    path: "./sub/lead-scraper.yaml"
+    description: "Finds B2B leads matching ICP using web search"
+
+  - name: "lead-verifier"
+    path: "./sub/lead-verifier.yaml"
+    description: "Quality gate — filters spam, verifies companies, assigns confidence scores"
+
+  - name: "outreach-drafter"
+    path: "./sub/outreach-drafter.yaml"
+    description: "Drafts personalized outreach emails/LinkedIn messages per lead"
+
+  - name: "deal-closer"
+    path: "./sub/deal-closer.yaml"
+    description: "Creates closing playbooks with follow-up cadence and objection handling"
+
+extensions:
+  - type: builtin
+    name: developer
+    bundled: true
+    timeout: 300
+
+prompt: |
+  Sales Query: {{ sales_query }}
+  ICP: {{ icp_description }}
+
+  Execute the full sales pipeline:
+
+  1. First, run lead-scraper with the ICP description to find potential leads.
+     Pass the icp_description as the parameter.
+
+  2. Take the leads from step 1 and pass them to lead-verifier for verification.
+     Pass raw_leads_json and icp_description.
+
+  3. Take the VERIFIED leads (NOT rejected ones) from step 2 and pass them to outreach-drafter.
+     Pass verified_leads_json.
+
+  4. Take the outreach drafts from step 3 and pass them to deal-closer.
+     Pass outreach_drafts_json.
+
+  5. Finally, synthesize everything into a structured report with:
+     - Pipeline summary (leads found → verified → drafted → playbooks)
+     - Key recommendations
+     - Source attributions
+     - Next steps
+
+  REMEMBER: The quality gate is MANDATORY. Never send unverified leads to outreach-drafter.
+
+
+Created /tmp/sales-team/recipe/sales-team.yaml (84 lines)
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Sales Team MAS - Build Checklist
+
+## Step 1: Initialize project skeleton
+- [x] Run dev_generic_init.py
+
+## Step 2: Create 5 agents
+- [x] sales-orchestrator.yaml (73 lines)
+- [x] lead-scraper.yaml (51 lines)
+- [x] lead-verifier.yaml (77 lines)
+- [x] outreach-drafter.yaml (60 lines)
+- [x] deal-closer.yaml (68 lines)
+
+## Step 3: Create root sales-team.yaml
+- [x] sales-team.yaml with sub_recipes (84 lines)
+
+## Step 4: Live tests
+- [ ] a) goose run sales-team.yaml --explain
+- [ ] b) goose run lead-scraper.yaml --explain
+- [ ] c) goose run lead-verifier.yaml --explain
+- [ ] d) goose run outreach-drafter.yaml --explain
+- [ ] e) goose run deal-closer.yaml --explain
+- [ ] f) Python YAML validation
+
+## Step 5: Report
+- [ ] File listing with line counts
+- [ ] PASS/FAIL per check
+- [ ] YAML errors
+
+## STEP 4 — LIVE TESTS
+
+First, the YAML validation (f), then the goose runs (a-e).
+
+### f) Python YAML validation
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import yaml, sys, os
+
+files = [
+    '/tmp/sales-team/recipe/sales-team.yaml',
+    '/tmp/sales-team/recipe/sub/lead-scraper.yaml',
+    '/tmp/sales-team/recipe/sub/lead-verifier.yaml',
+    '/tmp/sales-team/recipe/sub/outreach-drafter.yaml',
+    '/tmp/sales-team/recipe/sub/deal-closer.yaml',
+    '/tmp/sales-team/recipe/sub/sales-orchestrator.yaml',
+]
+
+errors = []
+success = []
+for f in files:
+    try:
+        with open(f) as fh:
+            data = yaml.safe_load(fh)
+        success.append((f, os.path.getsize(f)))
+        print(f'✅ VALID YAML: {f} ({len(data.keys())} top-level keys)')
+    except yaml.YAMLError as e:
+        errors.append((f, str(e)))
+        print(f'❌ YAML ERROR: {f}')
+        print(f'   {e}')
+
+if errors:
+    print(f'\n⚠️ {len(errors)} YAML error(s) found')
+    sys.exit(1)
+else:
+    print(f'\n✅ All {len(success)} YAML files are valid!')
+" 2>&1
+    timeout_secs: 15
+
+✅ VALID YAML: /tmp/sales-team/recipe/sales-team.yaml (8 top-level keys)
+✅ VALID YAML: /tmp/sales-team/recipe/sub/lead-scraper.yaml (7 top-level keys)
+✅ VALID YAML: /tmp/sales-team/recipe/sub/lead-verifier.yaml (7 top-level keys)
+✅ VALID YAML: /tmp/sales-team/recipe/sub/outreach-drafter.yaml (7 top-level keys)
+✅ VALID YAML: /tmp/sales-team/recipe/sub/deal-closer.yaml (7 top-level keys)
+✅ VALID YAML: /tmp/sales-team/recipe/sub/sales-orchestrator.yaml (7 top-level keys)
+
+✅ All 6 YAML files are valid!All YAML validations pass. Now let me run the goose `--explain` tests:
+
+### b) goose run lead-scraper.yaml --explain
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/sales-team && goose run --recipe /tmp/sales-team/recipe/sub/lead-scraper.yaml --no-session --explain 2>&1
+    timeout_secs: 30
+
+🔍 Loading recipe: Lead Scraper
+📄 Description:
+   Finds B2B leads matching ICP criteria using web search and returns structured lead data
+⚙️  Recipe Parameters:
+   - icp_description (string, required): Ideal Customer Profile description — industry, size, location, tech stack, etc.
+   - max_leads (number, optional) (default: 10): Maximum number of leads to return
+📥 Parameters used to load this recipe:
+   recipe_dir (built-in): /tmp/sales-team/recipe/sub
+   max_leads: 10
+🔴 Missing parameters in the command line if you want to run the recipe:
+   - icp_description
+📩 Please provide the following parameters in the command line if you want to run the recipe::
+  --params icp_description=your_value### c) goose run lead-verifier.yaml --explain
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/sales-team && goose run --recipe /tmp/sales-team/recipe/sub/lead-verifier.yaml --no-session --explain 2>&1
+    timeout_secs: 30
+
+🔍 Loading recipe: Lead Verifier
+📄 Description:
+   Quality gate that filters and verifies leads — removes spam, irrelevant companies, and scores confidence
+⚙️  Recipe Parameters:
+   - raw_leads_json (string, required): JSON string of raw leads from lead-scraper — array of {company, url, snippet, source_domain}
+   - icp_description (string, required): The original ICP description for cross-checking fit
+📥 Parameters used to load this recipe:
+   recipe_dir (built-in): /tmp/sales-team/recipe/sub
+🔴 Missing parameters in the command line if you want to run the recipe:
+   - raw_leads_json
+   - icp_description
+📩 Please provide the following parameters in the command line if you want to run the recipe::
+  --params raw_leads_json=your_value --params icp_description=your_value### d) goose run outreach-drafter.yaml --explain
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/sales-team && goose run --recipe /tmp/sales-team/recipe/sub/outreach-drafter.yaml --no-session --explain 2>&1
+    timeout_secs: 30
+
+🔍 Loading recipe: Outreach Drafter
+📄 Description:
+   Drafts personalized outreach emails/LinkedIn messages per verified lead
+⚙️  Recipe Parameters:
+   - verified_leads_json (string, required): JSON string of verified leads from lead-verifier
+📥 Parameters used to load this recipe:
+   recipe_dir (built-in): /tmp/sales-team/recipe/sub
+🔴 Missing parameters in the command line if you want to run the recipe:
+   - verified_leads_json
+📩 Please provide the following parameters in the command line if you want to run the recipe::
+  --params verified_leads_json=your_value### e) goose run deal-closer.yaml --explain
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/sales-team && goose run --recipe /tmp/sales-team/recipe/sub/deal-closer.yaml --no-session --explain 2>&1
+    timeout_secs: 30
+
+🔍 Loading recipe: Deal Closer
+📄 Description:
+   Suggests follow-up cadence, objection handling, and next-step playbook per lead
+⚙️  Recipe Parameters:
+   - outreach_drafts_json (string, required): JSON string of outreach drafts from outreach-drafter
+📥 Parameters used to load this recipe:
+   recipe_dir (built-in): /tmp/sales-team/recipe/sub
+🔴 Missing parameters in the command line if you want to run the recipe:
+   - outreach_drafts_json
+📩 Please provide the following parameters in the command line if you want to run the recipe::
+  --params outreach_drafts_json=your_value### a) goose run sales-team.yaml --explain
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/sales-team && goose run --recipe /tmp/sales-team/recipe/sales-team.yaml --no-session --explain 2>&1
+    timeout_secs: 30
+
+🔍 Loading recipe: Sales Team MAS
+📄 Description:
+   Full Sales Multi-Agent System — lead scraping, verification, outreach drafting, and deal closing. Every lead passes through a mandatory quality gate (lead-verifier) before reaching outreach.
+⚙️  Recipe Parameters:
+   - sales_query (string, required): The sales query — lead qualification, outreach strategy, deal closing, or pipeline review
+   - icp_description (string, optional) (default: B2B SaaS companies, 50-500 employees, Series A or later, US-based): Ideal Customer Profile description
+📥 Parameters used to load this recipe:
+   icp_description: B2B SaaS companies, 50-500 employees, Series A or later, US-based
+   recipe_dir (built-in): /tmp/sales-team/recipe
+🔴 Missing parameters in the command line if you want to run the recipe:
+   - sales_query
+📩 Please provide the following parameters in the command line if you want to run the recipe::
+  --params sales_query=your_valueLet me also verify the sub_recipes are properly connected by checking the full structure:
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import yaml
+
+# Validate all files again, this time checking sub_recipes linkage
+with open('/tmp/sales-team/recipe/sales-team.yaml') as f:
+    root = yaml.safe_load(f)
+
+subs = root.get('sub_recipes', [])
+print(f'Root recipe: {root[\"title\"]}')
+print(f'Sub-recipes defined ({len(subs)}):')
+for s in subs:
+    print(f'  - {s[\"name\"]} → {s[\"path\"]}')
+
+# Verify each sub-recipe file exists and has required fields
+required_fields = ['title', 'description', 'instructions', 'prompt']
+for s in subs:
+    path = '/tmp/sales-team/recipe/' + s['path']
+    with open(path) as f:
+        sub = yaml.safe_load(f)
+    missing = [f for f in required_fields if f not in sub]
+    status = '✅' if not missing else '❌'
+    print(f'{status} {s[\"name\"]} ({path}): {len(sub.keys())} fields' + (f' missing: {missing}' if missing else ''))
+    # Check for parameters
+    if 'parameters' in sub:
+        print(f'       Parameters: {[p[\"key\"] for p in sub[\"parameters\"]]}')
+" 2>&1
+    timeout_secs: 15
+
+Root recipe: Sales Team MAS
+Sub-recipes defined (4):
+  - lead-scraper → ./sub/lead-scraper.yaml
+  - lead-verifier → ./sub/lead-verifier.yaml
+  - outreach-drafter → ./sub/outreach-drafter.yaml
+  - deal-closer → ./sub/deal-closer.yaml
+✅ lead-scraper (/tmp/sales-team/recipe/./sub/lead-scraper.yaml): 7 fields
+       Parameters: ['icp_description', 'max_leads']
+✅ lead-verifier (/tmp/sales-team/recipe/./sub/lead-verifier.yaml): 7 fields
+       Parameters: ['raw_leads_json', 'icp_description']
+✅ outreach-drafter (/tmp/sales-team/recipe/./sub/outreach-drafter.yaml): 7 fields
+       Parameters: ['verified_leads_json']
+✅ deal-closer (/tmp/sales-team/recipe/./sub/deal-closer.yaml): 7 fields
+       Parameters: ['outreach_drafts_json']Now let me also verify the sales-orchestrator as a standalone agent (it won't be a sub_recipe of the root, but is available separately):
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/sales-team && goose run --recipe /tmp/sales-team/recipe/sub/sales-orchestrator.yaml --no-session --explain 2>&1
+    timeout_secs: 30
+
+🔍 Loading recipe: Sales Orchestrator
+📄 Description:
+   Orchestrates the full sales pipeline — decomposes queries, dispatches to specialists, collects results, and synthesizes recommendations
+⚙️  Recipe Parameters:
+   - sales_query (string, required): The sales query — lead qualification, outreach strategy, deal close assistance, or pipeline review
+   - icp_description (string, optional) (default: B2B SaaS companies, 50-500 employees, Series A or later, US-based): Ideal Customer Profile description
+📥 Parameters used to load this recipe:
+   icp_description: B2B SaaS companies, 50-500 employees, Series A or later, US-based
+   recipe_dir (built-in): /tmp/sales-team/recipe/sub
+🔴 Missing parameters in the command line if you want to run the recipe:
+   - sales_query
+📩 Please provide the following parameters in the command line if you want to run the recipe::
+  --params sales_query=your_value
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Sales Team MAS - Build Checklist
+
+## Step 1: Initialize project skeleton
+- [x] Run dev_generic_init.py
+
+## Step 2: Create 5 agents
+- [x] sales-orchestrator.yaml (73 lines)
+- [x] lead-scraper.yaml (51 lines)
+- [x] lead-verifier.yaml (77 lines)
+- [x] outreach-drafter.yaml (60 lines)
+- [x] deal-closer.yaml (68 lines)
+
+## Step 3: Create root sales-team.yaml
+- [x] sales-team.yaml with sub_recipes (84 lines)
+
+## Step 4: Live tests
+- [x] a) goose run sales-team.yaml --explain ✅
+- [x] b) goose run lead-scraper.yaml --explain ✅
+- [x] c) goose run lead-verifier.yaml --explain ✅
+- [x] d) goose run outreach-drafter.yaml --explain ✅
+- [x] e) goose run deal-closer.yaml --explain ✅
+- [x] f) Python YAML validation ✅
+
+## Step 5: Report
+- [ ] File listing with line counts
+- [ ] PASS/FAIL per check
+- [ ] YAML errors
+
+## STEP 5 — Report
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== FILE LISTING WITH LINE COUNTS ==="
+echo ""
+for f in \
+  /tmp/sales-team/recipe/sales-team.yaml \
+  /tmp/sales-team/recipe/sub/sales-orchestrator.yaml \
+  /tmp/sales-team/recipe/sub/lead-scraper.yaml \
+  /tmp/sales-team/recipe/sub/lead-verifier.yaml \
+  /tmp/sales-team/recipe/sub/outreach-drafter.yaml \
+  /tmp/sales-team/recipe/sub/deal-closer.yaml; do
+  wc -l "$f" | awk '{printf "  %4d lines  %s\n", $1, $2}'
+done
+echo ""
+echo "=== COMPLETE DIRECTORY STRUCTURE ==="
+echo ""
+find /tmp/sales-team/recipe -type f | sort | while read f; do
+  wc -l "$f" | awk '{printf "  %4d lines  %s\n", $1, $2}'
+done
+echo ""
+echo "=== TOTAL LINE COUNT ==="
+find /tmp/sales-team/recipe -type f -exec cat {} + | wc -l | awk '{printf "  %d total lines across all recipe files\n", $1}'
+    timeout_secs: 10
+
+=== FILE LISTING WITH LINE COUNTS ===
+
+    84 lines  /tmp/sales-team/recipe/sales-team.yaml
+    73 lines  /tmp/sales-team/recipe/sub/sales-orchestrator.yaml
+    51 lines  /tmp/sales-team/recipe/sub/lead-scraper.yaml
+    77 lines  /tmp/sales-team/recipe/sub/lead-verifier.yaml
+    60 lines  /tmp/sales-team/recipe/sub/outreach-drafter.yaml
+    68 lines  /tmp/sales-team/recipe/sub/deal-closer.yaml
+
+=== COMPLETE DIRECTORY STRUCTURE ===
+
+    84 lines  /tmp/sales-team/recipe/sales-team.yaml
+    68 lines  /tmp/sales-team/recipe/sub/deal-closer.yaml
+    51 lines  /tmp/sales-team/recipe/sub/lead-scraper.yaml
+    77 lines  /tmp/sales-team/recipe/sub/lead-verifier.yaml
+    60 lines  /tmp/sales-team/recipe/sub/outreach-drafter.yaml
+    73 lines  /tmp/sales-team/recipe/sub/sales-orchestrator.yaml
+
+=== TOTAL LINE COUNT ===
+  413 total lines across all recipe files
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Sales Team MAS - Build Checklist
+
+## Step 1: Initialize project skeleton
+- [x] Run dev_generic_init.py
+
+## Step 2: Create 5 agents
+- [x] sales-orchestrator.yaml (73 lines)
+- [x] lead-scraper.yaml (51 lines)
+- [x] lead-verifier.yaml (77 lines)
+- [x] outreach-drafter.yaml (60 lines)
+- [x] deal-closer.yaml (68 lines)
+
+## Step 3: Create root sales-team.yaml
+- [x] sales-team.yaml with sub_recipes (84 lines)
+
+## Step 4: Live tests
+- [x] a) goose run sales-team.yaml --explain ✅
+- [x] b) goose run lead-scraper.yaml --explain ✅
+- [x] c) goose run lead-verifier.yaml --explain ✅
+- [x] d) goose run outreach-drafter.yaml --explain ✅
+- [x] e) goose run deal-closer.yaml --explain ✅
+- [x] f) Python YAML validation ✅
+
+## Step 5: Report
+- [x] File listing with line counts
+- [x] PASS/FAIL per check
+- [x] YAML errors
+
+---
+
+# 🏆 Sales Team MAS — Build Complete
+
+## File Listing
+
+| # | File | Lines | Purpose |
+|---|------|-------|---------|
+| 1 | `recipe/sales-team.yaml` | 84 | Root orchestrator — entry point with 4 `sub_recipes` |
+| 2 | `recipe/sub/sales-orchestrator.yaml` | 73 | Internal orchestrator agent (standalone use) |
+| 3 | `recipe/sub/lead-scraper.yaml` | 51 | Finds B2B leads matching ICP via web search |
+| 4 | `recipe/sub/lead-verifier.yaml` | 77 | **Quality gate** — filters/verifies/scored leads |
+| 5 | `recipe/sub/outreach-drafter.yaml` | 60 | Drafts personalized emails/LinkedIn messages |
+| 6 | `recipe/sub/deal-closer.yaml` | 68 | Creates closing playbooks + objection handling |
+| | **Total** | **413 lines** | |
+
+## Test Results
+
+| # | Test | Result |
+|---|------|--------|
+| **a)** | `goose run sales-team.yaml --explain` | ✅ **PASS** — loaded correctly, 2 params (`sales_query`, `icp_description`), 4 sub_recipes registered |
+| **b)** | `goose run lead-scraper.yaml --explain` | ✅ **PASS** — 2 params (`icp_description`, `max_leads`) |
+| **c)** | `goose run lead-verifier.yaml --explain` | ✅ **PASS** — 2 params (`raw_leads_json`, `icp_description`) |
+| **d)** | `goose run outreach-drafter.yaml --explain` | ✅ **PASS** — 1 param (`verified_leads_json`) |
+| **e)** | `goose run deal-closer.yaml --explain` | ✅ **PASS** — 1 param (`outreach_drafts_json`) |
+| **f)** | `goose run sales-orchestrator.yaml --explain` | ✅ **PASS** — 2 params (`sales_query`, `icp_description`) |
+| **g)** | Python YAML validation (6 files) | ✅ **PASS** — all 6 files valid YAML, zero errors |
+
+**All 7 checks PASS. ✅ ✅ ✅ ✅ ✅ ✅ ✅**
+
+## Pipeline & Quality Gate Architecture
+
+```
+User Query
+    │
+    ▼
+┌──────────────────────┐
+│  sales-team.yaml     │  ← Root orchestrator with sub_recipes
+│  (84 lines)          │
+└──────────┬───────────┘
+           │
+    ┌──────┴──────┐
+    ▼             ▼
+lead-scraper ──► lead-verifier ◄── MANDATORY QUALITY GATE
+                     │                • Spam/irrelevant removal
+                     │                • Cross-check 2+ sources
+                     ▼                • Confidence score 0-1
+              outreach-drafter         • < 0.5 = REJECT
+                     │
+                     ▼
+              deal-closer
+                     │
+                     ▼
+         Final Recommendation
+         (with sources)
+```
+
+## YAML Errors
+
+**None.** All 6 YAML files validated clean with `yaml.safe_load()` — zero syntax errors, zero structural issues.
+
+## How to Run
+
+```bash
+# Full pipeline (interactive — will walk through sub-recipes step by step):
+goose run --recipe /tmp/sales-team/recipe/sales-team.yaml --params sales_query="Find B2B SaaS leads for our AI analytics product" --params icp_description="US-based B2B SaaS companies, 50-500 employees, Series A+"
+
+# Or run individual agents standalone (each requires its params):
+goose run --recipe /tmp/sales-team/recipe/sub/lead-scraper.yaml --params icp_description="..."
+goose run --recipe /tmp/sales-team/recipe/sub/lead-verifier.yaml --params raw_leads_json="..." icp_description="..."
+```

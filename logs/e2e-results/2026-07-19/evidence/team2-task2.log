@@ -1,0 +1,2068 @@
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260719_17 · /workspace
+     L L     goose is ready
+I'll start by examining the dataset, then set up a tracking todo, and deploy 3 specialized sub-agents in sequence. Let me first look at the data.
+  ────────────────────────────────────────
+  ▸ shell
+    command: head -20 /workspace/team2/data/messy_dataset.csv
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: wc -l /workspace/team2/data/messy_dataset.csv
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls -la /workspace/team2/data/
+
+id,name,age,salary,city
+1,Alice,29,75000,Berlin
+2,,45,92000,Berlin
+3,Charlie,34,,Munich
+4,Diana,28,72000,
+5,Eve,150,50000,Berlin
+6,Alice,29,75000,Berlin
+7,,,,8 /workspace/team2/data/messy_dataset.csvtotal 16
+drwxr-xr-x 2 root root 4096 Jul 19 16:37 .
+drwxr-xr-x 5 root root 4096 Jul 19 16:29 ..
+-rw-r--r-- 1 root root  159 Jul 19 16:37 messy_dataset.csv
+-rw-r--r-- 1 root root  605 Jul 19 16:28 sample_dataset.csvLet me get the full dataset and see the clean sample for context.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/team2/data/messy_dataset.csv
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/team2/data/sample_dataset.csv
+
+id,name,age,salary,city
+1,Alice,29,75000,Berlin
+2,,45,92000,Berlin
+3,Charlie,34,,Munich
+4,Diana,28,72000,
+5,Eve,150,50000,Berlin
+6,Alice,29,75000,Berlin
+7,,,,id,name,age,salary,department,join_date,email
+1,Alice,29,75000,Engineering,2021-03-15,alice@example.com
+2,Bob,45,92000,Engineering,2019-07-22,bob@example.com
+3,Charlie,34,68000,Marketing,2022-01-10,charlie@example.com
+4,Diana,28,72000,Marketing,2023-06-05,diana@example.com
+5,Eve,150,50000,Engineering,2020-01-01,eve@example.com
+6,Alice,29,75000,Engineering,2021-03-15,alice@example.com
+7,Frank,33,71000,Sales,2021-09-12,frank@example.com
+8,Grace,27,65000,Sales,2023-02-28,grace@example.com
+9,Henry,52,110000,Engineering,2015-11-03,henry@example.com
+10,Iris,31,73000,Marketing,2022-07-19,iris@example.comNow I have the full picture. Let me set up tracking and deploy all 3 data-quality sub-agents in parallel (since their analyses are read-only and independent).
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Data Quality Analysis - Messy Dataset
+
+## Phases
+- [x] Phase 0: Initial data examination
+- [ ] Phase 1: **Agent 1 - Missing Values & Completeness** (deployed)
+- [ ] Phase 2: **Agent 2 - Outlier & Anomaly Detection** (deployed)
+- [ ] Phase 3: **Agent 3 - Duplicate & Consistency Analysis** (deployed)
+- [ ] Phase 4: Synthesize final quality report with score 0-100
+
+
+Now deploying all 3 specialized sub-agents in parallel:
+  ────────────────────────────────────────
+  ▸ delegate
+    instructions You are Agent 1 — Missing Values & Completeness Analyst.
+
+Analyze this CSV file for missing value...
+    async: true
+
+
+  ────────────────────────────────────────
+  ▸ delegate
+    instructions You are Agent 2 — Outlier & Anomaly Detection Analyst.
+
+Analyze this CSV file for outliers, impos...
+    async: true
+
+
+  ────────────────────────────────────────
+  ▸ delegate
+    instructions You are Agent 3 — Duplicate & Consistency Analyst.
+
+Analyze this CSV file for duplicates and cons...
+    async: true
+
+All 3 agents are deployed and running in parallel. Let me collect their results now.
+  ▸ [subagent:19] shell
+    command: cat /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:19] shell
+    command: cat /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:19] shell
+    command: cat /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:20] read_image
+    source: /workspace/team2/data/messy_dataset.csv
+
+
+  ▸ [subagent:20] read_image
+    source: /workspace/team2/data/messy_dataset.csv
+
+
+  ▸ [subagent:20] read_image
+    source: /workspace/team2/data/messy_dataset.csv
+
+
+  ▸ [subagent:20] read_image
+    source: /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:20] read_image
+    source: /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:20] read_image
+    source: /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:18] read_image
+    source: /workspace/team2/data/messy_dataset.csv
+
+
+  ▸ [subagent:18] read_image
+    source: /workspace/team2/data/messy_dataset.csv
+
+
+  ▸ [subagent:18] read_image
+    source: /workspace/team2/data/messy_dataset.csv
+
+
+  ▸ [subagent:18] read_image
+    source: /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:18] read_image
+    source: /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:18] read_image
+    source: /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:20] shell
+    command: cat /workspace/team2/data/messy_dataset.csv
+
+
+  ▸ [subagent:20] shell
+    command: cat /workspace/team2/data/messy_dataset.csv
+
+
+  ▸ [subagent:20] shell
+    command: cat /workspace/team2/data/messy_dataset.csv
+
+
+  ▸ [subagent:20] shell
+    command: cat /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:20] shell
+    command: cat /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:20] shell
+    command: cat /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:18] shell
+    command: cat /workspace/team2/data/messy_dataset.csv
+
+
+  ▸ [subagent:18] shell
+    command: cat /workspace/team2/data/messy_dataset.csv
+
+
+  ▸ [subagent:18] shell
+    command: cat /workspace/team2/data/messy_dataset.csv
+
+
+  ▸ [subagent:18] shell
+    command: cat /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:18] shell
+    command: cat /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:18] shell
+    command: cat /workspace/team2/data/sample_dataset.csv
+
+
+  ▸ [subagent:19] shell
+    command: python3 -c "
+ages = [29, 45, 34, 28, 150, 29]
+salaries = [75000, 92000, 72000, 50000, 75000]
+import statistics
+print('=== AGE ANALYSIS ===')
+print(f'Values: {ages}')
+print(f'Mean: {statistics.mean(ages):.1f}')
+print(f'Median: {statistics.median(ages)}')
+print(f'StDev: {statistics.stdev(ages):.1f}')
+q1 = sorted(ages)[1]  # approximate
+q3 = sorted(ages)[4]
+iqr = q3 - q1
+print(f'Q1={q1}, Q3={q3}, IQR={iqr}')
+print(f'Lower fence={q1-1.5*iqr}, Upper fence={q3+1.5*iqr}')
+print(f'Outliers: {[a for a in ages if a < q1-1.5*iqr or a > q3+1.5*iqr]}')
+print()
+print('=== SALARY ANALYSIS ===')
+print(f'Values: {salaries}')
+print(f'Mean: {statistics.mean(salaries):.1f}')
+print(f'Median: {statistics.median(salaries)}')
+q1s = sorted(salaries)[1]
+q3s = sorted(salaries)[3]
+iqrs = q3s - q1s
+print(f'Q1={q1s}, Q3={q3s}, IQR={iqrs}')
+print(f'Lower fence={q1s-1.5*iqrs}, Upper fence={q3s+1.5*iqrs}')
+print(f'Outliers: {[s for s in salaries if s < q1s-1.5*iqrs or s > q3s+1.5*iqrs]}')
+print()
+print('=== SAMPLE REFERENCE (ages) ===')
+sample_ages = [29,45,34,28,150,29,33,27,52,31]
+print(f'Sample ages: {sample_ages}')
+print(f'Sample mean age: {statistics.mean(sample_ages):.1f}')
+print(f'Sample salary ref: [75000,92000,68000,72000,50000,75000,71000,65000,110000,73000]')
+"
+
+
+
+  ▸ [subagent:19] shell
+    command: python3 -c "
+ages = [29, 45, 34, 28, 150, 29]
+salaries = [75000, 92000, 72000, 50000, 75000]
+import statistics
+print('=== AGE ANALYSIS ===')
+print(f'Values: {ages}')
+print(f'Mean: {statistics.mean(ages):.1f}')
+print(f'Median: {statistics.median(ages)}')
+print(f'StDev: {statistics.stdev(ages):.1f}')
+q1 = sorted(ages)[1]  # approximate
+q3 = sorted(ages)[4]
+iqr = q3 - q1
+print(f'Q1={q1}, Q3={q3}, IQR={iqr}')
+print(f'Lower fence={q1-1.5*iqr}, Upper fence={q3+1.5*iqr}')
+print(f'Outliers: {[a for a in ages if a < q1-1.5*iqr or a > q3+1.5*iqr]}')
+print()
+print('=== SALARY ANALYSIS ===')
+print(f'Values: {salaries}')
+print(f'Mean: {statistics.mean(salaries):.1f}')
+print(f'Median: {statistics.median(salaries)}')
+q1s = sorted(salaries)[1]
+q3s = sorted(salaries)[3]
+iqrs = q3s - q1s
+print(f'Q1={q1s}, Q3={q3s}, IQR={iqrs}')
+print(f'Lower fence={q1s-1.5*iqrs}, Upper fence={q3s+1.5*iqrs}')
+print(f'Outliers: {[s for s in salaries if s < q1s-1.5*iqrs or s > q3s+1.5*iqrs]}')
+print()
+print('=== SAMPLE REFERENCE (ages) ===')
+sample_ages = [29,45,34,28,150,29,33,27,52,31]
+print(f'Sample ages: {sample_ages}')
+print(f'Sample mean age: {statistics.mean(sample_ages):.1f}')
+print(f'Sample salary ref: [75000,92000,68000,72000,50000,75000,71000,65000,110000,73000]')
+"
+
+
+
+  ▸ [subagent:19] shell
+    command: python3 -c "
+ages = [29, 45, 34, 28, 150, 29]
+salaries = [75000, 92000, 72000, 50000, 75000]
+import statistics
+print('=== AGE ANALYSIS ===')
+print(f'Values: {ages}')
+print(f'Mean: {statistics.mean(ages):.1f}')
+print(f'Median: {statistics.median(ages)}')
+print(f'StDev: {statistics.stdev(ages):.1f}')
+q1 = sorted(ages)[1]  # approximate
+q3 = sorted(ages)[4]
+iqr = q3 - q1
+print(f'Q1={q1}, Q3={q3}, IQR={iqr}')
+print(f'Lower fence={q1-1.5*iqr}, Upper fence={q3+1.5*iqr}')
+print(f'Outliers: {[a for a in ages if a < q1-1.5*iqr or a > q3+1.5*iqr]}')
+print()
+print('=== SALARY ANALYSIS ===')
+print(f'Values: {salaries}')
+print(f'Mean: {statistics.mean(salaries):.1f}')
+print(f'Median: {statistics.median(salaries)}')
+q1s = sorted(salaries)[1]
+q3s = sorted(salaries)[3]
+iqrs = q3s - q1s
+print(f'Q1={q1s}, Q3={q3s}, IQR={iqrs}')
+print(f'Lower fence={q1s-1.5*iqrs}, Upper fence={q3s+1.5*iqrs}')
+print(f'Outliers: {[s for s in salaries if s < q1s-1.5*iqrs or s > q3s+1.5*iqrs]}')
+print()
+print('=== SAMPLE REFERENCE (ages) ===')
+sample_ages = [29,45,34,28,150,29,33,27,52,31]
+print(f'Sample ages: {sample_ages}')
+print(f'Sample mean age: {statistics.mean(sample_ages):.1f}')
+print(f'Sample salary ref: [75000,92000,68000,72000,50000,75000,71000,65000,110000,73000]')
+"
+
+
+
+  ▸ [subagent:20] shell
+    command: cd /workspace/team2/data && python3 << 'EOF'
+import csv
+import sys
+
+def analyze_csv(filepath):
+    with open(filepath, 'r') as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+        columns = reader.fieldnames
+    
+    n_rows = len(rows)
+    n_cols = len(columns)
+    total_cells = n_rows * n_cols
+    
+    print(f"File: {filepath}")
+    print(f"Total rows: {n_rows}")
+    print(f"Total columns: {n_cols}")
+    print(f"Total cells: {total_cells}")
+    print("=" * 70)
+    
+    # Per-column missing analysis
+    print("\n--- PER-COLUMN MISSING ANALYSIS ---")
+    col_missing = {}
+    total_missing = 0
+    
+    for col in columns:
+        missing = 0
+        missing_indices = []
+        for i, row in enumerate(rows, 1):
+            val = row.get(col, '')
+            if val is None or val.strip() == '':
+                missing += 1
+                missing_indices.append(i)
+        col_missing[col] = (missing, missing_indices)
+        total_missing += missing
+        completeness = ((n_rows - missing) / n_rows) * 100
+        print(f"\n{col}:")
+        print(f"  Missing count: {missing}/{n_rows}")
+        print(f"  Completeness: {completeness:.1f}%")
+        print(f"  Empty rows: {missing_indices}")
+        if missing > 0:
+            # Severity rating
+            if missing >= n_rows * 0.5:
+                severity = "Critical"
+            elif missing >= n_rows * 0.25:
+                severity = "High"
+            elif missing >= n_rows * 0.15:
+                severity = "Medium"
+            else:
+                severity = "Low"
+            print(f"  Severity: {severity}")
+        else:
+            print(f"  Severity: None")
+    
+    # Overall completeness
+    overall_completeness = ((total_cells - total_missing) / total_cells) * 100
+    print("\n" + "=" * 70)
+    print(f"--- OVERALL DATASET COMPLETENESS ---")
+    print(f"Total cells: {total_cells}")
+    print(f"Total missing cells: {total_missing}")
+    print(f"Overall completeness: {overall_completeness:.1f}%")
+    
+    # Row-by-row analysis
+    print("\n" + "=" * 70)
+    print("--- ROW-BY-ROW COMPLETENESS ---")
+    for i, row in enumerate(rows, 1):
+        filled = 0
+        empty_fields = []
+        for col in columns:
+            val = row.get(col, '')
+            if val is None or val.strip() == '':
+                empty_fields.append(col)
+            else:
+                filled += 1
+        pct = (filled / n_cols) * 100
+        status = "COMPLETE" if filled == n_cols else "PARTIAL" if filled > 0 else "EMPTY"
+        print(f"Row {i}: {filled}/{n_cols} filled ({pct:.0f}%) [{status}]")
+        if empty_fields:
+            print(f"       Missing fields: {', '.join(empty_fields)}")
+    
+    # Pattern analysis
+    print("\n" + "=" * 70)
+    print("--- PATTERN ANALYSIS ---")
+    
+    # Check if row 7 is entirely empty
+    row7_filled = sum(1 for col in columns if rows[6].get(col, '').strip() != '')
+    print(f"\n1. Row 7 (last row): {row7_filled}/{n_cols} fields filled — {'Nearly empty row, likely a scraper artifact or corrupt data' if row7_filled <= 1 else 'Partially filled'}")
+    
+    # Check for duplicates
+    seen = {}
+    for i, row in enumerate(rows, 1):
+        vals = tuple(row.get(c, '').strip() for c in columns)
+        if vals in seen:
+            print(f"2. Row {i} is a duplicate of row {seen[vals]}")
+        seen[vals] = i
+    
+    if len(set(seen.keys())) == len(rows):
+        print("2. No exact duplicate rows found")
+    
+    # Missingness distribution
+    print("3. Missingness pattern:")
+    print(f"   - {n_rows - len([r for r in rows if all(v.strip() for v in r.values())])} rows have at least one missing value")
+    complete_rows = sum(1 for row in rows if all(v.strip() for v in row.values()))
+    print(f"   - {complete_rows} rows are fully complete")
+    
+    # Check if missingness is concentrated in specific rows or columns
+    missing_by_col = sorted([(col, cnt) for col, (cnt, _) in col_missing.items()], key=lambda x: -x[1])
+    if missing_by_col[0][1] > 0:
+        print(f"   - Column '{missing_by_col[0][0]}' has the most missing values ({missing_by_col[0][1]})")
+    
+    # Check if row 7 alone accounts for most missingness
+    row7_missing = n_cols - row7_filled
+    if row7_missing > 0:
+        pct_from_row7 = (row7_missing / total_missing) * 100
+        print(f"   - Row 7 alone accounts for {row7_missing}/{total_missing} ({pct_from_row7:.0f}%) of all missing values")
+    
+    print("\n4. Verdict on missingness pattern:")
+    if row7_missing / total_missing > 0.5:
+        print("   ⚠ SYSTEMATIC — Missingness is heavily concentrated in one row (row 7), suggesting a structural issue")
+    else:
+        print("   ⚡ MIXED — Some systematic (row 7 is nearly empty) and some random/sporadic missing values")
+    
+    print("\n" + "=" * 70)
+    print("--- SEVERITY SUMMARY ---")
+    for col in columns:
+        cnt, idxs = col_missing[col]
+        if cnt == 0:
+            sev = "None"
+        elif cnt >= n_rows * 0.5:
+            sev = "Critical"
+        elif cnt >= n_rows * 0.25:
+            sev = "High"
+        elif cnt >= n_rows * 0.15:
+            sev = "Medium"
+        else:
+            sev = "Low"
+        print(f"  {col}: {sev} ({cnt}/{n_rows} missing)")
+
+analyze_csv("messy_dataset.csv")
+EOF
+
+
+  ▸ [subagent:20] shell
+    command: cd /workspace/team2/data && python3 << 'EOF'
+import csv
+import sys
+
+def analyze_csv(filepath):
+    with open(filepath, 'r') as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+        columns = reader.fieldnames
+    
+    n_rows = len(rows)
+    n_cols = len(columns)
+    total_cells = n_rows * n_cols
+    
+    print(f"File: {filepath}")
+    print(f"Total rows: {n_rows}")
+    print(f"Total columns: {n_cols}")
+    print(f"Total cells: {total_cells}")
+    print("=" * 70)
+    
+    # Per-column missing analysis
+    print("\n--- PER-COLUMN MISSING ANALYSIS ---")
+    col_missing = {}
+    total_missing = 0
+    
+    for col in columns:
+        missing = 0
+        missing_indices = []
+        for i, row in enumerate(rows, 1):
+            val = row.get(col, '')
+            if val is None or val.strip() == '':
+                missing += 1
+                missing_indices.append(i)
+        col_missing[col] = (missing, missing_indices)
+        total_missing += missing
+        completeness = ((n_rows - missing) / n_rows) * 100
+        print(f"\n{col}:")
+        print(f"  Missing count: {missing}/{n_rows}")
+        print(f"  Completeness: {completeness:.1f}%")
+        print(f"  Empty rows: {missing_indices}")
+        if missing > 0:
+            # Severity rating
+            if missing >= n_rows * 0.5:
+                severity = "Critical"
+            elif missing >= n_rows * 0.25:
+                severity = "High"
+            elif missing >= n_rows * 0.15:
+                severity = "Medium"
+            else:
+                severity = "Low"
+            print(f"  Severity: {severity}")
+        else:
+            print(f"  Severity: None")
+    
+    # Overall completeness
+    overall_completeness = ((total_cells - total_missing) / total_cells) * 100
+    print("\n" + "=" * 70)
+    print(f"--- OVERALL DATASET COMPLETENESS ---")
+    print(f"Total cells: {total_cells}")
+    print(f"Total missing cells: {total_missing}")
+    print(f"Overall completeness: {overall_completeness:.1f}%")
+    
+    # Row-by-row analysis
+    print("\n" + "=" * 70)
+    print("--- ROW-BY-ROW COMPLETENESS ---")
+    for i, row in enumerate(rows, 1):
+        filled = 0
+        empty_fields = []
+        for col in columns:
+            val = row.get(col, '')
+            if val is None or val.strip() == '':
+                empty_fields.append(col)
+            else:
+                filled += 1
+        pct = (filled / n_cols) * 100
+        status = "COMPLETE" if filled == n_cols else "PARTIAL" if filled > 0 else "EMPTY"
+        print(f"Row {i}: {filled}/{n_cols} filled ({pct:.0f}%) [{status}]")
+        if empty_fields:
+            print(f"       Missing fields: {', '.join(empty_fields)}")
+    
+    # Pattern analysis
+    print("\n" + "=" * 70)
+    print("--- PATTERN ANALYSIS ---")
+    
+    # Check if row 7 is entirely empty
+    row7_filled = sum(1 for col in columns if rows[6].get(col, '').strip() != '')
+    print(f"\n1. Row 7 (last row): {row7_filled}/{n_cols} fields filled — {'Nearly empty row, likely a scraper artifact or corrupt data' if row7_filled <= 1 else 'Partially filled'}")
+    
+    # Check for duplicates
+    seen = {}
+    for i, row in enumerate(rows, 1):
+        vals = tuple(row.get(c, '').strip() for c in columns)
+        if vals in seen:
+            print(f"2. Row {i} is a duplicate of row {seen[vals]}")
+        seen[vals] = i
+    
+    if len(set(seen.keys())) == len(rows):
+        print("2. No exact duplicate rows found")
+    
+    # Missingness distribution
+    print("3. Missingness pattern:")
+    print(f"   - {n_rows - len([r for r in rows if all(v.strip() for v in r.values())])} rows have at least one missing value")
+    complete_rows = sum(1 for row in rows if all(v.strip() for v in row.values()))
+    print(f"   - {complete_rows} rows are fully complete")
+    
+    # Check if missingness is concentrated in specific rows or columns
+    missing_by_col = sorted([(col, cnt) for col, (cnt, _) in col_missing.items()], key=lambda x: -x[1])
+    if missing_by_col[0][1] > 0:
+        print(f"   - Column '{missing_by_col[0][0]}' has the most missing values ({missing_by_col[0][1]})")
+    
+    # Check if row 7 alone accounts for most missingness
+    row7_missing = n_cols - row7_filled
+    if row7_missing > 0:
+        pct_from_row7 = (row7_missing / total_missing) * 100
+        print(f"   - Row 7 alone accounts for {row7_missing}/{total_missing} ({pct_from_row7:.0f}%) of all missing values")
+    
+    print("\n4. Verdict on missingness pattern:")
+    if row7_missing / total_missing > 0.5:
+        print("   ⚠ SYSTEMATIC — Missingness is heavily concentrated in one row (row 7), suggesting a structural issue")
+    else:
+        print("   ⚡ MIXED — Some systematic (row 7 is nearly empty) and some random/sporadic missing values")
+    
+    print("\n" + "=" * 70)
+    print("--- SEVERITY SUMMARY ---")
+    for col in columns:
+        cnt, idxs = col_missing[col]
+        if cnt == 0:
+            sev = "None"
+        elif cnt >= n_rows * 0.5:
+            sev = "Critical"
+        elif cnt >= n_rows * 0.25:
+            sev = "High"
+        elif cnt >= n_rows * 0.15:
+            sev = "Medium"
+        else:
+            sev = "Low"
+        print(f"  {col}: {sev} ({cnt}/{n_rows} missing)")
+
+analyze_csv("messy_dataset.csv")
+EOF
+
+
+  ▸ [subagent:20] shell
+    command: cd /workspace/team2/data && python3 << 'EOF'
+import csv
+import sys
+
+def analyze_csv(filepath):
+    with open(filepath, 'r') as f:
+        reader = csv.DictReader(f)
+        rows = list(reader)
+        columns = reader.fieldnames
+    
+    n_rows = len(rows)
+    n_cols = len(columns)
+    total_cells = n_rows * n_cols
+    
+    print(f"File: {filepath}")
+    print(f"Total rows: {n_rows}")
+    print(f"Total columns: {n_cols}")
+    print(f"Total cells: {total_cells}")
+    print("=" * 70)
+    
+    # Per-column missing analysis
+    print("\n--- PER-COLUMN MISSING ANALYSIS ---")
+    col_missing = {}
+    total_missing = 0
+    
+    for col in columns:
+        missing = 0
+        missing_indices = []
+        for i, row in enumerate(rows, 1):
+            val = row.get(col, '')
+            if val is None or val.strip() == '':
+                missing += 1
+                missing_indices.append(i)
+        col_missing[col] = (missing, missing_indices)
+        total_missing += missing
+        completeness = ((n_rows - missing) / n_rows) * 100
+        print(f"\n{col}:")
+        print(f"  Missing count: {missing}/{n_rows}")
+        print(f"  Completeness: {completeness:.1f}%")
+        print(f"  Empty rows: {missing_indices}")
+        if missing > 0:
+            # Severity rating
+            if missing >= n_rows * 0.5:
+                severity = "Critical"
+            elif missing >= n_rows * 0.25:
+                severity = "High"
+            elif missing >= n_rows * 0.15:
+                severity = "Medium"
+            else:
+                severity = "Low"
+            print(f"  Severity: {severity}")
+        else:
+            print(f"  Severity: None")
+    
+    # Overall completeness
+    overall_completeness = ((total_cells - total_missing) / total_cells) * 100
+    print("\n" + "=" * 70)
+    print(f"--- OVERALL DATASET COMPLETENESS ---")
+    print(f"Total cells: {total_cells}")
+    print(f"Total missing cells: {total_missing}")
+    print(f"Overall completeness: {overall_completeness:.1f}%")
+    
+    # Row-by-row analysis
+    print("\n" + "=" * 70)
+    print("--- ROW-BY-ROW COMPLETENESS ---")
+    for i, row in enumerate(rows, 1):
+        filled = 0
+        empty_fields = []
+        for col in columns:
+            val = row.get(col, '')
+            if val is None or val.strip() == '':
+                empty_fields.append(col)
+            else:
+                filled += 1
+        pct = (filled / n_cols) * 100
+        status = "COMPLETE" if filled == n_cols else "PARTIAL" if filled > 0 else "EMPTY"
+        print(f"Row {i}: {filled}/{n_cols} filled ({pct:.0f}%) [{status}]")
+        if empty_fields:
+            print(f"       Missing fields: {', '.join(empty_fields)}")
+    
+    # Pattern analysis
+    print("\n" + "=" * 70)
+    print("--- PATTERN ANALYSIS ---")
+    
+    # Check if row 7 is entirely empty
+    row7_filled = sum(1 for col in columns if rows[6].get(col, '').strip() != '')
+    print(f"\n1. Row 7 (last row): {row7_filled}/{n_cols} fields filled — {'Nearly empty row, likely a scraper artifact or corrupt data' if row7_filled <= 1 else 'Partially filled'}")
+    
+    # Check for duplicates
+    seen = {}
+    for i, row in enumerate(rows, 1):
+        vals = tuple(row.get(c, '').strip() for c in columns)
+        if vals in seen:
+            print(f"2. Row {i} is a duplicate of row {seen[vals]}")
+        seen[vals] = i
+    
+    if len(set(seen.keys())) == len(rows):
+        print("2. No exact duplicate rows found")
+    
+    # Missingness distribution
+    print("3. Missingness pattern:")
+    print(f"   - {n_rows - len([r for r in rows if all(v.strip() for v in r.values())])} rows have at least one missing value")
+    complete_rows = sum(1 for row in rows if all(v.strip() for v in row.values()))
+    print(f"   - {complete_rows} rows are fully complete")
+    
+    # Check if missingness is concentrated in specific rows or columns
+    missing_by_col = sorted([(col, cnt) for col, (cnt, _) in col_missing.items()], key=lambda x: -x[1])
+    if missing_by_col[0][1] > 0:
+        print(f"   - Column '{missing_by_col[0][0]}' has the most missing values ({missing_by_col[0][1]})")
+    
+    # Check if row 7 alone accounts for most missingness
+    row7_missing = n_cols - row7_filled
+    if row7_missing > 0:
+        pct_from_row7 = (row7_missing / total_missing) * 100
+        print(f"   - Row 7 alone accounts for {row7_missing}/{total_missing} ({pct_from_row7:.0f}%) of all missing values")
+    
+    print("\n4. Verdict on missingness pattern:")
+    if row7_missing / total_missing > 0.5:
+        print("   ⚠ SYSTEMATIC — Missingness is heavily concentrated in one row (row 7), suggesting a structural issue")
+    else:
+        print("   ⚡ MIXED — Some systematic (row 7 is nearly empty) and some random/sporadic missing values")
+    
+    print("\n" + "=" * 70)
+    print("--- SEVERITY SUMMARY ---")
+    for col in columns:
+        cnt, idxs = col_missing[col]
+        if cnt == 0:
+            sev = "None"
+        elif cnt >= n_rows * 0.5:
+            sev = "Critical"
+        elif cnt >= n_rows * 0.25:
+            sev = "High"
+        elif cnt >= n_rows * 0.15:
+            sev = "Medium"
+        else:
+            sev = "Low"
+        print(f"  {col}: {sev} ({cnt}/{n_rows} missing)")
+
+analyze_csv("messy_dataset.csv")
+EOF
+
+
+  ▸ [subagent:18] shell
+    command: cd /workspace/team2/data && python3 -c "
+import csv
+
+# Read messy dataset
+with open('messy_dataset.csv', 'r') as f:
+    messy = list(csv.DictReader(f))
+    
+# Read sample dataset
+with open('sample_dataset.csv', 'r') as f:
+    sample = list(csv.DictReader(f))
+
+print('=== MESSY DATASET ===')
+for r in messy:
+    print(r)
+print()
+print('=== SAMPLE DATASET ===')
+for r in sample:
+    print(r)
+print()
+
+# 1. Exact duplicates in messy
+print('=== EXACT DUPLICATE ANALYSIS ===')
+for i in range(len(messy)):
+    for j in range(i+1, len(messy)):
+        if messy[i] == messy[j]:
+            print(f'Row {i+1} (id={messy[i][\"id\"]}) == Row {j+1} (id={messy[j][\"id\"]}) : {messy[i]}')
+
+# 2. Near duplicates - same name+age+city
+print()
+print('=== NEAR DUPLICATE ANALYSIS (name+age+city) ===')
+for i in range(len(messy)):
+    for j in range(i+1, len(messy)):
+        a, b = messy[i], messy[j]
+        if a['name'] and b['name'] and a['name'] == b['name']:
+            if a['age'] and b['age'] and a['age'] == b['age']:
+                if a['city'] and b['city'] and a['city'] == b['city']:
+                    print(f'Row {i+1} and {j+1}: name={a[\"name\"]}, age={a[\"age\"]}, city={a[\"city\"]}')
+
+# Also check same name
+print()
+print('=== SAME NAME, DIFFERENT VALUES ===')
+from collections import defaultdict
+by_name = defaultdict(list)
+for i, r in enumerate(messy):
+    if r['name']:
+        by_name[r['name']].append((i+1, r))
+for name, rows in by_name.items():
+    if len(rows) > 1:
+        print(f'{name}: {rows}')
+
+# 3. Cross-dataset: check sample IDs against messy IDs
+print()
+print('=== CROSS-DATASET CONSISTENCY ===')
+sample_by_id = {r['id']: r for r in sample}
+for r in messy:
+    mid = r['id']
+    if mid in sample_by_id:
+        s = sample_by_id[mid]
+        issues = []
+        if r['name'] and s['name'] and r['name'] != s['name']:
+            issues.append(f'name mismatch: messy={r[\"name\"]} vs sample={s[\"name\"]}')
+        if r['age'] and s['age'] and r['age'] != s['age']:
+            issues.append(f'age mismatch: messy={r[\"age\"]} vs sample={s[\"age\"]}')
+        if r['salary'] and s['salary'] and r['salary'] != s['salary']:
+            issues.append(f'salary mismatch: messy={r[\"salary\"]} vs sample={s[\"salary\"]}')
+        if not r['name'] and s['name']:
+            issues.append(f'name is missing in messy (expected \"{s[\"name\"]}\")')
+        if not r['age'] and s['age']:
+            issues.append(f'age is missing in messy (expected {s[\"age\"]})')
+        if not r['salary'] and s['salary']:
+            issues.append(f'salary is missing in messy (expected {s[\"salary\"]})')
+        if issues:
+            print(f'id={mid} ({r.get(\"name\",\"\") or \"empty\"}): {\" | \".join(issues)}')
+        else:
+            print(f'id={mid} ({r.get(\"name\",\"\") or \"empty\"}): OK')
+    else:
+        print(f'id={mid} ({r.get(\"name\",\"\") or \"empty\"}): No matching sample ID')
+
+# 4. Check data types
+print()
+print('=== DATA TYPE ISSUES ===')
+for i, r in enumerate(messy):
+    row_num = i + 1
+    name = r['name'] or '(empty)'
+    if r['age']:
+        try:
+            age = int(r['age'])
+            if age > 120:
+                print(f'Row {row_num} (id={r[\"id\"]}, {name}): age={r[\"age\"]} is unrealistic (> 120)')
+        except:
+            print(f'Row {row_num} (id={r[\"id\"]}, {name}): age=\"{r[\"age\"]}\" is not a valid integer')
+    if r['salary']:
+        try:
+            sal = int(r['salary'])
+        except:
+            print(f'Row {row_num} (id={r[\"id\"]}, {name}): salary=\"{r[\"salary\"]}\" is not a valid integer')
+
+# 5. Missing values
+print()
+print('=== MISSING VALUES ===')
+for i, r in enumerate(messy):
+    row_num = i + 1
+    missing = [k for k, v in r.items() if not v]
+    if missing:
+        print(f'Row {row_num} (id={r[\"id\"]}): missing fields: {missing}')
+
+# 6. Total empty row
+print()
+print('=== COMPLETELY EMPTY ROW ===')
+for i, r in enumerate(messy):
+    if all(not v for v in r.values()):
+        print(f'Row {i+1} (id={r[\"id\"]}): COMPLETELY EMPTY')
+"
+
+
+
+  ▸ [subagent:18] shell
+    command: cd /workspace/team2/data && python3 -c "
+import csv
+
+# Read messy dataset
+with open('messy_dataset.csv', 'r') as f:
+    messy = list(csv.DictReader(f))
+    
+# Read sample dataset
+with open('sample_dataset.csv', 'r') as f:
+    sample = list(csv.DictReader(f))
+
+print('=== MESSY DATASET ===')
+for r in messy:
+    print(r)
+print()
+print('=== SAMPLE DATASET ===')
+for r in sample:
+    print(r)
+print()
+
+# 1. Exact duplicates in messy
+print('=== EXACT DUPLICATE ANALYSIS ===')
+for i in range(len(messy)):
+    for j in range(i+1, len(messy)):
+        if messy[i] == messy[j]:
+            print(f'Row {i+1} (id={messy[i][\"id\"]}) == Row {j+1} (id={messy[j][\"id\"]}) : {messy[i]}')
+
+# 2. Near duplicates - same name+age+city
+print()
+print('=== NEAR DUPLICATE ANALYSIS (name+age+city) ===')
+for i in range(len(messy)):
+    for j in range(i+1, len(messy)):
+        a, b = messy[i], messy[j]
+        if a['name'] and b['name'] and a['name'] == b['name']:
+            if a['age'] and b['age'] and a['age'] == b['age']:
+                if a['city'] and b['city'] and a['city'] == b['city']:
+                    print(f'Row {i+1} and {j+1}: name={a[\"name\"]}, age={a[\"age\"]}, city={a[\"city\"]}')
+
+# Also check same name
+print()
+print('=== SAME NAME, DIFFERENT VALUES ===')
+from collections import defaultdict
+by_name = defaultdict(list)
+for i, r in enumerate(messy):
+    if r['name']:
+        by_name[r['name']].append((i+1, r))
+for name, rows in by_name.items():
+    if len(rows) > 1:
+        print(f'{name}: {rows}')
+
+# 3. Cross-dataset: check sample IDs against messy IDs
+print()
+print('=== CROSS-DATASET CONSISTENCY ===')
+sample_by_id = {r['id']: r for r in sample}
+for r in messy:
+    mid = r['id']
+    if mid in sample_by_id:
+        s = sample_by_id[mid]
+        issues = []
+        if r['name'] and s['name'] and r['name'] != s['name']:
+            issues.append(f'name mismatch: messy={r[\"name\"]} vs sample={s[\"name\"]}')
+        if r['age'] and s['age'] and r['age'] != s['age']:
+            issues.append(f'age mismatch: messy={r[\"age\"]} vs sample={s[\"age\"]}')
+        if r['salary'] and s['salary'] and r['salary'] != s['salary']:
+            issues.append(f'salary mismatch: messy={r[\"salary\"]} vs sample={s[\"salary\"]}')
+        if not r['name'] and s['name']:
+            issues.append(f'name is missing in messy (expected \"{s[\"name\"]}\")')
+        if not r['age'] and s['age']:
+            issues.append(f'age is missing in messy (expected {s[\"age\"]})')
+        if not r['salary'] and s['salary']:
+            issues.append(f'salary is missing in messy (expected {s[\"salary\"]})')
+        if issues:
+            print(f'id={mid} ({r.get(\"name\",\"\") or \"empty\"}): {\" | \".join(issues)}')
+        else:
+            print(f'id={mid} ({r.get(\"name\",\"\") or \"empty\"}): OK')
+    else:
+        print(f'id={mid} ({r.get(\"name\",\"\") or \"empty\"}): No matching sample ID')
+
+# 4. Check data types
+print()
+print('=== DATA TYPE ISSUES ===')
+for i, r in enumerate(messy):
+    row_num = i + 1
+    name = r['name'] or '(empty)'
+    if r['age']:
+        try:
+            age = int(r['age'])
+            if age > 120:
+                print(f'Row {row_num} (id={r[\"id\"]}, {name}): age={r[\"age\"]} is unrealistic (> 120)')
+        except:
+            print(f'Row {row_num} (id={r[\"id\"]}, {name}): age=\"{r[\"age\"]}\" is not a valid integer')
+    if r['salary']:
+        try:
+            sal = int(r['salary'])
+        except:
+            print(f'Row {row_num} (id={r[\"id\"]}, {name}): salary=\"{r[\"salary\"]}\" is not a valid integer')
+
+# 5. Missing values
+print()
+print('=== MISSING VALUES ===')
+for i, r in enumerate(messy):
+    row_num = i + 1
+    missing = [k for k, v in r.items() if not v]
+    if missing:
+        print(f'Row {row_num} (id={r[\"id\"]}): missing fields: {missing}')
+
+# 6. Total empty row
+print()
+print('=== COMPLETELY EMPTY ROW ===')
+for i, r in enumerate(messy):
+    if all(not v for v in r.values()):
+        print(f'Row {i+1} (id={r[\"id\"]}): COMPLETELY EMPTY')
+"
+
+
+
+  ▸ [subagent:18] shell
+    command: cd /workspace/team2/data && python3 -c "
+import csv
+
+# Read messy dataset
+with open('messy_dataset.csv', 'r') as f:
+    messy = list(csv.DictReader(f))
+    
+# Read sample dataset
+with open('sample_dataset.csv', 'r') as f:
+    sample = list(csv.DictReader(f))
+
+print('=== MESSY DATASET ===')
+for r in messy:
+    print(r)
+print()
+print('=== SAMPLE DATASET ===')
+for r in sample:
+    print(r)
+print()
+
+# 1. Exact duplicates in messy
+print('=== EXACT DUPLICATE ANALYSIS ===')
+for i in range(len(messy)):
+    for j in range(i+1, len(messy)):
+        if messy[i] == messy[j]:
+            print(f'Row {i+1} (id={messy[i][\"id\"]}) == Row {j+1} (id={messy[j][\"id\"]}) : {messy[i]}')
+
+# 2. Near duplicates - same name+age+city
+print()
+print('=== NEAR DUPLICATE ANALYSIS (name+age+city) ===')
+for i in range(len(messy)):
+    for j in range(i+1, len(messy)):
+        a, b = messy[i], messy[j]
+        if a['name'] and b['name'] and a['name'] == b['name']:
+            if a['age'] and b['age'] and a['age'] == b['age']:
+                if a['city'] and b['city'] and a['city'] == b['city']:
+                    print(f'Row {i+1} and {j+1}: name={a[\"name\"]}, age={a[\"age\"]}, city={a[\"city\"]}')
+
+# Also check same name
+print()
+print('=== SAME NAME, DIFFERENT VALUES ===')
+from collections import defaultdict
+by_name = defaultdict(list)
+for i, r in enumerate(messy):
+    if r['name']:
+        by_name[r['name']].append((i+1, r))
+for name, rows in by_name.items():
+    if len(rows) > 1:
+        print(f'{name}: {rows}')
+
+# 3. Cross-dataset: check sample IDs against messy IDs
+print()
+print('=== CROSS-DATASET CONSISTENCY ===')
+sample_by_id = {r['id']: r for r in sample}
+for r in messy:
+    mid = r['id']
+    if mid in sample_by_id:
+        s = sample_by_id[mid]
+        issues = []
+        if r['name'] and s['name'] and r['name'] != s['name']:
+            issues.append(f'name mismatch: messy={r[\"name\"]} vs sample={s[\"name\"]}')
+        if r['age'] and s['age'] and r['age'] != s['age']:
+            issues.append(f'age mismatch: messy={r[\"age\"]} vs sample={s[\"age\"]}')
+        if r['salary'] and s['salary'] and r['salary'] != s['salary']:
+            issues.append(f'salary mismatch: messy={r[\"salary\"]} vs sample={s[\"salary\"]}')
+        if not r['name'] and s['name']:
+            issues.append(f'name is missing in messy (expected \"{s[\"name\"]}\")')
+        if not r['age'] and s['age']:
+            issues.append(f'age is missing in messy (expected {s[\"age\"]})')
+        if not r['salary'] and s['salary']:
+            issues.append(f'salary is missing in messy (expected {s[\"salary\"]})')
+        if issues:
+            print(f'id={mid} ({r.get(\"name\",\"\") or \"empty\"}): {\" | \".join(issues)}')
+        else:
+            print(f'id={mid} ({r.get(\"name\",\"\") or \"empty\"}): OK')
+    else:
+        print(f'id={mid} ({r.get(\"name\",\"\") or \"empty\"}): No matching sample ID')
+
+# 4. Check data types
+print()
+print('=== DATA TYPE ISSUES ===')
+for i, r in enumerate(messy):
+    row_num = i + 1
+    name = r['name'] or '(empty)'
+    if r['age']:
+        try:
+            age = int(r['age'])
+            if age > 120:
+                print(f'Row {row_num} (id={r[\"id\"]}, {name}): age={r[\"age\"]} is unrealistic (> 120)')
+        except:
+            print(f'Row {row_num} (id={r[\"id\"]}, {name}): age=\"{r[\"age\"]}\" is not a valid integer')
+    if r['salary']:
+        try:
+            sal = int(r['salary'])
+        except:
+            print(f'Row {row_num} (id={r[\"id\"]}, {name}): salary=\"{r[\"salary\"]}\" is not a valid integer')
+
+# 5. Missing values
+print()
+print('=== MISSING VALUES ===')
+for i, r in enumerate(messy):
+    row_num = i + 1
+    missing = [k for k, v in r.items() if not v]
+    if missing:
+        print(f'Row {row_num} (id={r[\"id\"]}): missing fields: {missing}')
+
+# 6. Total empty row
+print()
+print('=== COMPLETELY EMPTY ROW ===')
+for i, r in enumerate(messy):
+    if all(not v for v in r.values()):
+        print(f'Row {i+1} (id={r[\"id\"]}): COMPLETELY EMPTY')
+"
+
+
+
+  ▸ [subagent:20] shell
+    command: cd /workspace/team2/data && python3 << 'EOF'
+import csv
+
+# Check for data quality issues beyond just missing values
+with open("messy_dataset.csv") as f:
+    reader = csv.DictReader(f)
+    rows = list(reader)
+    columns = reader.fieldnames
+
+print("--- DATA QUALITY ANOMALIES ---")
+
+# Check for anomalous age values
+for i, row in enumerate(rows, 1):
+    age = row.get('age', '').strip()
+    if age:
+        try:
+            age_int = int(age)
+            if age_int > 120 or age_int < 0:
+                print(f"Row {i}: age={age} is out of plausible range (0-120)")
+        except:
+            print(f"Row {i}: age='{age}' is not a valid number")
+
+# Check for salary anomalies
+for i, row in enumerate(rows, 1):
+    sal = row.get('salary', '').strip()
+    if sal:
+        try:
+            sal_int = int(sal)
+            if sal_int < 0 or sal_int > 500000:
+                print(f"Row {i}: salary={sal} is out of plausible range")
+        except:
+            print(f"Row {i}: salary='{sal}' is not a valid number")
+
+# Check for exact/approximate duplicates
+print("\n--- DUPLICATE / NEAR-DUPLICATE ANALYSIS ---")
+profiles = []
+for i, row in enumerate(rows, 1):
+    name = row.get('name', '').strip()
+    city = row.get('city', '').strip()
+    age = row.get('age', '').strip()
+    salary = row.get('salary', '').strip()
+    profiles.append((i, name, age, salary, city))
+
+# Compare rows
+for i in range(len(profiles)):
+    for j in range(i+1, len(profiles)):
+        r1 = profiles[i]
+        r2 = profiles[j]
+        name_match = r1[1] and r2[1] and r1[1] == r2[1]
+        city_match = r1[4] and r2[4] and r1[4] == r2[4]
+        salary_match = r1[3] and r2[3] and r1[3] == r2[3]
+        age_match = r1[2] and r2[2] and r1[2] == r2[2]
+        
+        matches = sum([name_match, city_match, salary_match, age_match])
+        if matches >= 3:
+            print(f"Row {r1[0]} and Row {r2[0]}: {matches}/4 fields match — potential duplicate")
+
+# Cross-reference with sample dataset
+print("\n--- CROSS-REFERENCE WITH SAMPLE DATASET ---")
+with open("sample_dataset.csv") as f:
+    sample_reader = csv.DictReader(f)
+    sample_rows = list(sample_reader)
+
+print(f"Sample dataset has {len(sample_rows)} rows and columns: {list(sample_rows[0].keys())}")
+print(f"Messy dataset has {len(rows)} rows and columns: {columns}")
+print(f"Common columns: id, name, age, salary")
+print(f"Sample has extra columns: department, join_date, email")
+print(f"Messy has extra column: city")
+
+# Check if messy data values exist in sample
+sample_names = {r['name'] for r in sample_rows if r['name'].strip()}
+sample_cities = set()  # sample doesn't have city column
+print(f"\nNames in sample: {sample_names}")
+print(f"Names in messy: {set(r['name'].strip() for r in rows if r['name'].strip())}")
+print(f"Names shared: {sample_names & set(r['name'].strip() for r in rows if r['name'].strip())}")
+EOF
+
+
+  ▸ [subagent:20] shell
+    command: cd /workspace/team2/data && python3 << 'EOF'
+import csv
+
+# Check for data quality issues beyond just missing values
+with open("messy_dataset.csv") as f:
+    reader = csv.DictReader(f)
+    rows = list(reader)
+    columns = reader.fieldnames
+
+print("--- DATA QUALITY ANOMALIES ---")
+
+# Check for anomalous age values
+for i, row in enumerate(rows, 1):
+    age = row.get('age', '').strip()
+    if age:
+        try:
+            age_int = int(age)
+            if age_int > 120 or age_int < 0:
+                print(f"Row {i}: age={age} is out of plausible range (0-120)")
+        except:
+            print(f"Row {i}: age='{age}' is not a valid number")
+
+# Check for salary anomalies
+for i, row in enumerate(rows, 1):
+    sal = row.get('salary', '').strip()
+    if sal:
+        try:
+            sal_int = int(sal)
+            if sal_int < 0 or sal_int > 500000:
+                print(f"Row {i}: salary={sal} is out of plausible range")
+        except:
+            print(f"Row {i}: salary='{sal}' is not a valid number")
+
+# Check for exact/approximate duplicates
+print("\n--- DUPLICATE / NEAR-DUPLICATE ANALYSIS ---")
+profiles = []
+for i, row in enumerate(rows, 1):
+    name = row.get('name', '').strip()
+    city = row.get('city', '').strip()
+    age = row.get('age', '').strip()
+    salary = row.get('salary', '').strip()
+    profiles.append((i, name, age, salary, city))
+
+# Compare rows
+for i in range(len(profiles)):
+    for j in range(i+1, len(profiles)):
+        r1 = profiles[i]
+        r2 = profiles[j]
+        name_match = r1[1] and r2[1] and r1[1] == r2[1]
+        city_match = r1[4] and r2[4] and r1[4] == r2[4]
+        salary_match = r1[3] and r2[3] and r1[3] == r2[3]
+        age_match = r1[2] and r2[2] and r1[2] == r2[2]
+        
+        matches = sum([name_match, city_match, salary_match, age_match])
+        if matches >= 3:
+            print(f"Row {r1[0]} and Row {r2[0]}: {matches}/4 fields match — potential duplicate")
+
+# Cross-reference with sample dataset
+print("\n--- CROSS-REFERENCE WITH SAMPLE DATASET ---")
+with open("sample_dataset.csv") as f:
+    sample_reader = csv.DictReader(f)
+    sample_rows = list(sample_reader)
+
+print(f"Sample dataset has {len(sample_rows)} rows and columns: {list(sample_rows[0].keys())}")
+print(f"Messy dataset has {len(rows)} rows and columns: {columns}")
+print(f"Common columns: id, name, age, salary")
+print(f"Sample has extra columns: department, join_date, email")
+print(f"Messy has extra column: city")
+
+# Check if messy data values exist in sample
+sample_names = {r['name'] for r in sample_rows if r['name'].strip()}
+sample_cities = set()  # sample doesn't have city column
+print(f"\nNames in sample: {sample_names}")
+print(f"Names in messy: {set(r['name'].strip() for r in rows if r['name'].strip())}")
+print(f"Names shared: {sample_names & set(r['name'].strip() for r in rows if r['name'].strip())}")
+EOF
+
+
+  ▸ [subagent:20] shell
+    command: cd /workspace/team2/data && python3 << 'EOF'
+import csv
+
+# Check for data quality issues beyond just missing values
+with open("messy_dataset.csv") as f:
+    reader = csv.DictReader(f)
+    rows = list(reader)
+    columns = reader.fieldnames
+
+print("--- DATA QUALITY ANOMALIES ---")
+
+# Check for anomalous age values
+for i, row in enumerate(rows, 1):
+    age = row.get('age', '').strip()
+    if age:
+        try:
+            age_int = int(age)
+            if age_int > 120 or age_int < 0:
+                print(f"Row {i}: age={age} is out of plausible range (0-120)")
+        except:
+            print(f"Row {i}: age='{age}' is not a valid number")
+
+# Check for salary anomalies
+for i, row in enumerate(rows, 1):
+    sal = row.get('salary', '').strip()
+    if sal:
+        try:
+            sal_int = int(sal)
+            if sal_int < 0 or sal_int > 500000:
+                print(f"Row {i}: salary={sal} is out of plausible range")
+        except:
+            print(f"Row {i}: salary='{sal}' is not a valid number")
+
+# Check for exact/approximate duplicates
+print("\n--- DUPLICATE / NEAR-DUPLICATE ANALYSIS ---")
+profiles = []
+for i, row in enumerate(rows, 1):
+    name = row.get('name', '').strip()
+    city = row.get('city', '').strip()
+    age = row.get('age', '').strip()
+    salary = row.get('salary', '').strip()
+    profiles.append((i, name, age, salary, city))
+
+# Compare rows
+for i in range(len(profiles)):
+    for j in range(i+1, len(profiles)):
+        r1 = profiles[i]
+        r2 = profiles[j]
+        name_match = r1[1] and r2[1] and r1[1] == r2[1]
+        city_match = r1[4] and r2[4] and r1[4] == r2[4]
+        salary_match = r1[3] and r2[3] and r1[3] == r2[3]
+        age_match = r1[2] and r2[2] and r1[2] == r2[2]
+        
+        matches = sum([name_match, city_match, salary_match, age_match])
+        if matches >= 3:
+            print(f"Row {r1[0]} and Row {r2[0]}: {matches}/4 fields match — potential duplicate")
+
+# Cross-reference with sample dataset
+print("\n--- CROSS-REFERENCE WITH SAMPLE DATASET ---")
+with open("sample_dataset.csv") as f:
+    sample_reader = csv.DictReader(f)
+    sample_rows = list(sample_reader)
+
+print(f"Sample dataset has {len(sample_rows)} rows and columns: {list(sample_rows[0].keys())}")
+print(f"Messy dataset has {len(rows)} rows and columns: {columns}")
+print(f"Common columns: id, name, age, salary")
+print(f"Sample has extra columns: department, join_date, email")
+print(f"Messy has extra column: city")
+
+# Check if messy data values exist in sample
+sample_names = {r['name'] for r in sample_rows if r['name'].strip()}
+sample_cities = set()  # sample doesn't have city column
+print(f"\nNames in sample: {sample_names}")
+print(f"Names in messy: {set(r['name'].strip() for r in rows if r['name'].strip())}")
+print(f"Names shared: {sample_names & set(r['name'].strip() for r in rows if r['name'].strip())}")
+EOF
+
+
+  ▸ [subagent:18] shell
+    command: cd /workspace/team2/data && python3 -c "
+import csv
+
+with open('messy_dataset.csv', 'r') as f:
+    messy = list(csv.DictReader(f))
+with open('sample_dataset.csv', 'r') as f:
+    sample = list(csv.DictReader(f))
+
+# Exact duplicates ignoring id
+print('=== EXACT DUPLICATES (all fields except id) ===')
+for i in range(len(messy)):
+    for j in range(i+1, len(messy)):
+        a = {k:v for k,v in messy[i].items() if k != 'id'}
+        b = {k:v for k,v in messy[j].items() if k != 'id'}
+        if a == b:
+            print(f'Row {i+1} (id={messy[i][\"id\"]}) == Row {j+1} (id={messy[j][\"id\"]})')
+            print(f'  Shared data: {a}')
+
+# Check for empty row 7
+print()
+print('=== ROW 7 (id=7) DETAILS ===')
+print(f'{messy[6]}')
+
+# Sample also has Alice duplicate
+print()
+print('=== SAMPLE SELF-CHECK: exact duplicates ignoring id ===')
+for i in range(len(sample)):
+    for j in range(i+1, len(sample)):
+        a = {k:v for k,v in sample[i].items() if k != 'id'}
+        b = {k:v for k,v in sample[j].items() if k != 'id'}
+        if a == b:
+            print(f'Sample Row {i+1} (id={sample[i][\"id\"]}) == Sample Row {j+1} (id={sample[j][\"id\"]})')
+
+# Salary comparison for Charlie (id=3)
+print()
+print('=== CHARLIE CROSS-REFERENCE ===')
+print(f'Messy id=3: {messy[2]}')
+print(f'Sample id=3: {sample[2]}')
+print(f'Salary mismatch? messy=\"{messy[2][\"salary\"]}\" vs sample=\"{sample[2][\"salary\"]}\"')
+
+# Bob vs messy row 2
+print()
+print('=== BOB/ROW-2 CROSS-REFERENCE ===')
+print(f'Messy id=2: {messy[1]}')
+print(f'Sample id=2 (Bob): {sample[1]}')
+
+# Column comparison
+print()
+print('=== COLUMN STRUCTURE DIFFERENCE ===')
+print(f'Messy columns: {list(messy[0].keys())}')
+print(f'Sample columns: {list(sample[0].keys())}')
+"
+
+
+
+  ▸ [subagent:18] shell
+    command: cd /workspace/team2/data && python3 -c "
+import csv
+
+with open('messy_dataset.csv', 'r') as f:
+    messy = list(csv.DictReader(f))
+with open('sample_dataset.csv', 'r') as f:
+    sample = list(csv.DictReader(f))
+
+# Exact duplicates ignoring id
+print('=== EXACT DUPLICATES (all fields except id) ===')
+for i in range(len(messy)):
+    for j in range(i+1, len(messy)):
+        a = {k:v for k,v in messy[i].items() if k != 'id'}
+        b = {k:v for k,v in messy[j].items() if k != 'id'}
+        if a == b:
+            print(f'Row {i+1} (id={messy[i][\"id\"]}) == Row {j+1} (id={messy[j][\"id\"]})')
+            print(f'  Shared data: {a}')
+
+# Check for empty row 7
+print()
+print('=== ROW 7 (id=7) DETAILS ===')
+print(f'{messy[6]}')
+
+# Sample also has Alice duplicate
+print()
+print('=== SAMPLE SELF-CHECK: exact duplicates ignoring id ===')
+for i in range(len(sample)):
+    for j in range(i+1, len(sample)):
+        a = {k:v for k,v in sample[i].items() if k != 'id'}
+        b = {k:v for k,v in sample[j].items() if k != 'id'}
+        if a == b:
+            print(f'Sample Row {i+1} (id={sample[i][\"id\"]}) == Sample Row {j+1} (id={sample[j][\"id\"]})')
+
+# Salary comparison for Charlie (id=3)
+print()
+print('=== CHARLIE CROSS-REFERENCE ===')
+print(f'Messy id=3: {messy[2]}')
+print(f'Sample id=3: {sample[2]}')
+print(f'Salary mismatch? messy=\"{messy[2][\"salary\"]}\" vs sample=\"{sample[2][\"salary\"]}\"')
+
+# Bob vs messy row 2
+print()
+print('=== BOB/ROW-2 CROSS-REFERENCE ===')
+print(f'Messy id=2: {messy[1]}')
+print(f'Sample id=2 (Bob): {sample[1]}')
+
+# Column comparison
+print()
+print('=== COLUMN STRUCTURE DIFFERENCE ===')
+print(f'Messy columns: {list(messy[0].keys())}')
+print(f'Sample columns: {list(sample[0].keys())}')
+"
+
+
+
+  ▸ [subagent:18] shell
+    command: cd /workspace/team2/data && python3 -c "
+import csv
+
+with open('messy_dataset.csv', 'r') as f:
+    messy = list(csv.DictReader(f))
+with open('sample_dataset.csv', 'r') as f:
+    sample = list(csv.DictReader(f))
+
+# Exact duplicates ignoring id
+print('=== EXACT DUPLICATES (all fields except id) ===')
+for i in range(len(messy)):
+    for j in range(i+1, len(messy)):
+        a = {k:v for k,v in messy[i].items() if k != 'id'}
+        b = {k:v for k,v in messy[j].items() if k != 'id'}
+        if a == b:
+            print(f'Row {i+1} (id={messy[i][\"id\"]}) == Row {j+1} (id={messy[j][\"id\"]})')
+            print(f'  Shared data: {a}')
+
+# Check for empty row 7
+print()
+print('=== ROW 7 (id=7) DETAILS ===')
+print(f'{messy[6]}')
+
+# Sample also has Alice duplicate
+print()
+print('=== SAMPLE SELF-CHECK: exact duplicates ignoring id ===')
+for i in range(len(sample)):
+    for j in range(i+1, len(sample)):
+        a = {k:v for k,v in sample[i].items() if k != 'id'}
+        b = {k:v for k,v in sample[j].items() if k != 'id'}
+        if a == b:
+            print(f'Sample Row {i+1} (id={sample[i][\"id\"]}) == Sample Row {j+1} (id={sample[j][\"id\"]})')
+
+# Salary comparison for Charlie (id=3)
+print()
+print('=== CHARLIE CROSS-REFERENCE ===')
+print(f'Messy id=3: {messy[2]}')
+print(f'Sample id=3: {sample[2]}')
+print(f'Salary mismatch? messy=\"{messy[2][\"salary\"]}\" vs sample=\"{sample[2][\"salary\"]}\"')
+
+# Bob vs messy row 2
+print()
+print('=== BOB/ROW-2 CROSS-REFERENCE ===')
+print(f'Messy id=2: {messy[1]}')
+print(f'Sample id=2 (Bob): {sample[1]}')
+
+# Column comparison
+print()
+print('=== COLUMN STRUCTURE DIFFERENCE ===')
+print(f'Messy columns: {list(messy[0].keys())}')
+print(f'Sample columns: {list(sample[0].keys())}')
+"
+
+
+
+  ▸ [subagent:20] shell
+    command: cd /workspace/team2/data && python3 << 'EOF'
+import csv
+
+# Check for data quality issues beyond just missing values
+with open("messy_dataset.csv") as f:
+    reader = csv.DictReader(f)
+    rows = list(reader)
+    columns = reader.fieldnames
+
+print("--- DATA QUALITY ANOMALIES ---")
+
+# Check for anomalous age values
+for i, row in enumerate(rows, 1):
+    age = row.get('age', '').strip()
+    if age:
+        try:
+            age_int = int(age)
+            if age_int > 120 or age_int < 0:
+                print(f"Row {i}: age={age} is out of plausible range (0-120)")
+        except:
+            print(f"Row {i}: age='{age}' is not a valid number")
+
+print("\n--- DUPLICATE / NEAR-DUPLICATE ANALYSIS ---")
+profiles = []
+for i, row in enumerate(rows, 1):
+    name = row.get('name', '').strip()
+    city = row.get('city', '').strip()
+    age = row.get('age', '').strip()
+    salary = row.get('salary', '').strip()
+    profiles.append((i, name, age, salary, city))
+
+# Compare rows
+for i in range(len(profiles)):
+    for j in range(i+1, len(profiles)):
+        r1 = profiles[i]
+        r2 = profiles[j]
+        name_match = r1[1] and r2[1] and r1[1] == r2[1]
+        city_match = r1[4] and r2[4] and r1[4] == r2[4]
+        salary_match = r1[3] and r2[3] and r1[3] == r2[3]
+        age_match = r1[2] and r2[2] and r1[2] == r2[2]
+        
+        matches = sum([name_match, city_match, salary_match, age_match])
+        if matches >= 3:
+            print(f"Row {r1[0]} and Row {r2[0]}: {matches}/4 content fields match — potential duplicate")
+
+# Cross-reference with sample dataset
+print("\n--- CROSS-REFERENCE WITH SAMPLE ---")
+with open("sample_dataset.csv") as f:
+    sample_reader = csv.DictReader(f)
+    sample_rows = list(sample_reader)
+
+sample_names = {r['name'] for r in sample_rows if r['name'].strip()}
+messy_names = set(r['name'].strip() for r in rows if r['name'].strip())
+print(f"Names in sample: {sample_names}")
+print(f"Names in messy: {messy_names}")
+print(f"Shared names: {sample_names & messy_names}")
+print(f"Names in messy but NOT in sample: {messy_names - sample_names}")
+EOF
+
+
+  ▸ [subagent:20] shell
+    command: cd /workspace/team2/data && python3 << 'EOF'
+import csv
+
+# Check for data quality issues beyond just missing values
+with open("messy_dataset.csv") as f:
+    reader = csv.DictReader(f)
+    rows = list(reader)
+    columns = reader.fieldnames
+
+print("--- DATA QUALITY ANOMALIES ---")
+
+# Check for anomalous age values
+for i, row in enumerate(rows, 1):
+    age = row.get('age', '').strip()
+    if age:
+        try:
+            age_int = int(age)
+            if age_int > 120 or age_int < 0:
+                print(f"Row {i}: age={age} is out of plausible range (0-120)")
+        except:
+            print(f"Row {i}: age='{age}' is not a valid number")
+
+print("\n--- DUPLICATE / NEAR-DUPLICATE ANALYSIS ---")
+profiles = []
+for i, row in enumerate(rows, 1):
+    name = row.get('name', '').strip()
+    city = row.get('city', '').strip()
+    age = row.get('age', '').strip()
+    salary = row.get('salary', '').strip()
+    profiles.append((i, name, age, salary, city))
+
+# Compare rows
+for i in range(len(profiles)):
+    for j in range(i+1, len(profiles)):
+        r1 = profiles[i]
+        r2 = profiles[j]
+        name_match = r1[1] and r2[1] and r1[1] == r2[1]
+        city_match = r1[4] and r2[4] and r1[4] == r2[4]
+        salary_match = r1[3] and r2[3] and r1[3] == r2[3]
+        age_match = r1[2] and r2[2] and r1[2] == r2[2]
+        
+        matches = sum([name_match, city_match, salary_match, age_match])
+        if matches >= 3:
+            print(f"Row {r1[0]} and Row {r2[0]}: {matches}/4 content fields match — potential duplicate")
+
+# Cross-reference with sample dataset
+print("\n--- CROSS-REFERENCE WITH SAMPLE ---")
+with open("sample_dataset.csv") as f:
+    sample_reader = csv.DictReader(f)
+    sample_rows = list(sample_reader)
+
+sample_names = {r['name'] for r in sample_rows if r['name'].strip()}
+messy_names = set(r['name'].strip() for r in rows if r['name'].strip())
+print(f"Names in sample: {sample_names}")
+print(f"Names in messy: {messy_names}")
+print(f"Shared names: {sample_names & messy_names}")
+print(f"Names in messy but NOT in sample: {messy_names - sample_names}")
+EOF
+
+
+  ▸ [subagent:20] shell
+    command: cd /workspace/team2/data && python3 << 'EOF'
+import csv
+
+# Check for data quality issues beyond just missing values
+with open("messy_dataset.csv") as f:
+    reader = csv.DictReader(f)
+    rows = list(reader)
+    columns = reader.fieldnames
+
+print("--- DATA QUALITY ANOMALIES ---")
+
+# Check for anomalous age values
+for i, row in enumerate(rows, 1):
+    age = row.get('age', '').strip()
+    if age:
+        try:
+            age_int = int(age)
+            if age_int > 120 or age_int < 0:
+                print(f"Row {i}: age={age} is out of plausible range (0-120)")
+        except:
+            print(f"Row {i}: age='{age}' is not a valid number")
+
+print("\n--- DUPLICATE / NEAR-DUPLICATE ANALYSIS ---")
+profiles = []
+for i, row in enumerate(rows, 1):
+    name = row.get('name', '').strip()
+    city = row.get('city', '').strip()
+    age = row.get('age', '').strip()
+    salary = row.get('salary', '').strip()
+    profiles.append((i, name, age, salary, city))
+
+# Compare rows
+for i in range(len(profiles)):
+    for j in range(i+1, len(profiles)):
+        r1 = profiles[i]
+        r2 = profiles[j]
+        name_match = r1[1] and r2[1] and r1[1] == r2[1]
+        city_match = r1[4] and r2[4] and r1[4] == r2[4]
+        salary_match = r1[3] and r2[3] and r1[3] == r2[3]
+        age_match = r1[2] and r2[2] and r1[2] == r2[2]
+        
+        matches = sum([name_match, city_match, salary_match, age_match])
+        if matches >= 3:
+            print(f"Row {r1[0]} and Row {r2[0]}: {matches}/4 content fields match — potential duplicate")
+
+# Cross-reference with sample dataset
+print("\n--- CROSS-REFERENCE WITH SAMPLE ---")
+with open("sample_dataset.csv") as f:
+    sample_reader = csv.DictReader(f)
+    sample_rows = list(sample_reader)
+
+sample_names = {r['name'] for r in sample_rows if r['name'].strip()}
+messy_names = set(r['name'].strip() for r in rows if r['name'].strip())
+print(f"Names in sample: {sample_names}")
+print(f"Names in messy: {messy_names}")
+print(f"Shared names: {sample_names & messy_names}")
+print(f"Names in messy but NOT in sample: {messy_names - sample_names}")
+EOF
+
+
+  ▸ [subagent:20] shell
+    command: cd /workspace/team2/data && python3 -c "
+import csv
+
+with open('messy_dataset.csv') as f:
+    reader = csv.DictReader(f)
+    rows = list(reader)
+
+print('--- DATA QUALITY ANOMALIES ---')
+for i, row in enumerate(rows, 1):
+    age = row.get('age', '').strip()
+    if age:
+        try:
+            age_int = int(age)
+            if age_int > 120 or age_int < 0:
+                print(f'Row {i}: age={age} is out of plausible range (0-120)')
+        except:
+            print(f'Row {i}: age is not a valid number')
+
+print()
+print('--- DUPLICATE ANALYSIS ---')
+profiles = [(i, r['name'].strip(), r['city'].strip(), r['salary'].strip(), r['age'].strip()) for i, r in enumerate(rows, 1)]
+for i in range(len(profiles)):
+    for j in range(i+1, len(profiles)):
+        r1, r2 = profiles[i], profiles[j]
+        matches = sum([r1[1] and r2[1] and r1[1]==r2[1], r1[2] and r2[2] and r1[2]==r2[2], r1[3] and r2[3] and r1[3]==r2[3], r1[4] and r2[4] and r1[4]==r2[4]])
+        if matches >= 3:
+            print(f'Row {r1[0]} and Row {r2[0]}: {matches}/4 fields match')
+
+print()
+print('--- CROSS-REFERENCE ---')
+with open('sample_dataset.csv') as f:
+    sample_rows = list(csv.DictReader(f))
+sample_names = {r['name'] for r in sample_rows if r['name'].strip()}
+messy_names = set(r['name'].strip() for r in rows if r['name'].strip())
+print(f'Names in both: {sample_names & messy_names}')
+print(f'Names only in messy: {messy_names - sample_names}')
+"
+
+
+
+  ▸ [subagent:20] shell
+    command: cd /workspace/team2/data && python3 -c "
+import csv
+
+with open('messy_dataset.csv') as f:
+    reader = csv.DictReader(f)
+    rows = list(reader)
+
+print('--- DATA QUALITY ANOMALIES ---')
+for i, row in enumerate(rows, 1):
+    age = row.get('age', '').strip()
+    if age:
+        try:
+            age_int = int(age)
+            if age_int > 120 or age_int < 0:
+                print(f'Row {i}: age={age} is out of plausible range (0-120)')
+        except:
+            print(f'Row {i}: age is not a valid number')
+
+print()
+print('--- DUPLICATE ANALYSIS ---')
+profiles = [(i, r['name'].strip(), r['city'].strip(), r['salary'].strip(), r['age'].strip()) for i, r in enumerate(rows, 1)]
+for i in range(len(profiles)):
+    for j in range(i+1, len(profiles)):
+        r1, r2 = profiles[i], profiles[j]
+        matches = sum([r1[1] and r2[1] and r1[1]==r2[1], r1[2] and r2[2] and r1[2]==r2[2], r1[3] and r2[3] and r1[3]==r2[3], r1[4] and r2[4] and r1[4]==r2[4]])
+        if matches >= 3:
+            print(f'Row {r1[0]} and Row {r2[0]}: {matches}/4 fields match')
+
+print()
+print('--- CROSS-REFERENCE ---')
+with open('sample_dataset.csv') as f:
+    sample_rows = list(csv.DictReader(f))
+sample_names = {r['name'] for r in sample_rows if r['name'].strip()}
+messy_names = set(r['name'].strip() for r in rows if r['name'].strip())
+print(f'Names in both: {sample_names & messy_names}')
+print(f'Names only in messy: {messy_names - sample_names}')
+"
+
+
+
+  ▸ [subagent:20] shell
+    command: cd /workspace/team2/data && python3 -c "
+import csv
+
+with open('messy_dataset.csv') as f:
+    reader = csv.DictReader(f)
+    rows = list(reader)
+
+print('--- DATA QUALITY ANOMALIES ---')
+for i, row in enumerate(rows, 1):
+    age = row.get('age', '').strip()
+    if age:
+        try:
+            age_int = int(age)
+            if age_int > 120 or age_int < 0:
+                print(f'Row {i}: age={age} is out of plausible range (0-120)')
+        except:
+            print(f'Row {i}: age is not a valid number')
+
+print()
+print('--- DUPLICATE ANALYSIS ---')
+profiles = [(i, r['name'].strip(), r['city'].strip(), r['salary'].strip(), r['age'].strip()) for i, r in enumerate(rows, 1)]
+for i in range(len(profiles)):
+    for j in range(i+1, len(profiles)):
+        r1, r2 = profiles[i], profiles[j]
+        matches = sum([r1[1] and r2[1] and r1[1]==r2[1], r1[2] and r2[2] and r1[2]==r2[2], r1[3] and r2[3] and r1[3]==r2[3], r1[4] and r2[4] and r1[4]==r2[4]])
+        if matches >= 3:
+            print(f'Row {r1[0]} and Row {r2[0]}: {matches}/4 fields match')
+
+print()
+print('--- CROSS-REFERENCE ---')
+with open('sample_dataset.csv') as f:
+    sample_rows = list(csv.DictReader(f))
+sample_names = {r['name'] for r in sample_rows if r['name'].strip()}
+messy_names = set(r['name'].strip() for r in rows if r['name'].strip())
+print(f'Names in both: {sample_names & messy_names}')
+print(f'Names only in messy: {messy_names - sample_names}')
+"
+
+
+
+  ▸ [subagent:20] write
+    path: /workspace/team2/analyze_missing.py
+    content: #!/usr/bin/env python3
+import csv
+
+with open('/workspace/team2/data/messy_dataset.csv') as f:
+    reader = csv.DictReader(f)
+    rows = list(reader)
+    columns = reader.fieldnames
+
+print("=== DATA QUALITY ANOMALIES ===")
+for i, row in enumerate(rows, 1):
+    age = row.get('age', '').strip()
+    if age:
+        try:
+            age_int = int(age)
+            if age_int > 120 or age_int < 0:
+                print(f"Row {i}: age={age} is out of plausible range (0-120)")
+        except:
+            print(f"Row {i}: age is not a valid number")
+
+print()
+print("=== DUPLICATE ANALYSIS ===")
+profiles = [(i, r['name'].strip(), r['city'].strip(), r['salary'].strip(), r['age'].strip()) for i, r in enumerate(rows, 1)]
+for i in range(len(profiles)):
+    for j in range(i+1, len(profiles)):
+        r1, r2 = profiles[i], profiles[j]
+        s = 0
+        if r1[1] and r2[1] and r1[1] == r2[1]:
+            s += 1
+        if r1[2] and r2[2] and r1[2] == r2[2]:
+            s += 1
+        if r1[3] and r2[3] and r1[3] == r2[3]:
+            s += 1
+        if r1[4] and r2[4] and r1[4] == r2[4]:
+            s += 1
+        if s >= 3:
+            print(f"Row {r1[0]} and Row {r2[0]}: {s}/4 content fields match")
+
+print()
+print("=== CROSS-REFERENCE ===")
+with open('/workspace/team2/data/sample_dataset.csv') as f:
+    sample_rows = list(csv.DictReader(f))
+sample_names = {r['name'] for r in sample_rows if r['name'].strip()}
+messy_names = set(r['name'].strip() for r in rows if r['name'].strip())
+print(f"Names in both datasets: {sample_names & messy_names}")
+print(f"Names only in messy: {messy_names - sample_names}")
+
+# Also check row 7 pattern
+print()
+print("=== ROW 7 COMPARISON ===")
+print("Row 7 raw data: {")
+for col in columns:
+    val = rows[6][col]
+    print(f"  {col}: '{val}'")
+print("}")
+print("This row has only 'id' populated - likely a header/formatting artifact")
+
+
+
+  ▸ [subagent:20] write
+    path: /workspace/team2/analyze_missing.py
+    content: #!/usr/bin/env python3
+import csv
+
+with open('/workspace/team2/data/messy_dataset.csv') as f:
+    reader = csv.DictReader(f)
+    rows = list(reader)
+    columns = reader.fieldnames
+
+print("=== DATA QUALITY ANOMALIES ===")
+for i, row in enumerate(rows, 1):
+    age = row.get('age', '').strip()
+    if age:
+        try:
+            age_int = int(age)
+            if age_int > 120 or age_int < 0:
+                print(f"Row {i}: age={age} is out of plausible range (0-120)")
+        except:
+            print(f"Row {i}: age is not a valid number")
+
+print()
+print("=== DUPLICATE ANALYSIS ===")
+profiles = [(i, r['name'].strip(), r['city'].strip(), r['salary'].strip(), r['age'].strip()) for i, r in enumerate(rows, 1)]
+for i in range(len(profiles)):
+    for j in range(i+1, len(profiles)):
+        r1, r2 = profiles[i], profiles[j]
+        s = 0
+        if r1[1] and r2[1] and r1[1] == r2[1]:
+            s += 1
+        if r1[2] and r2[2] and r1[2] == r2[2]:
+            s += 1
+        if r1[3] and r2[3] and r1[3] == r2[3]:
+            s += 1
+        if r1[4] and r2[4] and r1[4] == r2[4]:
+            s += 1
+        if s >= 3:
+            print(f"Row {r1[0]} and Row {r2[0]}: {s}/4 content fields match")
+
+print()
+print("=== CROSS-REFERENCE ===")
+with open('/workspace/team2/data/sample_dataset.csv') as f:
+    sample_rows = list(csv.DictReader(f))
+sample_names = {r['name'] for r in sample_rows if r['name'].strip()}
+messy_names = set(r['name'].strip() for r in rows if r['name'].strip())
+print(f"Names in both datasets: {sample_names & messy_names}")
+print(f"Names only in messy: {messy_names - sample_names}")
+
+# Also check row 7 pattern
+print()
+print("=== ROW 7 COMPARISON ===")
+print("Row 7 raw data: {")
+for col in columns:
+    val = rows[6][col]
+    print(f"  {col}: '{val}'")
+print("}")
+print("This row has only 'id' populated - likely a header/formatting artifact")
+
+
+
+  ▸ [subagent:20] shell
+    command: python3 /workspace/team2/analyze_missing.py
+
+
+  ▸ [subagent:20] shell
+    command: python3 /workspace/team2/analyze_missing.py
+
+All 3 agents have reported back. Now let me synthesize everything into the final quality report.
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Data Quality Analysis - Messy Dataset
+
+## Phases
+- [x] Phase 0: Initial data examination
+- [x] Phase 1: **Agent 1 - Missing Values & Completeness** ✅ Completed
+- [x] Phase 2: **Agent 2 - Outlier & Anomaly Detection** ✅ Completed
+- [x] Phase 3: **Agent 3 - Duplicate & Consistency Analysis** ✅ Completed
+- [x] Phase 4: Synthesize final quality report with score 0-100
+
+
+---
+
+# 📋 Data Quality Report — Team 2 Messy Dataset
+
+**File:** `/workspace/team2/data/messy_dataset.csv`  
+**Rows:** 7 (plus header)  |  **Columns:** 5  |  **Total Cells:** 35  
+**Reference:** `/workspace/team2/data/sample_dataset.csv` (10 rows, 7 columns)
+
+---
+
+## 📊 Overall Quality Score: **63 / 100**
+
+| Dimension | Weight | Score | Weighted |
+|-----------|:------:|:-----:|:--------:|
+| ✅ **Completeness** (are cells filled?) | 30% | 80/100 | 24.0 |
+| ✅ **Validity** (are values plausible?) | 30% | 40/100 | 12.0 |
+| ✅ **Consistency** (are records coherent?) | 20% | 50/100 | 10.0 |
+| ✅ **Uniqueness** (are records distinct?) | 20% | 85/100 | 17.0 |
+| **TOTAL** | **100%** | | **63.0** |
+
+**Rating: ⚠️ POOR — Significant data quality issues requiring remediation before analysis.**
+
+---
+
+## 1️⃣ Completeness — 80/100 🔶
+
+| Column | Missing | Filled | Completeness | Severity |
+|--------|:-------:|:------:|:------------:|:--------:|
+| **id** | 0 / 7 | 7 | **100%** | ✅ None |
+| **name** | 2 / 7 | 5 | **71.4%** | 🔴 High |
+| **age** | 1 / 7 | 6 | **85.7%** | 🟡 Low |
+| **salary** | 2 / 7 | 5 | **71.4%** | 🔴 High |
+| **city** | 2 / 7 | 5 | **71.4%** | 🔴 High |
+| **Overall** | **7 / 35** | **28** | **80.0%** | ⚠️ |
+
+**Key finding:** Row 7 accounts for **57% of all missing values** (4 of 7) — likely a corrupt import artifact.
+
+| Row | Fill Rate | Status |
+|:---:|:---------:|:------|
+| 1 | 5/5 (100%) | ✅ Complete |
+| 2 | 4/5 (80%)  | ⚠️ Missing name |
+| 3 | 4/5 (80%)  | ⚠️ Missing salary |
+| 4 | 4/5 (80%)  | ⚠️ Missing city |
+| 5 | 5/5 (100%) | ✅ Complete* (but age=150 invalid) |
+| 6 | 5/5 (100%) | ✅ Complete (duplicate of Row 1) |
+| 7 | 1/5 (20%)  | 🔴 Near-empty |
+
+---
+
+## 2️⃣ Validity — 40/100 🔴
+
+| # | Row | Field | Issue | Type | Severity |
+|---|:---:|:-----:|-------|:----:|:--------:|
+| 1 | 2 | name | **Missing** — should be "Bob" per sample (age=45, sal=92k confirm) | Missing | 🔴 Critical |
+| 2 | 3 | salary | **Missing** — should be 68,000 per sample (Charlie, 34) | Missing | 🔴 Critical |
+| 3 | 5 | age | **Age = 150** — biologically impossible (oldest human: 122). Z-score = 2.02. IQR upper fence: 69 | Impossible | 🔴 Critical |
+| 4 | 7 | all | **Completely empty** — likely corrupt/scraper artifact | Missing | 🔴 Critical |
+| 5 | 4 | city | **Missing city** — least impactful; Diana, 28, 72k otherwise clean | Missing | 🟡 Medium |
+
+**Summary:** 5 of 7 rows (71%) have at least one validity issue. Only rows **1 and 4** are clean (ignoring missing city).
+
+---
+
+## 3️⃣ Consistency — 50/100 🟠
+
+| Issue | Detail | Severity |
+|-------|--------|:--------:|
+| **Exact duplicate** | Row 6 ≡ Row 1 (Alice, 29, 75000, Berlin) — same data, different IDs | 🔴 Critical |
+| **Cross-dataset mismatch** | Row 2 (age=45, sal=92k) matches Bob in sample — name missing | 🟠 High |
+| **Cross-dataset mismatch** | Row 3 (Charlie, 34) should have salary=68k per sample | 🟠 High |
+| **Cross-dataset mismatch** | Row 7 (id=7) should be Frank, 33, 71k per sample — entirely blank | 🔴 Critical |
+| **Schema difference** | Messy uses `city` column; Sample uses `department`, `join_date`, `email` — different data models | 🟡 Medium |
+| **Age outlier** | Eve (id=5) has age=150 in **both** datasets — error originated upstream | 🟠 High |
+
+---
+
+## 4️⃣ Uniqueness — 85/100 🟢
+
+- **1 exact duplicate pair** (Rows 1 & 6): Alice, 29, 75000, Berlin
+- No near-duplicates found
+- **Duplicate rate:** 1 of 7 rows (14.3%)
+
+---
+
+## 5️⃣ Recommended Cleanup Actions
+
+| Priority | Action | Impact |
+|:--------:|--------|--------|
+| 🔴 **1** | **Remove Row 7** — completely empty, corrupt import | Restores completeness to 85% |
+| 🔴 **2** | **Remove duplicate Row 6** — keep the first occurrence (Row 1) | Eliminates data inflation |
+| 🔴 **3** | **Fix age=150 in Row 5** — impute with median age (31) or verify source | Removes impossible value |
+| 🟠 **4** | **Impute missing name in Row 2** — use "Bob" (confirmed by sample data) | Fixes critical gap |
+| 🟠 **5** | **Impute missing salary in Row 3** — use 68,000 (sample value) | Fixes critical gap |
+| 🟡 **6** | **Impute missing city in Row 4** — use "Berlin" (most common value, 3 of 5) | Minor improvement |
+
+**After cleanup:** 4 clean, unique rows remaining, yielding an estimated **cleaned quality score of ~94/100**.
+
+---
+
+## 6️⃣ Column-by-Column Assessment
+
+| Column | Score | Issues |
+|--------|:-----:|--------|
+| **id** | ✅ 100 | Complete, no anomalies |
+| **name** | ⚠️ 65 | 2 missing (rows 2, 7) |
+| **age** | ⚠️ 55 | 1 missing + 1 impossible value (150) |
+| **salary** | ⚠️ 60 | 2 missing (rows 3, 7) |
+| **city** | ⚠️ 65 | 2 missing (rows 4, 7) |
+
+---
+
+## 7️⃣ Root Cause Diagnosis
+
+The issues fall into **three source categories**:
+
+1. **Data entry errors** (rows 2, 3, 4) — individual field omissions, likely manual entry gaps
+2. **Upstream corruption** (row 7) — a systemic import issue producing empty rows
+3. **Source-level anomalies** (age=150, Alice duplicate) — these errors exist in both the messy dataset AND the reference sample, indicating they originated at the collection/source level, not during transmission
+
+---
+
+**Report generated by Goose Data Quality Team**  
+Agents: Missing Values ✅ | Outliers ✅ | Duplicates & Consistency ✅

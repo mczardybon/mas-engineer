@@ -1,0 +1,268 @@
+# R110-27 live log: code-review-perf
+# Started:    2026-07-29T13:38:59Z
+# Walltime:   31.15s
+# RC:         0
+# Bytes:      10994
+# Timed_out:  False
+# Error:      none
+# Wrapper:    /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/wrappers/code-review-perf.yaml
+# Task-file:  /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/tasks.yaml
+# ======================================================================
+
+Script started on 2026-07-29 13:38:59+00:00 [COMMAND="bash -c '/root/.local/bin/goose run --recipe /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/wrappers/code-review-perf.yaml --no-session 2>&1'" <not executed on terminal>]
+Loading recipe: R110-27 wrapper — code-review-perf
+Description: R110-27 wrapper injecting task for code-review-perf
+
+◒  starting 3 extensions: developer, analyze, summon                            
+◐  starting 3 extensions: developer, analyze, summon                            
+◐  starting 2 extensions: developer, analyze                                    
+◐  starting 1 extensions: developer                                             
+◐  starting 0 extensions:                                                       
+]0;🪿 mas-engineer
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260729_82 · /workspace/dev-branch/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/dev-branch/mas-engineer/sample-input/sample_with_bugs.py
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/dev-branch/mas-engineer/sample-input/perf_critical.py
+
+    Error: failed to read image file: No such file or directory (os error 2)
+    Error: failed to read image file: No such file or directory (os error 2)
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls -la /workspace/dev-branch/mas-engineer/sample-input/
+
+    ls: cannot access '/workspace/dev-branch/mas-engineer/sample-input/': No such file or directory
+    
+    Command exited with code 2
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls /workspace/dev-branch/ 2>/dev/null || ls /workspace/ 2>/dev/null || echo "Checking home" && ls ~/ 2>/dev/null
+
+    LICENSE
+    README.md
+    ai_agent_saas_marketing_report.md
+    code-review-report.json
+    dist
+    docs
+    e2e-evidence-gen2
+    e2e-results
+    install.sh
+    mas-engineer
+    outputs
+    recipe_live_test.yaml
+    recipe_live_test_FINAL.yaml
+    run_security_scanner.py
+    run_static_analyzer.py
+    security-scan-report.json
+    seo-research-output
+    static-analysis-report.json
+    tools
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: find /workspace -name "sample_with_bugs.py" -o -name "perf_critical.py" 2>/dev/null
+
+    /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/sample-input/perf_critical.py
+    /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/sample-input/sample_with_bugs.py
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/sample-input/sample_with_bugs.py
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/sample-input/perf_critical.py
+
+    """Sample code with intentional bugs for code-review team."""
+    from typing import List, Optional
+    
+    
+    def average(numbers: List[int]) -> int:
+        """Return the average of a list of integers."""
+        total = 0
+        for i in range(len(numbers) + 1):  # BUG: off-by-one
+            total += numbers[i]
+        return total // len(numbers)  # BUG: ZeroDivisionError on empty list
+    ... (24 lines hidden, /toggle to show all)
+    import threading
+    def worker():
+        for _ in range(1000):
+            counter.increment()
+    
+    if __name__ == "__main__":
+        threads = [threading.Thread(target=worker) for _ in range(10)]
+        for t in threads: t.start()
+        for t in threads: t.join()
+        print(f"Final count: {counter.get()} (expected 10000)")  # race-condition gives wrong answer
+    """Performance-critical code for perf-eval team."""
+    import time
+    
+    def find_duplicates_slow(items: list) -> list:
+        """O(n^2) duplicate finder — has performance issues."""
+        duplicates = []
+        for i in range(len(items)):
+            for j in range(len(items)):
+                if i != j and items[i] == items[j]:
+                    if items[i] not in duplicates:
+    ... (13 lines hidden, /toggle to show all)
+                        total += x
+        return total
+    
+    
+    def inefficient_search(arr: list, target: int) -> int:
+        """Linear search where binary search would be appropriate (sorted array)."""
+        for i in range(len(arr)):
+            if arr[i] == target:
+                return i
+        return -1
+Here are the performance findings across both files.
+
+---
+
+## 📄 `sample_with_bugs.py`
+
+This file is primarily focused on **correctness bugs**, but there is one notable performance issue.
+
+### 1. Race Condition on `Counter` — ⚠️ **High Impact (correctness + performance)**
+
+```python
+counter = Counter()
+def worker():
+    for _ in range(1000):
+        counter.increment()
+```
+- **10 threads × 1000 increments** on a shared `count` attribute with **no lock**.
+- The `count += 1` operation is not atomic (read-modify-write). Threads step on each other, causing **lost updates**.
+- Expected: **10,000** — actual result is **unpredictable and always less**.
+- **Performance cost**: Work is wasted/invalidated; any downstream consumer gets corrupt data, forcing re-execution or debugging overhead.
+
+**Fix**: Use `threading.Lock` around `self.count += 1`, or use `threading.AtomicInteger` or a `queue.Queue`. For CPython, the GIL helps for pure integer ops but does **not** guarantee correctness across this pattern.
+
+---
+
+## 📄 `perf_critical.py`
+
+This file has genuine algorithmic performance issues. Here they are ranked.
+
+---
+
+### 2. `find_duplicates_slow` — 🔴 **Critical Impact (O(n²) → O(n³))**
+
+```python
+def find_duplicates_slow(items: list) -> list:
+    duplicates = []
+    for i in range(len(items)):        # O(n)
+        for j in range(len(items)):    # O(n) → O(n²)
+            if i != j and items[i] == items[j]:
+                if items[i] not in duplicates:  # O(k) where k grows → O(n³)
+                    duplicates.append(items[i])
+```
+
+| n (items) | Comparisons    | Est. Runtime  |
+|-----------|----------------|---------------|
+| 100       | 10,000         | ~0.002s       |
+| 1,000     | 1,000,000      | ~0.2s         |
+| 10,000    | 100,000,000    | ~20s          |
+| 100,000   | 10,000,000,000 | ~33 min       |
+| 1,000,000 | 1e12           | **~55 hours** |
+**Root causes**:
+1. **Nested full loops** — checks every pair (`i != j`) instead of `for j in range(i+1, len(items))` (halves work).
+2. **Linear `not in duplicates` scan** — each duplicate check re-scans the growing result list, adding another O(n) factor.
+3. **Unnecessary self-comparison** — checks `i != j` every iteration instead of skipping structurally.
+
+**Fix**: Use a `set` for O(1) duplicate detection:
+```python
+def find_duplicates_fast(items: list) -> list:
+    seen = set()
+    duplicates = set()
+    for x in items:
+        if x in seen:
+            duplicates.add(x)
+        else:
+            seen.add(x)
+    return list(duplicates)
+```
+→ **O(n)** time, O(n) memory.
+
+---
+
+### 3. `inefficient_search` — 🟠 **High Impact (O(n) where O(log n) is possible)**
+
+```python
+def inefficient_search(arr: list, target: int) -> int:
+    for i in range(len(arr)):         # O(n) linear scan
+        if arr[i] == target:
+            return i
+    return -1
+```
+
+**Problem**: If the array is sorted (as the docstring implies: *"sorted array"*), linear search wastes cycles on large inputs.
+
+| n (size)  | Linear (O(n))    | Binary (O(log n)) | Speedup     |
+|-----------|------------------|-------------------|-------------|
+| 1,000     | ~1,000 steps     | ~10 steps         | **100×**    |
+| 100,000   | ~100,000 steps   | ~17 steps         | **5,800×**  |
+| 1,000,000 | ~1,000,000 steps | ~20 steps         | **50,000×** |
+**Fix**: Use `bisect` module:
+```python
+import bisect
+
+def efficient_search(arr: list, target: int) -> int:
+    idx = bisect.bisect_left(arr, target)
+    if idx < len(arr) and arr[idx] == target:
+        return idx
+    return -1
+```
+→ **O(log n)** time. *(Only valid if the array is guaranteed sorted.)*
+
+---
+
+### 4. `hot_path` — 🟢 **Low Impact (micro-optimizations only)**
+
+```python
+def hot_path(items: list) -> int:
+    total = 0
+    for x in items:
+        if x > 0:
+            if x < 100:
+                if x % 2 == 0:
+                    total += x * 2
+                else:
+                    total += x
+    return total
+```
+
+This is **O(n) with cheap integer operations** — fine for most cases. Minor tweaks:
+- **Nested conditionals** can be flattened: `if 0 < x < 100:`
+- `x * 2` → `x << 1` (micro-optimization, compiler usually handles this)
+- If `items` is huge, consider NumPy vectorization.
+
+**Impact**: Negligible in isolation. Only worth optimizing if profiling shows this is a bottleneck.
+
+---
+
+## Summary Table
+
+| # | File                  | Function               | Issue                                      | Pattern     | Impact Level    | Est. Speedup                   |
+|---|-----------------------|------------------------|--------------------------------------------|-------------|-----------------|--------------------------------|
+| 1 | `perf_critical.py`    | `find_duplicates_slow` | O(n²) nested loops + O(n) `not in` → O(n³) | Algorithmic | 🔴 **Critical** | **O(n³) → O(n)**               |
+| 2 | `perf_critical.py`    | `inefficient_search`   | Linear search on sorted array              | Algorithmic | 🟠 **High**     | **O(n) → O(log n)**            |
+| 3 | `sample_with_bugs.py` | `Counter.worker`       | No lock on shared counter                  | Concurrency | 🟡 **Medium**   | Correctness + wasted recompute |
+| 4 | `perf_critical.py`    | `hot_path`             | Nested conditionals, minor micro-opt       | Micro-opt   | 🟢 **Low**      | Negligible alone               |
+### Recommended Order of Fixes
+1. **`find_duplicates_slow`** → switch to `set`-based approach (biggest ROI)
+2. **`inefficient_search`** → replace with `bisect` if array is sorted
+3. **`Counter` race** → add `threading.Lock`
+4. **`hot_path`** → flatten conditionals if already touching the code
+
+Script done on 2026-07-29 13:39:30+00:00 [COMMAND_EXIT_CODE="0"]

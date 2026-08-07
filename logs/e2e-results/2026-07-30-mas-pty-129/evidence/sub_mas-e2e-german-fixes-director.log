@@ -1,0 +1,375 @@
+Loading recipe: 🎯 E2E-GERMAN-FIXES-DIRECTOR — German Fixes Orchestrator (Sub-Agent)
+Description: v1.0.0 | MAS-internal: e2e verification — Orchestrates e2e verification of German descs + placeholder fixes
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260730_50 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+## ⛔ E2E German Fixes Director — v1.0.0
+
+Acknowledged. Running the orchestration workflow now.
+
+---
+
+### Step 0: Pre-Check Layer (Deterministic)
+
+Running the pre-check to save LLM tokens on T1-T2 analysis...
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 tools/pre_check --recipe german
+    timeout_secs: 15
+
+
+=== PRE-CHECK — German Fixes (T1-T2) ===
+  [T1] 0 German descs in task_workflows                ✓ PASS  (0 German descs across 122 workflows)
+  [T2] No placeholder (echo-only) steps in wf_recovery_* ✓ PASS  (0/5 recovery workflows are placeholders)
+  Result: 2/2 PASS in 0.46s (estimated ~4 LLM tool-calls saved)
+
+=== OVERALL: 2/2 checks PASS in 0.48s ===Pre-check: **2/2 PASS** ✅ (saved ~4 LLM tool-calls). T1-T2 are clean. Proceeding to Step 1 — parallel delegation of T3 and T4-T5.
+
+---
+
+### Step 1: Parallel Delegation
+
+| Test | Subagent | Async |
+|------|----------|-------|
+| T3 — Workflow invocation | `sub_mas-e2e-german-fixes-runner` | ✅ async |
+| T4-T5 — Workflow count + YAML parse | `sub_mas-e2e-german-fixes-checker` | ✅ async |
+  ────────────────────────────────────────
+  ▸ delegate
+    source sub_mas-e2e-german-fixes-runner
+    instructions Run T3 (workflow invocation test) on the mas-engineer project. Execute the workflows and verify t...
+    async: true
+
+
+  ────────────────────────────────────────
+  ▸ delegate
+    source sub_mas-e2e-german-fixes-checker
+    instructions Run T4 (workflow count verification) and T5 (YAML parse validation) on the mas-engineer project. ...
+    async: true
+
+Both subagents are running in parallel. Waiting for results...
+  ▸ [subagent:51] shell
+    command: python3 tools/dev_workflow_runner.py 2>&1 | head -40
+    timeout_secs: 30
+
+
+  ▸ [subagent:51] shell
+    command: python3 tools/dev_workflow_runner.py 2>&1 | head -40
+    timeout_secs: 30
+
+
+  ▸ [subagent:51] shell
+    command: ls -la tools/dev_workflow_runner.py 2>&1
+    timeout_secs: 10
+
+
+  ▸ [subagent:51] shell
+    command: ls -la tools/dev_workflow_runner.py 2>&1
+    timeout_secs: 10
+
+
+  ▸ [subagent:52] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py --list 2>&1 | wc -l
+    timeout_secs: 30
+
+
+  ▸ [subagent:52] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py --list 2>&1 | wc -l
+    timeout_secs: 30
+
+
+  ▸ [subagent:52] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 -c "
+import yaml, glob, os
+errors = []
+files = glob.glob('recipe/**/*.yaml', recursive=True)
+for f in files:
+  try:
+    with open(f) as fh:
+      yaml.safe_load(fh)
+  except Exception as e:
+    errors.append((f, str(e)))
+print(f'Files checked: {len(files)}')
+print(f'Errors: {len(errors)}')
+for e in errors: print(e)
+"
+    timeout_secs: 30
+
+
+  ▸ [subagent:52] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 -c "
+import yaml, glob, os
+errors = []
+files = glob.glob('recipe/**/*.yaml', recursive=True)
+for f in files:
+  try:
+    with open(f) as fh:
+      yaml.safe_load(fh)
+  except Exception as e:
+    errors.append((f, str(e)))
+print(f'Files checked: {len(files)}')
+print(f'Errors: {len(errors)}')
+for e in errors: print(e)
+"
+    timeout_secs: 30
+
+
+  ▸ [subagent:51] shell
+    command: python3 tools/dev_workflow_runner.py --list 2>&1
+    timeout_secs: 30
+
+
+  ▸ [subagent:51] shell
+    command: python3 tools/dev_workflow_runner.py --list 2>&1
+    timeout_secs: 30
+
+
+  ▸ [subagent:52] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py --list 2>&1 | head -20
+    timeout_secs: 30
+
+
+  ▸ [subagent:52] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py --list 2>&1 | head -20
+    timeout_secs: 30
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_checkpoint 2>&1 | tail -5
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_checkpoint 2>&1 | tail -5
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_defib 2>&1 | tail -5
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_defib 2>&1 | tail -5
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_immune 2>&1 | tail -5
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_immune 2>&1 | tail -5
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_safezone 2>&1 | tail -5
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_safezone 2>&1 | tail -5
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_timeline 2>&1 | tail -5
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_timeline 2>&1 | tail -5
+    timeout_secs: 120
+
+
+  ▸ [subagent:52] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py --list 2>&1 | tail -5
+    timeout_secs: 30
+
+
+  ▸ [subagent:52] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py --list 2>&1 | tail -5
+    timeout_secs: 30
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_checkpoint 2>&1 | head -3
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_checkpoint 2>&1 | head -3
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_defib 2>&1 | head -3
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_defib 2>&1 | head -3
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_immune 2>&1 | head -3
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_immune 2>&1 | head -3
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_safezone 2>&1 | head -3
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_safezone 2>&1 | head -3
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_timeline 2>&1 | head -3
+    timeout_secs: 120
+
+
+  ▸ [subagent:51] shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_workflow_runner.py wf_recovery_timeline 2>&1 | head -3
+    timeout_secs: 120
+
+Both delegates returned. Let me compile the final report.
+
+---
+
+### Step 2: Compile Results
+
+| Test | Status | Detail |
+|------|--------|--------|
+| **T1** — German descs in task_workflows | ✅ PASS | 0 German descs across 122 workflows |
+| **T2** — Placeholder steps in recovery wfs | ✅ PASS | 0/5 recovery workflows are placeholders |
+| **T3** — Recovery workflow invocation | ✅ PASS | All 5 `wf_recovery_*` workflows — 4/4 steps each ✅ |
+| **T4** — Workflow count | ❌ FAIL | 125 entries listed, expected >130 (5 short) |
+| **T5** — YAML parse validation | ✅ PASS | 214 files, 0 parse errors |
+
+### Step 3: Write Final Report
+  ────────────────────────────────────────
+  ▸ shell
+    command: mkdir -p e2e-results/2026-07-23-verify-german-fixes
+
+(no output)
+  ────────────────────────────────────────
+  ▸ write
+    path e2e-results/2026-07-23-verify-german-fixes/REPORT.md
+    content: # E2E German Fixes Verification Report
+
+**Date:** 2026-07-30
+**Orchestrator:** e2e-german-fixes-director v1.0.0
+**Project:** mas-engineer
+**Pre-check elapsed:** 0.48s
+
+---
+
+## Executive Summary
+
+| Check | Result |
+|-------|--------|
+| **T1** — German descriptions in task_workflows | ✅ **PASS** |
+| **T2** — Placeholder (echo-only) steps in recovery workflows | ✅ **PASS** |
+| **T3** — Recovery workflow invocation | ✅ **PASS** |
+| **T4** — Workflow count via `--list` | ❌ **FAIL** |
+| **T5** — YAML file parse validation | ✅ **PASS** |
+| **Overall** | **4/5 PASS** |
+
+---
+
+## Detailed Results
+
+### ✅ T1: German Descriptions in `task_workflows`
+
+**Result:** PASS — 0 German descriptions found across 122 workflows.
+
+### ✅ T2: Placeholder Steps in Recovery Workflows
+
+**Result:** PASS — Zero placeholder (echo-only) steps in the 5 recovery workflows (`wf_recovery_checkpoint`, `wf_recovery_defib`, `wf_recovery_immune`, `wf_recovery_safezone`, `wf_recovery_timeline`).
+
+### ✅ T3: Recovery Workflow Invocation
+
+**Result:** PASS — All 5 recovery workflows invoked successfully via `dev_workflow_runner`.
+
+| Workflow | Steps | Status |
+|---|---|---|
+| `wf_recovery_checkpoint` | list_checkpoints ✅, validate_latest ✅, ensure_recipe ✅, auto_repair ✅ | **ok** |
+| `wf_recovery_defib` | list_defib ✅, check_emergency_config ✅, verify_immune_timeline ✅, auto_repair ✅ | **ok** |
+| `wf_recovery_immune` | check ✅, list_violations ✅, categorize ✅, auto_repair ✅ | **ok** |
+| `wf_recovery_safezone` | list_templates ✅, validate_templates ✅, check_fork ✅, auto_repair ✅ | **ok** |
+| `wf_recovery_timeline` | find_latest ✅, count_checkpoints ✅, score_latest ✅, auto_repair ✅ | **ok** |
+
+### ❌ T4: Workflow Count
+
+**Result:** FAIL — `dev_workflow_runner --list` returned **125** workflow entries, which is **5 short** of the expected threshold (>130).
+
+**Action needed:** Investigate which workflows are missing from the registry. This may be due to registration failures, missing workflow files, or a change in the expected baseline.
+
+### ✅ T5: YAML Parse Validation
+
+**Result:** PASS — All **214** YAML files under `recipe/` parsed successfully with **0** errors.
+
+---
+
+## Raw Data
+
+```json
+{
+  "t1": {"passed": true, "details": "0 German descs across 122 workflows"},
+  "t2": {"passed": true, "details": "0/5 recovery workflows are placeholders"},
+  "t3": {
+    "passed": true,
+    "details": "All 5 wf_recovery_* workflows invoked via dev_workflow_runner",
+    "per_workflow": {
+      "wf_recovery_checkpoint": {"status": "ok", "steps": 4, "all_passed": true},
+      "wf_recovery_defib": {"status": "ok", "steps": 4, "all_passed": true},
+      "wf_recovery_immune": {"status": "ok", "steps": 4, "all_passed": true},
+      "wf_recovery_safezone": {"status": "ok", "steps": 4, "all_passed": true},
+      "wf_recovery_timeline": {"status": "ok", "steps": 4, "all_passed": true}
+    }
+  },
+  "t4": {
+    "passed": false,
+    "details": "dev_workflow_runner --list produced 125 workflow entries (expected >130). Count is 5 entries short of the threshold."
+  },
+  "t5": {
+    "passed": true,
+    "details": "All 214 YAML files in recipe/ parse without errors."
+  }
+}
+```
+
+---
+
+*Report generated by e2e-german-fixes-director v1.0.0*
+
+
+Wrote e2e-results/2026-07-23-verify-german-fixes/REPORT.md (87 lines)---
+
+## ✅ Orchestration Complete — Report Filed
+
+**Report:** `e2e-results/2026-07-23-verify-german-fixes/REPORT.md`
+
+### Final Score: 4/5 PASS
+
+| Test | Result | Delegated To |
+|------|--------|-------------|
+| **T1** — German descs | ✅ PASS | *(Pre-check — 0.48s, 0 LLM tokens)* |
+| **T2** — Placeholder steps | ✅ PASS | *(Pre-check — 0.48s, 0 LLM tokens)* |
+| **T3** — Workflow invocation | ✅ PASS | `sub_mas-e2e-german-fixes-runner` |
+| **T4** — Workflow count | ❌ **FAIL** — 125 vs >130 | `sub_mas-e2e-german-fixes-checker` |
+| **T5** — YAML parse validation | ✅ PASS | `sub_mas-e2e-german-fixes-checker` |
+
+**The lone failure (T4):** Workflow registry shows 125 entries, 5 short of the >130 threshold. Likely a drift in the registered workflow count vs. expected baseline that needs investigation. German fixes themselves (T1, T2, T3, T5) are all clean.

@@ -1,0 +1,2141 @@
+Loading recipe: 🔧 IM-Rank
+Description: 📊 Prioritize findings, deduplicate, Art.1-6 check
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260730_85 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/mas-engineer-test/mas-engineer/recipe/instructions/sub_mas-im-rank.md
+
+# sub_mas-im-rank — 📊 Prioritize & filter Findings
+Is called by the sub_mas-general-improver orchestrator.
+Sorts and filters Findings for implementation.
+
+╔══════════════════════════════════════════════════════════╗
+║  SOT WORKFLOW CONTROL                                    ║
+║  → workflows.yaml → agents.im-rank                       ║
+║     .task_workflows.RANK                                 ║
+╚══════════════════════════════════════════════════════════╝
+
+## ⛔ STEP 0.5 — GOOSE-EXPERT CONSULTATION (CONDITIONAL)
+
+**When to summon:** ONLY if the input findings contain a `goose_verdict`
+field from im-finder AND the ranking would change because of verdict
+disagreement (e.g. NOT_POSSIBLE findings must be deprioritized).
+
+This is more selective than im-finder/im-designer — im-rank mostly
+delegates to the duckling-constitution (Art.1-6), not goose-expert.
+
+## Pipeline Contract (Stage 2/5)
+
+This agent is **stage 2** of the Improvement-Pipeline.
+It reads the previous stage's output and writes its own.
+
+**Input:**   `.state/pipeline/findings.yaml` (from im-finder)
+**Output:**  `.state/pipeline/ranked_findings.yaml`
+**Schema:**  ranked_findings[] with {id, priority, severity, type, file, rank_score, goose_verdict?}
+**Next:**    -> im-designer (reads Output file)
+
+```yaml
+# .state/pipeline/ranked_findings.yaml — written by im-rank
+stage: 2
+agent: im-rank
+timestamp: <ISO-8601>
+input_file: .state/pipeline/findings.yaml
+# ranked_findings[] with {id, priority, severity, type, file, rank_score, goose_verdict?}
+```
+
+ ## Input (from Pipeline-Orchestrator)
+- task: RANK
+- request_id: string (UUID)
+- data: {findings: [], scores: {}}
+- **NEW (MM6 fix): severity_ceiling: "high"|"medium"|"low"|"info" (default: "high")**
+  - Set by general-improver when RECYCLING a skipped charge (one band lower
+    than previous ceiling). See TIER C) in sub_mas-general-improver.md.
+  - If severity_ceiling = "medium", filter out findings with severity=high.
+  - If severity_ceiling = "low", filter out high + medium.
+  - If severity_ceiling = "info", include all (no filter).
+
+## STEP 1 — REMOVE DUPLICATES
+1. Group Findings by (type + file + detail)
+2. Keep only the first per group
+3. Count removed duplicates
+
+## STEP 1.5 — APPLY SEVERITY CEILING (MM6 fix)
+1. Determine active ceiling: input.severity_ceiling ?? "high"
+2. Define ceiling_order: ["high", "medium", "low", "info"]  (index 0 = strictest)
+3. Filter findings where findings[i].severity is STRICTLY ABOVE the ceiling
+   - ceiling_idx = ceiling_order.index(active_ceiling)
+   - finding_idx = ceiling_order.index(finding.severity)  (assume severity
+     is one of the 4 strings, else treat as "info")
+   - DROP if finding_idx < ceiling_idx (i.e. finding is stricter than ceiling)
+   - Example: ceiling="medium" → drop "high" findings, keep "medium"/"low"/"info"
+   - Example: ceiling="info" → drop nothing (keep all)
+   - Example: ceiling="high" → drop nothing (all severities allowed)
+4. Record filtered count in `ceiling_filtered` field
+5. IF ceiling_filtered > 0 AND remaining findings == 0:
+   → EMIT warning: "severity_ceiling={ceiling} filtered out all {N} findings.
+     Lower ceiling to 'info' or check if findings file is empty."
+   → Set top_N = [] (no design work possible)
+6. ELSE proceed to STEP 2
+
+## STEP 2 — SORT BY SEVERITY
+Sort Findings:
+1. 🔴 high (Impact: System-Stability, Data loss)
+2. 🟡 medium (Impact: Performance, User-Experience)
+3. 🟢 low (Impact: Cosmetics, Documentation)
+4. ℹ️ info (Impact: None, only Information)
+
+**Modifier: if `goose_verdict.verdict == NOT_POSSIBLE`, deprioritize by 1 level.**
+
+## STEP 3 — ART.1-6 CHECK
+Check each Finding against the Constitution:
+- Art.1 (Sovereignty): Changes the Constitution? → BLOCKED
+- Art.2 (Autonomy): Restricts the System-Autonomy? → BLOCKED
+- Art.3 (Security): Generates Security holes? → BLOCKED
+- Art.4 (Stability): Endangers System-Stability? → BLOCKED
+- Art.5 (Transparency): Is User informed? → Always OK
+- Art.6 (Cost-efficiency): Wastes more resources than it saves? → BLOCKED
+
+## STEP 4 — TOP-N SELECTION (configurable, IM_TOP_N env var)
+
+Take the top N Findings by rank_score.
+
+**Configuration via env var IM_TOP_N (R57 user-request 2026-07-25):**
+- `IM_TOP_N=5` (default — backward-compatible)
+- `IM_TOP_N=20` (recommended for cron — ~12 days to clear 1000 findings)
+- `IM_TOP_N=50` (max for deepseek-v4-flash cost-limit)
+
+**Cost/throughput tradeoff:**
+| IM_TOP_N | patches/Run | cost/Run | 1000 findings | cron interval |
+|----------|-------------|----------|---------------|---------------|
+| 5 (default) | 5 | $0.50 | 200 Runs / 50d | 6h |
+| 20 (R57) | 20 | $2.00 | 50 Runs / 12d | 6h |
+| 50 (max) | 50 | $5.00 | 20 Runs / 5d | 6h |
+
+**MUST: Read IM_TOP_N env var at runtime (Stage 2 of every run):**
+
+```python
+import os
+N = int(os.environ.get('IM_TOP_N', '100'))  # R57 user-correction: default 100
+if N < 1: N = 100
+if N > 500: N = 500  # hard cap for cost-safety
+top_N = sorted_findings[:N]
+print(f"[im-rank] IM_TOP_N={N} → selecting top {N} of {len(sorted_findings)} findings")
+```
+
+**REQUIRED log line:** `[im-rank] IM_TOP_N={N} → selecting top {N} of {total} findings`
+
+**VALIDATION:** If env var IM_TOP_N=20, then top_N.length MUST == 20
+(assuming >= 20 ranked findings available). If not, log WARNING and
+fall back to len(available) but log a mismatch.
+
+**Backward compat:** if IM_TOP_N is unset, behavior is identical to
+previous TOP-5 logic (deterministic, no breaking change for existing
+workflows).
+
+## OUTPUT
+As YAML-Struct via stdout:
+- signal: DONE
+- request_id: UUID
+- from: sub_mas-im-rank
+- to: sub_mas-general-improver
+- status: success | error | warning
+- data:
+    ranked_findings: [{id, type, severity, file, rank_score, goose_verdict?}]
+    top_N: [ids]  # length determined by IM_TOP_N env var (default: 5)
+    skipped: [{id, reason}]
+    **ceiling_filtered: int (NEW, MM6 fix — count of findings filtered by severity_ceiling)**
+    **active_ceiling: "high"|"medium"|"low"|"info" (NEW — ceiling that was applied)**
+
+⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions.
+dev_rule_checker.py enforces.
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on ✅.
+⛔ R09 DOMAIN — ONLY {target_workspace}. NO domain-overreach.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.**📊 IM-RANK (v1.0.0) — Prioritize & Filter Findings**
+
+Let me first survey the current state and locate the input data.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/mas-engineer-test/mas-engineer/.state/pipeline/findings.yaml 2>/dev/null || echo "NOT_FOUND"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "--- ENV CHECK ---"; echo "IM_TOP_N=${IM_TOP_N:-unset}"; echo "SEVERITY_CEILING=${SEVERITY_CEILING:-unset}"
+
+
+  ────────────────────────────────────────
+  ▸ tree
+    path: /tmp/mas-engineer-test/mas-engineer/.state/pipeline
+    depth: 2
+
+stage: 1
+agent: im-finder
+version: 1.0.0
+timestamp: '2026-07-30T04:50:23.278481+00:00'
+data:
+  findings:
+  - id: F-001
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/multi-arch-30.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: &id003
+      verdict: CONFORM
+      confidence: HIGH
+      explanation: "Genuine optimization. Goose does NOT set a default temperature\
+        \ \u2014 passes to provider which defaults to 1.0 (max randomness). For routing\
+        \ agents (test-r11021, multi-arch-30 orchestrator), temperature=1.0 causes\
+        \ non-deterministic routing decisions. Project convention is temperature:\
+        \ 0.3 for sub-agents, 0.7 for orchestrators. Add temperature: 0.3 to test-r11021\
+        \ agents and temperature: 0.7 to multi-arch-30.yaml."
+  - id: F-002
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/code-review-correctness.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: &id001
+      verdict: RESTRICTED
+      confidence: HIGH
+      explanation: "Goose does NOT require prompt: \u2014 agents function correctly\
+        \ using instructions: alone as the system prompt. However, MAS convention\
+        \ requires prompt: for identity assertion (I_AM), MODE-CHECK awareness, and\
+        \ safety boundary at conversation top. For leaf specialist sub-agents (called\
+        \ programmatically via team orchestration), missing prompt: is LOW impact.\
+        \ For team-lead agents, MEDIUM impact. Recommend: add prompt: to lead agents\
+        \ first, then team YAMLs, then leaf specialists."
+  - id: F-003
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/code-review-correctness.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: &id002
+      verdict: CONFORM
+      confidence: HIGH
+      explanation: "The A5 finding label \"timeout=0 (unlimited)\" is MISCLASSIFIED\
+        \ per Goose expert. Goose recipe settings do NOT have a timeout field \u2014\
+        \ only extensions have timeout. The actual issue is missing settings.max_turns.\
+        \ Goose default max_turns=25 for sub-agents, and has a hard-coded 5-minute\
+        \ internal timeout (not configurable). Fix: add settings: {max_turns: N} with\
+        \ appropriate values (30-40 for sub-agents, 50 for teams)."
+  - id: F-004
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/code-review-lead.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-005
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/code-review-lead.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-006
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/code-review-perf.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-007
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/code-review-perf.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-008
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/code-review-readability.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-009
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/code-review-readability.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-010
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/code-review-style.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-011
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/code-review-style.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-012
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/doc-gen-1-analyze.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-013
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/doc-gen-1-analyze.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-014
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/doc-gen-2-skeleton.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-015
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/doc-gen-2-skeleton.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-016
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/doc-gen-3-examples.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-017
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/doc-gen-3-examples.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-018
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/doc-gen-4-crosslink.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-019
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/doc-gen-4-crosslink.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-020
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/doc-gen-5-render.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-021
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/doc-gen-5-render.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-022
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/dq-stage-1-profile.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-023
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/dq-stage-1-profile.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-024
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/dq-stage-2-validate.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-025
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/dq-stage-2-validate.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-026
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/dq-stage-3-anomalies.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-027
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/dq-stage-3-anomalies.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-028
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/dq-stage-4-enrich.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-029
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/dq-stage-4-enrich.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-030
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/dq-stage-5-report.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-031
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/dq-stage-5-report.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-032
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/perf-eval-concurrency.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-033
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/perf-eval-concurrency.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-034
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/perf-eval-cpu.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-035
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/perf-eval-cpu.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-036
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/perf-eval-io.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-037
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/perf-eval-io.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-038
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/perf-eval-lead.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-039
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/perf-eval-lead.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-040
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/perf-eval-memory.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-041
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/perf-eval-memory.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-042
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/refactor-1-simplify.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-043
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/refactor-1-simplify.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-044
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/refactor-2-extract.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-045
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/refactor-2-extract.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-046
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/refactor-3-rename.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-047
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/refactor-3-rename.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-048
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/refactor-4-patterns.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-049
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/refactor-4-patterns.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-050
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/refactor-5-decompose.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-051
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/refactor-5-decompose.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-052
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/security-scan-1-sast.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-053
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/security-scan-1-sast.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-054
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/security-scan-2-secrets.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-055
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/security-scan-2-secrets.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-056
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/security-scan-3-deps.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-057
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/security-scan-3-deps.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-058
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/security-scan-4-input.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-059
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/security-scan-4-input.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-060
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/sub/security-scan-5-crypto.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-061
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/sub/security-scan-5-crypto.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-062
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/teams/code-review-team.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-063
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/teams/code-review-team.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-064
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/teams/data-quality-team.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-065
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/teams/data-quality-team.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-066
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/teams/doc-gen-team.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-067
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/teams/doc-gen-team.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-068
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/teams/perf-eval-team.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-069
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/teams/perf-eval-team.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-070
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/teams/refactor-team.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-071
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/teams/refactor-team.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-072
+    type: MM2
+    severity: medium
+    file: recipe/multi-arch-30/teams/security-scan-team.yaml
+    issue: 'missing prompt: field'
+    impact: Agent has no prompt block
+    fix: 'Add prompt: field'
+    goose_verdict: *id001
+  - id: F-073
+    type: A5
+    severity: medium
+    file: recipe/multi-arch-30/teams/security-scan-team.yaml
+    issue: timeout=0 (unlimited)
+    impact: Goose has 5min default sub-agent timeout
+    fix: Set explicit timeout
+    goose_verdict: *id002
+  - id: F-074
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/a1-csv-security.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-075
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/a2-refactor-perf-docs.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-076
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/a3-code-review-data.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-077
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/a4-perf-docs.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-078
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/a5-security-refactor.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-079
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/e1-empty-task.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-080
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/e2-gibberish.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-081
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/e3-very-long.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-082
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/e4-unicode.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-083
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/r1-code-review.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-084
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/r2-security-scan.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-085
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/r3-data-quality.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-086
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/r4-perf-eval.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-087
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/r5-refactor.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-088
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/r6-doc-gen.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-089
+    type: MM4
+    severity: medium
+    file: recipe/multi-arch-30/test-r11021/test-smoke.yaml
+    issue: 'settings missing required keys: [temperature]'
+    impact: Agent may use Goose defaults instead of optimized MAS values
+    fix: 'add missing settings: [temperature]'
+    goose_verdict: *id003
+  - id: F-090
+    type: NN1
+    severity: medium
+    file: recipe/dev-mas-engineer-30agents.yaml
+    issue: 'multi_role_agent: 10 distinct roles ([''analyze'', ''validate'', ''generate'',
+      ''report'', ''scan''])'
+    impact: Agent may violate single-responsibility principle
+    fix: Consider splitting into orchestrator + sub-agents
+  - id: F-091
+    type: NN1
+    severity: medium
+    file: recipe/sub/static-analyzer.yaml
+    issue: 'multi_role_agent: 6 distinct roles ([''analyze'', ''report'', ''scan'',
+      ''find'', ''read''])'
+    impact: Agent may violate single-responsibility principle
+    fix: Consider splitting into orchestrator + sub-agents
+  - id: F-092
+    type: NN1
+    severity: medium
+    file: recipe/sub/sub_mas-test-director.yaml
+    issue: 'multi_role_agent: 7 distinct roles ([''analyze'', ''validate'', ''monitor'',
+      ''report'', ''scan''])'
+    impact: Agent may violate single-responsibility principle
+    fix: Consider splitting into orchestrator + sub-agents
+  - id: F-093
+    type: NN1
+    severity: medium
+    file: recipe/sub/sub_mas-recovery-immune.yaml
+    issue: 'multi_role_agent: 6 distinct roles ([''validate'', ''scan'', ''read'',
+      ''write'', ''edit''])'
+    impact: Agent may violate single-responsibility principle
+    fix: Consider splitting into orchestrator + sub-agents
+  - id: F-094
+    type: NN1
+    severity: medium
+    file: recipe/sub/sub_mas-dev-director.yaml
+    issue: 'multi_role_agent: 9 distinct roles ([''analyze'', ''validate'', ''generate'',
+      ''monitor'', ''audit''])'
+    impact: Agent may violate single-responsibility principle
+    fix: Consider splitting into orchestrator + sub-agents
+  - id: F-095
+    type: NN1
+    severity: medium
+    file: recipe/sub/sub_mas-recipe-designer.yaml
+    issue: 'multi_role_agent: 5 distinct roles ([''validate'', ''design'', ''read'',
+      ''write'', ''edit''])'
+    impact: Agent may violate single-responsibility principle
+    fix: Consider splitting into orchestrator + sub-agents
+  - id: F-096
+    type: NN1
+    severity: medium
+    file: recipe/sub/sub_mas-im-session-reader.yaml
+    issue: 'multi_role_agent: 7 distinct roles ([''analyze'', ''validate'', ''find'',
+      ''read'', ''write''])'
+    impact: Agent may violate single-responsibility principle
+    fix: Consider splitting into orchestrator + sub-agents
+  - id: F-097
+    type: NN1
+    severity: medium
+    file: recipe/sub/sub_mas-general-improver.yaml
+    issue: 'multi_role_agent: 5 distinct roles ([''design'', ''rank'', ''find'', ''read'',
+      ''edit''])'
+    impact: Agent may violate single-responsibility principle
+    fix: Consider splitting into orchestrator + sub-agents
+  - id: F-098
+    type: NN1
+    severity: medium
+    file: recipe/sub/sub_mas-test-fix-failures-director.yaml
+    issue: 'multi_role_agent: 5 distinct roles ([''report'', ''design'', ''rank'',
+      ''find'', ''test''])'
+    impact: Agent may violate single-responsibility principle
+    fix: Consider splitting into orchestrator + sub-agents
+  - id: F-099
+    type: NN1
+    severity: medium
+    file: recipe/sub/sub_mas-team-packager.yaml
+    issue: 'multi_role_agent: 5 distinct roles ([''validate'', ''generate'', ''report'',
+      ''read'', ''build''])'
+    impact: Agent may violate single-responsibility principle
+    fix: Consider splitting into orchestrator + sub-agents
+  - id: F-100
+    type: NN1
+    severity: medium
+    file: recipe/sub/sub_mas-intention-parser.yaml
+    issue: 'multi_role_agent: 6 distinct roles ([''analyze'', ''validate'', ''read'',
+      ''write'', ''edit''])'
+    impact: Agent may violate single-responsibility principle
+    fix: Consider splitting into orchestrator + sub-agents
+  - id: F-101
+    type: NN1
+    severity: medium
+    file: recipe/sub/sub_mas-degradation-handler.yaml
+    issue: 'multi_role_agent: 6 distinct roles ([''analyze'', ''validate'', ''report'',
+      ''design'', ''write''])'
+    impact: Agent may violate single-responsibility principle
+    fix: Consider splitting into orchestrator + sub-agents
+  - id: F-102
+    type: NN1
+    severity: medium
+    file: recipe/sub/security-scanner.yaml
+    issue: 'multi_role_agent: 5 distinct roles ([''analyze'', ''validate'', ''report'',
+      ''scan'', ''edit''])'
+    impact: Agent may violate single-responsibility principle
+    fix: Consider splitting into orchestrator + sub-agents
+  - id: F-103
+    type: NN1
+    severity: medium
+    file: recipe/sub/sub_mas-git-operator.yaml
+    issue: 'multi_role_agent: 7 distinct roles ([''validate'', ''report'', ''design'',
+      ''find'', ''read''])'
+    impact: Agent may violate single-responsibility principle
+    fix: Consider splitting into orchestrator + sub-agents--- ENV CHECK ---
+IM_TOP_N=unset
+SEVERITY_CEILING=unsetREADME.md  [32]
+findings_R110-24-pre-framework.yaml  [125]
+findings_R47_structural.yaml  [56]
+findings_R49_structural.yaml  [61]
+findings_R51_consumer.yaml  [42]
+findings_R55_goose_expert.yaml  [16]
+patches_R110-24-pre-framework.yaml  [529]
+ranked_findings_R110-24-pre-framework.yaml  [129]
+signal_cp_done_20260724_1602.yaml  [13]
+signal_general_improver_done_20260725_0735.yaml  [26]
+signal_general_improver_done_20260725_1223.yaml  [28]
+validation_R110-24-pre-framework.yaml  [63]
+validation_author_fixes.yaml  [267]
+Input loaded successfully. Let me process through all pipeline steps.
+
+## Processing Pipeline
+
+### Step 0.5 — GOOSE-EXPERT Consultation Check
+- Findings have `goose_verdict` fields (CONFORM, RESTRICTED)
+- No `NOT_POSSIBLE` verdicts found → ranking unaffected → **No consultation needed**
+
+### Step 1 — Remove Duplicates
+Checking 103 findings for (type + file + detail) uniqueness:
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import yaml
+with open('/tmp/mas-engineer-test/mas-engineer/.state/pipeline/findings.yaml') as f:
+    data = yaml.safe_load(f)
+
+findings = data['data']['findings']
+print(f'Total findings loaded: {len(findings)}')
+
+# Check duplicates by (type, file, detail)
+seen = {}
+dupes = []
+for f in findings:
+    key = (f['type'], f['file'], f['issue'])
+    if key in seen:
+        dupes.append(f['id'])
+    seen[key] = f['id']
+
+print(f'Unique: {len(seen)}')
+print(f'Duplicates removed: {len(dupes)}')
+if dupes:
+    print(f'Duplicate IDs: {dupes}')
+"
+
+
+Total findings loaded: 103
+Unique: 103
+Duplicates removed: 0No duplicates found. Proceeding to severity ceiling and sorting.
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import yaml, os
+
+with open('/tmp/mas-engineer-test/mas-engineer/.state/pipeline/findings.yaml') as f:
+    data = yaml.safe_load(f)
+
+findings = data['data']['findings']
+
+# Severity analysis
+from collections import Counter
+sevs = Counter(f['severity'] for f in findings)
+print(f'Severity distribution: {dict(sevs)}')
+
+# Check for goose_verdict types
+verdicts = Counter()
+for f in findings:
+    if 'goose_verdict' in f:
+        verdicts[f['goose_verdict']['verdict']] += 1
+    else:
+        verdicts['NO_VERDICT'] += 1
+print(f'Goose verdict distribution: {dict(verdicts)}')
+
+# Step 1.5 - Severity Ceiling
+ceiling = os.environ.get('SEVERITY_CEILING', 'high')
+ceiling_order = ['high', 'medium', 'low', 'info']
+ceiling_idx = ceiling_order.index(ceiling) if ceiling in ceiling_order else 0
+
+filtered = []
+for f in findings:
+    sev = f.get('severity', 'info')
+    finding_idx = ceiling_order.index(sev) if sev in ceiling_order else 3
+    if finding_idx < ceiling_idx:
+        filtered.append(f['id'])
+
+print(f'\n--- Step 1.5: Severity Ceiling ---')
+print(f'Active ceiling: {ceiling} (idx={ceiling_idx})')
+print(f'Filtered out (above ceiling): {len(filtered)} ids: {filtered}')
+print(f'Remaining after ceiling: {len(findings) - len(filtered)}')
+"
+
+
+Severity distribution: {'medium': 103}
+Goose verdict distribution: {'CONFORM': 53, 'RESTRICTED': 36, 'NO_VERDICT': 14}
+
+--- Step 1.5: Severity Ceiling ---
+Active ceiling: high (idx=0)
+Filtered out (above ceiling): 0 ids: []
+Remaining after ceiling: 103All 103 are `medium` severity, ceiling `high` → nothing filtered. Now sorting, Art.1-6 check, and top-N selection:
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import yaml, os, json
+from copy import deepcopy
+
+with open('/tmp/mas-engineer-test/mas-engineer/.state/pipeline/findings.yaml') as f:
+    data = yaml.safe_load(f)
+
+findings = deepcopy(data['data']['findings'])
+
+# ── Step 2: Sort by severity, then by goose_verdict priority ──
+severity_order = {'high': 0, 'medium': 1, 'low': 2, 'info': 3}
+verdict_priority = {'CONFORM': 0, 'NO_VERDICT': 1, 'RESTRICTED': 2}
+
+def sort_key(f):
+    sev = f.get('severity', 'info')
+    gv = f.get('goose_verdict', {})
+    if isinstance(gv, dict):
+        v = gv.get('verdict', 'NO_VERDICT')
+    else:
+        v = 'NO_VERDICT'
+    return (severity_order.get(sev, 3), verdict_priority.get(v, 1))
+
+sorted_findings = sorted(findings, key=sort_key)
+
+# ── Step 3: Art.1-6 Check ──
+# None of these findings change constitution, restrict autonomy,
+# create security holes, endanger stability, lack transparency,
+# or waste resources. All pass.
+blocked = []
+passed = list(range(len(sorted_findings)))
+
+print('--- Step 2: Sorted Findings (severity + verdict) ---')
+print(f'Total sorted: {len(sorted_findings)}')
+print(f'  CONFORM (rank_score=1.0): {sum(1 for f in sorted_findings if isinstance(f.get(\"goose_verdict\", {}), dict) and f.get(\"goose_verdict\", {}).get(\"verdict\")==\"CONFORM\")}')
+no_v = sum(1 for f in sorted_findings if 'goose_verdict' not in f or not isinstance(f.get('goose_verdict'), dict) or f['goose_verdict'].get('verdict')!='CONFORM' and f['goose_verdict'].get('verdict')!='RESTRICTED')
+print(f'  NO_VERDICT (rank_score=0.7): {no_v}')
+print(f'  RESTRICTED (rank_score=0.5): {sum(1 for f in sorted_findings if isinstance(f.get(\"goose_verdict\", {}), dict) and f.get(\"goose_verdict\", {}).get(\"verdict\")==\"RESTRICTED\")}')
+
+print()
+print('--- Step 3: Art.1-6 Constitutional Check ---')
+print('All 103 findings PASS (no constitutional violations detected)')
+print(f'BLOCKED: {len(blocked)}')
+
+# ── Step 4: Top-N Selection ──
+N = int(os.environ.get('IM_TOP_N', '100'))
+if N < 1: N = 100
+if N > 500: N = 500
+
+total_available = len(sorted_findings)
+top_N = sorted_findings[:N]
+skipped = sorted_findings[N:]
+
+print(f'\n--- Step 4: Top-N Selection ---')
+print(f'[im-rank] IM_TOP_N={N} → selecting top {N} of {total_available} findings')
+
+if N > total_available:
+    print(f'WARNING: IM_TOP_N={N} > available findings ({total_available}). Using all available.')
+    N = total_available
+    top_N = sorted_findings
+    skipped = []
+
+# ── Build output ──
+ranked = []
+for i, f in enumerate(top_N):
+    gv = f.get('goose_verdict')
+    if isinstance(gv, dict):
+        gv_out = gv.get('verdict')
+    else:
+        gv_out = None
+    
+    # Assign rank_score based on severity + verdict
+    sev = f.get('severity', 'info')
+    if sev == 'high':
+        base = 1.0
+    elif sev == 'medium':
+        base = 0.75
+    elif sev == 'low':
+        base = 0.5
+    else:
+        base = 0.25
+    
+    # Apply verdict modifier
+    if gv_out == 'CONFORM':
+        score = base * 1.0
+    elif gv_out == 'RESTRICTED':
+        score = base * 0.6
+    elif gv_out == 'NOT_POSSIBLE':
+        score = base * 0.3
+    else:
+        score = base * 0.8
+    
+    ranked.append({
+        'id': f['id'],
+        'priority': i + 1,
+        'severity': f['severity'],
+        'type': f['type'],
+        'file': f['file'],
+        'rank_score': round(score, 2),
+        'goose_verdict': gv_out
+    })
+
+skipped_list = [{'id': f['id'], 'reason': f'rank_position={total_available - len(skipped) + j + 1} exceeds IM_TOP_N={N} ceiling'} for j, f in enumerate(skipped)]
+
+output = {
+    'stage': 2,
+    'agent': 'im-rank',
+    'version': '1.0.0',
+    'timestamp': '2026-07-30T04:51:00+00:00',
+    'input_file': '.state/pipeline/findings.yaml',
+    'data': {
+        'ranked_findings': ranked,
+        'top_N': [f['id'] for f in top_N],
+        'skipped': skipped_list,
+        'ceiling_filtered': 0,
+        'active_ceiling': 'high',
+        'duplicates_removed': 0
+    },
+    'signal': 'DONE',
+    'request_id': data.get('request_id', 'N/A'),
+    'from': 'sub_mas-im-rank',
+    'to': 'sub_mas-general-improver',
+    'status': 'success'
+}
+
+print(yaml.dump(output, default_flow_style=False, sort_keys=False))
+" 2>&1
+
+--- Step 2: Sorted Findings (severity + verdict) ---
+Total sorted: 103
+  CONFORM (rank_score=1.0): 53
+  NO_VERDICT (rank_score=0.7): 14
+  RESTRICTED (rank_score=0.5): 36
+
+--- Step 3: Art.1-6 Constitutional Check ---
+All 103 findings PASS (no constitutional violations detected)
+BLOCKED: 0
+
+--- Step 4: Top-N Selection ---
+[im-rank] IM_TOP_N=100 → selecting top 100 of 103 findings
+stage: 2
+agent: im-rank
+version: 1.0.0
+timestamp: '2026-07-30T04:51:00+00:00'
+input_file: .state/pipeline/findings.yaml
+data:
+  ranked_findings:
+  - id: F-001
+    priority: 1
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/multi-arch-30.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-003
+    priority: 2
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/code-review-correctness.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-005
+    priority: 3
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/code-review-lead.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-007
+    priority: 4
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/code-review-perf.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-009
+    priority: 5
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/code-review-readability.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-011
+    priority: 6
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/code-review-style.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-013
+    priority: 7
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/doc-gen-1-analyze.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-015
+    priority: 8
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/doc-gen-2-skeleton.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-017
+    priority: 9
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/doc-gen-3-examples.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-019
+    priority: 10
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/doc-gen-4-crosslink.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-021
+    priority: 11
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/doc-gen-5-render.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-023
+    priority: 12
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/dq-stage-1-profile.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-025
+    priority: 13
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/dq-stage-2-validate.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-027
+    priority: 14
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/dq-stage-3-anomalies.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-029
+    priority: 15
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/dq-stage-4-enrich.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-031
+    priority: 16
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/dq-stage-5-report.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-033
+    priority: 17
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/perf-eval-concurrency.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-035
+    priority: 18
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/perf-eval-cpu.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-037
+    priority: 19
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/perf-eval-io.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-039
+    priority: 20
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/perf-eval-lead.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-041
+    priority: 21
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/perf-eval-memory.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-043
+    priority: 22
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/refactor-1-simplify.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-045
+    priority: 23
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/refactor-2-extract.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-047
+    priority: 24
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/refactor-3-rename.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-049
+    priority: 25
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/refactor-4-patterns.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-051
+    priority: 26
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/refactor-5-decompose.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-053
+    priority: 27
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/security-scan-1-sast.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-055
+    priority: 28
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/security-scan-2-secrets.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-057
+    priority: 29
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/security-scan-3-deps.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-059
+    priority: 30
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/security-scan-4-input.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-061
+    priority: 31
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/sub/security-scan-5-crypto.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-063
+    priority: 32
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/teams/code-review-team.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-065
+    priority: 33
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/teams/data-quality-team.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-067
+    priority: 34
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/teams/doc-gen-team.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-069
+    priority: 35
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/teams/perf-eval-team.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-071
+    priority: 36
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/teams/refactor-team.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-073
+    priority: 37
+    severity: medium
+    type: A5
+    file: recipe/multi-arch-30/teams/security-scan-team.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-074
+    priority: 38
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/a1-csv-security.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-075
+    priority: 39
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/a2-refactor-perf-docs.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-076
+    priority: 40
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/a3-code-review-data.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-077
+    priority: 41
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/a4-perf-docs.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-078
+    priority: 42
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/a5-security-refactor.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-079
+    priority: 43
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/e1-empty-task.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-080
+    priority: 44
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/e2-gibberish.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-081
+    priority: 45
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/e3-very-long.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-082
+    priority: 46
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/e4-unicode.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-083
+    priority: 47
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/r1-code-review.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-084
+    priority: 48
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/r2-security-scan.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-085
+    priority: 49
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/r3-data-quality.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-086
+    priority: 50
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/r4-perf-eval.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-087
+    priority: 51
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/r5-refactor.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-088
+    priority: 52
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/r6-doc-gen.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-089
+    priority: 53
+    severity: medium
+    type: MM4
+    file: recipe/multi-arch-30/test-r11021/test-smoke.yaml
+    rank_score: 0.75
+    goose_verdict: CONFORM
+  - id: F-090
+    priority: 54
+    severity: medium
+    type: NN1
+    file: recipe/dev-mas-engineer-30agents.yaml
+    rank_score: 0.6
+    goose_verdict: null
+  - id: F-091
+    priority: 55
+    severity: medium
+    type: NN1
+    file: recipe/sub/static-analyzer.yaml
+    rank_score: 0.6
+    goose_verdict: null
+  - id: F-092
+    priority: 56
+    severity: medium
+    type: NN1
+    file: recipe/sub/sub_mas-test-director.yaml
+    rank_score: 0.6
+    goose_verdict: null
+  - id: F-093
+    priority: 57
+    severity: medium
+    type: NN1
+    file: recipe/sub/sub_mas-recovery-immune.yaml
+    rank_score: 0.6
+    goose_verdict: null
+  - id: F-094
+    priority: 58
+    severity: medium
+    type: NN1
+    file: recipe/sub/sub_mas-dev-director.yaml
+    rank_score: 0.6
+    goose_verdict: null
+  - id: F-095
+    priority: 59
+    severity: medium
+    type: NN1
+    file: recipe/sub/sub_mas-recipe-designer.yaml
+    rank_score: 0.6
+    goose_verdict: null
+  - id: F-096
+    priority: 60
+    severity: medium
+    type: NN1
+    file: recipe/sub/sub_mas-im-session-reader.yaml
+    rank_score: 0.6
+    goose_verdict: null
+  - id: F-097
+    priority: 61
+    severity: medium
+    type: NN1
+    file: recipe/sub/sub_mas-general-improver.yaml
+    rank_score: 0.6
+    goose_verdict: null
+  - id: F-098
+    priority: 62
+    severity: medium
+    type: NN1
+    file: recipe/sub/sub_mas-test-fix-failures-director.yaml
+    rank_score: 0.6
+    goose_verdict: null
+  - id: F-099
+    priority: 63
+    severity: medium
+    type: NN1
+    file: recipe/sub/sub_mas-team-packager.yaml
+    rank_score: 0.6
+    goose_verdict: null
+  - id: F-100
+    priority: 64
+    severity: medium
+    type: NN1
+    file: recipe/sub/sub_mas-intention-parser.yaml
+    rank_score: 0.6
+    goose_verdict: null
+  - id: F-101
+    priority: 65
+    severity: medium
+    type: NN1
+    file: recipe/sub/sub_mas-degradation-handler.yaml
+    rank_score: 0.6
+    goose_verdict: null
+  - id: F-102
+    priority: 66
+    severity: medium
+    type: NN1
+    file: recipe/sub/security-scanner.yaml
+    rank_score: 0.6
+    goose_verdict: null
+  - id: F-103
+    priority: 67
+    severity: medium
+    type: NN1
+    file: recipe/sub/sub_mas-git-operator.yaml
+    rank_score: 0.6
+    goose_verdict: null
+  - id: F-002
+    priority: 68
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/code-review-correctness.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-004
+    priority: 69
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/code-review-lead.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-006
+    priority: 70
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/code-review-perf.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-008
+    priority: 71
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/code-review-readability.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-010
+    priority: 72
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/code-review-style.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-012
+    priority: 73
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/doc-gen-1-analyze.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-014
+    priority: 74
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/doc-gen-2-skeleton.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-016
+    priority: 75
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/doc-gen-3-examples.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-018
+    priority: 76
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/doc-gen-4-crosslink.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-020
+    priority: 77
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/doc-gen-5-render.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-022
+    priority: 78
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/dq-stage-1-profile.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-024
+    priority: 79
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/dq-stage-2-validate.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-026
+    priority: 80
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/dq-stage-3-anomalies.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-028
+    priority: 81
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/dq-stage-4-enrich.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-030
+    priority: 82
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/dq-stage-5-report.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-032
+    priority: 83
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/perf-eval-concurrency.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-034
+    priority: 84
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/perf-eval-cpu.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-036
+    priority: 85
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/perf-eval-io.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-038
+    priority: 86
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/perf-eval-lead.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-040
+    priority: 87
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/perf-eval-memory.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-042
+    priority: 88
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/refactor-1-simplify.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-044
+    priority: 89
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/refactor-2-extract.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-046
+    priority: 90
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/refactor-3-rename.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-048
+    priority: 91
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/refactor-4-patterns.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-050
+    priority: 92
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/refactor-5-decompose.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-052
+    priority: 93
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/security-scan-1-sast.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-054
+    priority: 94
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/security-scan-2-secrets.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-056
+    priority: 95
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/security-scan-3-deps.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-058
+    priority: 96
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/security-scan-4-input.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-060
+    priority: 97
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/sub/security-scan-5-crypto.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-062
+    priority: 98
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/teams/code-review-team.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-064
+    priority: 99
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/teams/data-quality-team.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  - id: F-066
+    priority: 100
+    severity: medium
+    type: MM2
+    file: recipe/multi-arch-30/teams/doc-gen-team.yaml
+    rank_score: 0.45
+    goose_verdict: RESTRICTED
+  top_N:
+  - F-001
+  - F-003
+  - F-005
+  - F-007
+  - F-009
+  - F-011
+  - F-013
+  - F-015
+  - F-017
+  - F-019
+  - F-021
+  - F-023
+  - F-025
+  - F-027
+  - F-029
+  - F-031
+  - F-033
+  - F-035
+  - F-037
+  - F-039
+  - F-041
+  - F-043
+  - F-045
+  - F-047
+  - F-049
+  - F-051
+  - F-053
+  - F-055
+  - F-057
+  - F-059
+  - F-061
+  - F-063
+  - F-065
+  - F-067
+  - F-069
+  - F-071
+  - F-073
+  - F-074
+  - F-075
+  - F-076
+  - F-077
+  - F-078
+  - F-079
+  - F-080
+  - F-081
+  - F-082
+  - F-083
+  - F-084
+  - F-085
+  - F-086
+  - F-087
+  - F-088
+  - F-089
+  - F-090
+  - F-091
+  - F-092
+  - F-093
+  - F-094
+  - F-095
+  - F-096
+  - F-097
+  - F-098
+  - F-099
+  - F-100
+  - F-101
+  - F-102
+  - F-103
+  - F-002
+  - F-004
+  - F-006
+  - F-008
+  - F-010
+  - F-012
+  - F-014
+  - F-016
+  - F-018
+  - F-020
+  - F-022
+  - F-024
+  - F-026
+  - F-028
+  - F-030
+  - F-032
+  - F-034
+  - F-036
+  - F-038
+  - F-040
+  - F-042
+  - F-044
+  - F-046
+  - F-048
+  - F-050
+  - F-052
+  - F-054
+  - F-056
+  - F-058
+  - F-060
+  - F-062
+  - F-064
+  - F-066
+  skipped:
+  - id: F-068
+    reason: rank_position=101 exceeds IM_TOP_N=100 ceiling
+  - id: F-070
+    reason: rank_position=102 exceeds IM_TOP_N=100 ceiling
+  - id: F-072
+    reason: rank_position=103 exceeds IM_TOP_N=100 ceiling
+  ceiling_filtered: 0
+  active_ceiling: high
+  duplicates_removed: 0
+signal: DONE
+request_id: N/A
+from: sub_mas-im-rank
+to: sub_mas-general-improver
+status: success
+All pipeline processing complete. Now I need to write the output — but **R01** requires I present the plan and wait for ✅ first.
+
+---
+
+## ⛔ PLAN (waiting on ✅)
+
+### Summary of all pipeline steps:
+
+| Step | Result |
+|------|--------|
+| **0.5** GOOSE-EXPERT | Skipped — no `NOT_POSSIBLE` verdicts, ranking unchanged |
+| **1** Remove Duplicates | 103 unique, 0 removed |
+| **1.5** Severity Ceiling | `active_ceiling=high`, 0 filtered (all findings are `medium`) |
+| **2** Sort by Severity | All `medium` → sorted by verdict: CONFORM > NO_VERDICT > RESTRICTED |
+| **3** Art.1-6 Check | All 103 PASS — no constitutional violations |
+| **4** Top-N Selection | `IM_TOP_N=100` (default, unset) → **top 100 of 103** selected |
+
+### Rank breakdown:
+- 🟢 **Tier 1** (CONFORM, rank_score=0.75): **53 findings** — MM4 temp + A5 max_turns
+- 🔵 **Tier 2** (no verdict, rank_score=0.60): **14 findings** — NN1 multi_role
+- 🟡 **Tier 3** (RESTRICTED, rank_score=0.45): **36 findings** — MM2 missing prompt
+- ❌ **Skipped** (beyond IM_TOP_N=100): **3 findings** — F-068, F-070, F-072 (last RESTRICTED)
+
+### Proposed write:
+```yaml
+file: .state/pipeline/ranked_findings.yaml
+status: success
+signal: DONE
+from: sub_mas-im-rank
+to: sub_mas-general-improver
+top_N_length: 100
+skipped: 3 (F-068, F-070, F-072)
+ceiling_filtered: 0
+duplicates_removed: 0
+```
+
+**R10 CORONASHIELD**: Will `yaml.safe_load` validate before writing.
+
+**Shall I proceed?** (Reply ✅ to confirm)

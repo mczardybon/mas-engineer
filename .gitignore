@@ -49,19 +49,17 @@ e2e-results/*/raw-results.json
 # ============================================================
 # logs/ — SINGLE central destination for ALL mas-generated logs,
 # evidence, test results and AI-generated reports (from mas-engineer
-# or any other AI). EVIDENCE-*.md / REPORT.md / SUMMARY.* and other
-# curated evidence files (non-log) stay committed for traceability;
-# only raw runtime logs/output are ignored.
+# or any other AI).
+#
+# The e2e logs/evidence under logs/e2e-results/, logs/e2e-evidence/ and
+# logs/e2e-evidence-gen2/ are the PUBLIC PROOF that mas-engineer works.
+# They ARE committed to GitHub (R110-143, 2026-08-07) so anyone can verify
+# the claimed test results. They are scanned for secrets before commit
+# (test_r110134_8_evidence_secret_leak) and must contain no API keys.
+#
+# Only NON-EVIDENCE artifacts stay ignored: build output (dist/), AI
+# research outputs, and loose reports/scripts at the logs/ top level.
 # ============================================================
-logs/**/*.log
-logs/**/*.log.*
-logs/**/raw-results.json
-logs/**/wrappers/*.log
-logs/**/wrappers/*.yaml
-logs/**/agent-logs/*.log
-logs/**/agent-logs/*.log.*
-logs/**/evidence/*.log
-logs/**/_results.tsv
 logs/dist/
 logs/outputs/
 logs/seo-research-output/
@@ -110,8 +108,18 @@ __pycache__/
 *.swo
 .vscode/
 .idea/
-*.log
-nohup.out
+ *.log
+ nohup.out
+ # e2e evidence logs ARE committed (R110-143 — public proof mas works).
+ # Re-include the .log files under logs/e2e-* that *.log above would ignore.
+ !logs/e2e-results/**/*.log
+ !logs/e2e-results/**/*.log.*
+ !logs/e2e-evidence/**/*.log
+ !logs/e2e-evidence/**/*.log.*
+ !logs/e2e-evidence-gen2/**/*.log
+ !logs/e2e-evidence-gen2/**/*.log.*
+ !logs/e2e-results/**/_results.tsv
+ !logs/e2e-results/**/raw-results.json
 
 # Build / runtime
 node_modules/

@@ -1,0 +1,100 @@
+Loading recipe: 🛡️ SUB-MAS-SECURITY-CMD-INJECTION-SCANNER — Command Injection (Script-wrapper)
+Description: v2.0.0 | Code-Review-Team: Scans for command injection vulnerabilities. Delegates to tools/dev_security_scan.py SCAN cmd-injection.
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260801_126 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 tools/dev_security_scan.py SCAN cmd-injection .
+
+{
+  "command": "SCAN",
+  "scan": "cmd-injection",
+  "path": "/tmp/mas-engineer-test/mas-engineer",
+  "timestamp": "2026-08-01T10:48:15.224623+00:00",
+  "scanned_files": 144,
+  "findings": [
+    {
+      "file": "run_translators.py",
+      "line": 41,
+      "pattern": "subprocess\\.\\w+\\([^)]*shell\\s*=\\s*True",
+      "match": "subprocess.run(\n            shell_cmd,\n            shell=True",
+      "context": "result = subprocess.run(",
+      "severity": "CRITICAL",
+      "confidence": 0.95,
+      "scan": "cmd-injection"
+    },
+    {
+      "file": "tests/test_unix_test_word.py",
+      "line": 190,
+      "pattern": "subprocess\\.\\w+\\([^)]*shell\\s*=\\s*True",
+      "match": "subprocess.run(\"command -v test && type test\", shell=True",
+      "context": "r = subprocess.run(\"command -v test && type test\", shell=True,",
+      "severity": "CRITICAL",
+      "confidence": 0.95,
+      "scan": "cmd-injection"
+    }
+  ],
+  "count": 2,
+  "by_severity": {
+    "CRITICAL": 2,
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "INFO": 0
+  },
+  "issues_found": true
+}
+
+Command exited with code 1Scan complete. Here are the results:
+
+## 🛡️ CMD-INJECTION SCAN RESULTS (v2.0.0)
+
+**Scope:** `/tmp/mas-engineer-test/mas-engineer` (144 files scanned)
+
+**Result: ⛔ 2 CRITICAL findings — issues found (exit code 1)**
+
+| # | File | Line | Pattern | Match | Confidence |
+|---|------|------|---------|-------|-----------|
+| 1 | `run_translators.py` | 41 | `subprocess.\w+\([^)]*shell\s*=\s*True` | `subprocess.run(shell_cmd, shell=True, ...)` | 0.95 |
+| 2 | `tests/test_unix_test_word.py` | 190 | `subprocess.\w+\([^)]*shell\s*=\s*True` | `subprocess.run("command -v test && type test", shell=True, ...)` | 0.95 |
+
+**Severity breakdown:** CRITICAL 2 · HIGH 0 · MEDIUM 0 · LOW 0 · INFO 0
+
+**RAW JSON:**
+```json
+{
+  "scanned_files": 144,
+  "findings": [
+    {
+      "file": "run_translators.py",
+      "line": 41,
+      "match": "subprocess.run(\n            shell_cmd,\n            shell=True",
+      "severity": "CRITICAL",
+      "confidence": 0.95
+    },
+    {
+      "file": "tests/test_unix_test_word.py",
+      "line": 190,
+      "match": "subprocess.run(\"command -v test && type test\", shell=True,",
+      "severity": "CRITICAL",
+      "confidence": 0.95
+    }
+  ],
+  "count": 2,
+  "issues_found": true
+}
+```
+
+---
+
+**Analysis notes:**
+
+1. **`run_translators.py:41`** — `subprocess.run(shell_cmd, shell=True)` is the classic command-injection sink. If `shell_cmd` is constructed from any untrusted input (translator names, file paths, env vars), this is exploitable. **Recommendation:** replace with an argument-list invocation (no `shell=True`) or validate/whitelist input.
+
+2. **`tests/test_unix_test_word.py:190`** — static string (`"command -v test && type test"`) with no interpolation, so it is **not exploitable as written** — but it is still flagged CRITICAL by policy (shell=True in tests). **Recommendation:** low priority; consider `["command", "-v", "test"]` style to keep the codebase shell-free.
+
+Scan mode: `cmd-injection` only — no other vulnerability classes evaluated.
