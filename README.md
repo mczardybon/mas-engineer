@@ -98,6 +98,28 @@ goose run --recipe dev-mas-engineer
 #   "Improve my agents' performance"
 ```
 
+## Demo: try it yourself
+
+After installing, start a session and paste this prompt verbatim. It builds a
+working 3-agent customer-support team at `/tmp/support` — project skeleton,
+agent YAMLs, orchestrator, MCP dashboard — and runs live validation:
+
+```
+Build a customer-support multi-agent team at /tmp/support with 3 agents:
+
+1. intent-router      — classifies incoming messages as billing/technical/general
+2. specialist-handler — resolves the issue based on the category
+3. empathic-responder — formats the final customer-facing reply
+
+Create the project skeleton, all agent YAMLs, the orchestrator recipe, set up
+the MCP dashboard, and run live validation. Report the results.
+```
+
+The system generates all files, registers the agents in the SOT, and reports
+pass/fail for every check. This prompt pattern is verified — 9/9 successful
+team-generation runs across different team types (sales, marketing, translator)
+are documented under [`logs/e2e-results/2026-07-24-demo-team-generation-rate/`](logs/e2e-results/2026-07-24-demo-team-generation-rate/).
+
 See [`docs/installation.md`](docs/installation.md) for details.
 
 ## Documentation
