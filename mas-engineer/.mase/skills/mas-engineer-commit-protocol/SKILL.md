@@ -215,7 +215,7 @@ bash mas-engineer/.githooks/pre-commit && echo "OK hook active"
 
 | Event | CHANGELOG action |
 |-------|------------------|
-| R-sprint completes (e.g., R108 reaches a milestone) | Add section to `mas-engineer/docs/CHANGELOG-<date>.md` |
+| R-sprint completes (e.g., R108 reaches a milestone) | Add section to `mas-engineer/../archive/docs/CHANGELOG-<date>.md` |
 | E2E test passes for the first time (like the 2026-07-19 e2e-success) | Add new `CHANGELOG-<date>-<topic>.md` |
 | Routine fix / transparency report | NO CHANGELOG update (commit alone is enough) |
 | Force-push after secret-leak | NO CHANGELOG update (the secret-leak commit itself documents it) |

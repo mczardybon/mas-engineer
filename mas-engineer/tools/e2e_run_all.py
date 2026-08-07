@@ -244,7 +244,7 @@ def main():
     # see a fresh confirmation.
     #
     # The pre-push-validator's Check 10 (recipe/instructions/sub_mas-
-    # pre-push-validator.md:441-447) and docs/E2E-TESTPLAN.md Test 5.1
+    # pre-push-validator.md:441-447) and archive/docs/E2E-TESTPLAN.md Test 5.1
     # both invoke this tool with the BOTH-required flag+env combo.
     # - If --auto-confirm is passed AND MAS_AUTO_CONFIRM=1 is set in env: update
     #   the confirmation file to now (within the 5-min window).

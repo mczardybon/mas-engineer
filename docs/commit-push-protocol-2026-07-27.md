@@ -365,7 +365,7 @@ b662e83 R108-8 — Pre-push YAML validation (hook)
 | Conventional commit body | ❌ NEIN — nur stil | (kein hook) |
 | pre-push-validator Check 1.5 | ❌ NEIN — operator-tool | `mas-engineer/recipe/sub/sub_mas-pre-push-validator.yaml` |
 | GitHub branch-protection | ❌ NEIN — nicht konfiguriert | (repo-settings) |
-| CHANGELOG-update pro sprint | ❌ NEIN — manuell | `docs/CHANGELOG-*.md` |
+| CHANGELOG-update pro sprint | ❌ NEIN — manuell | `../archive/docs/CHANGELOG-*.md` |
 
 **Folgerung:** Die R-Disziplin entsteht nicht durch enforcement, sondern durch **1) hook-automation für sensible scopes (secrets + YAML) + 2) operator-disziplin für R-Format**. Beide schichten zusammen ergeben die beobachtbare konsistenz. v1 hat die hook-schicht übersehen.
 
@@ -373,8 +373,8 @@ b662e83 R108-8 — Pre-push YAML validation (hook)
 
 | Artefakt | Vorhanden? | Funktion |
 |---|---|---|
-| `docs/CHANGELOG-2026-07-19-e2e-success.md` (865B) | ✅ | Self-dokumentation des 2026-07-19 e2e-success |
-| `docs/CHANGELOG-2026-07-25.md` (132B) | ✅ | Self-dokumentation des 2026-07-25 events |
+| `../archive/docs/CHANGELOG-2026-07-19-e2e-success.md` (865B) | ✅ | Self-dokumentation des 2026-07-19 e2e-success |
+| `../archive/docs/CHANGELOG-2026-07-25.md` (132B) | ✅ | Self-dokumentation des 2026-07-25 events |
 | 11 docs in `docs/` (architecture, agents, recovery, etc.) | ✅ | Self-dokumentation des systems |
 | Auto-generated protokoll pro push | ❌ | (operator schreibt) |
 
