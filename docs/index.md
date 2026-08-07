@@ -83,6 +83,7 @@ flowchart TD
     INDEX --> IMPROVE["improvement-pipeline.md\nSelf-Improvement"]
     INDEX --> RECOVERY["recovery-system.md\nRecovery"]
     INDEX --> DASH["dashboard.md\nDashboard"]
+    INDEX --> DEV["dev/index.md\nDeveloper Docs"]
 
     USAGE --> IMPROVE
     USAGE --> RECOVERY
@@ -99,3 +100,4 @@ flowchart TD
 | [improvement-pipeline.md](improvement-pipeline.md) | 8-stage self-improvement (S1-S8 with S0 prerequisites; 5 im-* sub-agents: im-session-reader, im-finder, im-rank, im-designer, im-validator, plus general-improver dispatcher) |
 | [recovery-system.md](recovery-system.md) | 5-stage Phoenix recovery |
 | [dashboard.md](dashboard.md) | Framework dashboard setup |
+| [dev/](dev/index.md) | **Developer documentation** — detailed architecture, SOT, rules, pipeline, recovery, communication, tools, directives (for developers) |
