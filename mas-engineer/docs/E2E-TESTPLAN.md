@@ -33,7 +33,7 @@ Memory: `goose: command not found` wenn von Hermes-shell. Fix:
 ```bash
 du -sh .state/                                            # muss <2M sein
 find .state/ -type f | wc -l                              # muss <100 sein
-test -d e2e-results/ && echo "FAIL: e2e-results existiert" || echo "OK"
+test -d logs/e2e-results/ && echo "FAIL: e2e-results existiert" || echo "OK"
 test -d .state/workflow_runs/ && echo "FAIL: workflow_runs" || echo "OK"
 test -d .state/pipeline/backups/ && echo "FAIL: pipeline/backups" || echo "OK"
 ```
@@ -115,7 +115,7 @@ Fuer jedes sub-recipe in `recipe/sub/sub_mas-*.yaml`:
 
 ```bash
 RECIPE=recipe/sub/sub_mas-<name>.yaml
-OUT=/tmp/e2e-results/sub_$(basename $RECIPE .yaml)_$(date +%s)
+OUT=/tmp/logs/e2e-results/sub_$(basename $RECIPE .yaml)_$(date +%s)
 mkdir -p $OUT
 
 cd $MAS_WORKSPACE
@@ -339,7 +339,7 @@ RECURSION_OVERRIDE=2 goose run --recipe recipe/sub/sub_mas-general-improver.yaml
 ### Test 6.1 — dev-mas-engineer.yaml als interaktive PTY-session
 ```bash
 cd $MAS_WORKSPACE
-timeout 1800 goose run --recipe recipe/dev-mas-engineer.yaml --name e2e-dev-mas-composition 2>&1 | tee /tmp/e2e-results/dev-mas-composition.log
+timeout 1800 goose run --recipe recipe/dev-mas-engineer.yaml --name e2e-dev-mas-composition 2>&1 | tee /tmp/logs/e2e-results/dev-mas-composition.log
 ```
 
 **Operator-Script (in PTY, antwortet wie ein Mensch):**
@@ -360,7 +360,7 @@ goose run --recipe recipe/dev-mas-engineer.yaml --interactive
 # operator beantwortet menu: "FULL_IMPROVEMENT" → "yes" → "y"
 ```
 
-**Pass:** mas laeuft alle 5 im-phasen, commited, pushed, log in /tmp/e2e-results/
+**Pass:** mas laeuft alle 5 im-phasen, commited, pushed, log in /tmp/logs/e2e-results/
 
 ---
 
@@ -386,13 +386,13 @@ echo "" | goose run --recipe recipe/sub/sub_mas-general-improver.yaml --no-sessi
 
 ### 7.4 Pre-push validator
 ```bash
-python3 tools/dev_goose_expert_check.py --commit HEAD 2>&1 | tee /tmp/e2e-results/pre-push.log
-grep -qE "PASS|FAIL" /tmp/e2e-results/pre-push.log && echo "PASS" || echo "FAIL"
+python3 tools/dev_goose_expert_check.py --commit HEAD 2>&1 | tee /tmp/logs/e2e-results/pre-push.log
+grep -qE "PASS|FAIL" /tmp/logs/e2e-results/pre-push.log && echo "PASS" || echo "FAIL"
 ```
 
 ### 7.5 Self-auditor
 ```bash
-goose run --with-builtin developer --recipe recipe/sub/sub_mas-self-auditor.yaml --params "workspace=$MAS_WORKSPACE" --no-session 2>&1 | tee /tmp/e2e-results/self-audit.log
+goose run --with-builtin developer --recipe recipe/sub/sub_mas-self-auditor.yaml --params "workspace=$MAS_WORKSPACE" --no-session 2>&1 | tee /tmp/logs/e2e-results/self-audit.log
 ```
 
 ---
@@ -403,13 +403,13 @@ goose run --with-builtin developer --recipe recipe/sub/sub_mas-self-auditor.yaml
 python3 -c "
 import json, os, glob, datetime
 phases = {
-    '1_sanity': glob.glob('/tmp/e2e-results/sanity_*.log'),
-    '2_sub_recipes': glob.glob('/tmp/e2e-results/sub_*.log'),
-    '3_tools': glob.glob('/tmp/e2e-results/tool_*.log'),
-    '4_pipeline': glob.glob('/tmp/e2e-results/pipeline_*.log'),
-    '5_switches': glob.glob('/tmp/e2e-results/switch_*.log'),
-    '6_composition': glob.glob('/tmp/e2e-results/dev-mas-*.log'),
-    '7_rules': glob.glob('/tmp/e2e-results/rule_*.log'),
+    '1_sanity': glob.glob('/tmp/logs/e2e-results/sanity_*.log'),
+    '2_sub_recipes': glob.glob('/tmp/logs/e2e-results/sub_*.log'),
+    '3_tools': glob.glob('/tmp/logs/e2e-results/tool_*.log'),
+    '4_pipeline': glob.glob('/tmp/logs/e2e-results/pipeline_*.log'),
+    '5_switches': glob.glob('/tmp/logs/e2e-results/switch_*.log'),
+    '6_composition': glob.glob('/tmp/logs/e2e-results/dev-mas-*.log'),
+    '7_rules': glob.glob('/tmp/logs/e2e-results/rule_*.log'),
 }
 report = {'timestamp': datetime.datetime.now().isoformat(), 'phases': {}}
 total_pass = total_fail = 0
@@ -422,7 +422,7 @@ for p, files in phases.items():
 report['total_pass'] = total_pass
 report['total_fail'] = total_fail
 report['pass_rate'] = f'{100*total_pass/(total_pass+total_fail):.1f}%' if (total_pass+total_fail) else 'N/A'
-json.dump(report, open('/tmp/e2e-results/REPORT.json', 'w'), indent=2)
+json.dump(report, open('/tmp/logs/e2e-results/REPORT.json', 'w'), indent=2)
 print(json.dumps(report, indent=2))
 "
 ```
@@ -435,14 +435,14 @@ print(json.dumps(report, indent=2))
 
 ### 10.1 Test ist idempotent
 ```bash
-bash test-e2e-full.sh > /tmp/e2e-results/run1.log 2>&1
-bash test-e2e-full.sh > /tmp/e2e-results/run2.log 2>&1
-diff <(grep -E "PASS|FAIL" /tmp/e2e-results/run1.log) <(grep -E "PASS|FAIL" /tmp/e2e-results/run2.log) > /dev/null && echo "IDEMPOTENT" || echo "DIFFERENT — investigate"
+bash test-e2e-full.sh > /tmp/logs/e2e-results/run1.log 2>&1
+bash test-e2e-full.sh > /tmp/logs/e2e-results/run2.log 2>&1
+diff <(grep -E "PASS|FAIL" /tmp/logs/e2e-results/run1.log) <(grep -E "PASS|FAIL" /tmp/logs/e2e-results/run2.log) > /dev/null && echo "IDEMPOTENT" || echo "DIFFERENT — investigate"
 ```
 
 ### 10.2 Cleanup nach test
 ```bash
-rm -rf /tmp/e2e-results/test-*
+rm -rf /tmp/logs/e2e-results/test-*
 rm -f .state/pipeline/test_*
 test "$(du -sm .state | cut -f1)" -lt 3 && echo "OK workspace zurueck"
 ```
@@ -471,7 +471,7 @@ test "$(du -sm .state | cut -f1)" -lt 3 && echo "OK workspace zurueck"
 
 Bei fail:
 1. **Sofort stop** — keine weiteren phasen starten
-2. **Log sichern** — `cp /tmp/e2e-results/<test>.log /tmp/e2e-results/FAILED_<test>_<timestamp>.log`
+2. **Log sichern** — `cp /tmp/logs/e2e-results/<test>.log /tmp/logs/e2e-results/FAILED_<test>_<timestamp>.log`
 3. **Diagnose** — operator liest log, identifiziert: bug in mas, falscher test, env-problem
 4. **Re-run** — single test isoliert, dann ggf. ganze phase
 5. **Skip** — nur bei EXTERNEN bugs (R13: /root/.config/goose/recipes/*), mit dokumentation

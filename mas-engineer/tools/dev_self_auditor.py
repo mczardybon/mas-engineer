@@ -2,7 +2,7 @@
 """
 dev_self_auditor.py — Codifies the "verification theater" detector.
 
-Purpose: Scan e2e-results/, docs/, and cert-style *.md files for strong
+Purpose: Scan logs/e2e-results/, docs/, and cert-style *.md files for strong
 claims ("VERIFIED FUNCTIONAL", "ALL HYPOTHESES VERIFIED", "100% PASS",
 "guarantees") that are NOT backed by a matching test log demonstrating
 the claim. This is the pattern the user (mczardybon) flagged on 2026-07-21
@@ -12,11 +12,11 @@ Used by:
   - sub_mas-pre-push-validator (Check 9) on every push
   - sub_mas-self-auditor (the recipe-level auditor)
   - sub_mas-general-improver (stage 6.5 — verify-before-claim)
-  - ad-hoc: `python3 dev_self_auditor.py --scope e2e-results`
+  - ad-hoc: `python3 dev_self_auditor.py --scope logs/e2e-results`
 
 Usage:
-    python3 dev_self_auditor.py --scope e2e-results
-    python3 dev_self_auditor.py --scope e2e-results/2026-07-21-demo-3teams
+    python3 dev_self_auditor.py --scope logs/e2e-results
+    python3 dev_self_auditor.py --scope logs/e2e-results/2026-07-21-demo-3teams
     python3 dev_self_auditor.py --file path/to/specific.md
     python3 dev_self_auditor.py --workspace .
 
@@ -335,7 +335,7 @@ def write_report(workspace: str, file_results: list[dict], scope: str) -> dict:
 def main():
     parser = argparse.ArgumentParser(description='Self-auditor: detect "verification theater" in MAS-Engineer docs')
     parser.add_argument('--workspace', default='.', help='Workspace root')
-    parser.add_argument('--scope', help='Path to scope (e.g. e2e-results, e2e-results/2026-07-21, or "staged" to audit only git-cached files)')
+    parser.add_argument('--scope', help='Path to scope (e.g. logs/e2e-results, logs/e2e-results/2026-07-21, or "staged" to audit only git-cached files)')
     parser.add_argument('--file', help='Single file to audit')
     parser.add_argument('--output', default='.state/pipeline/self_audit.yaml', help='Output report path')
     parser.add_argument('--json', action='store_true', help='Output JSON to stdout instead of YAML')
@@ -370,7 +370,7 @@ def main():
     elif args.scope:
         target_files = find_target_files(args.scope, workspace)
     else:
-        target_files = find_target_files('e2e-results', workspace)
+        target_files = find_target_files('logs/e2e-results', workspace)
 
     if not target_files:
         print(f'No files found in scope', file=sys.stderr)
@@ -393,7 +393,7 @@ def main():
         else:
             print(f'  ⏭️  {f.relative_to(workspace) if f.is_relative_to(workspace) else f}', file=sys.stderr)
 
-    report = write_report(workspace, file_results, args.scope or 'e2e-results')
+    report = write_report(workspace, file_results, args.scope or 'logs/e2e-results')
 
     # Write YAML report
     output_path = Path(workspace) / args.output

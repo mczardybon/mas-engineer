@@ -1,6 +1,6 @@
 # Agent Catalog
 
-MAS-Engineer contains 96 sub-agents, organized into functional categories. The detailed listing below covers 52 of them (snapshot as of 2026-07-19); for the full 96-agent catalog, run `ls mas-engineer/recipe/sub/sub_mas-*.yaml` or see `e2e-results/2026-07-24-demo-team-generation-rate/`.
+MAS-Engineer contains 96 sub-agents, organized into functional categories. The detailed listing below covers 52 of them (snapshot as of 2026-07-19); for the full 96-agent catalog, run `ls mas-engineer/recipe/sub/sub_mas-*.yaml` or see `logs/e2e-results/2026-07-24-demo-team-generation-rate/`.
 
 ```mermaid
 pie title Sub-Agents by Category — 2026-07-19 snapshot (52 total; current canonical: 96 in 9 categories, see Current Counts below)

@@ -40,7 +40,7 @@ else
 fi
 export TEAM1_DIR=/workspace/team1
 export TEAM2_DIR=/workspace/team2
-export EVIDENCE=/workspace/e2e-evidence
+export EVIDENCE=/workspace/logs/e2e-evidence
 mkdir -p "$EVIDENCE"
 log() { echo "[$(date +%H:%M:%S)] $*" | tee -a "$EVIDENCE/run.log"; }
 section() { echo ""; echo "==== $* ====" | tee -a "$EVIDENCE/run.log"; }

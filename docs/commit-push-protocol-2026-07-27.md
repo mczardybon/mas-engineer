@@ -220,7 +220,7 @@ E2E (5 real-flow scenarios):
 - code-only commit          → Check 9 SKIPPED, exit 0
 - overclaim in nested cert  → detector MATCHES, exit 1 BLOCKED
 - clean nested cert         → detector MATCHES, exit 0 PASS
-- overclaim in e2e-results/ → detector MATCHES, exit 1 BLOCKED
+- overclaim in logs/e2e-results/ → detector MATCHES, exit 1 BLOCKED
 - whack-a-mole (clean staged + historical e2e-results unflagged)
                          → detector MATCHES, exit
 ```

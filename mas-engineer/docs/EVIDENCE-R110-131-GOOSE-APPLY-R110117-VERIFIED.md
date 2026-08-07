@@ -22,7 +22,7 @@ left independently-verifiable artifacts on disk.**
 - **Operator:** goose recipe run loop operator → general-improver → DELEGATE to sub_mas-apply-directive
 - **Watchdog:** none (background, terminated when logs stopped growing)
 - **Actual runtime:** ~2 min wall clock (04:24 → 04:27 UTC, 2026-08-05)
-- **Captured output:** `e2e-results/2026-08-05-r110117-redispatch/evidence/goose-apply-r110117-v2.log` (878 lines, 49 KB; **gitignored**, runtime evidence)
+- **Captured output:** `logs/e2e-results/2026-08-05-r110117-redispatch/evidence/goose-apply-r110117-v2.log` (878 lines, 49 KB; **gitignored**, runtime evidence)
 
 ## Independently-verified artifacts (re-read from disk, variant 7 protocol)
 

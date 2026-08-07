@@ -3,7 +3,7 @@
 Date: 2026-07-24
 Model: deepseek-v4-flash (via openai host)
 Operator: mas-engineer (human-mode, PTY-less)
-Evidence: mas-engineer/e2e-evidence/
+Evidence: mas-engineer/logs/e2e-evidence/
 
 ## TL;DR
 
@@ -19,7 +19,7 @@ Evidence: mas-engineer/e2e-evidence/
 ### Step 1 — Build the team (07:04:30 UTC)
 
 Tool: `goose run --no-session -i - < prompt-build.txt`
-Result: `e2e-evidence/step1-build.log`
+Result: `logs/e2e-evidence/step1-build.log`
 
 mas-engineer received a human-mode prompt:
 > Build a complete Multi-Agent System called "research-team" at
@@ -38,7 +38,7 @@ What happened (logged):
 ### Step 2 — Use the team (07:12:14 UTC)
 
 Tool: `goose run --no-session -i - < prompt-use-team.txt`
-Result: `e2e-evidence/step2-use.log`
+Result: `logs/e2e-evidence/step2-use.log`
 
 Human-mode prompt:
 > Use the research-team you just built at /tmp/research-team to answer

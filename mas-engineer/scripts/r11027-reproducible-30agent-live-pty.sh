@@ -24,8 +24,9 @@ set -o pipefail
 # === CONFIG ===
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MAS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+LOGS_ROOT="$(cd "$MAS_ROOT/.." && pwd)/logs"
 RECIPE_DIR="/tmp/multi-arch-30/recipe/sub"
-RESULT_DIR="$MAS_ROOT/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty"
+RESULT_DIR="$LOGS_ROOT/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty"
 TASKS_FILE="$RESULT_DIR/tasks.yaml"
 LOG_DIR="$RESULT_DIR/agent-logs"
 WRAPPER_DIR="$RESULT_DIR/wrappers"

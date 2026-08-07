@@ -7,7 +7,7 @@ These verify that the 9 documented capabilities of mas-engineer are:
 2. Not broken by refactor
 3. Internally consistent (cross-references work)
 
-The 9 capabilities (extracted from e2e-results/2026-08-01-mas-pty-129/dev-mas-engineer-30agents.log):
+The 9 capabilities (extracted from logs/e2e-results/2026-08-01-mas-pty-129/dev-mas-engineer-30agents.log):
 
   C1: Generic framework initialization  (dev_generic_init.py exists + importable)
   C2: YAML recipe validation           (yaml.safe_load works on all recipes)

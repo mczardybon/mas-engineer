@@ -51,7 +51,7 @@ bash scripts/r11070-mas-engineer-all-functions-pty.sh --result-dir /tmp/my-run
 | `--first N` | only test first N recipes (after filter) | all |
 | `--dry-run` | only build wrappers/tasks, do not invoke goose | off |
 | `--timeout SEC` | per-recipe timeout | 120 |
-| `--result-dir DIR` | custom result dir | timestamped `e2e-results/<date>-r11070-...` |
+| `--result-dir DIR` | custom result dir | timestamped `logs/e2e-results/<date>-r11070-...` |
 
 ## Output structure
 
@@ -135,7 +135,7 @@ The script runs 4 steps in order. Each fails fast on error.
 - FAIL: 0
 - Total walltime: ~6 min
 - All agents identified themselves correctly
-- E2E evidence: `e2e-results/2026-08-03-r11070-mas-engineer-all-functions-pty/`
+- E2E evidence: `logs/e2e-results/2026-08-03-r11070-mas-engineer-all-functions-pty/`
 
 ## When to run
 

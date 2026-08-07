@@ -63,16 +63,16 @@ Nach der erfolgreichen `code-reviewer-ORIGINAL.yaml` löschung (8/8 verifiziert)
 - Tests laufen lassen vor push
 - **Nicht einfach `rm -rf`** weil das keine history erzeugt
 
-### 2) `e2e-results/` — 289 files in 47 subdirs
+### 2) `logs/e2e-results/` — 289 files in 47 subdirs
 
 **Befund:**
 - Tag-based evidence-storage, ALTE runs von 19.07, 21.07, 22.07
-- Aktive nutzung für e2e-evidence (R108-13, R108-12 etc. hinterlegen hier ihre evidence)
+- Aktive nutzung für logs/e2e-evidence (R108-13, R108-12 etc. hinterlegen hier ihre evidence)
 - KEINE retention-policy sichtbar
 - Akkumuliert unkontrolliert (289 files, 373 mit subdirs, gemischte extensions: .md, .json, .py, .sh, .log, .yaml, .csv)
 
 **Warum NICHT aufgeräumt:**
-- Wird aktiv genutzt für evidence-ablage (R108-13 commit `b98d92b` ist in R108-13 e2e-evidence)
+- Wird aktiv genutzt für evidence-ablage (R108-13 commit `b98d92b` ist in R108-13 logs/e2e-evidence)
 - Retention-policy existiert nicht — aufräumen ohne policy ist arbitrary
 - 4 wochen alte runs können historisch wertvoll sein (R108-13 hat 14-tage-vergleiche)
 - **Andere cleanup-kategorie als recipe** — würde eigene analyse brauchen
@@ -134,14 +134,14 @@ Nach der erfolgreichen `code-reviewer-ORIGINAL.yaml` löschung (8/8 verifiziert)
 - ❌ **Nicht** tools/ als obsolet markiert basierend auf 0 imports (CLI-pattern)
 - ❌ **Nicht** demo-team templates angefasst (archetype-pattern)
 - ❌ **Nicht** .state/ files commited (fremde änderungen)
-- ❌ **Nicht** e2e-results/ aufgeräumt (keine retention-policy)
+- ❌ **Nicht** logs/e2e-results/ aufgeräumt (keine retention-policy)
 
 ---
 
 ## FAZIT
 
 **Belastbarer cleanup:** 1 file (code-reviewer-ORIGINAL.yaml) — bereits erledigt in 3ff4023
-**Verdächtige aber unsichere befunde:** 2 bereiche (legacy/, e2e-results/) — dokumentiert, NICHT angefasst
+**Verdächtige aber unsichere befunde:** 2 bereiche (legacy/, logs/e2e-results/) — dokumentiert, NICHT angefasst
 **Gesamt-empfehlung:** Stop, warte auf explizite aufträge für die verdächtigen bereiche
 
 **Begründung fürs stoppen:** Bei 2 vorgeschichten mit fehlern (95% und 99% confidence für jeweils falsche behauptungen) ist die richtige default-aktion **NICHT** "mehr cleanup", sondern "befunde dokumentieren und auf bestätigung warten".

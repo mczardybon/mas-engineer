@@ -14,8 +14,8 @@ Tests (no shortcuts, no DRY-RUN):
 
 Output:
   - console: real-time progress
-  - JSON: e2e-results/<date>-run-<n>/raw-results.json
-  - Markdown: e2e-results/<date>-run-<n>/REPORT.md
+  - JSON: logs/e2e-results/<date>-run-<n>/raw-results.json
+  - Markdown: logs/e2e-results/<date>-run-<n>/REPORT.md
   - Exit code: 0 if pass rate >= 95%, else 1
 
 Usage:
@@ -202,7 +202,7 @@ def test_mas_engineer_interactive():
     section("TEST 5: mas-engineer recipe via goose")
     log("  running goose run --recipe recipe/test-mas-user.yaml...")
     log("  (this can take 15-25 minutes)")
-    log("  tail the log: tail -f e2e-results/<date>/logs/pty-test-mas-user.log")
+    log("  tail the log: tail -f logs/e2e-results/<date>/logs/pty-test-mas-user.log")
     try:
         r = subprocess.run(
             ["goose", "run", "--recipe", "recipe/test-mas-user.yaml"],
@@ -277,9 +277,9 @@ def main():
 
     # Set up output dir
     today = datetime.now().strftime("%Y-%m-%d")
-    existing = sorted(glob.glob(f"e2e-results/{today}-run-*"))
+    existing = sorted(glob.glob(f"logs/e2e-results/{today}-run-*"))
     run_n = len(existing) + 1
-    out_dir = f"e2e-results/{today}-run-{run_n}"
+    out_dir = f"logs/e2e-results/{today}-run-{run_n}"
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(f"{out_dir}/logs", exist_ok=True)
     log(f"results dir: {out_dir}")

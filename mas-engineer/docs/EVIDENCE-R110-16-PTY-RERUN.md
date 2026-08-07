@@ -104,13 +104,13 @@ confirms the recipe still works after the R110-14 multi-fix.
 
 ## Evidence on disk (gitignored, not in repo)
 
-All artifacts live under `mas-engineer/e2e-results/2026-07-28-r11016-pty-rerun/`
+All artifacts live under `mas-engineer/logs/e2e-results/2026-07-28-r11016-pty-rerun/`
 which is gitignored. They stay on disk for verification but do not pollute
 the repo.
 
-- `e2e-results/2026-07-28-r11016-pty-rerun/runner.out` — Python PTY driver stdout
-- `e2e-results/2026-07-28-r11016-pty-rerun/evidence/run.log` — goose run output, TTY-stripped
-- `e2e-results/2026-07-28-r11016-pty-rerun/evidence/run.log.raw` — Raw PTY buffer incl. ANSI codes
+- `logs/e2e-results/2026-07-28-r11016-pty-rerun/runner.out` — Python PTY driver stdout
+- `logs/e2e-results/2026-07-28-r11016-pty-rerun/evidence/run.log` — goose run output, TTY-stripped
+- `logs/e2e-results/2026-07-28-r11016-pty-rerun/evidence/run.log.raw` — Raw PTY buffer incl. ANSI codes
 - `/tmp/multi-arch-30/` — the actual MAS that was built (3585 files, 43 YAMLs, 181 MDs, dashboard MCP server, 30-agent agent_template)
 - `/tmp/multi-arch-30/R110-16-evidence/REPORT.md` — copy of the pre-correction FINAL-REPORT for reference
 

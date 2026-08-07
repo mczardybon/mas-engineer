@@ -201,14 +201,14 @@ of `DEEPSEEK_API_KEY=[a-z0-9]` (1-char, false-positive-everywhere).
 ### Finding D — 5 untracked evidence files (4 R110-77 fixtures + new R110-89 dir)
 
 T7 evidence: 5 untracked files in the working tree, all in
-`e2e-results/`:
+`logs/e2e-results/`:
 
 ```
-?? mas-engineer/e2e-results/2026-07-30-mas-pty-129/evidence/sub_mas-recipe-manager.log
-?? mas-engineer/e2e-results/2026-07-30-mas-pty-129/evidence/sub_mas-security-secrets-scanner.log
-?? mas-engineer/e2e-results/2026-08-01-mas-pty-129/evidence/sub_mas-recipe-manager.log
-?? mas-engineer/e2e-results/2026-08-01-mas-pty-129/evidence/sub_mas-security-secrets-scanner.log
-?? mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/   <-- THIS COMMIT'S EVIDENCE
+?? mas-engineer/logs/e2e-results/2026-07-30-mas-pty-129/evidence/sub_mas-recipe-manager.log
+?? mas-engineer/logs/e2e-results/2026-07-30-mas-pty-129/evidence/sub_mas-security-secrets-scanner.log
+?? mas-engineer/logs/e2e-results/2026-08-01-mas-pty-129/evidence/sub_mas-recipe-manager.log
+?? mas-engineer/logs/e2e-results/2026-08-01-mas-pty-129/evidence/sub_mas-security-secrets-scanner.log
+?? mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/   <-- THIS COMMIT'S EVIDENCE
 ```
 
 The 4 from 2026-07-30 / 2026-08-01 contain intentional
@@ -216,13 +216,13 @@ The 4 from 2026-07-30 / 2026-08-01 contain intentional
 R110-77 (committed 2026-08-03) and R110-75 (exclusion note) both
 explicitly chose to keep them untracked rather than commit, because
 GH's push-time secret-scanner flags the `sk-` prefix even when the
-middle is `...`. The .gitignore currently has `!e2e-results/*/evidence/*.log`
+middle is `...`. The .gitignore currently has `!logs/e2e-results/*/evidence/*.log`
 (R110-74b) which would allow committing them, but the team's
 choice was to leave them excluded anyway as a defense-in-depth.
 
 The 5th (this commit's evidence dir, `2026-08-03-r11089-...`)
 is **committed** in this commit (EVIDENCE doc in `docs/` + 19
-log files in `e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/`).
+log files in `logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/`).
 It does NOT contain any `sk-` placeholder (only the audit-pattern
 match counts and conclusions), so pre-commit and pre-push hooks
 pass cleanly on it.
@@ -394,25 +394,25 @@ chain has drifted and R110-90+ needs to re-tighten.
 | File | Purpose | Bytes | Lines |
 |---|---|---|---|
 | `mas-engineer/docs/EVIDENCE-R110-89-HONEST-REPOFMT-AND-EVIDENCE-AUDIT.md` | this document | ~9k | ~210 |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T1_pytest.log` | pytest 1277 PASS 8.01s | 633 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T2_collect_count.log` | 1277 collect-only | 96 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T3_sub_recipe_ref_audit.log` | 76/76 100% | 147 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T4_1295_hits.log` | 0 (post-fix) | 27 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T4_1277_hits.log` | 4 (post-fix) | 30 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T5_skill_dir.log` | skill dir ls | 98 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T5_skill_idx.log` | SKILLS-INDEX 1 hit | 26 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T5_skill_yaml.log` | frontmatter parses | 403 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T6_files.log` | 6 files in last 10 commits | 310 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T6_fixture_secret_scan.log` | 0 R110-77-form hits | 44 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T6_real_secret_scan.log` | 0 real-key hits | 37 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T7_untracked.log` | 4 + 1 untracked | 436 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T8_corrected_secrets.log` | 0 real, 8 placeholders | 373 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T8_secrets.log` | raw 26 false-positive hits | 1985 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T9_commit_titles.log` | 10 commit titles | 759 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T9_emoji_dist.log` | 2+8 dist | 41 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T10_timing.log` | 14:11..20:22 | 1019 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T11_spec_sizes.log` | 979 total | 227 | n/a |
-| `mas-engineer/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T12_body_audit.log` | 0/10 5-section | 464 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T1_pytest.log` | pytest 1277 PASS 8.01s | 633 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T2_collect_count.log` | 1277 collect-only | 96 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T3_sub_recipe_ref_audit.log` | 76/76 100% | 147 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T4_1295_hits.log` | 0 (post-fix) | 27 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T4_1277_hits.log` | 4 (post-fix) | 30 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T5_skill_dir.log` | skill dir ls | 98 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T5_skill_idx.log` | SKILLS-INDEX 1 hit | 26 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T5_skill_yaml.log` | frontmatter parses | 403 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T6_files.log` | 6 files in last 10 commits | 310 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T6_fixture_secret_scan.log` | 0 R110-77-form hits | 44 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T6_real_secret_scan.log` | 0 real-key hits | 37 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T7_untracked.log` | 4 + 1 untracked | 436 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T8_corrected_secrets.log` | 0 real, 8 placeholders | 373 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T8_secrets.log` | raw 26 false-positive hits | 1985 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T9_commit_titles.log` | 10 commit titles | 759 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T9_emoji_dist.log` | 2+8 dist | 41 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T10_timing.log` | 14:11..20:22 | 1019 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T11_spec_sizes.log` | 979 total | 227 | n/a |
+| `mas-engineer/logs/e2e-results/2026-08-03-r11089-repofmt-and-evidence/evidence/T12_body_audit.log` | 0/10 5-section | 464 | n/a |
 
 Aggregate: 1 doc + 19 evidence logs. Total 84 KB on disk.
 

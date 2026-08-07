@@ -4,7 +4,7 @@
 **Sub-Agents:** 96
 **Tools:** 57 total (50 Python, 6 Shell, 1 YAML)
 
-> **Latest verified results (2026-07-24):** 9/9 demo-team generation runs (R38) · 8/8 e2e infrastructure tests (R39) · 11/11 pre-push validation (every commit) · 2 dogfooded user-bug fixes (R37). Full evidence under `e2e-results/2026-07-24-*/` and the commit graph.
+> **Latest verified results (2026-07-24):** 9/9 demo-team generation runs (R38) · 8/8 e2e infrastructure tests (R39) · 11/11 pre-push validation (every commit) · 2 dogfooded user-bug fixes (R37). Full evidence under `logs/e2e-results/2026-07-24-*/` and the commit graph.
 
 ---
 

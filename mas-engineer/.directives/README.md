@@ -85,7 +85,7 @@ aktualisiert sobald mas-engineer PHASE 1+ umgesetzt hat.
 - Echte Python-tools (die gehoeren in `tools/`)
 - User-persona-notizen (die gehoeren in `docs/`)
 - Commit-message drafts (die gehoeren in commit body, nicht hier)
-- Session-logs (die gehoeren in `e2e-results/<session>/`)
+- Session-logs (die gehoeren in `logs/e2e-results/<session>/`)
 
 ## Konventionen
 
