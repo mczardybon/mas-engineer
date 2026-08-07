@@ -71,8 +71,8 @@ For full MAS distribution deploys: use sub_mas-bootstrap
 ## Documentation Checking (via sub_mas-doc-generator)
 
 The doc-generator checks these files for currency:
-- `mas-engineer/docs/manifest.md` — Agent descriptions, tool lists
-- `mas-engineer/docs/governance.md` — Rules, constitution, priorities
-- `mas-engineer/docs/procedures.md` — Commands, workflows, procedures
+- `docs/manifest.md` — Agent descriptions, tool lists
+- `docs/governance.md` — Rules, constitution, priorities
+- `docs/procedures.md` — Commands, workflows, procedures
 
 It counts agents, tools, recipes, and verifies documented values match actual values.

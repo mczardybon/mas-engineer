@@ -13,7 +13,7 @@ MAS-Engineer itself is a MAS: 117 sub-agents (recipe/sub/sub_mas-*.yaml; 170 inc
 - Full audit trail in `.mase/`
 - Single-source-of-truth workflows in `.mase/workflows.yaml`
 - 8-stage IM-pipeline (S1-S8 with S0 prerequisites; im-session-reader → im-finder → im-rank → im-designer → im-validator → apply → summarize → push)
-- 6 Phoenix Recovery files (5 internal + 1 monitor) — but only 5 are listed in `docs/`; the 6th is `monitor-recovery`
+- 6 Phoenix Recovery files (5 internal + 1 monitor) — but only 5 are listed in `../docs/`; the 6th is `monitor-recovery`
 
 ## Quick start: run the demo
 
@@ -33,25 +33,25 @@ Or just say "Run the demo." in any goose session.
 **Want to write your own MAS-Engineer prompts? See real examples:**
 
 ```
-prompts/
+demos/demo-team/prompts/
 ├── README.md              ← how to write prompts
 └── research-team.txt      ← full working prompt, ready to copy-paste
 ```
 
-The [prompts/research-team.txt](prompts/research-team.txt) file is the
+The [prompts/research-team.txt](../demos/demo-team/prompts/research-team.txt) file is the
 exact prompt that built the 5-agent research team at `/tmp/research-team`.
 Copy it, modify the agents, change the output path, and run it. It
 follows the build pattern: initialize → create agents → wire them →
 dashboard → live test → report (the "6-step pattern" mentioned in some
 docs; this is the runtime observation, not a fixed framework rule).
 
-More prompts: [prompts/README.md](prompts/README.md)
+More prompts: [prompts/README.md](../demos/demo-team/prompts/README.md)
 
 ## Documentation
 
-- [docs/DEMO-RESEARCH-TEAM.md](docs/DEMO-RESEARCH-TEAM.md) — Run the research-team demo
-- [prompts/](prompts/) — Copy-paste prompts to use as templates
-- [prompts/research-team.txt](prompts/research-team.txt) — The full demo prompt
+- [docs/DEMO-RESEARCH-TEAM.md](../docs/DEMO-RESEARCH-TEAM.md) — Run the research-team demo
+- [../demos/demo-team/prompts/](../demos/demo-team/prompts/) — Copy-paste prompts to use as templates
+- [prompts/research-team.txt](../demos/demo-team/prompts/research-team.txt) — The full demo prompt
 
 ## Use MAS-Engineer for your own work
 
@@ -91,7 +91,7 @@ MAS-Engineer supports **two workflows** for building multi-agent teams. Choose w
 If no keyword is found and the description mentions a team, MAS-Engineer
 shows a hint in the plan offering both options before R01 confirmation.
 
-See: [docs/WORKFLOWS.md](docs/WORKFLOWS.md) for the full workflow selection guide.
+See: [docs/WORKFLOWS.md](../docs/WORKFLOWS.md) for the full workflow selection guide.
 
 ## Architecture
 
@@ -113,17 +113,17 @@ dev-mas-engineer  (root orchestrator)
 
 ## Documentation
 
-- [docs/WORKFLOWS.md](docs/WORKFLOWS.md) - Team creation workflows (AUTO-SPLIT vs INTERACTIVE)
-- [docs/HOWTO-CREATE-AGENT.md](docs/HOWTO-CREATE-AGENT.md) - Create a single agent with intention-parser
-- [docs/HOWTO-IM-PIPELINE.md](docs/HOWTO-IM-PIPELINE.md) - Run the 8-stage improvement pipeline
-- [docs/HOWTO-TEAM-STANDALONE.md](docs/HOWTO-TEAM-STANDALONE.md) - Are created teams standalone-runnable?
-- [docs/HOWTO-PACKAGE-TEAM.md](docs/HOWTO-PACKAGE-TEAM.md) - Package a team for standalone distribution
-- [docs/DEMO-RESEARCH-TEAM.md](docs/DEMO-RESEARCH-TEAM.md) - Run the research-team demo
-- [docs/governance.md](docs/governance.md) - R-rules and decision-making
-- [docs/manifest.md](docs/manifest.md) - What MAS-Engineer is
-- [docs/procedures.md](docs/procedures.md) - Standard operating procedures
-- [docs/lessons-learned.md](docs/lessons-learned.md) - Hard-won knowledge
-- [prompts/](prompts/) - Copy-paste prompts to use as templates
+- [docs/WORKFLOWS.md](../docs/WORKFLOWS.md) - Team creation workflows (AUTO-SPLIT vs INTERACTIVE)
+- [docs/HOWTO-CREATE-AGENT.md](../docs/HOWTO-CREATE-AGENT.md) - Create a single agent with intention-parser
+- [docs/HOWTO-IM-PIPELINE.md](../docs/HOWTO-IM-PIPELINE.md) - Run the 8-stage improvement pipeline
+- [docs/HOWTO-TEAM-STANDALONE.md](../docs/HOWTO-TEAM-STANDALONE.md) - Are created teams standalone-runnable?
+- [docs/HOWTO-PACKAGE-TEAM.md](../docs/HOWTO-PACKAGE-TEAM.md) - Package a team for standalone distribution
+- [docs/DEMO-RESEARCH-TEAM.md](../docs/DEMO-RESEARCH-TEAM.md) - Run the research-team demo
+- [docs/governance.md](../docs/governance.md) - R-rules and decision-making
+- [docs/manifest.md](../docs/manifest.md) - What MAS-Engineer is
+- [docs/procedures.md](../docs/procedures.md) - Standard operating procedures
+- [docs/lessons-learned.md](../docs/lessons-learned.md) - Hard-won knowledge
+- [../demos/demo-team/prompts/](../demos/demo-team/prompts/) - Copy-paste prompts to use as templates
 - [recipe/instructions/](recipe/instructions/) - All sub-agent instructions
 
 ## Project structure
@@ -139,7 +139,7 @@ mas-engineer/
     tools/                        # 65 tools (57 Python, 7 Shell, 1 YAML)
   .mase/mcp/                     # MCP dashboard server
   .mase/                       # SOT, audit trail, findings
-  docs/                         # documentation
+  ../docs/                    # documentation (repo root)
   tests/                        # test suite
   sub/                          # legacy sub-agents
 ```

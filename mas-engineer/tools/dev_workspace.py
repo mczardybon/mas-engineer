@@ -206,7 +206,7 @@ def cmd_init(ws_dir: str):
                 shutil.rmtree(mas_docs_dir)
             shutil.copytree(mas_docs_src, mas_docs_dir)
             n_mas_docs = count_files(mas_docs_dir, "*.md")
-            ok(f"MAS-Docs: {n_mas_docs} files → mas-engineer/docs/")
+            ok(f"MAS-Docs: {n_mas_docs} files → docs/")
             n_docs += n_mas_docs
 
     ok(f"Recipes: {n_recipes} files")

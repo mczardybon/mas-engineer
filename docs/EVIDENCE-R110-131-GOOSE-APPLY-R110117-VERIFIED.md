@@ -61,7 +61,7 @@ left independently-verifiable artifacts on disk.**
 
 ## Files modified by this commit
 
-- **NEW:** `mas-engineer/docs/EVIDENCE-R110-131-GOOSE-APPLY-R110117-VERIFIED.md` (this file)
+- **NEW:** `docs/EVIDENCE-R110-131-GOOSE-APPLY-R110117-VERIFIED.md` (this file)
 - (Companion commit 🔧 R110-131 — marker: `mas-engineer/.mase/directive_already_applied.json` +1 line for R110-117)
 
 ## R-sprint progress
@@ -77,6 +77,6 @@ left independently-verifiable artifacts on disk.**
 - R110-117 spec: `.mase/directives/R110-117-apply-directive-e2e-test.md`
 - R110-115 wiring: `recipe/sub/sub_mas-apply-directive.yaml` (RECURSION-GUARD v3 + RECURSION_OVERRIDE=2)
 - R110-78 IM-pipeline: `docs/commit-push-protocol-2026-07-27.md` (post-R110-126 force-push, e89a0e5)
-- R110-89 honest audit: `mas-engineer/docs/EVIDENCE-R110-89-HONEST-REPOFMT-AND-EVIDENCE-AUDIT.md`
+- R110-89 honest audit: `docs/EVIDENCE-R110-89-HONEST-REPOFMT-AND-EVIDENCE-AUDIT.md`
 - Verification-theater-guard skill: `~/.hermes/skills/mas-engineer-verification-theater-guard`
 - Commit-protocol skill: `~/.hermes/skills/mas-engineer-commit-protocol`

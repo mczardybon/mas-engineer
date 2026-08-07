@@ -112,7 +112,7 @@ def test_sub_recipe_count_at_least_55():
 
 def test_sub_recipe_count_matches_manifest():
     """If docs/manifest.md mentions a count, it should match reality (or be >= reality)."""
-    manifest = (REPO_ROOT / "docs" / "manifest.md").read_text()
+    manifest = (REPO_ROOT.parent / "docs" / "manifest.md").read_text()
     recipe_dir = REPO_ROOT / "recipe" / "sub"
     n = len(list(recipe_dir.glob("*.yaml")))
     # Find any "N sub-recipes" or "(N)" pattern

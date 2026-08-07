@@ -49,7 +49,7 @@ RECIPE_DIR = REPO_ROOT / "recipe"
 SUB_DIR = RECIPE_DIR / "sub"
 # R110-55 cleanup: demo-team was moved from recipe/sub/demo-team/ to
 # demos/demo-team/. Update DEMO_TEAM_DIR to the new location.
-DEMO_TEAM_DIR = REPO_ROOT / "demos" / "demo-team"
+DEMO_TEAM_DIR = REPO_ROOT.parent / "demos" / "demo-team"
 DEMO_TEAM_RECIPES_DIR = DEMO_TEAM_DIR / "recipes"
 DEMO_TEAM_INSTRUCTIONS_DIR = DEMO_TEAM_DIR / "instructions"
 TEMPLATE_DIR = SUB_DIR / "template"
@@ -59,7 +59,7 @@ WORKFLOWS_YAML = REPO_ROOT / ".mase" / "workflows.yaml"
 # R110-39 + R110-52: registry scan includes multi-arch-30 sub/teams/ sub-recipes.
 # Tests of the multi-arch-30 demo itself live in
 # demos/multi-arch-30/tests/test_multi_arch_30.py (R110-53).
-MULTI_ARCH_DIR = REPO_ROOT / "demos" / "multi-arch-30"
+MULTI_ARCH_DIR = REPO_ROOT.parent / "demos" / "multi-arch-30"
 
 # R110-43: tools that MUST NOT contain hard-coded /root/, /home/, /Users/, /tmp/
 TOOLS_DIR = REPO_ROOT / "tools"

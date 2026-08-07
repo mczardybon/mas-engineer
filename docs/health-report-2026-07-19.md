@@ -42,7 +42,7 @@
 | `??` | `mas-engineer/.mase/mcp/data.json` |
 | `??` | `mas-engineer/.mase/cycle-log-20260719-0841.yaml` |
 | `??` | `mas-engineer/.mase/session-report-20260719-0841.yaml` |
-| `??` | `mas-engineer/docs/health-report-2026-07-19.md` |
+| `??` | `docs/health-report-2026-07-19.md` |
 
 > ℹ️ All 4 are runtime/generated files — consider adding `.mase/` and `.mase/mcp/` to `.gitignore`.
 

@@ -17,8 +17,8 @@ import yaml
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.resolve()
-TESTPROJECT = REPO_ROOT / "testproject"
-DOCS_DIR = REPO_ROOT / "docs"
+TESTPROJECT = REPO_ROOT.parent / "archive" / "testproject"
+DOCS_DIR = REPO_ROOT.parent / "docs"
 
 
 # === testproject/ ===
