@@ -91,16 +91,16 @@ patches_dict = {
     "from": "im-designer",
     "to": "sub_mas-im-validator",
     "status": "success",
-    "input_file": ".state/pipeline/ranked_findings.yaml",
+    "input_file": ".mase/pipeline/ranked_findings.yaml",
     "data": {
         "patches": <list of patches with goose_verdict from STEP 0.5>,
         "skipped": <list of skipped findings with verdict reason>
     }
 }
 # Write the file
-with open('.state/pipeline/patches.yaml', 'w') as f:
+with open('.mase/pipeline/patches.yaml', 'w') as f:
     yaml.safe_dump(patches_dict, f, default_flow_style=False, sort_keys=False)
-print(f"WRITTEN: .state/pipeline/patches.yaml with {len(patches)} patches ({len(skipped)} skipped)")
+print(f"WRITTEN: .mase/pipeline/patches.yaml with {len(patches)} patches ({len(skipped)} skipped)")
 ```
 
 **R01 BYPASS FOR patches.yaml:**
@@ -115,7 +115,7 @@ print(f"WRITTEN: .state/pipeline/patches.yaml with {len(patches)} patches ({len(
 ```bash
 python3 -c "
 import yaml
-d = yaml.safe_load(open('.state/pipeline/patches.yaml'))
+d = yaml.safe_load(open('.mase/pipeline/patches.yaml'))
 data = d.get('data', {})
 p = data.get('patches', [])
 s = data.get('skipped', [])
@@ -141,12 +141,12 @@ This agent is **stage 3** of the Improvement-Pipeline.
 It reads the previous stage output and writes its own.
 
 **Input:**   `[SOT-IM-RANK]` (from im-rank)
-**Output:**  `.state/pipeline/patches.yaml`
+**Output:**  `.mase/pipeline/patches.yaml`
 **Schema:**  patches[] with {file, field, from, to, reason, type, priority, current_chars, target_chars, goose_verdict?}
 **Next:**    -> im-validator (reads Output file)
 
 ```yaml
-# .state/pipeline/patches.yaml - written by im-designer
+# .mase/pipeline/patches.yaml - written by im-designer
 stage: 3
 agent: im-designer
 timestamp: <ISO-8601>
@@ -265,8 +265,8 @@ Any conflict = the patch is REWRITTEN to use the native Goose mechanism
 
 **PRECONDITIONS (added R52, 2026-07-25)** — skip NN1 split if any of these fail:
 - **Line threshold:** agent YAML instruction section must be >= 200 lines (avoid micro-splits)
-- **Recency guard:** agent must NOT appear in `.state/pipeline/skip_recently_split.yaml` with ts < 5 rounds ago
-- **Im-finder flag:** agent must have `flagged_by: intention-parser` OR `already_split: false` in `.state/pipeline/findings.yaml`
+- **Recency guard:** agent must NOT appear in `.mase/pipeline/skip_recently_split.yaml` with ts < 5 rounds ago
+- **Im-finder flag:** agent must have `flagged_by: intention-parser` OR `already_split: false` in `.mase/pipeline/findings.yaml`
 
 If all 3 preconditions pass, proceed:
 1. For each NN-type finding, EXTRACT from agent YAML:
@@ -281,7 +281,7 @@ If all 3 preconditions pass, proceed:
      role2: sub_mas-{agent}-{role2}
    ```
 3. GENERATE N sub-agent YAMLs (use dev_template_generator.py pattern)
-4. WRITE to `.state/pipeline/patches.yaml`:
+4. WRITE to `.mase/pipeline/patches.yaml`:
    ```yaml
    patches:
      - type: create_orchestrator
@@ -294,7 +294,7 @@ If all 3 preconditions pass, proceed:
        file: recipe/sub/legacy/sub_mas-{agent}-ORIGINAL.yaml
        from: recipe/sub/sub_mas-{agent}.yaml
      - type: update_sot
-       file: .state/workflows.yaml
+       file: .mase/workflows.yaml
        operation: register N+1 new agents
    ```
 

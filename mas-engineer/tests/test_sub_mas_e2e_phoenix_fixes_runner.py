@@ -2,7 +2,7 @@
 test_sub_mas_e2e_phoenix_fixes_runner.py — sanity tests for e2e-phoenix-fixes-runner.
 
 Runs T6 (workflow invocation test) for the e2e-verify-phoenix-fixes
-workflow. Loads .state/workflows.yaml and checks recovery workflows.
+workflow. Loads .mase/workflows.yaml and checks recovery workflows.
 
 Note: this recipe has 'description:' but no 'settings:' field.
 Required-fields test adapted accordingly.
@@ -51,10 +51,10 @@ def test_e2e_phoenix_fixes_runner_t6_role():
 
 
 def test_e2e_phoenix_fixes_runner_loads_workflows_yaml():
-    """Spec: loads .state/workflows.yaml via yaml.safe_load."""
+    """Spec: loads .mase/workflows.yaml via yaml.safe_load."""
     content = RECIPE.read_text()
-    assert ".state/workflows.yaml" in content, \
-        "e2e-phoenix-fixes-runner must reference .state/workflows.yaml"
+    assert ".mase/workflows.yaml" in content, \
+        "e2e-phoenix-fixes-runner must reference .mase/workflows.yaml"
     assert "yaml.safe_load" in content, \
         "e2e-phoenix-fixes-runner must use yaml.safe_load"
 

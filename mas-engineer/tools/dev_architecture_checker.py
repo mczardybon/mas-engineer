@@ -16,8 +16,8 @@ import sys, os, re, json, yaml
 
 # Files that count as "architecture"
 ARCHITEKTUR_DATEIEN = [
-    ".state/workflows.yaml",
-    ".state/domains/registry.yaml",
+    ".mase/workflows.yaml",
+    ".mase/domains/registry.yaml",
     "recipe/dev-mas-engineer.yaml",
     "recipe/sub/sub_mas-master-constitution.yaml",
     "recipe/template/agent_template.yaml",
@@ -27,12 +27,12 @@ ARCHITEKTUR_DATEIEN = [
 ALLOWED_PATTERNS = [
     r"recipe/sub/sub_mas-\w+\.yaml$",  # Sub-agent edit (not CREATE)
     r"tools/dev_\w+\.py$",              # Tool edit (not CREATE)
-    r"\.state/knowledge/.*\.md",        # Knowledge files
-    r"\.state/changes\.json",           # Changes log
+    r"\.mase/knowledge/.*\.md",        # Knowledge files
+    r"\.mase/changes\.json",           # Changes log
     r"docs/.*\.md",                     # Documentation
     r"user_info/.*",                    # User info
     r"\.backups/.*",                    # Backups
-    r"\.state/checkpoints/.*",         # Checkpoints
+    r"\.mase/checkpoints/.*",         # Checkpoints
 ]
 
 def ist_architektur_change(action, file=""):

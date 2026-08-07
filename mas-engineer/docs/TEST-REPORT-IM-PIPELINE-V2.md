@@ -26,10 +26,10 @@ manually applied, and pushed to GitHub.
 
 | Phase | Recipe | Time | Log Size | Exit | Output |
 |-------|--------|------|----------|------|--------|
-| 1 | sub_mas-im-finder | 241s | 224KB | 0 | `.state/pipeline/findings.yaml` (19KB, 8 findings) |
-| 2 | sub_mas-im-rank | 86s | 103KB | 0 | `.state/pipeline/ranked_findings.yaml` (20KB, ranked) |
-| 3 | sub_mas-im-designer | 98s | 122KB | 0 | `.state/pipeline/patches.yaml` (5.4KB, 5 patches) |
-| 4 | sub_mas-im-validator | 128s | 129KB | 0 | `.state/pipeline/validation.yaml` (all 5 CONFORM) |
+| 1 | sub_mas-im-finder | 241s | 224KB | 0 | `.mase/pipeline/findings.yaml` (19KB, 8 findings) |
+| 2 | sub_mas-im-rank | 86s | 103KB | 0 | `.mase/pipeline/ranked_findings.yaml` (20KB, ranked) |
+| 3 | sub_mas-im-designer | 98s | 122KB | 0 | `.mase/pipeline/patches.yaml` (5.4KB, 5 patches) |
+| 4 | sub_mas-im-validator | 128s | 129KB | 0 | `.mase/pipeline/validation.yaml` (all 5 CONFORM) |
 | 5 | sub_mas-general-improver | 26s | 29KB | 0 | INTERACTIVE — manual apply required |
 
 **Total runtime: 9.5 minutes** (Finder dominated because of many shell calls)
@@ -175,8 +175,8 @@ Pushed successfully to master
 
 ### 6.3 NOT Pushed (intentionally)
 - `/tmp/demo-tasks-cli/` — was never a git repo
-- `.state/pipeline/patches.yaml`, `findings.yaml`, `ranked_findings.yaml` — temp artifacts
-- `.mas/dashboards/`, `tests/` — local dev artifacts
+- `.mase/pipeline/patches.yaml`, `findings.yaml`, `ranked_findings.yaml` — temp artifacts
+- `.mase/dashboards/`, `tests/` — local dev artifacts
 
 ---
 

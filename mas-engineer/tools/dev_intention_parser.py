@@ -11,8 +11,8 @@ Usage:
 import yaml, os, sys, json, re, subprocess
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WF_FILE = os.path.join(BASE, ".state", "workflows.yaml")
-SCHEMA_FILE = os.path.join(BASE, ".state", "sot_schema.yaml")
+WF_FILE = os.path.join(BASE, ".mase", "workflows.yaml")
+SCHEMA_FILE = os.path.join(BASE, ".mase", "sot_schema.yaml")
 TEMPLATE = os.path.join(BASE, "recipe", "template", "agent_template.yaml")
 SUB_DIR = os.path.join(BASE, "recipe", "sub")
 

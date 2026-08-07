@@ -79,11 +79,11 @@ ls ~/.config/goose/recipes/sub/ 2>&1 | wc -l | tee -a "$EVIDENCE/run.log"
 section "STEP 2: Create TEAM 1 (code-review-team)"
 mkdir -p "$TEAM1_DIR"
 goose_run "team1-create" \
-  "Create a new sub-agent team called 'code-review-team' in $TEAM1_DIR. The team should have 3 sub-agents: (1) static-analyzer for Python syntax/lint issues, (2) security-scanner for security issues like SQL injection/hardcoded secrets/unsafe deserialization, (3) code-reviewer that synthesizes findings. Create real working files in $TEAM1_DIR/recipe/ (yaml + md) and register in $TEAM1_DIR/.state/workflows.yaml. Use the template at /workspace/mas-engineer/recipe/template/agent_template.yaml. Validate every YAML with python yaml.safe_load. After all 3 agents are created, output a summary listing the created files."
+  "Create a new sub-agent team called 'code-review-team' in $TEAM1_DIR. The team should have 3 sub-agents: (1) static-analyzer for Python syntax/lint issues, (2) security-scanner for security issues like SQL injection/hardcoded secrets/unsafe deserialization, (3) code-reviewer that synthesizes findings. Create real working files in $TEAM1_DIR/recipe/ (yaml + md) and register in $TEAM1_DIR/.mase/workflows.yaml. Use the template at /workspace/mas-engineer/recipe/template/agent_template.yaml. Validate every YAML with python yaml.safe_load. After all 3 agents are created, output a summary listing the created files."
 section "STEP 3: Create TEAM 2 (data-quality-team)"
 mkdir -p "$TEAM2_DIR"
 goose_run "team2-create" \
-  "Create a new sub-agent team called 'data-quality-team' in $TEAM2_DIR. The team should have 3 sub-agents: (1) data-profiler for analyzing CSV/JSON datasets (rows, columns, types, missing values), (2) anomaly-detector for finding outliers and duplicates, (3) quality-reporter that synthesizes findings into a quality report with score 0-100. Create real working files in $TEAM2_DIR/recipe/ (yaml + md) and register in $TEAM2_DIR/.state/workflows.yaml. Use the template at /workspace/mas-engineer/recipe/template/agent_template.yaml. Validate every YAML with python yaml.safe_load."
+  "Create a new sub-agent team called 'data-quality-team' in $TEAM2_DIR. The team should have 3 sub-agents: (1) data-profiler for analyzing CSV/JSON datasets (rows, columns, types, missing values), (2) anomaly-detector for finding outliers and duplicates, (3) quality-reporter that synthesizes findings into a quality report with score 0-100. Create real working files in $TEAM2_DIR/recipe/ (yaml + md) and register in $TEAM2_DIR/.mase/workflows.yaml. Use the template at /workspace/mas-engineer/recipe/template/agent_template.yaml. Validate every YAML with python yaml.safe_load."
 section "STEP 4: Validate created files"
 for d in "$TEAM1_DIR" "$TEAM2_DIR"; do
   log "Validating $d"
@@ -117,7 +117,7 @@ if [ -z "$TEAM1_RECIPE" ]; then
 else
   log "Found TEAM 1 root recipe: $TEAM1_RECIPE"
   goose_run "team1-task1" \
-    "Please review the file $TEAM1_DIR/vulnerable_app.py using the code-review team in $TEAM1_DIR/recipe/sub/. Use the 3 sub-agents (static-analyzer, security-scanner, code-reviewer) in fan-out/fan-in pattern. Produce a final review report with findings including severity, CWE references, and recommendations. Save reports to .state/reports/."
+    "Please review the file $TEAM1_DIR/vulnerable_app.py using the code-review team in $TEAM1_DIR/recipe/sub/. Use the 3 sub-agents (static-analyzer, security-scanner, code-reviewer) in fan-out/fan-in pattern. Produce a final review report with findings including severity, CWE references, and recommendations. Save reports to .mase/reports/."
 fi
 section "STEP 6: TEAM 2 — run first task (analyze dataset)"
 mkdir -p "$TEAM1_DIR/data" "$TEAM2_DIR/data"

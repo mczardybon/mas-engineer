@@ -25,21 +25,21 @@ A created team has:
 - 1 root YAML (orchestrator or coordinator) with `sub_recipes`.
 - N sub-agent YAMLs, each with role + tool inventory + I/O schema.
 - N workflow entries (defined in the parent MAS-Engineer SOT).
-- N SOT entries (`agents.<name>` in `.state/workflows.yaml`).
+- N SOT entries (`agents.<name>` in `.mase/workflows.yaml`).
 
 ## What a team does NOT have
 
 A created team does **NOT** have:
 
 - Its own SOT file. The SOT lives in MAS-Engineer's
-  `.state/workflows.yaml`. Take the team out of MAS-Engineer and the
+  `.mase/workflows.yaml`. Take the team out of MAS-Engineer and the
   workflow routing has no place to live.
 - Its own orchestrator process. The team has no `dev-<domain>` root
   recipe. The MAS-Engineer root (`dev-mas-engineer.yaml`) is what
   invokes the team via `sub_recipes`.
 - Its own knowledge base. The teams I built reference MAS-Engineer
-  knowledge files (for example, `.state/knowledge/05-rules.md`).
-- Its own state tracking. There is no `.state/` in the team directory.
+  knowledge files (for example, `.mase/knowledge/05-rules.md`).
+- Its own state tracking. There is no `.mase/` in the team directory.
 
 ## What works without MAS-Engineer
 
@@ -55,7 +55,7 @@ What breaks immediately:
 - SOT references like `SOT: workflows.yaml — agents.<name>.task_workflows`
   point to a SOT that no longer exists.
 - Tool inventory entries like `✅ HAS: load (load knowledge)` reference
-  MAS-Engineer's `.state/knowledge/` directory.
+  MAS-Engineer's `.mase/knowledge/` directory.
 - The `summon` extension (delegate to sub-agent) requires the parent
   MAS-Engineer to be running.
 - The `dev_rule_checker` invocation in the prompt has no
@@ -67,7 +67,7 @@ Centralized SOT is a design choice, not a limitation. It means:
 
 - One place to add or remove agents. No per-team SOTs to keep in sync.
 - One audit trail. Every team's actions are logged in
-  `.state/audit.log.jsonl`.
+  `.mase/audit.log.jsonl`.
 - One rule source. R01 (confirmation), R09 (domain), R10
   (coronashield) are defined once, not per team.
 - One health report. `health-reporter` sees all teams at once.
@@ -103,8 +103,8 @@ If you want the team to run outside MAS-Engineer, run
 `sub_mas-generic-init` with task `INIT` and project name `<your-project>`.
 This creates a new project directory with:
 
-- Its own SOT (`.state/workflows.yaml`).
-- Its own knowledge base (`.state/knowledge/`).
+- Its own SOT (`.mase/workflows.yaml`).
+- Its own knowledge base (`.mase/knowledge/`).
 - Its own orchestrator (`recipe/dev-<project>.yaml`).
 - Its own pre-push validator and health reporter.
 - A copy of the team's agents under `recipe/sub/`.

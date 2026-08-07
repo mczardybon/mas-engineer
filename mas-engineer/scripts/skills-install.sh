@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # skills-install.sh — R110-133 self-contained mas-engineer skills installer
 #
-# Bundled skills: mas-state/skills/ (in the repo) -> <TARGET> (user-supplied)
+# Bundled skills: .mase/skills/ (in the repo) -> <TARGET> (user-supplied)
 #
 # Why no hardcoded runtime path:
 #   mas-engineer is a generic agent-project. It does not know — and refuses to
 #   know — which agent runtime consumes its skills. The runtime's skills
 #   directory is the runtime's concern, not ours. This script is a copy-utility:
-#   give it a target path and it copies the repo's mas-state/skills/ there.
+#   give it a target path and it copies the repo's .mase/skills/ there.
 #
 # Contract (enforced by tests/test_skills_install.py):
 #   - Idempotent: re-running with the same target overwrites mas-engineer-owned
@@ -17,7 +17,7 @@
 #     environment variable. No $X, no $HERMES_HOME, no $HOME tricks.
 #
 # Usage:
-#   bash scripts/skills-install.sh                          # target = ./mas-state/skills (no-op install)
+#   bash scripts/skills-install.sh                          # target = ./.mase/skills (no-op install)
 #   bash scripts/skills-install.sh /path/to/target/skills    # copy to <target>
 #
 # Exit codes:
@@ -27,10 +27,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-# Skills liegen seit 2026-08-07 unter mas-state/skills (umbenannt aus mas-engineer/)
-SKILLS_SRC="$ROOT/mas-state/skills"
+# Skills liegen seit 2026-08-07 unter .mase/skills (umbenannt aus mas-engineer/)
+SKILLS_SRC="$ROOT/.mase/skills"
 
-# Target = CLI arg if given, else repo-relative mas-state/skills/ (no-op).
+# Target = CLI arg if given, else repo-relative .mase/skills/ (no-op).
 # When target == SKILLS_SRC, the install is a no-op: skills are already where
 # they belong, namely the repo. We still report success so callers can run
 # this unconditionally.

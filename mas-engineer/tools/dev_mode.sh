@@ -22,7 +22,7 @@ register_domain() {
     echo -e "${YELLOW}📝 Registriere new Domain: $name ($path)${NC}"
     python3 -c "
 import yaml
-registry_path = 'mas-engineer/.state/domains/registry.yaml'
+registry_path = 'mas-engineer/.mase/domains/registry.yaml'
 with open(registry_path) as f:
     reg = yaml.safe_load(f) or {'version': '1.0.0', 'domains': {}}
 reg['domains']['$name'] = {'path': '$path', 'mode': 'generic', 'isolated': True}
@@ -43,12 +43,12 @@ if os.path.exists(path):
     # rules.yaml
     dst = path + '/rules.yaml'
     if not os.path.exists(dst):
-        shutil.copy2(base + '/.state/templates/user_rules_template.yaml', dst)
+        shutil.copy2(base + '/.mase/templates/user_rules_template.yaml', dst)
         print('  ✅ rules.yaml copyrt')
     # .goosehints
     dst2 = path + '/.goosehints'
     if not os.path.exists(dst2):
-        shutil.copy2(base + '/.state/templates/goosehints_generic_template', dst2)
+        shutil.copy2(base + '/.mase/templates/goosehints_generic_template', dst2)
         print('  ✅ .goosehints copyrt')
     # Tools
     d = path + '/tools'
@@ -57,9 +57,9 @@ if os.path.exists(path):
     shutil.copy2(base + '/tools/dev_yaml_generator.py', d + '/dev_yaml_generator.py')
     print('  ✅ checker + yaml-generator copyrt')
     # SOT-template
-    st = path + '/.state/templates'
+    st = path + '/.mase/templates'
     os.makedirs(st, exist_ok=True)
-    shutil.copy2(base + '/.state/templates/agent_schema_generic.yaml', st + '/agent_schema.yaml')
+    shutil.copy2(base + '/.mase/templates/agent_schema_generic.yaml', st + '/agent_schema.yaml')
     print('  ✅ agent_schema.yaml copyrt (SOT-template)')
     # Initiale YAMLs generate
     import subprocess
@@ -76,7 +76,7 @@ if os.path.exists(path):
 }
 
 list_domains() {
-    local registry="mas-engineer/.state/domains/registry.yaml"
+    local registry="mas-engineer/.mase/domains/registry.yaml"
     if [ ! -f "$registry" ]; then
         echo -e "${RED}❌ No registry.yaml${NC}"
         return

@@ -73,7 +73,7 @@ Expected output:
   - ✅ .gitignore + .gitattributes
   - ✅ .goosehints (Goose integration)
   - ✅ .mas-mode (mode file with project name)
-  - ✅ .mas/dashboards/ (dashboard data + MCP app)
+  - ✅ .mase/dashboards/ (dashboard data + MCP app)
   - ✅ Extended components per selection:
     • rules:    Rules R01-R18 + hardness levels + responsibility matrix
     • state:    changes.json + guardian.yaml + schedule.yaml + audit.log
@@ -128,7 +128,7 @@ SHOW:
   🔬 Analysis:  Remote via sub_mas-general-improver
                 No agent copy needed — im-* read remotely
 
-  ✅ Rules:    .state/rules/regeln.yaml (adapt to your project)
+  ✅ Rules:    .mase/rules/regeln.yaml (adapt to your project)
                 3 default rules (R01, R04, R09) — in auto mode: R01-R18 + hardness levels
 
   📊 Checklist: BP-CHECKLIST.md (37 feature types)
@@ -199,7 +199,7 @@ Used by intention-parser when user requests a team with (interactive)/(manual)/(
 2. After confirmation:
    a. Create coordinator YAML (use dev_template_generator.py)
    b. Create N member YAMLs (use dev_template_generator.py with generic task)
-   c. Update SOT (.state/workflows.yaml)
+   c. Update SOT (.mase/workflows.yaml)
    d. Update sub_recipes (recipe/dev-mas-engineer.yaml)
    e. NO split-pattern (this is the interactive alternative to auto-split)
 3. Return result:

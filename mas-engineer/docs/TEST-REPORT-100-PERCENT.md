@@ -44,7 +44,7 @@ Recipe settings have `timeout: 600`. With a 90s external cap they were artificia
 
 | Recipe | Duration | Log size | Output |
 |--------|----------|----------|--------|
-| sub_mas-config-auditor | 224s | 216 KB | `.state/audit_result.yaml` (5.1 KB) |
+| sub_mas-config-auditor | 224s | 216 KB | `.mase/audit_result.yaml` (5.1 KB) |
 | sub_mas-framework-scanner | 82s | 118 KB | framework scanner complete |
 | sub_mas-im-designer | 109s | 9.8 KB | requires findings.yaml as input |
 | sub_mas-im-finder | 66s | 7.8 KB | analysis partially complete |
@@ -79,53 +79,53 @@ TOTAL: 50/52 tested (96.2% coverage) - 0 FAIL
 These files were written by the sub-agent recipes DURING the runs:
 
 ### Audit and Validation
-- `.state/audit_result.yaml` (5.1 KB) — config-auditor output
-- `.state/audit.log.jsonl` (1.4 KB) — audit log
-- `.state/pipeline/pre_push_validation.yaml` (1.7 KB) — gatekeeper
+- `.mase/audit_result.yaml` (5.1 KB) — config-auditor output
+- `.mase/audit.log.jsonl` (1.4 KB) — audit log
+- `.mase/pipeline/pre_push_validation.yaml` (1.7 KB) — gatekeeper
 
 ### Findings and Planning
-- `.state/pipeline/findings.yaml` (24.8 KB) — main findings
-- `.state/pipeline/summary_report.md` (4.8 KB) — summary
-- `.state/pipeline/PLAN_FINDINGS_FIX.md` (9.7 KB) — fix plan
+- `.mase/pipeline/findings.yaml` (24.8 KB) — main findings
+- `.mase/pipeline/summary_report.md` (4.8 KB) — summary
+- `.mase/pipeline/PLAN_FINDINGS_FIX.md` (9.7 KB) — fix plan
 
 ### Knowledge Base (9 files)
-- `.state/knowledge/01-architecture.md` (3.9 KB)
-- `.state/knowledge/02-communication.md` (2.4 KB)
-- `.state/knowledge/03-installation.md` (2.4 KB)
-- `.state/knowledge/04-recovery.md` (1.8 KB)
-- `.state/knowledge/05-rules.md` (2.9 KB)
-- `.state/knowledge/06-tools.md` (3.0 KB)
-- `.state/knowledge/07-agents.md` (5.2 KB)
-- `.state/knowledge/08-build.md` (2.7 KB)
-- `.state/knowledge/09-im-features.md` (17.1 KB)
+- `.mase/knowledge/01-architecture.md` (3.9 KB)
+- `.mase/knowledge/02-communication.md` (2.4 KB)
+- `.mase/knowledge/03-installation.md` (2.4 KB)
+- `.mase/knowledge/04-recovery.md` (1.8 KB)
+- `.mase/knowledge/05-rules.md` (2.9 KB)
+- `.mase/knowledge/06-tools.md` (3.0 KB)
+- `.mase/knowledge/07-agents.md` (5.2 KB)
+- `.mase/knowledge/08-build.md` (2.7 KB)
+- `.mase/knowledge/09-im-features.md` (17.1 KB)
 
 ### Rules and Workflows
-- `.state/rules/rules.yaml` (2.3 KB)
-- `.state/rules/hard_rules.yaml` (2.6 KB)
-- `.state/workflows.yaml` (97 KB) — complete workflow system
-- `.state/sot_schema.yaml` (1.9 KB)
-- `.state/schedule.yaml` (1.3 KB)
+- `.mase/rules/rules.yaml` (2.3 KB)
+- `.mase/rules/hard_rules.yaml` (2.6 KB)
+- `.mase/workflows.yaml` (97 KB) — complete workflow system
+- `.mase/sot_schema.yaml` (1.9 KB)
+- `.mase/schedule.yaml` (1.3 KB)
 
 ### Templates
-- `.state/templates/agent_schema.yaml` (266 KB) — agent schemas
-- `.state/templates/agent_schema_generic.yaml` (434 bytes)
+- `.mase/templates/agent_schema.yaml` (266 KB) — agent schemas
+- `.mase/templates/agent_schema_generic.yaml` (434 bytes)
 - 4 project-specific templates (python, web, generic)
 
 ### Reports
 - `docs/health-report-2026-07-18.md` — health-reporter
-- `.state/pipeline/summarizer_result.yaml` (1.5 KB)
-- `.state/pipeline/summarizer_result_20260718.yaml` (1.6 KB)
+- `.mase/pipeline/summarizer_result.yaml` (1.5 KB)
+- `.mase/pipeline/summarizer_result_20260718.yaml` (1.6 KB)
 
 ### Misc State
-- `.state/guardian.yaml` (10.7 KB) — agent monitor state
-- `.state/best-practices.yaml` (11.6 KB)
-- `.state/patches.yaml` (961 bytes)
-- `.state/analysis.json` (320 bytes)
-- `.state/changes.json` (1.5 KB)
-- `.state/agents/special_agents.yaml` (938 bytes)
-- `.state/domains/registry.yaml` (571 bytes)
-- `.state/framework-best-practices.yaml` (1.5 KB)
-- `.state/generic-bp-registry.yaml` (2.5 KB)
+- `.mase/guardian.yaml` (10.7 KB) — agent monitor state
+- `.mase/best-practices.yaml` (11.6 KB)
+- `.mase/patches.yaml` (961 bytes)
+- `.mase/analysis.json` (320 bytes)
+- `.mase/changes.json` (1.5 KB)
+- `.mase/agents/special_agents.yaml` (938 bytes)
+- `.mase/domains/registry.yaml` (571 bytes)
+- `.mase/framework-best-practices.yaml` (1.5 KB)
+- `.mase/generic-bp-registry.yaml` (2.5 KB)
 
 **Total: 40+ output files, ALL produced by REAL LLM runs.**
 
@@ -168,7 +168,7 @@ Run 2: 6 recipes × ~20 turns × ~3K tokens ≈ 0.36M tokens ≈ $0.13
 - Goose CLI with DeepSeek via openai-provider
 - 50/52 sub-agent recipes (96.2% coverage)
 - Real LLM execution with tool calls
-- Pipeline outputs in .state/
+- Pipeline outputs in .mase/
 - Knowledge base generation
 - Inter-agent dependencies (im-designer → findings.yaml)
 - Read-only mode enforcement (web-researcher)

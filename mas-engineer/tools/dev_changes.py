@@ -28,8 +28,8 @@ def resolve_state_dir():
     for i, arg in enumerate(sys.argv):
         if arg == "--workspace" and i + 1 < len(sys.argv):
             ws = Path(sys.argv[i + 1]).resolve()
-            return ws / ".state"
-    return (Path(__file__).parent.parent / ".state").resolve()
+            return ws / ".mase"
+    return (Path(__file__).parent.parent / ".mase").resolve()
 
 STATE_DIR = resolve_state_dir()
 CHANGES_FILE = STATE_DIR / "changes.json"

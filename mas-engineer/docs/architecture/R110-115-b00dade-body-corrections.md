@@ -89,7 +89,7 @@ halten von key-namen in den kwargs.
 
 `recipe/sub/sub_mas-apply-directive.yaml` description war erst:
 
-    description: 🎯 Applies operator-written .directives/ specs to
+    description: 🎯 Applies operator-written .mase/directives/ specs to
       mas-engineer codebase
 
 Pytest erste run:
@@ -105,7 +105,7 @@ description-pattern matched: `v1.0.0 | ...` prefix ist required
 
 **Fix:** `🎯 Applies operator-written...` →
 `v1.0.0 | MAS-internal: Apply-Directive applies operator-written
-.directives/ specs to mas-engineer codebase (DOMAIN 1)`.
+.mase/directives/ specs to mas-engineer codebase (DOMAIN 1)`.
 
 **Lesson:** Alle neuen `sub_mas-*.yaml` descriptions MUESSEN mit
 `v1.0.0 | MAS-internal: ...` starten (R110-30 convention enforced
@@ -130,7 +130,7 @@ Der b00dade body enthaelt:
 4. Habe `mas_cost check` ausgefuehrt → 0.99/20.00 USD = 5% used
    (cost-limit war NICHT der echte blocker, der gestrige "cost_limit
    reached" war der 5-entries counter)
-5. Habe 5 apply_only entries nach `.state/changes.archive-2026-08-04.json`
+5. Habe 5 apply_only entries nach `.mase/changes.archive-2026-08-04.json`
    archiviert (R36 pattern)
 6. Goose im-finder/rank/designer/improver end-to-end laufen lassen
 7. Habe 4 files MANUELL erstellt (weil goose run nicht selbst

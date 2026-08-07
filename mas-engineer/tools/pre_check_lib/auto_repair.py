@@ -17,7 +17,7 @@ from typing import Any, Dict, List
 
 DESCRIPTION = "Auto-repair step validation across 4 recovery workflows (T1, T4-T10, mirrors e2e-verify-auto-repair)"
 
-WORKFLOWS_FILE = Path(".state/workflows.yaml")
+WORKFLOWS_FILE = Path(".mase/workflows.yaml")
 
 RECOVERY_WORKFLOWS = [
     "wf_recovery_checkpoint",
@@ -130,9 +130,9 @@ def run(workspace: Path) -> Dict[str, Any]:
     import os
     os.chdir(workspace)
     global WORKFLOWS_FILE
-    WORKFLOWS_FILE = Path(".state/workflows.yaml").resolve()
+    WORKFLOWS_FILE = Path(".mase/workflows.yaml").resolve()
     if not WORKFLOWS_FILE.exists():
-        WORKFLOWS_FILE = workspace / ".state" / "workflows.yaml"
+        WORKFLOWS_FILE = workspace / ".mase" / "workflows.yaml"
 
     start = time.time()
     checks: List[Dict[str, Any]] = []

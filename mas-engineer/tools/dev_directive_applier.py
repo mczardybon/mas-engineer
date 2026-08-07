@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""R110-115 DIREKTIVE 1: apply .directives/R<NR>-<topic>.md via 3 hook points.
+"""R110-115 DIREKTIVE 1: apply .mase/directives/R<NR>-<topic>.md via 3 hook points.
 
 Usage:
     python3 tools/dev_directive_applier.py --hook pre-apply <directive>
@@ -8,9 +8,9 @@ Usage:
     python3 tools/dev_directive_applier.py --apply <directive>
     python3 tools/dev_directive_applier.py --rollback <directive>
 
-Pre-apply:  verifies pre-conditions, checks .state/directive_already_applied.json
-Post-apply: runs pytest, scans, writes .state/directive_already_applied.json
-Error:      logs to .state/directive_failures.json
+Pre-apply:  verifies pre-conditions, checks .mase/directive_already_applied.json
+Post-apply: runs pytest, scans, writes .mase/directive_already_applied.json
+Error:      logs to .mase/directive_failures.json
 Apply:      delegates to sub_mas-apply-directive via goose run
 Rollback:   reverts applied patches via git checkout
 """
@@ -21,9 +21,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-ALREADY_APPLIED = Path('.state/directive_already_applied.json')
-FAILURES = Path('.state/directive_failures.json')
-CHANGES = Path('.state/changes.json')
+ALREADY_APPLIED = Path('.mase/directive_already_applied.json')
+FAILURES = Path('.mase/directive_failures.json')
+CHANGES = Path('.mase/changes.json')
 
 
 def log_change(directive_path, stage, status, **extra):

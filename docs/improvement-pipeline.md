@@ -189,9 +189,9 @@ Optionally installed into Goose.
 ### STEP 8 — Push Improvements
 
 The `PUSH_IMPROVEMENTS` task copies improvements to user projects:
-- Knowledge files → user project's `.state/knowledge/`
+- Knowledge files → user project's `.mase/knowledge/`
 - Agent template → user project's `recipe/template/`
-- SOT updates → user project's `.state/workflows.yaml` (optional)
+- SOT updates → user project's `.mase/workflows.yaml` (optional)
 
 ---
 

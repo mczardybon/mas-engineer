@@ -15,7 +15,7 @@ flowchart TB
         E1["dev-mas-engineer.yaml\nNatural Language Interface"]
         E2["96 Sub-Agents\n8 categories"]
         E3["57 Tools\n50 Python + 6 Shell + 1 YAML"]
-        E4[".state/\nSOT · Rules · Knowledge"]
+        E4[".mase/\nSOT · Rules · Knowledge"]
     end
     subgraph USER["User Framework"]
         U1["Your Multi-Agent System\nYour Agents · Your Workflows"]
@@ -155,11 +155,11 @@ parsed: { task: "...", result: {...} }
 
 ## The SOT (Single Source of Truth)
 
-The `workflows.yaml` file in `.state/` is the central registry:
+The `workflows.yaml` file in `.mase/` is the central registry:
 
 ```mermaid
 graph TD
-    SOT["workflows.yaml\n.state/workflows.yaml"] --> RULES["10 active rules\nR01-R18 (gaps reserved)"]
+    SOT["workflows.yaml\n.mase/workflows.yaml"] --> RULES["10 active rules\nR01-R18 (gaps reserved)"]
     SOT --> SIGNALS["10 Signal Types\nDONE · ERROR · HANDOVER · DRIFT · RESURRECTED"]
     SOT --> WORKFLOWS["116+ Workflow Bodies\nAll possible operations"]
     SOT --> MODES["20+ detect_mode Workflows\nMode awareness"]

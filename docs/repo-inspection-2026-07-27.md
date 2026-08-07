@@ -31,7 +31,7 @@ Nach der erfolgreichen `code-reviewer-ORIGINAL.yaml` löschung (8/8 verifiziert)
 
 **Befund:**
 - 20 files mit `-ORIGINAL` suffix (gleiche konvention wie der bereits gelöschte `code-reviewer-ORIGINAL.yaml`)
-- ALLE in `.state/changes.archive-*.json` als `"archived_files": [...]` mit `"op": "archive"` markiert
+- ALLE in `.mase/changes.archive-*.json` als `"archived_files": [...]` mit `"op": "archive"` markiert
 - NICHT git-tracked (außer `.gitkeep` — das verzeichnis selbst ist offiziell)
 - 7/20 files: 0 refs überhaupt
 - 13/20 files: 1 ref in `changes.archive-*.json` (evidence-only, nicht runtime)
@@ -91,28 +91,28 @@ Nach der erfolgreichen `code-reviewer-ORIGINAL.yaml` löschung (8/8 verifiziert)
 | `mas-engineer/recipe/` | 258 | 119 sub-agents aktiv, 47 instructions, 13 root recipes — gut gepflegt |
 | `mas-engineer/recipe/.backups/` | 15 timestamped subdirs | **AUTO-SNAPSHOT** convention vor recipe-edits, dotfile-pattern |
 | `mas-engineer/recipe/sub/demo-team/` | 23 files | **TEMPLATES** für team-generation (on-demand per LLM), NIEMALS aktiv aufgerufen — lesson learned |
-| `mas-engineer/tools/` | 76 files | dev CLI-tools, alle haben legitime use-cases (auch wenn 0 imports — name-refs in .state/scripts != imports) |
+| `mas-engineer/tools/` | 76 files | dev CLI-tools, alle haben legitime use-cases (auch wenn 0 imports — name-refs in .mase/scripts != imports) |
 | `mas-engineer/tests/` | 128 files | 1247 tests, alle passing, gut gepflegt |
 | `mas-engineer/scripts/` | 4 files | e2e-pipeline, install, alle aktiv |
 | `mas-engineer/prompts/` | 7 files | archetype-prompts, alle aktiv |
-| `mas-engineer/.state/coverage/` | 14 files | timestamped snapshots, könnte retention-policy gebrauchen |
-| `mas-engineer/.state/knowledge/` | 9 files | 01-architecture bis 09-im-features — wertvolle docs |
-| `mas-engineer/.state/logs/` | 1 file (cycle log) | minimal |
+| `mas-engineer/.mase/coverage/` | 14 files | timestamped snapshots, könnte retention-policy gebrauchen |
+| `mas-engineer/.mase/knowledge/` | 9 files | 01-architecture bis 09-im-features — wertvolle docs |
+| `mas-engineer/.mase/logs/` | 1 file (cycle log) | minimal |
 | `docs/` | 9 files | transparente dokumentation, alle aktiv |
 | `mas-engineer/recipe/instructions/` | 47 files | system-knowledge files |
 | `mas-engineer/recipe/template/` | 6 files + recovery/ | agent-template-pattern, aktiv |
 
 **Modifizierte files im working tree (NICHT meine änderung):**
-- `mas-engineer/.state/pipeline/patches.yaml` (240+ zeilen diff)
-- `mas-engineer/.state/pre-push-e2e-baseline.json`
-- `mas-engineer/.state/pre-push-test-coverage.json`
-- `mas-engineer/.state/todo.md`
+- `mas-engineer/.mase/pipeline/patches.yaml` (240+ zeilen diff)
+- `mas-engineer/.mase/pre-push-e2e-baseline.json`
+- `mas-engineer/.mase/pre-push-test-coverage.json`
+- `mas-engineer/.mase/todo.md`
 - Diese sind von vorherigen pipeline-runs (25.07), nicht teil meiner aufgabe
 
 **Untracked files im working tree (auch nicht meine):**
-- `mas-engineer/.state/.last_confirmation` (11B, enthält timestamp)
-- `mas-engineer/.state/pipeline/backup/` (mehrere dirs)
-- `mas-engineer/.state/pipeline/signal_*_done_20260725_*.yaml` (3 files)
+- `mas-engineer/.mase/.last_confirmation` (11B, enthält timestamp)
+- `mas-engineer/.mase/pipeline/backup/` (mehrere dirs)
+- `mas-engineer/.mase/pipeline/signal_*_done_20260725_*.yaml` (3 files)
 - Auch von vorherigen runs
 
 ---
@@ -133,7 +133,7 @@ Nach der erfolgreichen `code-reviewer-ORIGINAL.yaml` löschung (8/8 verifiziert)
 - ❌ **Nicht** alle `-ORIGINAL` files pauschal gelöscht (code-reviewer fall war EIN file mit 8/8 beweis, legacy/ ist 20 files mit 13 evidence-only-refs)
 - ❌ **Nicht** tools/ als obsolet markiert basierend auf 0 imports (CLI-pattern)
 - ❌ **Nicht** demo-team templates angefasst (archetype-pattern)
-- ❌ **Nicht** .state/ files commited (fremde änderungen)
+- ❌ **Nicht** .mase/ files commited (fremde änderungen)
 - ❌ **Nicht** logs/e2e-results/ aufgeräumt (keine retention-policy)
 
 ---

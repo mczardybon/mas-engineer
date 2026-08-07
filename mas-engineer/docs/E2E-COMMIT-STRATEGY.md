@@ -22,20 +22,20 @@ This way:
 ## Files for Commit 1
 
 ```
-?? mas-engineer/.state/pipeline/signal_apply_only_done_20260724_1746.yaml
+?? mas-engineer/.mase/pipeline/signal_apply_only_done_20260724_1746.yaml
 ?? mas-engineer/docs/E2E-SELF-IMPROVEMENT-REPORT-2026-07-24.md
 ?? mas-engineer/logs/e2e-evidence-gen2/                         (4 logs)
 ```
 
 Plus modified state files:
 ```
- M mas-engineer/.state/pipeline/patches.yaml
- M mas-engineer/.state/pipeline/self_audit.yaml
- M mas-engineer/.state/pipeline/signals.log
- M mas-engineer/.state/pipeline/validation.yaml
- M mas-engineer/.state/pre-push-e2e-baseline.json
- M mas-engineer/.state/schedule.yaml
- M mas-engineer/.state/todo.md
+ M mas-engineer/.mase/pipeline/patches.yaml
+ M mas-engineer/.mase/pipeline/self_audit.yaml
+ M mas-engineer/.mase/pipeline/signals.log
+ M mas-engineer/.mase/pipeline/validation.yaml
+ M mas-engineer/.mase/pre-push-e2e-baseline.json
+ M mas-engineer/.mase/schedule.yaml
+ M mas-engineer/.mase/todo.md
 ```
 
 ## Files for Commit 2 (after mas fixes promint typo)

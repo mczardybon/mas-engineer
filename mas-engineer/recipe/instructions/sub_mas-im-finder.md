@@ -15,12 +15,12 @@ This agent is the **first stage** of the Improvement-Pipeline.
 It receives data via pipeline-orchestrator params and persists the result.
 
 **Input:**   (none — entry stage, receives data from orchestrator params)
-**Output:**  `.state/pipeline/findings.yaml`
+**Output:**  `.mase/pipeline/findings.yaml`
 **Schema:**  findings[] with {id, type, severity, file, issue, impact, fix, goose_verdict?}
 **Next:**    -> im-rank (reads Output file)
 
 ```yaml
-# .state/pipeline/findings.yaml — written by im-finder
+# .mase/pipeline/findings.yaml — written by im-finder
 stage: 1
 agent: im-finder
 timestamp: <ISO-8601>
@@ -91,9 +91,9 @@ findings_dict = {
     "data": {"findings": <list of findings with verdicts>}
 }
 # Write the file
-with open('.state/pipeline/findings.yaml', 'w') as f:
+with open('.mase/pipeline/findings.yaml', 'w') as f:
     yaml.safe_dump(findings_dict, f, default_flow_style=False, sort_keys=False)
-print(f"WRITTEN: .state/pipeline/findings.yaml with {len(findings)} findings")
+print(f"WRITTEN: .mase/pipeline/findings.yaml with {len(findings)} findings")
 ```
 
 **R01 BYPASS FOR findings.yaml:**
@@ -108,7 +108,7 @@ print(f"WRITTEN: .state/pipeline/findings.yaml with {len(findings)} findings")
 ```bash
 python3 -c "
 import yaml
-d = yaml.safe_load(open('.state/pipeline/findings.yaml'))
+d = yaml.safe_load(open('.mase/pipeline/findings.yaml'))
 f = d.get('data', {}).get('findings', [])
 mm8 = sum(1 for x in f if x.get('type') == 'MM8')
 mm9 = sum(1 for x in f if x.get('type') == 'MM9')
@@ -209,13 +209,13 @@ spec-drift findings that the scanner does NOT detect.
 
 ```python
 # 1. Run self-audit
-shell(cmd="cd {workspace} && python3 tools/dev_self_audit.py --scope recipe/instructions/ --repo-root {workspace} --output {workspace}/.state/pipeline/self_audit.yaml")
-shell(cmd="cd {workspace} && python3 tools/dev_spec_invariant.py --repo-root {workspace} --output {workspace}/.state/pipeline/spec_invariant.yaml")
+shell(cmd="cd {workspace} && python3 tools/dev_self_audit.py --scope recipe/instructions/ --repo-root {workspace} --output {workspace}/.mase/pipeline/self_audit.yaml")
+shell(cmd="cd {workspace} && python3 tools/dev_spec_invariant.py --repo-root {workspace} --output {workspace}/.mase/pipeline/spec_invariant.yaml")
 
 # 2. Read both outputs
 import yaml
-sa = yaml.safe_load(open('{workspace}/.state/pipeline/self_audit.yaml'))
-si = yaml.safe_load(open('{workspace}/.state/pipeline/spec_invariant.yaml'))
+sa = yaml.safe_load(open('{workspace}/.mase/pipeline/self_audit.yaml'))
+si = yaml.safe_load(open('{workspace}/.mase/pipeline/spec_invariant.yaml'))
 
 # 3. Convert findings to MM9-EXTENSION entries
 mm9_ext = []
@@ -283,7 +283,7 @@ AUTOMATIC_CHECK — Tools:
   Missing? → restricted to continue
 
 ## 37 FEATURE-TYPES (A-KK)
-→ LOAD: sub_mas-im-finder needs IF mode == "mas": load(source: "mas-engineer/.mas/feature_matrix.yaml")
+→ LOAD: sub_mas-im-finder needs IF mode == "mas": load(source: "mas-engineer/.mase/feature_matrix.yaml")
 ELSE: load(source: "{workspace}/feature_matrix.yaml")
 
 ### Type-Matrix (53 Feature-Types A-MM):
@@ -472,11 +472,11 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
 - NN1: **multi_role_agent** — agent prompt lists 3+ distinct roles/tasks with different tools
   - Detection: parse prompt for verbs + tool references, count distinct role clusters
   - **R52 (2026-07-25) Skip-if-recently-split:** if target agent has sub_mas-{name}-director.yaml
-    AND its name is in `.state/pipeline/skip_recently_split.yaml` with `round_count - last_split_round < 5`,
+    AND its name is in `.mase/pipeline/skip_recently_split.yaml` with `round_count - last_split_round < 5`,
     tag finding with `already_split: true` and skip NN1 application
   - Severity: high (impacts maintainability, testability, single-responsibility)
   - Fix: split into orchestrator + N sub-agents, generate pipeline config
-  - Source: `flagged_by: intention-parser` in `.state/pipeline/findings.yaml`
+  - Source: `flagged_by: intention-parser` in `.mase/pipeline/findings.yaml`
 - NN2: **tool_overload** — agent declares 5+ tools/MCPs in extensions
   - Detection: count tools in extensions list
   - Severity: medium
@@ -486,7 +486,7 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
   - Severity: medium
   - Fix: split into domain-specific sub-agents
 - NN4: **flagged_for_split** — agent was created by intention-parser with multi-role flag
-  - Detection: read `.state/pipeline/findings.yaml` for `flagged_by: intention-parser`
+  - Detection: read `.mase/pipeline/findings.yaml` for `flagged_by: intention-parser`
   - Severity: critical (user intent was team, not monolith)
   - Fix: trigger split_into_orchestrator_and_subs pattern
 
@@ -496,7 +496,7 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
    # Read intention-parser flags
    python3 -c "
    import yaml, os
-   flags_file = '.state/pipeline/findings.yaml'
+   flags_file = '.mase/pipeline/findings.yaml'
    if os.path.exists(flags_file):
        data = yaml.safe_load(open(flags_file))
        for f in data.get('findings', []):
@@ -507,7 +507,7 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
 2. For each flagged agent: ANALYZE the agent YAML
 3. IDENTIFY distinct roles (NN1), tool clusters (NN2), domain boundaries (NN3)
 4. EMIT finding with type=NN1/NN2/NN3/NN4, severity, recommended_split
-5. WRITE to `.state/pipeline/findings.yaml` (append, not overwrite)
+5. WRITE to `.mase/pipeline/findings.yaml` (append, not overwrite)
 
 ## Procedure (FIND)
 
@@ -521,7 +521,7 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
    ```
    Any conflict = the finding is REWRITTEN to reference the native Goose mechanism
    instead of proposing a custom implementation.
-6. WRITE findings to .state/pipeline/findings.yaml
+6. WRITE findings to .mase/pipeline/findings.yaml
 7. RETURN signal=DONE with summary {total: int, by_type: dict, by_severity: dict, with_goose_verdict: int}
 
 ## Severity Levels
@@ -531,7 +531,7 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
 
 ## Output Format
 
-Write to `.state/pipeline/findings.yaml`:
+Write to `.mase/pipeline/findings.yaml`:
 ```yaml
 stage: 1
 agent: im-finder

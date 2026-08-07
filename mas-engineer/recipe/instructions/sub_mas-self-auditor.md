@@ -37,21 +37,21 @@ Sub-agents in the mas-engineer recipes are loaded with only two tools:
 **Implication for this agent's report:**
 
 The instruction below (and lines 57+ in this file) previously said
-"Always written to `.state/pipeline/self_audit.yaml`". This was
+"Always written to `.mase/pipeline/self_audit.yaml`". This was
 overclaim. The actual flow is:
 
   1. sub_mas-self-auditor produces a YAML-formatted report as its
      FINAL ASSISTANT MESSAGE.
   2. A wrapper (e.g. dev-mas-engineer, pre-push-validator, or Hermes)
      captures that message and persists it to
-     `.state/pipeline/self_audit.yaml`.
+     `.mase/pipeline/self_audit.yaml`.
   3. pre-push-validator reads that file to gate `git push`.
 
 The recipe was updated to remove the "the agent writes the file"
 overclaim. See `sub_mas-self-auditor.yaml` for the new recipe text.
 
 **Why the previous version was wrong (verification-theater fix):**
-A claim like "always written to .state/pipeline/self_audit.yaml"
+A claim like "always written to .mase/pipeline/self_audit.yaml"
 without qualifying "by a wrapper, not by the agent itself" is the
 exact pattern this agent exists to detect. The recipe must not embody
 the pattern it audits against.
@@ -89,7 +89,7 @@ in the goose session. The report uses the YAML schema below.
 
 **Persistence path:** a wrapper (dev-mas-engineer, pre-push-validator,
 or a human operator) is responsible for capturing the final message
-and writing it to `.state/pipeline/self_audit.yaml`. This agent does
+and writing it to `.mase/pipeline/self_audit.yaml`. This agent does
 not write the file itself — see "Tool limitations" above.
 
 **Report schema:**
@@ -229,7 +229,7 @@ is a **better** document than one that just says "VERIFIED-FUNCTIONAL".
 ## Output schema (final)
 
 ```yaml
-# .state/pipeline/self_audit.yaml
+# .mase/pipeline/self_audit.yaml
 audit_run:
   timestamp: ISO-8601
   request_id: UUID

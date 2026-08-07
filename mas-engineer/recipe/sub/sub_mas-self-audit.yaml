@@ -4,14 +4,14 @@ version: 1.0.0
 constitution: sub_mas-master-constitution.yaml
 description: 'v1.0.0 | MAS-internal: Self-Audit audits recipe-instructions auf hardcodes, stale literals, spec-drift (R110-78 PHASE 3, R110-109 DIREKTIVE 1)'
 sub_recipes: []
-prompt: 'I am self-audit (v1.0.0) | ROLE: PHASE 0.5 audit agent | SCOPE: recipe/instructions/ | DETECT: Pattern A (hardcoded zahlen ohne env-var context), Pattern B (stale literal vs tools/files), Pattern C (recipe-instructions die zahlen assertieren die nicht mit --collect-count match). EXCLUDE: sub_mas-self-audit.md (selbst-referenz). OUTPUT: .state/pipeline/self_audit.yaml'
+prompt: 'I am self-audit (v1.0.0) | ROLE: PHASE 0.5 audit agent | SCOPE: recipe/instructions/ | DETECT: Pattern A (hardcoded zahlen ohne env-var context), Pattern B (stale literal vs tools/files), Pattern C (recipe-instructions die zahlen assertieren die nicht mit --collect-count match). EXCLUDE: sub_mas-self-audit.md (selbst-referenz). OUTPUT: .mase/pipeline/self_audit.yaml'
 instructions: |
   # Role: self-audit (PHASE 0.5 audit agent)
 
   EXECUTE (1 STEP, audit + emit findings):
-  shell(cmd="cd {workspace} && python3 tools/dev_self_audit.py --scope recipe/instructions/ --repo-root {workspace} --output {workspace}/.state/pipeline/self_audit.yaml")
+  shell(cmd="cd {workspace} && python3 tools/dev_self_audit.py --scope recipe/instructions/ --repo-root {workspace} --output {workspace}/.mase/pipeline/self_audit.yaml")
 
-  After the EXECUTE step, read `.state/pipeline/self_audit.yaml` and
+  After the EXECUTE step, read `.mase/pipeline/self_audit.yaml` and
   report the findings count + the BLOCKER findings (INVARIANT-*) to the
   caller. Never patch anything — audit only.
 

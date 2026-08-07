@@ -29,7 +29,7 @@ the team should do and you want a ready-to-use structure immediately.
 4. The improvement pipeline splits the monolith into one orchestrator and N
    specialized sub-agents, each with a clear role and a delegation map.
 5. All sub-agents and workflows are registered in the SOT
-   (`.state/workflows.yaml`) and in the `sub_recipes` list of the root
+   (`.mase/workflows.yaml`) and in the `sub_recipes` list of the root
    orchestrator.
 
 ### Example
@@ -123,7 +123,7 @@ have two options:
    creation again. The new team is created alongside the old one.
 2. **Edit by hand**: open the agent's YAML file and rewrite the
    `task:` and `prompt:` fields. Update the SOT entry in
-   `.state/workflows.yaml` to match.
+   `.mase/workflows.yaml` to match.
 
 ## Auto-hint
 

@@ -15,13 +15,13 @@ In 215 recipe-yamls `settings.goose_provider: openai` was hardcoded. This had tw
 
 ## Solution
 
-**Central Config:** `mas-engineer/.state/goose-defaults.env`
+**Central Config:** `mas-engineer/.mase/goose-defaults.env`
 
 Before every recipe-run:
 
 ```bash
 cd /workspace/mas-engineer-src
-source mas-engineer/.state/goose-defaults.env
+source mas-engineer/.mase/goose-defaults.env
 goose run --recipe mas-engineer/recipe/sub/sub_mas-migration-helper.yaml
 ```
 
@@ -68,18 +68,18 @@ Add to `~/.bashrc`:
 
 ```bash
 # Auto-load mas-engineer provider defaults
-[ -f /workspace/mas-engineer-src/mas-engineer/.state/goose-defaults.env ] && \
-  source /workspace/mas-engineer-src/mas-engineer/.state/goose-defaults.env
+[ -f /workspace/mas-engineer-src/mas-engineer/.mase/goose-defaults.env ] && \
+  source /workspace/mas-engineer-src/mas-engineer/.mase/goose-defaults.env
 ```
 
 ## Validation
 
 ```bash
-# Check: is .state/goose-defaults.env valid?
-bash -n mas-engineer/.state/goose-defaults.env && echo "OK"
+# Check: is .mase/goose-defaults.env valid?
+bash -n mas-engineer/.mase/goose-defaults.env && echo "OK"
 
 # Check: provider effectively set after source?
-source mas-engineer/.state/goose-defaults.env
+source mas-engineer/.mase/goose-defaults.env
 echo "GOOSE_PROVIDER=$GOOSE_PROVIDER"     # expected: openai
 echo "GOOSE_MODEL=$GOOSE_MODEL"           # expected: deepseek-v4-flash (not deepseek-chat, deprecated 2026-07-23)
 echo "OPENAI_HOST=$OPENAI_HOST"           # expected: https://api.deepseek.com (NO /v1, goose 1.44 adds it)

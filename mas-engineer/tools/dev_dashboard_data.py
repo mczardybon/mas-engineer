@@ -4,8 +4,8 @@
 Reads Monitoring data and writes JSON for the framework dashboard.
 Will be called via Goose Scheduler every 5 Min OR on User-Refresh.
 
-Output: {workspace}/.mas/dashboards/data.json
-History: {workspace}/.mas/dashboards/history.json
+Output: {workspace}/.mase/dashboards/data.json
+History: {workspace}/.mase/dashboards/history.json
 
 Features:
 - Auto-generates data.json on each run
@@ -61,8 +61,8 @@ def generate_data(ws):
     else:
         mas_root = ws_abs
 
-    state_dir = os.path.join(mas_root, '.state')
-    dash_dir = os.path.join(mas_root, '.mas', 'dashboards')
+    state_dir = os.path.join(mas_root, '.mase')
+    dash_dir = os.path.join(mas_root, '.mase', 'dashboards')
     sub_dir = os.path.join(mas_root, 'recipe', 'sub')
     dist_dir = os.path.join(mas_root, 'dist')
     docs_dir = os.path.join(mas_root, 'docs')
@@ -271,7 +271,7 @@ def send_dashboard_notification(data: dict = None, workspace: str = None):
         # looking for a .mas directory (a MAS-Engineer workspace marker)
         current = os.path.abspath('.')
         while current != os.path.dirname(current):
-            if os.path.isdir(os.path.join(current, '.mas')):
+            if os.path.isdir(os.path.join(current, '.mase')):
                 ws = current
                 break
             current = os.path.dirname(current)
@@ -282,7 +282,7 @@ def send_dashboard_notification(data: dict = None, workspace: str = None):
                 if os.path.isdir(candidate):
                     ws = candidate
                     break
-    flag_dir = os.path.join(ws, '.mas', 'dashboards')
+    flag_dir = os.path.join(ws, '.mase', 'dashboards')
     os.makedirs(flag_dir, exist_ok=True)
     flag_file = os.path.join(flag_dir, '.updated')
     with open(flag_file, 'w') as f:
@@ -301,7 +301,7 @@ def main():
 
     data = generate_data(ws)
     ws_abs = os.path.abspath(ws)
-    dash_dir = os.path.join(ws_abs, '.mas', 'dashboards')
+    dash_dir = os.path.join(ws_abs, '.mase', 'dashboards')
     os.makedirs(dash_dir, exist_ok=True)
 
     data_path = os.path.join(dash_dir, 'data.json')

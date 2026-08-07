@@ -9,7 +9,7 @@ def calculate_score(target):
     checks = []
     
     # 1. Rules-Aktivierung (R01-R09)
-    reg_path = os.path.join(target, '.state/rules/rules.yaml')
+    reg_path = os.path.join(target, '.mase/rules/rules.yaml')
     if os.path.exists(reg_path):
         try:
             data = yaml.safe_load(open(reg_path))
@@ -53,7 +53,7 @@ def calculate_score(target):
         checks.append({"name": "yaml_valid", "ok": True, "detail": "no agents"})
     
     # 4. Letzter SI-RUN
-    changes_path = os.path.join(target, '.state/changes.json')
+    changes_path = os.path.join(target, '.mase/changes.json')
     if os.path.exists(changes_path):
         try:
             changes = json.load(open(changes_path))
@@ -73,7 +73,7 @@ def calculate_score(target):
     return {"checks": checks, "score": score, "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S')}
 
 def save_history(target, report):
-    hist_path = os.path.join(target, '.state/health-history.json')
+    hist_path = os.path.join(target, '.mase/health-history.json')
     history = []
     if os.path.exists(hist_path):
         try:
@@ -126,8 +126,8 @@ def main():
         print(f"\n  Recommendation: system ist gesund")
     
     # memorye Report
-    json.dump(report, open(os.path.join(target, '.state/health-report.json'), 'w'), indent=2)
-    print(f"\n  Report saved: .state/health-report.json")
+    json.dump(report, open(os.path.join(target, '.mase/health-report.json'), 'w'), indent=2)
+    print(f"\n  Report saved: .mase/health-report.json")
 
 if __name__ == "__main__":
     main()

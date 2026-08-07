@@ -3,7 +3,7 @@ test_sub_mas_e2e_phoenix_fixes_validator.py — sanity tests for e2e-phoenix-fix
 
 Validates phoenix-recovery fix state — runs T1-T5 and T7 tests for
 e2e-verify-phoenix-fixes workflow. 5 sub-checks against
-.state/workflows.yaml.
+.mase/workflows.yaml.
 
 Note: this recipe has 'description:' but no 'settings:' field.
 Required-fields test adapted accordingly.

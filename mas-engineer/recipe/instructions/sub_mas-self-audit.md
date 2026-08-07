@@ -33,7 +33,7 @@ findings, it never patches.
 
 ## OUTPUT FORMAT
 
-Writes `.state/pipeline/self_audit.yaml`:
+Writes `.mase/pipeline/self_audit.yaml`:
 
 ```yaml
 audit_run:
@@ -54,11 +54,11 @@ Exit code: `0` clean, `1` if ≥1 BLOCKER finding.
 
 ## 3 HOOK POINTS
 
-1. **PRE-AUDIT:** skip the run if `.state/pipeline/self_audit.yaml` exists
+1. **PRE-AUDIT:** skip the run if `.mase/pipeline/self_audit.yaml` exists
    AND is fresher than 1h (same scope) — stale reports must not be reused.
 2. **POST-AUDIT:** return the findings count + BLOCKER list to the caller
-   (orchestrator logs to `.state/changes.json`).
-3. **ERROR:** log to `.state/self_audit_failures.json` (timestamp, scope,
+   (orchestrator logs to `.mase/changes.json`).
+3. **ERROR:** log to `.mase/self_audit_failures.json` (timestamp, scope,
    error message) and return exit 2 — never emit a partial PASS.
 
 ## IDEMPOTENZ

@@ -51,17 +51,17 @@ Coordinates 6 specialized sub-agents in 7 stages.
   It runs stages 1-4 in sequence, then applies the validated patches.
 
   **Reads (orchestrated stages):**
-    - im-finder writes to  `.state/pipeline/findings.yaml`
-    - im-rank writes to    `.state/pipeline/ranked_findings.yaml`
-    - im-designer writes to `.state/pipeline/patches.yaml`
-    - im-validator writes to `.state/pipeline/validation.yaml`
+    - im-finder writes to  `.mase/pipeline/findings.yaml`
+    - im-rank writes to    `.mase/pipeline/ranked_findings.yaml`
+    - im-designer writes to `.mase/pipeline/patches.yaml`
+    - im-validator writes to `.mase/pipeline/validation.yaml`
 
-  **Final Output:**  `.state/changes.json` (appended per run)
+  **Final Output:**  `.mase/changes.json` (appended per run)
   **Schema:**        CP_DONE signal after applying approved patches
   **Next:**          -> git-operator (commits to git)
 
   ```yaml
-  # .state/changes.json - appended by general-improver
+  # .mase/changes.json - appended by general-improver
   run_id: <UUID>
   timestamp: <ISO-8601>
   stages_run: [im-finder, im-rank, im-designer, im-validator, apply]
@@ -197,7 +197,7 @@ ONLY at FULL_IMPROVEMENT or REVIEW:
     → "ℹ️ Skip Web-Research — work with known knowledge"
 
 ### RECURSION GUARD (v2 — RECURSION-OVERRIDE)
-CHECK: {workspace}/.state/schedule.yaml
+CHECK: {workspace}/.mase/schedule.yaml
 TWO-TIER RULES:
 
 A) FULL_IMPROVEMENT self-runs (FIND→RANK→DESIGN→VALIDATE→APPLY):
@@ -208,7 +208,7 @@ A) FULL_IMPROVEMENT self-runs (FIND→RANK→DESIGN→VALIDATE→APPLY):
      IF env RECURSION_OVERRIDE=2 OR --params override_mode=full:
        → SKIP 24h cooldown
        → Allow FULL_IMPROVEMENT in mas mode (operator-initiated)
-       → APPEND to .state/changes.json with stage="full_improvement_override"
+       → APPEND to .mase/changes.json with stage="full_improvement_override"
        → SHOW: "✅ RECURSION-OVERRIDE=2: mas-mode FULL_IMPROVEMENT authorized"
      IF env RECURSION_OVERRIDE=1 OR --recursion-override flag:
        → STILL APPLY-ONLY (do not promote to FULL_IMPROVEMENT)
@@ -216,15 +216,15 @@ A) FULL_IMPROVEMENT self-runs (FIND→RANK→DESIGN→VALIDATE→APPLY):
 B) APPLY-ONLY operations (RECURSION_OVERRIDE=1):
    IF env RECURSION_OVERRIDE=1 OR --recursion-override flag:
      → SKIP 24h cooldown
-     → READ .state/pipeline/validation.yaml
+     → READ .mase/pipeline/validation.yaml
      → For each status=approved + verdict=CONFORM:
        delegate to sub_mas-yaml-editor (APPLY)
-     → APPEND to .state/changes.json with stage="apply_only"
+     → APPEND to .mase/changes.json with stage="apply_only"
      → DO NOT touch last_FULL_IMPROVEMENT_run timestamp
      → SHOW: "✅ RECURSION-OVERRIDE: applied N patches (operator-initiated)"
 
 C) RECYCLE operations (MM6 fix by Hermes 2026-07-23):
-   **Trigger condition:** .state/pipeline/validation.yaml has
+   **Trigger condition:** .mase/pipeline/validation.yaml has
    `validation.status == "skipped_charge"` (set by im-validator when all
    patches got verdict=RESTRICTED from goose-expert — see STEP 0.5b
    in sub_mas-im-validator.md).
@@ -234,34 +234,34 @@ C) RECYCLE operations (MM6 fix by Hermes 2026-07-23):
    requested a recycle with `severity_fallback: "next_lower_band"`.
 
    **Procedure (no RECURSION_OVERRIDE needed — recycle is cheap):**
-   1. READ .state/pipeline/validation.yaml
+   1. READ .mase/pipeline/validation.yaml
    2. IF validation.status != "skipped_charge": → NOT a recycle, normal flow
    3. IF validation.skip_reason == "all_restricted":
       a. Determine new ceiling:
          - IF validation.severity_fallback == "next_lower_band":
-           current_ceiling = .state/pipeline/ranked_findings.yaml.active_ceiling ?? "high"
+           current_ceiling = .mase/pipeline/ranked_findings.yaml.active_ceiling ?? "high"
            ceiling_order = ["high", "medium", "low", "info"]  # strictest → loosest
            idx = ceiling_order.index(current_ceiling)
            IF idx == len(ceiling_order) - 1:
              → SHOW "⏭️ Already at lowest ceiling (info) — cannot recycle lower"
-             → APPEND to .state/changes.json with stage="recycle_exhausted"
+             → APPEND to .mase/changes.json with stage="recycle_exhausted"
              → ABORT recycle (no lower band exists)
            ELSE:
              new_ceiling = ceiling_order[idx + 1]  # one band lower
          - ELSE: → ABORT (unknown fallback strategy)
-      b. CHECK: .state/pipeline/findings.yaml still exists AND has findings
+      b. CHECK: .mase/pipeline/findings.yaml still exists AND has findings
          - IF empty: → SHOW "⏭️ No findings to recycle, ending pipeline"
          - ELSE: continue
       c. DELEGATE to sub_mas-im-rank with severity_ceiling=new_ceiling
-         (input: findings from .state/pipeline/findings.yaml + new ceiling)
+         (input: findings from .mase/pipeline/findings.yaml + new ceiling)
       d. IF rank.status == "warning" (all findings filtered out):
          → SHOW "⏭️ severity_ceiling={new_ceiling} filtered all findings,
            ending pipeline for this cycle"
-         → APPEND to .state/changes.json with stage="recycle_exhausted"
+         → APPEND to .mase/changes.json with stage="recycle_exhausted"
          → DO NOT enter design phase
-      e. ELSE: WRITE .state/pipeline/ranked_findings.yaml with new ceiling
+      e. ELSE: WRITE .mase/pipeline/ranked_findings.yaml with new ceiling
          → PROCEED to STEP 2 (DESIGN) of this orchestrator
-         → APPEND to .state/changes.json with
+         → APPEND to .mase/changes.json with
            stage="recycle", previous_ceiling=current_ceiling,
            new_ceiling=new_ceiling, skip_reason="all_restricted"
          → SHOW: "♻️ RECYCLE: re-running pipeline with severity_ceiling
@@ -272,7 +272,7 @@ C) RECYCLE operations (MM6 fix by Hermes 2026-07-23):
    4. ELSE (different skip_reason): → ABORT (not yet implemented)
 
    **Recursion budget for recycle (prevent infinite cycles):**
-   - CHECK .state/changes.json for entries with stage="recycle" today
+   - CHECK .mase/changes.json for entries with stage="recycle" today
    - IF 3+ recycle entries today: → ABORT recycle chain with message
      "⛔ Recycle budget exhausted (3+ today) — manual intervention needed"
    - ELSE: continue
@@ -285,12 +285,12 @@ C) RECYCLE operations (MM6 fix by Hermes 2026-07-23):
    "0 patches applied because all got RESTRICTED".
 
 COST LIMIT (all tiers):
-CHECK: {workspace}/.state/changes.json
+CHECK: {workspace}/.mase/changes.json
 IF 5+ self-improve entries today:
   → ABORT (cost limit) — override does NOT bypass cost limit
 
 ### TIMING CHECK
-1. READ {workspace}/.state/schedule.yaml
+1. READ {workspace}/.mase/schedule.yaml
   IF not exists → create: version: 1.0.0, history: []
 2. IF status == "blocked": → "⛔ Timing blocked" + ABORT
 3. IF status == "pause_recommended": → Ask User "Continue? (y/N)"
@@ -398,8 +398,8 @@ prevents recurrence: any time the pipeline touches EVIDENCE/cert docs, the
 self-auditor re-checks that the claims are backed by actual test logs.
 
 **Action:**
-1. RUN: `python3 tools/dev_self_auditor.py --workspace {workspace} --scope e2e-results --output .state/pipeline/self_audit.yaml`
-2. READ: `.state/pipeline/self_audit.yaml` → `audit_run.result`
+1. RUN: `python3 tools/dev_self_auditor.py --workspace {workspace} --scope e2e-results --output .mase/pipeline/self_audit.yaml`
+2. READ: `.mase/pipeline/self_audit.yaml` → `audit_run.result`
 3. **IF result == FAIL** (≥1 overclaim without evidence):
    - SHOW the SC-XXX findings to User
    - ASK: "Self-audit found {N} overclaim(s) in changed docs. Apply anyway? (y/N/fix)"
@@ -434,12 +434,12 @@ IF yes:
 Update timing:
   python3 -c "
 import yaml
-with open('{workspace}/.state/schedule.yaml')
+with open('{workspace}/.mase/schedule.yaml')
   as f:
   d = yaml.safe_load(f) or {}
 d.setdefault('history', []).append({'round': len(d.get('history', [])) + 1, 'time': 'now', 'findings_count': {findings_count}, 'duration_sec': {duration}})
 
-with open('{workspace}/.state/schedule.yaml', 'w') as f:
+with open('{workspace}/.mase/schedule.yaml', 'w') as f:
   yaml.dump(d, f)
 "
 
@@ -503,7 +503,7 @@ IF task in (FULL_IMPROVEMENT, REVIEW) AND pipeline completed:
 
 **Procedure:**
 1. RECEIVE params: `agent_name`, `findings_file` (from intention-parser)
-2. LOAD findings from `.state/pipeline/findings.yaml` (filtered: flagged_by=intention-parser)
+2. LOAD findings from `.mase/pipeline/findings.yaml` (filtered: flagged_by=intention-parser)
 3. RUN abridged pipeline (only relevant stages):
    - **im-finder** (task=FIND, mode=split):
      - Read findings already written by intention-parser
@@ -520,7 +520,7 @@ IF task in (FULL_IMPROVEMENT, REVIEW) AND pipeline completed:
    - CREATE orchestrator: `sub_mas-{domain}-director.yaml`
    - CREATE N sub-agents: `sub_mas-{domain}-{role}.yaml`
    - ARCHIVE original: `recipe/sub/legacy/sub_mas-{name}-ORIGINAL.yaml`
-   - UPDATE `.state/workflows.yaml` (register orchestrator + N subs)
+   - UPDATE `.mase/workflows.yaml` (register orchestrator + N subs)
    - UPDATE `recipe/dev-mas-engineer.yaml` (add to sub_recipes)
 5. RETURN result:
    ```yaml

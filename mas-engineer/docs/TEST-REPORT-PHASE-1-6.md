@@ -126,7 +126,7 @@
 | Step | Result | Detail |
 |------|--------|--------|
 | 1. Dependencies | OK | node (/usr/bin/node), python3, npm present |
-| 2. State dirs | OK | .state/dispatch, .state/checkpoints created |
+| 2. State dirs | OK | .mase/dispatch, .mase/checkpoints created |
 | 3. Dashboard MCP | OK | node_modules, server.js, package.json present |
 | 4. Initial data | OK | rc=0, data.json written |
 | 5. Daemon | OK | starts, refreshes every 5s, clean SIGTERM |

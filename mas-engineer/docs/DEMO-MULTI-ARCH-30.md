@@ -33,11 +33,11 @@ Architectures: 10 HIERARCHICAL + 10 FLAT + 10 PIPELINE
 ```
 
 Plus a complete dashboard:
-- `/tmp/multi-arch-30/.mas/dashboards/data.json` (30 agents scored)
-- `/tmp/multi-arch-30/.mas/mcp/server.js` (Node.js MCP server)
-- `/tmp/multi-arch-30/.mas/mcp/dashboard.html` (chart.js webapp)
+- `/tmp/multi-arch-30/.mase/dashboards/data.json` (30 agents scored)
+- `/tmp/multi-arch-30/.mase/mcp/server.js` (Node.js MCP server)
+- `/tmp/multi-arch-30/.mase/mcp/dashboard.html` (chart.js webapp)
 - `~/.config/goose/config.yaml`: `multi-arch-30-dashboard` extension registered
-- `/tmp/multi-arch-30/.state/routing-test.jsonl` (6/6 routing correct)
+- `/tmp/multi-arch-30/.mase/routing-test.jsonl` (6/6 routing correct)
 
 **Why three architectures?** Same topology (6 teams × 5 agents), three
 collaboration patterns. HIERARCHICAL = lead delegates. FLAT = peer vote.
@@ -219,17 +219,17 @@ STEP 4 — Create instructions/ folder with one .md per agent (30 files).
 
 STEP 5 — DASHBOARD SETUP (mandatory)
 a) cd /tmp/multi-arch-30
-b) mkdir -p .mas/mcp
+b) mkdir -p .mase/mcp
 c) Copy MCP server files from mas-engineer:
-     cp /workspace/dev-branch/mas-engineer/.mas/mcp/server.js .mas/mcp/
-     cp /workspace/dev-branch/mas-engineer/.mas/mcp/package.json .mas/mcp/
-     cp /workspace/dev-branch/mas-engineer/.mas/mcp/dashboard.html .mas/mcp/
-d) cd .mas/mcp && npm install
+     cp /workspace/dev-branch/mas-engineer/.mase/mcp/server.js .mase/mcp/
+     cp /workspace/dev-branch/mas-engineer/.mase/mcp/package.json .mase/mcp/
+     cp /workspace/dev-branch/mas-engineer/.mase/mcp/dashboard.html .mase/mcp/
+d) cd .mase/mcp && npm install
 e) Register multi-arch-30-dashboard extension in
    ~/.config/goose/config.yaml (under extensions:)
 f) First dashboard-data refresh:
    python3 ~/.config/goose/recipes/tools/dev_dashboard_data.py /tmp/multi-arch-30
-g) Verify: cat /tmp/multi-arch-30/.mas/dashboards/data.json
+g) Verify: cat /tmp/multi-arch-30/.mase/dashboards/data.json
    Check "agents.total" >= 30 and "agents.healthy" == total
 
 STEP 6 — LIVE TEST (mandatory, run each one):
@@ -251,7 +251,7 @@ and verify the orchestrator picks the correct team:
 4. "Profile this function's runtime"   → perf-eval-team (HIERARCHICAL)
 5. "Simplify this 200-line function"   → refactor-team (FLAT)
 6. "Generate docs for this module"     → doc-gen-team (PIPELINE)
-Save the routing decisions to /tmp/multi-arch-30/.state/routing-test.jsonl
+Save the routing decisions to /tmp/multi-arch-30/.mase/routing-test.jsonl
 
 STEP 8 — Report:
 - Total files created (expect 37 yaml + 30 md + dashboard files = 70+)
@@ -407,7 +407,7 @@ at the end of this file — it is empty.
 - **PTY mode is fine for long prompts** — hypothesis: goose will accept
   the 8.3 KB prompt via input-feld + Enter. The auto-confirm at 6s
   idle is expected to handle the "proceed?" mid-prompt question.
-- **All routing decisions land in `.state/routing-test.jsonl`** —
+- **All routing decisions land in `.mase/routing-test.jsonl`** —
   expected to be auditable, machine-readable, replayable. Same pattern
   as research-team's research log.
 - **Dashboard 30/30 healthy on first run** — hypothesis: no
@@ -468,9 +468,9 @@ recipe/template/agent_template.yaml  (1 template)
 recipe/teams/                        (6 team recipes: HIERARCHICAL×2, FLAT×2, PIPELINE×2)
 recipe/sub/                          (30 agent recipes: 5 per team)
 recipe/instructions/                 (30 instruction MDs, one per agent)
-.mas/dashboards/data.json            (30 agents, all healthy, score 1.0)
-.mas/mcp/                            (Node.js MCP server files)
-.state/routing-test.jsonl            (6 routing test records)
+.mase/dashboards/data.json            (30 agents, all healthy, score 1.0)
+.mase/mcp/                            (Node.js MCP server files)
+.mase/routing-test.jsonl            (6 routing test records)
 00-GUIDELINES.md, BP-CHECKLIST.md, project.yaml, .goosehints, .gitignore, .gitattributes
 ```
 
@@ -481,7 +481,7 @@ recipe/instructions/                 (30 instruction MDs, one per agent)
 | 30-agent MAS is small for mas-engineer (under 2 min)      | PARTIALLY | 227s, but most time was LLM file-generation, not mas-engineer logic. Build+tests in ~4 min is acceptable but not "small". |
 | 3 architectures, 1 master orchestrator works              | ✅ YES    | All 6 routing tests landed on the correct team + architecture. |
 | PTY mode is fine for long prompts                         | ✅ YES    | R110-10: PTY run completed in 216s vs 227s for --no-session. No intermediate prompts, no hang. Skill's "multi-turn needs real PTY" warning is context-specific — for `sub_recipes` dispatch, `--no-session` and PTY both work. Multi-turn REPL still needs PTY. |
-| Routing decisions land in `.state/routing-test.jsonl`     | ✅ YES    | 6 records with `passed: true`, `confidence: 0.95`. |
+| Routing decisions land in `.mase/routing-test.jsonl`     | ✅ YES    | 6 records with `passed: true`, `confidence: 0.95`. |
 | Dashboard 30/30 healthy on first run                      | ✅ YES    | 30/30 healthy, 0 degraded, 0 dead, avg score 1.0. |
 | `dev-mas-engineer` is the right entry point               | ✅ YES    | Recipe's `sub_recipes` worked once the broken dashboard ref was fixed. |
 

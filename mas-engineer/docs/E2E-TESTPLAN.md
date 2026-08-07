@@ -31,18 +31,18 @@ Memory: `goose: command not found` wenn von Hermes-shell. Fix:
 
 ### 0.3 Workspace-Cleanliness-Gate
 ```bash
-du -sh .state/                                            # muss <2M sein
-find .state/ -type f | wc -l                              # muss <100 sein
+du -sh .mase/                                            # muss <2M sein
+find .mase/ -type f | wc -l                              # muss <100 sein
 test -d logs/e2e-results/ && echo "FAIL: e2e-results existiert" || echo "OK"
-test -d .state/workflow_runs/ && echo "FAIL: workflow_runs" || echo "OK"
-test -d .state/pipeline/backups/ && echo "FAIL: pipeline/backups" || echo "OK"
+test -d .mase/workflow_runs/ && echo "FAIL: workflow_runs" || echo "OK"
+test -d .mase/pipeline/backups/ && echo "FAIL: pipeline/backups" || echo "OK"
 ```
 
 ### 0.4 Budget-Check
 ```bash
 python3 -c "
 import json, datetime
-d = json.load(open('.state/changes.json'))
+d = json.load(open('.mase/changes.json'))
 cutoff = datetime.datetime.now() - datetime.timedelta(hours=24)
 recent = [e for e in d.get('entries',[]) if 'timestamp' in e and e['timestamp'] > cutoff.isoformat()]
 full = [e for e in recent if e.get('type') == 'full_improvement_override']
@@ -225,28 +225,28 @@ goose run --with-builtin developer \
   --params "workspace=$MAS_WORKSPACE,scan_scope=recipe/" \
   --no-session
 ```
-**Pass:** exit 0, `.state/pipeline/findings.yaml` updated, size > 50KB
+**Pass:** exit 0, `.mase/pipeline/findings.yaml` updated, size > 50KB
 
 ### 5.2 RANK isoliert
 ```bash
 echo "ack" | goose run --with-builtin developer \
   --recipe recipe/sub/sub_mas-im-rank.yaml --no-session
 ```
-**Pass:** `.state/pipeline/ranked_findings.yaml` updated, valid yaml, enthaelt ≥1 finding mit priority
+**Pass:** `.mase/pipeline/ranked_findings.yaml` updated, valid yaml, enthaelt ≥1 finding mit priority
 
 ### 5.3 DESIGN isoliert
 ```bash
 echo "ack" | goose run --with-builtin developer \
   --recipe recipe/sub/sub_mas-im-designer.yaml --no-session
 ```
-**Pass:** `.state/pipeline/patches.yaml` mit ≥1 patch (file, field, from, to, reason)
+**Pass:** `.mase/pipeline/patches.yaml` mit ≥1 patch (file, field, from, to, reason)
 
 ### 5.4 VALIDATE isoliert
 ```bash
 echo "ack" | goose run --with-builtin developer \
   --recipe recipe/sub/sub_mas-im-validator.yaml --no-session
 ```
-**Pass:** `.state/pipeline/validation.yaml` mit CONFORM/VIOLATION verdict
+**Pass:** `.mase/pipeline/validation.yaml` mit CONFORM/VIOLATION verdict
 
 ### 5.5 APPLY (general-improver) isoliert
 ```bash
@@ -257,7 +257,7 @@ goose run --with-builtin developer \
   --params "task=APPLY_ONLY,confirm=yes,approve=y" \
   --no-session
 ```
-**Pass:** exit 0, `.state/pipeline/apply.yaml` updated, applied_patches zeigt echte file-modifications
+**Pass:** exit 0, `.mase/pipeline/apply.yaml` updated, applied_patches zeigt echte file-modifications
 
 ---
 
@@ -287,18 +287,18 @@ goose run --with-builtin developer \
 # R01 (CONFIRMATION_REQUIRED) is a hardness-5 rule that BLOCKS any preflight
 # in non-interactive mode unless a fresh confirmation token exists.
 # Mechanism: dev_rule_checker.py:71-77 reads
-#   mas-engineer/.state/.last_confirmation  (unix timestamp)
+#   mas-engineer/.mase/.last_confirmation  (unix timestamp)
 #   and returns (time.time() - ts) < 300.
 #
 # Two known bypass paths (operator-initiated only, NEVER auto-set):
 #
-#   1. Interactive:  echo "$(date +%s)" > mas-engineer/.state/.last_confirmation
+#   1. Interactive:  echo "$(date +%s)" > mas-engineer/.mase/.last_confirmation
 #                    (valid 5 min, then auto-expires)
 #
 #   2. Non-interactive batch runs (CI, e2e preflight, pre-push-validator):
 #        export MAS_AUTO_CONFIRM=1
 #        python3 tools/e2e_run_all.py --auto-confirm ...
-#      e2e_run_all.py (R110-58) refreshes .state/.last_confirmation BEFORE
+#      e2e_run_all.py (R110-58) refreshes .mase/.last_confirmation BEFORE
 #      running the e2e tests, so the workflows it spawns (build-test,
 #      top_workflows, recovery) see a fresh confirmation. BOTH the
 #      --auto-confirm CLI flag AND the MAS_AUTO_CONFIRM=1 env var are
@@ -443,7 +443,7 @@ diff <(grep -E "PASS|FAIL" /tmp/logs/e2e-results/run1.log) <(grep -E "PASS|FAIL"
 ### 10.2 Cleanup nach test
 ```bash
 rm -rf /tmp/logs/e2e-results/test-*
-rm -f .state/pipeline/test_*
+rm -f .mase/pipeline/test_*
 test "$(du -sm .state | cut -f1)" -lt 3 && echo "OK workspace zurueck"
 ```
 

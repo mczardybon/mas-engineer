@@ -1,0 +1,66 @@
+# Build-System v3.0
+
+## ZIP build (dev_build.sh)
+cd ~/agent_test/work && bash mas-engineer/tools/dev_build.sh
+→ dist/mas-framework-v1.0.0_TIMESTAMP.zip (287 files, ~700 KB)
+
+### What happens:
+1. __pycache__ + .backups + .mase/checkpoints will be deleted before build
+2. zip -r from Workspace-Root:
+   - installr.sh, update.sh, .mas-mode, .gitignore
+   - framework/.projects.yaml
+   - framework/$PROJECT/ (recipes + docs + config + tests + python)
+   - mas-engineer/ (recipe + tools + docs + plans + .state)
+3. Exclusions: *.git* .backups __pycache__ *.pyc *.pyo improve-log*
+4. validation: 5 Cores, 47 Specialists, 44 FW-Subs, 36 MAS-Subs, >=40 Tools, no pycache
+
+### Modes:
+| Command | Description |
+|:-------|:-------------|
+| dev_build.sh | framework mode (only active Project) |
+| dev_build.sh --full | FULL mode (MAS + ALL Projects from .projects.yaml) |
+| dev_build.sh --dry-run | Only check, build nothing |
+| dev_build.sh --version x.y.z | Set version |
+
+## Installation (installr.sh)
+cd dist && unzip mas-framework-*.zip && ./installr.sh
+
+### install_mas():
+| Step | Source | Target |
+|:-------:|:-------|:-----|
+| M1 | mas-engineer/recipe/dev-mas-engineer.yaml | ~/.config/goose/recipes/ |
+| M2 | mas-engineer/recipe/sub/sub_mas-*.yaml (36) | ~/.config/goose/recipes/sub/ |
+| M3 | mas-engineer/recipe/template/ | ~/.config/goose/recipes/template/ |
+| M4 | mas-engineer/tools/* (43) | ~/.config/goose/recipes/mas-engineer-tools/ |
+| M5 | mas-engineer/docs/* | ~/.config/goose/docs/mas-engineer/ |
+| M6 | mas-engineer/.mase/* | ~/.config/goose/.state/ |
+
+### install_framework():
+| Step | Source | Target |
+|:-------:|:-------|:-----|
+| F1 | framework/dev-team/ | ~/.local/share/goose/framework/ |
+| F2 | 4 Core-Recipes | ~/.config/goose/recipes/ |
+| F3 | core/specialist-constitution.yaml | ~/.config/goose/recipes/core/ |
+| F4 | specialist_*.yaml (47) | ~/.config/goose/recipes/ |
+| F5 | sub_*.yaml (44) | ~/.config/goose/recipes/ |
+| F6 | framework/docs/ | ~/.config/goose/docs/ |
+| F7 | config.yaml | ~/.config/goose/config.yaml (merge) |
+| F8 | .projects.yaml | ~/.config/goose/.projects.yaml |
+
+## Update (update.sh)
+| Command | Description |
+|:-------|:-------------|
+| ./update.sh --mas | Only sync MAS from Workspace |
+| ./update.sh --framework | Only sync framework from Workspace |
+| ./update.sh --mas --dry-run | MAS-Dry run |
+| ./update.sh --help | Help |
+
+## Auto-Build (dev_autobuild.sh)
+| Command | Description |
+|:-------|:-------------|
+| dev_autobuild.sh | Auto-Build (checks whether commit since last ZIP) |
+| dev_autobuild.sh --force | Always build |
+| dev_autobuild.sh --status | Only check |
+| dev_autobuild.sh --install | Build + install |
+
+No own logic anymore — delegates to dev_build.sh.

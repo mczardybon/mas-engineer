@@ -14,7 +14,7 @@ VERWENDUNG:
     python3 dev_observer.py --scan --quick          # Only Overview
     python3 dev_observer.py --scan --yaml <path>    # Eine determinese YAML
     python3 dev_observer.py --scan --yaml-dir <path> # Ein Directory
-    python3 dev_observer.py --save                  # Scan + save in .state/
+    python3 dev_observer.py --save                  # Scan + save in .mase/
 """
 
 import os, sys, subprocess
@@ -59,7 +59,7 @@ def get_state_dir() -> Path:
     """Lazy-loaded State-Path."""
     global _STATE_DIR
     if _STATE_DIR is None:
-        _STATE_DIR = (Path(__file__).parent.parent / ".state").resolve()
+        _STATE_DIR = (Path(__file__).parent.parent / ".mase").resolve()
     return _STATE_DIR
 
 
@@ -357,7 +357,7 @@ class Scanner:
 
 
 def save_scan(scanner: Scanner):
-    """memorye Scan-Result in .state/analysis.json."""
+    """memorye Scan-Result in .mase/analysis.json."""
     get_state_dir().mkdir(parents=True, exist_ok=True)
     
     scanner._collect()
@@ -384,7 +384,7 @@ def save_scan(scanner: Scanner):
     with open(get_state_dir() / "analysis.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
     
-    return f"✅ Analyse saved: .state/analysis.json"
+    return f"✅ Analyse saved: .mase/analysis.json"
     
 
 def main():
@@ -394,7 +394,7 @@ def main():
     parser.add_argument("--quick", action="store_true", help="Only Overview")
     parser.add_argument("--yaml", type=str, help="Only eine file")
     parser.add_argument("--yaml-dir", type=str, help="Only a Directory")
-    parser.add_argument("--save", action="store_true", help="Scan + in .state/ save")
+    parser.add_argument("--save", action="store_true", help="Scan + in .mase/ save")
     parser.add_argument("--agent-path", type=str, default=None)
     
     args = parser.parse_known_args()[0]

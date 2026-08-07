@@ -10,7 +10,7 @@ if [ "$MODE" = "--mode" ]; then
     MODE="$2"
 fi
 
-REGL_DIR="mas-engineer/.state/rules"
+REGL_DIR="mas-engineer/.mase/rules"
 
 if [ ! -d "$REGL_DIR" ]; then
     mkdir -p "$REGL_DIR"
@@ -35,8 +35,8 @@ print(f'⛔ {len(rulen)} Generic-Rulen loaded')
 "
     else
         echo "  ⚠️  No rulen.yaml found — Generic-Rulen not active"
-        echo "  → Copy user_rulen_template.yaml after .state/rules/rulen.yaml"
-        cp -n mas-engineer/.state/templates/user_rulen_template.yaml "$REGL_DIR/rulen.yaml" 2>/dev/null
+        echo "  → Copy user_rulen_template.yaml after .mase/rules/rulen.yaml"
+        cp -n mas-engineer/.mase/templates/user_rulen_template.yaml "$REGL_DIR/rulen.yaml" 2>/dev/null
     fi
 else
     # ── MAS-MODE: Harte Rulen load ──

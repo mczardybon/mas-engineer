@@ -108,7 +108,7 @@ STEP 3 — Create orchestrator root recipe that references all agents
 via sub_recipes field.
 
 STEP 4 — DASHBOARD SETUP
-a) Copy MCP server files from mas-engineer to <path>/.mas/mcp/
+a) Copy MCP server files from mas-engineer to <path>/.mase/mcp/
 b) Run npm install
 c) Register framework-dashboard extension in ~/.config/goose/config.yaml
 d) First dashboard refresh via dev_dashboard_data.py

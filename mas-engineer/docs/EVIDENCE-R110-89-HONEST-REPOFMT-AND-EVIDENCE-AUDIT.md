@@ -76,17 +76,17 @@ the format-audit findings that triggered this document.
   free-form, no 5-section.
 
 04afe4a `docs(directives): R110-78 IM-pipeline directives for mas-engineer`
-  Created `mas-engineer/.directives/R110-78-spec-drift.md` (528 lines,
+  Created `mas-engineer/.mase/directives/R110-78-spec-drift.md` (528 lines,
   was 528+7-6=529 after R110-88, see T11). Real artifact. Title uses
   `docs(directives):` (not a standard emoji category from the protocol
   skill). R110-80 (5f9418e) later moved this file from repo root to
-  `mas-engineer/.directives/`, so this commit's path is now stale
-  (root-level `.directives/` is no longer where the spec lives).
+  `mas-engineer/.mase/directives/`, so this commit's path is now stale
+  (root-level `.mase/directives/` is no longer where the spec lives).
 
-5f9418e `chore: R110-80 -- move .directives/ into mas-engineer/ subdir`
-  Moved `.directives/` from repo root to `mas-engineer/.directives/`
+5f9418e `chore: R110-80 -- move .mase/directives/ into mas-engineer/ subdir`
+  Moved `.mase/directives/` from repo root to `mas-engineer/.mase/directives/`
   because mas-engineer reads its directives from
-  `cwd=mas-engineer/.directives/` and the previous root-level path
+  `cwd=mas-engineer/.mase/directives/` and the previous root-level path
   was unreachable. Real fix, real value. Body is free-form.
 
 b8f8bc7 `docs(directives): R110-81 -- add execution phases + stop-punkte to R110-78`
@@ -106,16 +106,16 @@ b8f8bc7 `docs(directives): R110-81 -- add execution phases + stop-punkte to R110
   DIREKTIVE 2 (im-finder SD-findung) + DIREKTIVE 3 (dev_spec_invariant.py
   for hard rule). Real, structural. Title `docs(directives):`.
 
-f5204f5 `docs(directives): R110-85 -- add .directives/README.md index`
-  Added `mas-engineer/.directives/README.md` (109 lines, see T11).
+f5204f5 `docs(directives): R110-85 -- add .mase/directives/README.md index`
+  Added `mas-engineer/.mase/directives/README.md` (109 lines, see T11).
   Real index doc. Title `docs(directives):`.
 
-74c6835 `docs(directives): R110-86 -- add .directives/STATUS.md tracker`
-  Added `mas-engineer/.directives/STATUS.md` (70 lines). Real status
+74c6835 `docs(directives): R110-86 -- add .mase/directives/STATUS.md tracker`
+  Added `mas-engineer/.mase/directives/STATUS.md` (70 lines). Real status
   tracker. Title `docs(directives):`.
 
 db5bdd0 `docs(directives): R110-87 -- add test-fixture template for PHASE 1`
-  Added `mas-engineer/.directives/test-fixtures/test_r11078_spec_drift_template.py`
+  Added `mas-engineer/.mase/directives/test-fixtures/test_r11078_spec_drift_template.py`
   (271 lines). Real pytest template, all tests `@pytest.mark.skip` so
   collect-count stable until mas-engineer activates it. Title
   `docs(directives):`.
@@ -380,8 +380,8 @@ EOF
 # expected: "broken_refs": [], "coverage_pct": 100.0
 
 # T4: R110-88 fix verification
-grep -c "1295" .directives/R110-78-spec-drift.md   # must be 0
-grep -c "1277" .directives/R110-78-spec-drift.md   # must be >=4
+grep -c "1295" .mase/directives/R110-78-spec-drift.md   # must be 0
+grep -c "1277" .mase/directives/R110-78-spec-drift.md   # must be >=4
 ```
 
 If any of these re-runs returns a different number, the R110-78..R110-88

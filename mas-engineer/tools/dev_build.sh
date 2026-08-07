@@ -80,13 +80,13 @@ build_zip() {
 
     # Backup-directoryse ausclose
     find "$WORKSPACE/mas-engineer" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
-    rm -rf "$WORKSPACE/mas-engineer/.state/checkpoints" 2>/dev/null || true
+    rm -rf "$WORKSPACE/mas-engineer/.mase/checkpoints" 2>/dev/null || true
 
     cd "$WORKSPACE"
     
     # Clean up
     find mas-engineer -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-    rm -f mas-engineer/.state/checkpoints/checkpoint_config.yaml 2>/dev/null || true
+    rm -f mas-engineer/.mase/checkpoints/checkpoint_config.yaml 2>/dev/null || true
     
     # Build TAR.GZ (zip-free — no extra binary dep)
     tar -czf "$zip_path" \
@@ -95,8 +95,8 @@ build_zip() {
         --exclude="*/__pycache__/*" \
         --exclude="*.pyc" \
         --exclude="*.bak" \
-        --exclude="mas-engineer/.state/checkpoints/*" \
-        --exclude="mas-engineer/.state/workflow_runs/*" \
+        --exclude="mas-engineer/.mase/checkpoints/*" \
+        --exclude="mas-engineer/.mase/workflow_runs/*" \
         --exclude="mas-engineer/tools/dev_build.sh.v*" \
         --exclude="mas-engineer/dist/*" \
         --exclude="mas-engineer/recipe/sub/*.bak*" \
@@ -141,7 +141,7 @@ validate_zip() {
     # 8. MAS-State (Rulen)
     echo -n "MAS-State:      "
     local state_count
-    state_count=$(tar -tzf "$zip_path" 2>/dev/null | grep -c "mas-engineer/.state/rules/")
+    state_count=$(tar -tzf "$zip_path" 2>/dev/null | grep -c "mas-engineer/.mase/rules/")
     [ "$state_count" -ge 4 ] && ok "✅ ($state_count rules)" || { warn "❌ ($state_count)"; errors=$((errors + 1)); }
 
     echo ""

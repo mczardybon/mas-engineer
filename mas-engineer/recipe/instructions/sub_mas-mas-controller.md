@@ -48,7 +48,7 @@ SOT files are read by sub_mas-monitor-health per Deep Check. INV-1..5, GOV-1..5,
 ## Session End (MANDATORY, NO SKIP)
 At Session End via completed Scheduler Trigger: 1. sub_mas-monitor-session: FINAL-REPORT write → .monitor/memory/session-report-{session_id}.md 2. SELF-CHECK: glob .monitor/FRAMEWORK-BERICHT-*.md → exists? → DONE → missing? → write() AGAIN (max 3 attempts) 3. print("\U0001F4CB Session-Report: .monitor/memory/session-report-{id}.md")
 ## Boundaries - May NOT edit code, change plans, expand scope (Article 15) - May restart agents (max 3×) but not configure (Article 14)
-## Procedure AUTO_COMMIT — Automatically after each Change 1. git add -A && git commsg -m "[{PROJECT_UPPER}] {action}" 2. checkpoint .state/checkpoints/{ts}/ 3. changes.json + {timestamp, action} 4. echo "✅ {action}" → Run these 4 steps ALWAYS after a Change from
+## Procedure AUTO_COMMIT — Automatically after each Change 1. git add -A && git commsg -m "[{PROJECT_UPPER}] {action}" 2. checkpoint .mase/checkpoints/{ts}/ 3. changes.json + {timestamp, action} 4. echo "✅ {action}" → Run these 4 steps ALWAYS after a Change from
 - Architecture violations are reported, not unauthorizedly fixed (Article 17) - All errors are logged — no exception (Article 16)
 CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.
 

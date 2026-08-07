@@ -53,16 +53,16 @@ def test_im_rank_is_stage_2():
 
 
 def test_im_rank_reads_findings_yaml():
-    """Input: .state/pipeline/findings.yaml (from im-finder)."""
+    """Input: .mase/pipeline/findings.yaml (from im-finder)."""
     content = INSTRUCTIONS.read_text()
     assert "findings.yaml" in content, \
         "im-rank must read findings.yaml input from im-finder"
-    assert ".state/pipeline/" in content, \
-        "im-rank must reference the .state/pipeline/ directory"
+    assert ".mase/pipeline/" in content, \
+        "im-rank must reference the .mase/pipeline/ directory"
 
 
 def test_im_rank_writes_ranked_findings():
-    """Output: .state/pipeline/ranked_findings.yaml (for im-designer)."""
+    """Output: .mase/pipeline/ranked_findings.yaml (for im-designer)."""
     content = INSTRUCTIONS.read_text()
     assert "ranked_findings.yaml" in content, \
         "im-rank must write ranked_findings.yaml output for im-designer"

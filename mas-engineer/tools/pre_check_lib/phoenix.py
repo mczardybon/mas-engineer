@@ -19,7 +19,7 @@ from typing import Any, Dict, List
 
 DESCRIPTION = "Phoenix recovery workflow fixes (T1-T7, mirrors e2e-verify-phoenix-fixes)"
 
-WORKFLOWS_FILE = Path(".state/workflows.yaml")
+WORKFLOWS_FILE = Path(".mase/workflows.yaml")
 
 
 def _check_recovery_workflow(wf_name: str, step_keyword: str) -> Dict[str, Any]:
@@ -101,10 +101,10 @@ def run(workspace: Path) -> Dict[str, Any]:
     # Ensure we look in the workspace, not cwd
     os.chdir(workspace)
     global WORKFLOWS_FILE
-    WORKFLOWS_FILE = Path(".state/workflows.yaml").resolve()
+    WORKFLOWS_FILE = Path(".mase/workflows.yaml").resolve()
     if not WORKFLOWS_FILE.exists():
         # try absolute from workspace
-        WORKFLOWS_FILE = workspace / ".state" / "workflows.yaml"
+        WORKFLOWS_FILE = workspace / ".mase" / "workflows.yaml"
 
     start = time.time()
     checks: List[Dict[str, Any]] = []

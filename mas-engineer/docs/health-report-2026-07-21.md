@@ -36,13 +36,13 @@
 | 2026-07-21 ~ | `7df4152` | [FIX] sub_mas-self-auditor: honest output mode + correct load paths |
 | 2026-07-21 ~ | `edf5d58` | [EVIDENCE] mas-engineer self-improvement attempt — could not fix autonomously |
 | 2026-07-21 ~ | `c96881f` | [EVIDENCE] comprehensive e2e tests of mas-engineer functionality in goose CLI |
-| 2026-07-21 ~ | `dfecb86` | [CLEANUP] remove .state/pipeline/e2e-*.yaml (test artifacts) |
+| 2026-07-21 ~ | `dfecb86` | [CLEANUP] remove .mase/pipeline/e2e-*.yaml (test artifacts) |
 | 2026-07-21 ~ | `29f18f7` | [EVIDENCE] e2e-tests for sub_mas-self-auditor (verification-theater guard) |
 | 2026-07-21 ~ | `3e7b187` | [FEATURE] sub_mas-self-auditor — verification theater detector (53rd sub-agent) |
 | 2026-07-21 ~ | `17d58ef` | [CORRECTION] Honest scope of E2E-FIX-VERIFICATION (no overclaims) |
 | 2026-07-21 ~ | `b2f4a60` | [EVIDENCE+CERT] mas-engineer E2E-fix-verified + replayable certificate |
 
-> ⚠️ 2 untracked files: `mas-engineer/.state/cycle-log-20260721-1949.yaml` and `mas-engineer/.state/session-report-20260721-1949.yaml` (runtime-generated, expected)
+> ⚠️ 2 untracked files: `mas-engineer/.mase/cycle-log-20260721-1949.yaml` and `mas-engineer/.mase/session-report-20260721-1949.yaml` (runtime-generated, expected)
 
 ---
 
@@ -69,10 +69,10 @@
 
 | Metric | Value |
 |--------|-------|
-| **Total Entries** | N/A — `.state/changes.json` not found in workspace root |
-| **Current Tracking** | Session monitoring via `.state/` dashboard system |
+| **Total Entries** | N/A — `.mase/changes.json` not found in workspace root |
+| **Current Tracking** | Session monitoring via `.mase/` dashboard system |
 
-> ℹ️ The project now relies on the **monitor-session** system for change tracking. The session report at `mas-engineer/.state/session-report-20260721-1949.yaml` records 4 significant changes today.
+> ℹ️ The project now relies on the **monitor-session** system for change tracking. The session report at `mas-engineer/.mase/session-report-20260721-1949.yaml` records 4 significant changes today.
 
 **Latest Session Changes (from monitor-session):**
 
@@ -165,7 +165,7 @@ All 56 sub-recipes pass YAML validation. No issues detected.
 
 | Check | Status | Detail |
 |-------|--------|--------|
-| 1 — P1 Findings | ⚠️ WARN | No `.state/pipeline/findings.yaml` — run im-finder |
+| 1 — P1 Findings | ⚠️ WARN | No `.mase/pipeline/findings.yaml` — run im-finder |
 | 2 — Hardcoded Paths | ✅ PASS | No hardcoded `/home/<user>/` paths |
 | 3 — YAML Syntax | ✅ PASS | All recipe YAMLs parse correctly |
 | 4 — Python Compile | ✅ PASS | All dev_*.py compile without errors |
@@ -213,8 +213,8 @@ All 56 sub-recipes pass YAML validation. No issues detected.
 
 | Severity | Title | Description |
 |----------|-------|-------------|
-| P3 | **2 untracked runtime files** | `cycle-log-20260721-1949.yaml` and `session-report-20260721-1949.yaml` — consider adding `.state/` to `.gitignore` |
-| P3 | **Pre-push check 1 warnings** | Missing `findings.yaml` in `.state/pipeline/` — run `im-finder` before push for completeness |
+| P3 | **2 untracked runtime files** | `cycle-log-20260721-1949.yaml` and `session-report-20260721-1949.yaml` — consider adding `.mase/` to `.gitignore` |
+| P3 | **Pre-push check 1 warnings** | Missing `findings.yaml` in `.mase/pipeline/` — run `im-finder` before push for completeness |
 | P3 | **Pre-push check 7 warnings** | 3 modified instruction files — commit or stash before push |
 | P3 | **Self-fix attempt documented failure** | mas-engineer could not fix autonomously (edf5d58) — indicates gap in autonomous repair capability |
 

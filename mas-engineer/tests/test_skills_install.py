@@ -13,18 +13,18 @@ Design constraint (R110-133 strict):
   mas-engineer is hermes-agnostic. The repo must not hardcode any runtime
   path, must not read any environment variable, and must not mention the
   consuming runtime by name. The installer is a generic copy-utility: give
-  it a target directory as a CLI arg, it copies the repo's mas-state/skills/
+  it a target directory as a CLI arg, it copies the repo's .mase/skills/
   there. No env-vars. No runtime coupling.
 
 Contract:
-  - 18 mas-engineer-relevant skills must live in mas-state/skills/
+  - 18 mas-engineer-relevant skills must live in .mase/skills/
   - Each must have a SKILL.md
   - SKILLS-INDEX.md must enumerate all 18
   - 0 secrets in the bundled skills
   - 0 hardcoded user-specific paths in non-anti-pattern context
   - scripts/skills-install.sh must install the 18 skills to a user-supplied
     target path (CLI arg) idempotently
-  - Default target (no CLI arg) = repo's own mas-state/skills/ (no-op)
+  - Default target (no CLI arg) = repo's own .mase/skills/ (no-op)
   - No env-var reads in skills-install.sh
   - dev_install.sh and mas-reinstall.sh must delegate to skills-install.sh
   - User-installed non-mas-engineer skills in the target must be preserved
@@ -49,14 +49,14 @@ import pytest
 # ---------------------------------------------------------------------------
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SKILLS_SRC = REPO_ROOT / "mas-state" / "skills"
+SKILLS_SRC = REPO_ROOT / ".mase" / "skills"
 SKILLS_INSTALL_SH = REPO_ROOT / "scripts" / "skills-install.sh"
 DEV_INSTALL_SH = REPO_ROOT / "tools" / "dev_install.sh"
 MAS_REINSTALL_SH = REPO_ROOT / "scripts" / "mas-reinstall.sh"
 SKILLS_INDEX_MD = SKILLS_SRC / "SKILLS-INDEX.md"
 
 # The skills that mas-engineer requires to operate (per R110-133). This is
-# the source-of-truth list — the contents of mas-state/skills/ in the repo.
+# the source-of-truth list — the contents of .mase/skills/ in the repo.
 # The list is computed at test-collection time from the actual repo state,
 # not hardcoded here, so the test stays correct when skills are added/removed.
 # We return the SKILL-DIR relative paths, not the file paths, so callers can
@@ -88,7 +88,7 @@ FORBIDDEN_ENV_VARS = ["HERMES_HOME", "HERMES_SKILLS", "MAS_SKILLS_HOME"]
 
 
 # ---------------------------------------------------------------------------
-# Test 1: the 18 skills physically live in mas-state/skills/
+# Test 1: the 18 skills physically live in .mase/skills/
 # ---------------------------------------------------------------------------
 
 
@@ -230,7 +230,7 @@ def test_skills_install_preserves_user_installed_skills(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Test 7: default target (no CLI arg) = repo's own mas-state/skills/
+# Test 7: default target (no CLI arg) = repo's own .mase/skills/
 # ---------------------------------------------------------------------------
 
 

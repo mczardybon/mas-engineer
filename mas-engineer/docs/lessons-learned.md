@@ -123,7 +123,7 @@ cd ~/mas-engineer/mas-engineer
 goose run --recipe recipe/sub/sub_mas-pre-push-validator.yaml --no-session
 ```
 
-Read `.state/pipeline/pre_push_validation.yaml`. Status MUST be `ok`.
+Read `.mase/pipeline/pre_push_validation.yaml`. Status MUST be `ok`.
 If `blocked`: fix the blocked_reasons FIRST, then re-run.
 
 ### The 7 checks

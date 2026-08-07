@@ -59,9 +59,9 @@ def test_health_reporter_mentions_success_signal():
 
 
 def test_health_reporter_reads_state_dir():
-    """Health report must read from .state/ directory (R99 health-evidence pattern)."""
+    """Health report must read from .mase/ directory (R99 health-evidence pattern)."""
     content = INSTRUCTIONS.read_text()
-    assert ".state/" in content, "Health reporter must read from .state/ directory"
+    assert ".mase/" in content, "Health reporter must read from .mase/ directory"
 
 
 def test_health_reporter_mentions_recovery_system():

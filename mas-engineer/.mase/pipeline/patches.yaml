@@ -1,0 +1,109 @@
+stage: 3
+agent: im-designer
+timestamp: '2026-08-04T12:17:06.540457+00:00'
+request_id: c11373b4-3fbd-40a7-a08f-22ee79115fd8
+from: im-designer
+to: sub_mas-im-validator
+status: success
+input_file: .mase/pipeline/ranked_findings.yaml
+data:
+  patches: []
+  skipped:
+  - finding_id: F-001
+    type: NN1
+    reason: "R52 NN1 preconditions: #1 FAIL (instructions block ~8L < 200-line threshold);\
+      \ #2 PASS (skip_recently_split.yaml absent); #3 FAIL (no flagged_by: intention-parser\
+      \ / already_split: false in findings.yaml). verified_note: dev-mas-engineer-30agents\
+      \ is an E2E demo recipe that BUILDS a 30-agent MAS (6 teams, master orchestrator\
+      \ routes tasks) \u2014 it IS the orchestrator; splitting breaks the demo."
+    why_skipped: by-design E2E multi-arch orchestrator (demo)
+  - finding_id: F-002
+    type: NN1
+    reason: "R52 preconditions: #3 FAIL (no flagged_by/already_split metadata). verified_note:\
+      \ static-analyzer.yaml carries architecture_split: 'orchestrator + 3 sub-agents:\
+      \ sub_mas-static-analyzer-syntax-checker/lint-scanner/type-checker' \u2014 ALREADY\
+      \ SPLIT by design."
+    why_skipped: already_split (architecture_split metadata present)
+  - finding_id: F-003
+    type: NN1
+    reason: "R52 preconditions: #1 FAIL (60L total); #3 FAIL. verified_note: sub_mas-test-director\
+      \ title reads 'Test Orchestrator (NN1 Enhanced)' \u2014 delegation map + sub_recipes\
+      \ (sub_mas-test-executor, sub_mas-test-reporter): '7 roles split into 4 focused\
+      \ subs' already done."
+    why_skipped: already_split orchestrator (NN1 Enhanced)
+  - finding_id: F-004
+    type: NN1
+    reason: "R52 precondition #1 FAIL: instructions 88L (< 200). verified_note: sub_mas-recovery-immune\
+      \ is a single-purpose leaf (CORONASHIELD R10 YAML validation) \u2014 no distinct\
+      \ roles to split."
+    why_skipped: micro-split guard (88L < 200)
+  - finding_id: F-005
+    type: NN1
+    reason: "R52 preconditions: #1 FAIL (66L total); #3 FAIL. verified_note: sub_mas-dev-director\
+      \ is the orchestrator of the dev team \u2014 delegation map to sub_mas-dev-analyzer/builder/observer/tester\
+      \ (all present on disk). Already split."
+    why_skipped: already_split orchestrator
+  - finding_id: F-006
+    type: NN1
+    reason: 'R52 precondition #1 FAIL: 65L total, instructions outsourced (8L). Micro-split
+      of a 65-line leaf agent = anti-pattern (R98).'
+    why_skipped: micro-split guard (<200)
+  - finding_id: F-007
+    type: NN1
+    reason: 'R52 precondition #1 FAIL: instructions 90L (< 200). Single domain (session
+      analysis); role-verbs are workflow sub-steps, not distinct roles.'
+    why_skipped: micro-split guard (<200)
+  - finding_id: F-008
+    type: NN1
+    reason: "R04/R08: NEVER edit sub_mas-general-improver.yaml (no recursion). verified_note:\
+      \ it IS the master pipeline orchestrator (routes find\u2192rank\u2192design\u2192\
+      validate\u2192apply). Splitting = recursion."
+    why_skipped: R04 protected + already master orchestrator
+  - finding_id: F-009
+    type: NN1
+    reason: "R52 preconditions: #1 FAIL (62L total); #3 FAIL. verified_note: sub_mas-test-fix-failures-director\
+      \ is an orchestrator \u2014 'You are the orchestrator... Delegate to specialized\
+      \ sub-agents' with sub_recipes (finder, ranker)."
+    why_skipped: already_split orchestrator
+  - finding_id: F-010
+    type: NN1
+    reason: 'R52 precondition #1 FAIL: 68L total, instructions 21L (< 200). Leaf agent
+      (team packaging).'
+    why_skipped: micro-split guard (<200)
+  - finding_id: F-011
+    type: NN1
+    reason: 'R52 precondition #1 FAIL: instructions 13L (outsourced to recipe/instructions/sub_mas-intention-parser.md);
+      file bulk is the patterns: list. Already delegates via sub_recipes (sub_mas-generic-init,
+      sub_mas-team-packager) + generator call.'
+    why_skipped: micro-split guard (<200) + already delegating
+  - finding_id: F-012
+    type: NN1
+    reason: 'R52 precondition #1 FAIL: 63L total, instructions 6L (outsourced). Degradation
+      domain already split: sub_mas-degradation-director + analyzer/planner/reporter
+      exist on disk.'
+    why_skipped: micro-split guard (<200) + domain already split
+  - finding_id: F-013
+    type: NN1
+    reason: "R52 preconditions: #1 FAIL (60L total); #3 FAIL. verified_note: security-scanner.yaml\
+      \ is 'SECURITY-SCANNER-DIRECTOR \u2014 Security Operations Orchestrator' with\
+      \ delegation map + sub_recipes (sub_mas-security-sqli/secrets/deserialize/cmd-injection-scanner).\
+      \ Already split."
+    why_skipped: already_split orchestrator
+  - finding_id: F-014
+    type: NN1
+    reason: "R52 precondition #1 borderline PASS (instructions 201L) but #3 FAIL (no\
+      \ flagged_by/already_split=false metadata). verified_note: sub_mas-git-operator\
+      \ is a single-domain leaf (git v2.0.0 clean-commit); the 7 detected role-verbs\
+      \ (validate/report/design/find/read) are sub-steps of git ops (validate YAML,\
+      \ report status, design commit msg, find files, read log) \u2014 not distinct\
+      \ roles. Split would create N micro-agents duplicating the 201-line workflow\
+      \ (R98 anti-pattern: '5+ role-verbs is normal for small focused agents')."
+    why_skipped: "false positive \u2014 single-domain leaf, role-verbs = workflow\
+      \ sub-steps"
+  summary: "0 patches designed, 14 findings skipped (all NN1). All 14 verified as\
+    \ either already-split orchestrators (F-001/002/003/005/008/009/013), micro-split\
+    \ guard failures <200 instruction lines (F-004/006/007/010/011/012), or single-domain\
+    \ leaf false positives (F-014). R52 NN1 precondition #3 (flagged_by: intention-parser\
+    \ OR already_split: false in findings.yaml) fails for ALL 14 (no such metadata\
+    \ this round). goose-expert: 0 consulted \u2014 NN1 not in mandatory prefix list\
+    \ (A/B/D/MM/JJ/S/HH/LL); no patches designed."

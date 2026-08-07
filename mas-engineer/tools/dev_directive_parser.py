@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""R110-115 DIREKTIVE 1: parse .directives/R<NR>-<topic>.md into JSON.
+"""R110-115 DIREKTIVE 1: parse .mase/directives/R<NR>-<topic>.md into JSON.
 
 Usage:
     python3 tools/dev_directive_parser.py <directive_path> [--json]

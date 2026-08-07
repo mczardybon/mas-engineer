@@ -64,9 +64,9 @@ python3 ~/.config/goose/recipes/tools/dev_generic_init.py \
 
 This creates:
 - /tmp/research-team/recipe/ (empty)
-- /tmp/research-team/.mas/dashboards/data.json (initial)
-- /tmp/research-team/.mas/mcp/ (empty)
-- /tmp/research-team/.state/ (empty)
+- /tmp/research-team/.mase/dashboards/data.json (initial)
+- /tmp/research-team/.mase/mcp/ (empty)
+- /tmp/research-team/.mase/ (empty)
 
 ### Step 3: Create 5 interconnected agents
 
@@ -106,13 +106,13 @@ Create these files in /tmp/research-team/recipe/ and recipe/sub/:
 
 ```bash
 # Copy MCP server from mas-engineer
-cp /tmp/mas-engineer/mas-engineer/.mas/mcp/server.js /tmp/research-team/.mas/mcp/
-cp /tmp/mas-engineer/mas-engineer/.mas/mcp/package.json /tmp/research-team/.mas/mcp/
-cp /tmp/mas-engineer/mas-engineer/.mas/mcp/dashboard.html /tmp/research-team/.mas/mcp/
-cp /tmp/mas-engineer/mas-engineer/.mas/mcp/mas-dispatch-monitor.html /tmp/research-team/.mas/mcp/
+cp /tmp/mas-engineer/mas-engineer/.mase/mcp/server.js /tmp/research-team/.mase/mcp/
+cp /tmp/mas-engineer/mas-engineer/.mase/mcp/package.json /tmp/research-team/.mase/mcp/
+cp /tmp/mas-engineer/mas-engineer/.mase/mcp/dashboard.html /tmp/research-team/.mase/mcp/
+cp /tmp/mas-engineer/mas-engineer/.mase/mcp/mas-dispatch-monitor.html /tmp/research-team/.mase/mcp/
 
 # Install dependencies
-cd /tmp/research-team/.mas/mcp && npm install
+cd /tmp/research-team/.mase/mcp && npm install
 
 # First data refresh
 python3 ~/.config/goose/recipes/tools/dev_dashboard_data.py /tmp/research-team
@@ -126,7 +126,7 @@ framework-dashboard:
   name: framework-dashboard
   enabled: true
   cmd: node
-  args: ["/tmp/research-team/.mas/mcp/server.js"]
+  args: ["/tmp/research-team/.mase/mcp/server.js"]
   description: "Research Team Dashboard MCP App"
   timeout: 300
 ```
@@ -148,19 +148,19 @@ python3 -c "import yaml; [yaml.safe_load(open(f)) for f in [
     '/tmp/research-team/recipe/sub/source-verifier.yaml',
     '/tmp/research-team/recipe/sub/fact-extractor.yaml',
     '/tmp/research-team/recipe/sub/synthesizer.yaml',
-    '/tmp/research-team/.mas/dashboards/data.json' if false else '/dev/null'
+    '/tmp/research-team/.mase/dashboards/data.json' if false else '/dev/null'
 ]]"
 # Note: yaml.safe_load data.json, not needed. Use:
-python3 -c "import json; json.load(open('/tmp/research-team/.mas/dashboards/data.json'))"
+python3 -c "import json; json.load(open('/tmp/research-team/.mase/dashboards/data.json'))"
 
 # Test 12: data.json exists with all 12 keys
-python3 -c "import json; d=json.load(open('/tmp/research-team/.mas/dashboards/data.json')); required=['version','timestamp','workspace','mode','project_name','agents','changes','improvement','dispatch','build','health','health_trend']; missing=[k for k in required if k not in d]; assert not missing, f'missing: {missing}'"
+python3 -c "import json; d=json.load(open('/tmp/research-team/.mase/dashboards/data.json')); required=['version','timestamp','workspace','mode','project_name','agents','changes','improvement','dispatch','build','health','health_trend']; missing=[k for k in required if k not in d]; assert not missing, f'missing: {missing}'"
 
 # Test 13: agents.total = 5
-python3 -c "import json; d=json.load(open('/tmp/research-team/.mas/dashboards/data.json')); assert d['agents']['total']==5, f\"expected 5, got {d['agents']['total']}\""
+python3 -c "import json; d=json.load(open('/tmp/research-team/.mase/dashboards/data.json')); assert d['agents']['total']==5, f\"expected 5, got {d['agents']['total']}\""
 
 # Test 14: project_name = research-team
-python3 -c "import json; d=json.load(open('/tmp/research-team/.mas/dashboards/data.json')); assert d['project_name']=='research-team', f\"expected research-team, got {d['project_name']}\""
+python3 -c "import json; d=json.load(open('/tmp/research-team/.mase/dashboards/data.json')); assert d['project_name']=='research-team', f\"expected research-team, got {d['project_name']}\""
 ```
 
 Each test should print "Loading recipe" (for goose --explain) or "PASS"
@@ -179,7 +179,7 @@ Output a markdown report with:
 - Next steps for the User:
   - "cd /tmp/research-team and run: goose session"
   - "Or: cat <<EOF | goose run --no-session -i -" with a sample query
-  - "Or: open the dashboard in your browser: file:///tmp/research-team/.mas/mcp/dashboard.html"
+  - "Or: open the dashboard in your browser: file:///tmp/research-team/.mase/mcp/dashboard.html"
 
 ## Pitfalls
 

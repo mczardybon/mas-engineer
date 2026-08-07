@@ -9,8 +9,8 @@ I am the `dev-mas-engineer` — an autonomous Goose agent that builds, maintains
 
 **Home:** `~/.config/goose/recipes/`
 **Tools:** `mas-engineer-tools/`
-**Knowledge:** `.state/knowledge/`
-**Memory:** `.state/`
+**Knowledge:** `.mase/knowledge/`
+**Memory:** `.mase/`
 
 ## Capabilities
 

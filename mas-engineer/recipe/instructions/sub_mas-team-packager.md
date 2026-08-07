@@ -24,7 +24,7 @@ dev-team/
 │   │   ├── sub_mas-dev-tester.yaml
 │   │   └── ... (one per agent)
 │   └── sub_mas-master-constitution.yaml
-├── .state/
+├── .mase/
 │   ├── workflows.yaml                  # team-local SOT
 │   └── knowledge/
 │       ├── 01-rules.md                 # R01, R09, R10 (minimum)
@@ -56,7 +56,7 @@ of MAS-Engineer. The directory contains everything the team needs:
 
 - Its own root recipe.
 - Its own sub-agents.
-- Its own SOT (`.state/workflows.yaml`).
+- Its own SOT (`.mase/workflows.yaml`).
 - Its own minimum knowledge base.
 - Install and uninstall scripts.
 
@@ -122,7 +122,7 @@ Create `{output_path}/{team_name}/recipe/{team_name}-root.yaml`.
 This file MUST NOT reference:
 
 - `~/.config/goose/recipes/mas-engineer/`
-- `.state/knowledge/` (other than the team-local one)
+- `.mase/knowledge/` (other than the team-local one)
 - `tools/dev_rule_checker.py`
 - `sub_mas-master-constitution.yaml` (use a self-contained constitution instead)
 - `sub_mas-general-improver.yaml` (NEVER edit / never reference)
@@ -142,13 +142,13 @@ For each path in sub_recipes, copy the file to
 `{output_path}/{team_name}/recipe/sub/`. Keep the original filename.
 
 If a sub-agent YAML references MAS-Engineer-specific paths
-(`.state/knowledge/05-rules.md`, `tools/dev_rule_checker.py`), warn the
+(`.mase/knowledge/05-rules.md`, `tools/dev_rule_checker.py`), warn the
 user but do not modify the file. The warning is logged in the output
 summary.
 
 ## STEP 5 — CREATE TEAM-LOCAL SOT
 
-Create `{output_path}/{team_name}/.state/workflows.yaml`:
+Create `{output_path}/{team_name}/.mase/workflows.yaml`:
 
 ```yaml
 version: 1.0.0
@@ -271,7 +271,7 @@ fi
 # Create directories
 mkdir -p "$GOOSE_RECIPES"
 mkdir -p "$GOOSE_SUB"
-mkdir -p "$GOOSE_RECIPES/.state/knowledge"
+mkdir -p "$GOOSE_RECIPES/.mase/knowledge"
 
 # Copy root recipe
 cp "$TEAM_DIR/recipe/$TEAM_NAME-root.yaml" "$GOOSE_RECIPES/"
@@ -281,10 +281,10 @@ cp "$TEAM_DIR/recipe/sub/"*.yaml "$GOOSE_SUB/"
 
 # Copy team SOT
 mkdir -p "$GOOSE_RECIPES/.state"
-cp "$TEAM_DIR/.state/workflows.yaml" "$GOOSE_RECIPES/.state/"
+cp "$TEAM_DIR/.mase/workflows.yaml" "$GOOSE_RECIPES/.mase/"
 
 # Copy knowledge base
-cp "$TEAM_DIR/.state/knowledge/"*.md "$GOOSE_RECIPES/.state/knowledge/"
+cp "$TEAM_DIR/.mase/knowledge/"*.md "$GOOSE_RECIPES/.mase/knowledge/"
 
 # Set mode
 echo "$TEAM_NAME" > "$GOOSE_RECIPES/.mas-mode"

@@ -41,7 +41,7 @@ Invariant-check:
         emit_finding(code=f"INVARIANT-{type}", severity=BLOCKER,
                      description=..., suggested_fix=...)
 
-Spec: .directives/R110-118-self-audit-implementation.md DIREKTIVE 2.
+Spec: .mase/directives/R110-118-self-audit-implementation.md DIREKTIVE 2.
 """
 
 import argparse

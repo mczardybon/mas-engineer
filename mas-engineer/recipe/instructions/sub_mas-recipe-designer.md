@@ -18,8 +18,8 @@ NOT responsible for existing agents or tools.
 ## SOURCES
 - Template: recipe/template/agent_template.yaml
 - Existing agents as model: recipe/sub/sub_mas-*.yaml
-- SOT schema: .state/sot_schema.yaml
-- Workflow model: .state/workflows.yaml (existing workflows)
+- SOT schema: .mase/sot_schema.yaml
+- Workflow model: .mase/workflows.yaml (existing workflows)
 
 ## TOOLS
 ✅ HAS: write (create new .yaml file)
@@ -82,7 +82,7 @@ agent_intake:
    desc: {task} description
    steps: simple shell step with echo
 2. Insert BEFORE the last empty entry in workflows.yaml
-3. python3 -c "import yaml; yaml.safe_load(open('.state/workflows.yaml'))" → validate
+3. python3 -c "import yaml; yaml.safe_load(open('.mase/workflows.yaml'))" → validate
 
 ### SOT — Extend SOT structure
 1. Add agents: entry in workflows.yaml:
