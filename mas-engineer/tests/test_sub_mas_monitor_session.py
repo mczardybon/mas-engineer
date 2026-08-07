@@ -1,7 +1,7 @@
 """
 test_sub_mas_monitor_session.py — sanity tests for monitor-session (R85).
 
-Monitor-session writes cycle logs to .state/logs/cycle-{YYYY-MM-DD}.log.
+Monitor-session writes cycle logs to .mase/logs/cycle-{YYYY-MM-DD}.log.
 R85 Phase 2 refactor: thin wrapper around tools/dev_health_monitor.py
 LOG_SESSION subcommand.
 
@@ -60,10 +60,10 @@ def test_monitor_session_tool_imports_correctly():
 
 
 def test_monitor_session_writes_cycle_log():
-    """Spec: appends JSON line to .state/logs/cycle-{YYYY-MM-DD}.log."""
+    """Spec: appends JSON line to .mase/logs/cycle-{YYYY-MM-DD}.log."""
     content = RECIPE.read_text()
-    assert ".state/logs/" in content, \
-        "monitor-session must write to .state/logs/ directory"
+    assert ".mase/logs/" in content, \
+        "monitor-session must write to .mase/logs/ directory"
     assert "cycle-" in content, "monitor-session must use cycle-{date}.log naming"
     assert "JSON" in content, "monitor-session must write JSON lines"
 

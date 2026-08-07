@@ -32,7 +32,7 @@ REPO_ROOT = _Path(__file__).parent.parent.resolve()
 LOGS_ROOT = REPO_ROOT.parent / "logs"
 RECIPE_DIR = REPO_ROOT / "recipe"
 INSTRUCTIONS_DIR = RECIPE_DIR / "instructions"
-SKILLS_DIR = REPO_ROOT / "mas-state" / "skills"
+SKILLS_DIR = REPO_ROOT / ".mase" / "skills"
 E2E_RESULTS_DIR = LOGS_ROOT / "e2e-results"
 EVIDENCE_DIRS = [E2E_RESULTS_DIR]  # R110-74a gitignored
 

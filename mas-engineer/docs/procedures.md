@@ -57,7 +57,7 @@ Before every step:
 ## Recovery System (5 stages)
 
 1. **Immune** — YAML/Python/Shell syntax check before every change
-2. **Checkpoint** — Git-like snapshots in `.state/checkpoints/`
+2. **Checkpoint** — Git-like snapshots in `.mase/checkpoints/`
 3. **Safezone** — Fork workspace (parallel work, merge only after validation)
 4. **Timeline** — Automatic best checkpoint finder + restore
 5. **Defib** — Emergency revival (minimal config: immune + timeline only)

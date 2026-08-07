@@ -10,8 +10,8 @@ Usage:
     mas_cost --breakdown                 # show top-N most expensive sessions
     mas_cost --check                     # exit 0 if ok, exit 1 if exceeded (for scripts)
 
-Configuration: reads/writes .mas/config/cost.yaml
-Data source: mas-engineer/.mas/data/goose/sessions.db (per cost.yaml)
+Configuration: reads/writes .mase/config/cost.yaml
+Data source: mas-engineer/.mase/data/goose/sessions.db (per cost.yaml)
 """
 import argparse
 import os
@@ -33,7 +33,7 @@ DEFAULT_COST_CONFIG = {
     "per_session_max_usd": 0.50,
     "gate": {"daily": "block", "per_run": "block", "per_session": "warn"},
     "cost_source": {
-        "db_path": "mas-engineer/.mas/data/goose/sessions.db",
+        "db_path": "mas-engineer/.mase/data/goose/sessions.db",
         "table": "sessions",
         "cost_column": "accumulated_cost",
         "timestamp_column": "created_at",
@@ -43,7 +43,7 @@ DEFAULT_COST_CONFIG = {
 
 
 def load_config(workspace: Path) -> dict:
-    cfg_path = workspace / ".mas" / "config" / "cost.yaml"
+    cfg_path = workspace / ".mase" / "config" / "cost.yaml"
     if not cfg_path.exists():
         return DEFAULT_COST_CONFIG
     try:
@@ -59,7 +59,7 @@ def load_config(workspace: Path) -> dict:
 
 
 def save_config(workspace: Path, config: dict) -> None:
-    cfg_path = workspace / ".mas" / "config" / "cost.yaml"
+    cfg_path = workspace / ".mase" / "config" / "cost.yaml"
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     cfg_path.write_text(yaml.safe_dump(config, sort_keys=False))
 
@@ -67,7 +67,7 @@ def save_config(workspace: Path, config: dict) -> None:
 def get_cost_data(workspace: Path, config: dict) -> dict:
     """Read cost data from sqlite db. Returns dict with totals + session list."""
     src = config.get("cost_source", {})
-    db_path = workspace / src.get("db_path", "mas-engineer/.mas/data/goose/sessions.db")
+    db_path = workspace / src.get("db_path", "mas-engineer/.mase/data/goose/sessions.db")
     if not db_path.exists():
         return {"cost_today": 0.0, "session_count": 0, "sessions": [], "db_missing": True}
 
@@ -201,7 +201,7 @@ def cmd_set(args, workspace: Path) -> int:
     else:
         cfg[key] = val
     save_config(workspace, cfg)
-    print(f"✓ Set {key} = {val} in {workspace}/.mas/config/cost.yaml")
+    print(f"✓ Set {key} = {val} in {workspace}/.mase/config/cost.yaml")
     return 0
 
 
@@ -257,7 +257,7 @@ def main() -> int:
 
     args = ap.parse_args()
     workspace = Path(args.workspace).resolve()
-    if not (workspace / ".mas" / "config" / "cost.yaml").exists() and not (workspace / "tools" / "dev_recursion_override.py").exists():
+    if not (workspace / ".mase" / "config" / "cost.yaml").exists() and not (workspace / "tools" / "dev_recursion_override.py").exists():
         # Try as parent (in case cwd is mas-engineer/)
         if (workspace / "mas-engineer" / "tools" / "dev_recursion_override.py").exists():
             workspace = workspace / "mas-engineer"

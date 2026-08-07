@@ -171,7 +171,7 @@ def estimate_llm_cost_savings(benchmarks: dict) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Pre-check layer benchmark")
     parser.add_argument("--verbose", action="store_true", help="Verbose output")
-    parser.add_argument("--save-report", action="store_true", help="Save report to .state/")
+    parser.add_argument("--save-report", action="store_true", help="Save report to .mase/")
     args = parser.parse_args()
 
     print("=" * 70)
@@ -225,7 +225,7 @@ def main() -> int:
 
     # Save report
     if args.save_report:
-        report_dir = WORKSPACE / ".state" / "pre_check_benchmark"
+        report_dir = WORKSPACE / ".mase" / "pre_check_benchmark"
         report_dir.mkdir(parents=True, exist_ok=True)
         report_file = report_dir / f"benchmark-{time.strftime('%Y%m%d_%H%M%S')}.json"
         report = {

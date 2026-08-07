@@ -3,9 +3,9 @@
 dev_template_generator.py v2.0.0 — Generates & refreshed Agent-YAMLs aus SOT + Best-Practices + Improvement-Plan
 
 Sources:
-  1. .state/workflows.yaml → configs.mas-self (restrictions, enforcement, recovery, signals)
-  2. .state/best-practices.yaml → 27 auto_apply Rulen
-  3. .state/improvement-plan.json → open improvements
+  1. .mase/workflows.yaml → configs.mas-self (restrictions, enforcement, recovery, signals)
+  2. .mase/best-practices.yaml → 27 auto_apply Rulen
+  3. .mase/improvement-plan.json → open improvements
   4. recipe/template/agent_template.yaml → Reaelseruktur
 
 Modes:
@@ -100,21 +100,21 @@ def load_all_sources(workspace: str) -> Dict:
     base = workspace or os.getcwd()
     
     # SOT
-    raw_sot = load_yaml(os.path.join(base, ".state/workflows.yaml"))
+    raw_sot = load_yaml(os.path.join(base, ".mase/workflows.yaml"))
     sot = raw_sot.get("configs", {}).get("mas-self", {})
     
     # Best-Practices
-    bp = load_yaml(os.path.join(base, ".state/best-practices.yaml"))
+    bp = load_yaml(os.path.join(base, ".mase/best-practices.yaml"))
     
     # Improvement-Plan
-    improvement = load_json(os.path.join(base, ".state/improvement-plan.json"))
+    improvement = load_json(os.path.join(base, ".mase/improvement-plan.json"))
     plan_items = improvement.get("plan", []) if isinstance(improvement, dict) else []
     
     # Template
     template = load_text(os.path.join(base, "recipe/template/agent_template.yaml"))
     
     # Schema
-    schema = load_yaml(os.path.join(base, ".state/templates/agent_schema.yaml"))
+    schema = load_yaml(os.path.join(base, ".mase/templates/agent_schema.yaml"))
     
     sources = {
         "sot": sot,
@@ -422,7 +422,7 @@ def build_yaml(filled: str, rules: Dict, name: str, emoji: str, task: str) -> Di
 
 def _update_changes_json(workspace: str, action: str, description: str):
     """Fuegt a entry in changes.json hinzu."""
-    changes_path = os.path.join(workspace, ".state/changes.json")
+    changes_path = os.path.join(workspace, ".mase/changes.json")
     entry = {
         "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
         "action": action,
@@ -445,7 +445,7 @@ def _update_changes_json(workspace: str, action: str, description: str):
 
 def _add_sot_entry(workspace: str, name: str, task: str):
     """Fuegt Agent-entry in workflows.yaml → agents hinzu."""
-    wf_path = os.path.join(workspace, ".state/workflows.yaml")
+    wf_path = os.path.join(workspace, ".mase/workflows.yaml")
     if not os.path.exists(wf_path):
         print(f"  ⚠️  SOT not found: {wf_path}")
         return False
@@ -523,7 +523,7 @@ def write_agent(yaml_data: Dict, name: str, agent_type: str, workspace: str, no_
     
     # Backup falls present
     if os.path.exists(out_path):
-        backup_dir = os.path.join(base, ".state/backups")
+        backup_dir = os.path.join(base, ".mase/backups")
         os.makedirs(backup_dir, exist_ok=True)
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_path = os.path.join(backup_dir, f"{ts}_{agent_key}.yaml")
@@ -700,7 +700,7 @@ def refresh_agent(agent_name: str, dry_run: bool, workspace: str, sources: Optio
                 agent_data["settings"]["max_steps"] = DEFAULT_MAX_STEPS
         
         # Backup + Write
-        backup_path = os.path.join(base, ".state/backups", f"pre_refresh_{agent_name}.yaml")
+        backup_path = os.path.join(base, ".mase/backups", f"pre_refresh_{agent_name}.yaml")
         os.makedirs(os.path.dirname(backup_path), exist_ok=True)
         try:
             with open(agent_path) as f_src, open(backup_path, "w") as f_dst:

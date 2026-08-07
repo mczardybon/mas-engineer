@@ -36,7 +36,7 @@ guardian_intake:
     degraded_agents: [agent_names]
     to: "sub_mas-degradation-handler"
   HEALTH_REPORT|DRIFT_LOG|CONTEXT_DRIFT"
-  state_path: "{workspace}/.state/guardian.yaml"
+  state_path: "{workspace}/.mase/guardian.yaml"
   # Only at CHECK: the last sub-agent result
   last_result:
     agent: "sub_{project}-test-runner"  # MODE-DEPENDENT
@@ -132,7 +132,7 @@ guardian_intake:
 
 IF the intake additionally for_general_improver=true contains:
 5. CORRELATION WITH changes.json:
-   READ {workspace}/.state/changes.json
+   READ {workspace}/.mase/changes.json
    For EACH drift in drift_log:
      Search change in changes with timestamp ≈ drift.timestamp
      IF match: "Change {id} ({file}) correlates with {N} drifts"

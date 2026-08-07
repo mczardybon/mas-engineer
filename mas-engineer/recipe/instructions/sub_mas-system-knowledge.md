@@ -112,7 +112,7 @@ This keeps the framework always up-to-date.
 
 ## RECOVERY SYSTEM (5 stages, always available)
 1. IMMUNE: YAML-Prevention (Coronashield)
-2. CHECKPOINT: Git-similar Snapshots in .state/checkpoints/
+2. CHECKPOINT: Git-similar Snapshots in .mase/checkpoints/
 3. SAFEZONE: Fork-Workspace (work in parallel)
 4. TIMELINE: Automatically find best checkpoint
 5. DEFIB: Emergency-Resuscitation (Minimal-Configuration)
@@ -140,7 +140,7 @@ Installation targets:
 /status               → Show status
 /changes              → Last Changes
 
-Detailed knowledge in .state/knowledge/:
+Detailed knowledge in .mase/knowledge/:
 01-architecture.md   → Complete Architecture
 02-communication.md  → Communication flow + Signals
 03-installation.md   → ZIP structure + Target locations

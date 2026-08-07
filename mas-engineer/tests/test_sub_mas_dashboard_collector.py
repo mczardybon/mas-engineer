@@ -78,7 +78,7 @@ def test_dashboard_collector_r01_r09_r10():
 
 
 def test_dashboard_collector_output_path():
-    """Spec: writes to {workspace}/.mas/dashboards/data.json."""
+    """Spec: writes to {workspace}/.mase/dashboards/data.json."""
     content = RECIPE.read_text()
-    assert ".mas/dashboards" in content or "data.json" in content, \
+    assert ".mase/dashboards" in content or "data.json" in content, \
         "dashboard-collector must declare output path"

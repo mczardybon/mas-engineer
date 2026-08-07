@@ -31,7 +31,7 @@ Die ursprüngliche aufgabenstellung "obsoleszenz-analyse → cleanup" hat sich n
 > "Diese 2 files haben 0 hard-refs, sind 100% redundanz, können gelöscht werden."
 
 **Was tatsächlich wahr war:**
-- `sub_mas-framework-scanner.yaml` ist in 77+ files referenziert: `.state/workflows.yaml` (als eigener workflow-block), tests, tools, coverage-logs
+- `sub_mas-framework-scanner.yaml` ist in 77+ files referenziert: `.mase/workflows.yaml` (als eigener workflow-block), tests, tools, coverage-logs
 - 269 runtime-calls in 167 e2e-logs der letzten 14 tage
 - Es ist der **system-canon name**, nicht ein orphan-duplikat
 
@@ -77,7 +77,7 @@ Die ursprüngliche aufgabenstellung "obsoleszenz-analyse → cleanup" hat sich n
 ## 2. DIE 3 FALSCHEN ANNAHMEN — und was ich daraus lerne
 
 ### Fallacy 1: "0 hard-refs in recipe/" = "0 hard-refs im system"
-- **Falsch.** Repo hat 5 schichten die unabhängig referenzieren: `recipe/`, `.state/`, `tools/`, `tests/`, `scripts/`
+- **Falsch.** Repo hat 5 schichten die unabhängig referenzieren: `recipe/`, `.mase/`, `tools/`, `tests/`, `scripts/`
 - **Lerne:** Jede schicht prüfen, plus path-based grep
 
 ### Fallacy 2: "0 runtime-calls in e2e-logs" = "obsolet"
@@ -116,7 +116,7 @@ Die ursprüngliche aufgabenstellung "obsoleszenz-analyse → cleanup" hat sich n
 
 **File-stat der 3 commits:** `docs/obsolescence-report-2026-07-27.md` 165 insertions, 0 deletions in echten files.
 
-**Working-tree status:** 4 modifizierte `.state/` files (patches.yaml, pre-push-e2e-baseline.json, pre-push-test-coverage.json, todo.md) + mehrere untracked backup-files in `.state/pipeline/backup/`. **Diese habe ich nicht angefasst** — sie sind von vorherigen runs und gehören nicht zu meiner aufgabe.
+**Working-tree status:** 4 modifizierte `.mase/` files (patches.yaml, pre-push-e2e-baseline.json, pre-push-test-coverage.json, todo.md) + mehrere untracked backup-files in `.mase/pipeline/backup/`. **Diese habe ich nicht angefasst** — sie sind von vorherigen runs und gehören nicht zu meiner aufgabe.
 
 **Empfehlung:** 
 - **Option A (bevorzugt):** Branch pushen und PR/merge zurück zu `Dev` als documentation — beweis dass 0 cleanup nötig
@@ -129,7 +129,7 @@ Die ursprüngliche aufgabenstellung "obsoleszenz-analyse → cleanup" hat sich n
 **Finale korrekte heuristic:**
 
 Ein agent ist ein obsolet-kandidat wenn ALLE drei bedingungen zutreffen:
-1. **0 active-refs** in `.state/workflows.yaml`, `tools/*.py`, `tests/*.py`, `.md` documentation, `docs/`
+1. **0 active-refs** in `.mase/workflows.yaml`, `tools/*.py`, `tests/*.py`, `.md` documentation, `docs/`
 2. **0 archetype-funktion** — keine referenz in `prompts/{name}.txt`, `recipe/sub/demo-team/*`, `scripts/{name}*.sh`
 3. **Keine pytest hardcoded-asserts** die den namen oder `.md` pendant erwarten
 

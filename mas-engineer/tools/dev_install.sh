@@ -20,8 +20,8 @@ echo "   ✅ CLI tools OK (node=$(node --version), python3=$(python3 --version |
 
 # ─── 2. State directories ───
 echo "📁 Step 2/7: Create state directories..."
-mkdir -p "$MAS_WORKSPACE/.state/dispatch"
-mkdir -p "$MAS_WORKSPACE/.state/checkpoints"
+mkdir -p "$MAS_WORKSPACE/.mase/dispatch"
+mkdir -p "$MAS_WORKSPACE/.mase/checkpoints"
 echo "   ✅ Directories OK"
 
 # ─── 2.5. Install Goose recipes (CRITICAL: without this, no recipe can be invoked) ───
@@ -99,17 +99,17 @@ fi
 
 # ─── 3. Start dashboard MCP server (stdio-based) ───
 echo "🖥️  Step 3/7: Start dashboard MCP server (stdio)..."
-DASHBOARD_PID_FILE="$MAS_WORKSPACE/.mas/dashboard.pid"
+DASHBOARD_PID_FILE="$MAS_WORKSPACE/.mase/dashboard.pid"
 if [ -f "$DASHBOARD_PID_FILE" ] && kill -0 $(cat "$DASHBOARD_PID_FILE") 2>/dev/null; then
     echo "   ✅ Dashboard server already running (PID $(cat $DASHBOARD_PID_FILE))"
 else
-    cd "$MAS_WORKSPACE/.mas/mcp"
+    cd "$MAS_WORKSPACE/.mase/mcp"
     if [ ! -d "node_modules" ]; then
         echo "   📦 Installing dashboard npm dependencies..."
         npm install --silent 2>/dev/null || { echo "   ❌ npm install failed"; exit 1; }
     fi
     MAS_WORKSPACE="$MAS_WORKSPACE" exec </dev/null nohup /usr/bin/node server.js \
-        > "$MAS_WORKSPACE/.mas/dashboard-server.log" 2>&1 &
+        > "$MAS_WORKSPACE/.mase/dashboard-server.log" 2>&1 &
     DASHBOARD_PID=$!
     echo $DASHBOARD_PID > "$DASHBOARD_PID_FILE"
     sleep 2
@@ -131,27 +131,27 @@ echo "   ✅ Initial data OK"
 
 # ─── 5. Start live daemon ───
 echo "🚀 Step 5/7: Start live dispatch daemon..."
-DAEMON_PID_FILE="$MAS_WORKSPACE/.mas/live-daemon.pid"
+DAEMON_PID_FILE="$MAS_WORKSPACE/.mase/live-daemon.pid"
 if [ -f "$DAEMON_PID_FILE" ] && kill -0 $(cat "$DAEMON_PID_FILE") 2>/dev/null; then
     echo "   ✅ Daemon already running (PID $(cat "$DAEMON_PID_FILE"))"
 else
     cd "$MAS_WORKSPACE"
     nohup python3 "$MAS_WORKSPACE/tools/dev_dispatch_live.py" --daemon \
         --workspace "$MAS_WORKSPACE" \
-        > "$MAS_WORKSPACE/.mas/live-daemon.log" 2>&1 &
+        > "$MAS_WORKSPACE/.mase/live-daemon.log" 2>&1 &
     DAEMON_PID=$!
     echo $DAEMON_PID > "$DAEMON_PID_FILE"
     sleep 2
     if kill -0 $DAEMON_PID 2>/dev/null; then
         echo "   ✅ Daemon started (PID $DAEMON_PID)"
     else
-        echo "   ⚠️  Daemon may have stopped (check .mas/live-daemon.log)"
+        echo "   ⚠️  Daemon may have stopped (check .mase/live-daemon.log)"
     fi
 fi
 
 # ─── 6. Setup Cron ───
 echo "⏰ Step 6/7: Setup cron scheduler..."
-CRON_LINE="*/5 * * * * $MAS_WORKSPACE/.mas/scheduler.sh"
+CRON_LINE="*/5 * * * * $MAS_WORKSPACE/.mase/scheduler.sh"
 if command -v crontab >/dev/null 2>&1; then
     (crontab -l 2>/dev/null | grep -v "scheduler.sh" || true; echo "$CRON_LINE") | crontab - 2>/dev/null || true
     if crontab -l 2>/dev/null | grep -q "scheduler.sh"; then
@@ -161,13 +161,13 @@ if command -v crontab >/dev/null 2>&1; then
     fi
 else
     echo "   ⚠️  Cron not available in this environment (skipped)"
-    echo "   💡 To run scheduler manually: $MAS_WORKSPACE/.mas/scheduler.sh"
+    echo "   💡 To run scheduler manually: $MAS_WORKSPACE/.mase/scheduler.sh"
 fi
 
 # ─── 2.8. Install hermes skills (R110-133) — delegate to skills-install.sh ───
 # skills-install.sh is hermes-free and takes its target path as a CLI arg
 # (no env-var, no hardcoded runtime path). When called without args it is
-# a no-op (target = repo's own mas-state/skills/).
+# a no-op (target = repo's own .mase/skills/).
 echo "🧠  Step 2.8/7: Install hermes skills..."
 if [ -f "$MAS_WORKSPACE/scripts/skills-install.sh" ]; then
     if bash "$MAS_WORKSPACE/scripts/skills-install.sh"; then
@@ -184,7 +184,7 @@ echo ""
 echo "╔══════════════════════════════════════════════╗"
 echo "║  ✅ MAS-ENGINEER INSTALLATION COMPLETE       ║"
 echo "╠══════════════════════════════════════════════╣"
-echo "║  Dashboard:  MCP stdio (.mas/mcp/server.js)  ║"
+echo "║  Dashboard:  MCP stdio (.mase/mcp/server.js)  ║"
 echo "║  Dispatch:   130 entries                     ║"
 echo "║  Agents:     50 sub-agents                   ║"
 echo "║  Tools:      47 active                        ║"
@@ -193,7 +193,7 @@ echo "╚═══════════════════════�
 
 # ─── 7. Deploy Goose App ───
 echo "📱 Step 7/7: Deploy Goose App..."
-APP_SRC="$MAS_WORKSPACE/.mas/mcp/mas-dispatch-monitor.html"
+APP_SRC="$MAS_WORKSPACE/.mase/mcp/mas-dispatch-monitor.html"
 APP_DEST="${HOME}/.local/share/goose/apps/mas-dispatch-monitor.html"
 mkdir -p "$(dirname "$APP_DEST")"
 if [ -f "$APP_SRC" ]; then

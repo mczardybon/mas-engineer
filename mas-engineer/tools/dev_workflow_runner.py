@@ -12,8 +12,8 @@ import yaml, os, sys, json, datetime, subprocess, time, re, threading
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOLS_DIR = BASE + "/tools"
-WF_FILE = os.path.join(BASE, ".state", "workflows.yaml")
-RUNS_DIR = os.path.join(BASE, ".state", "workflow_runs")
+WF_FILE = os.path.join(BASE, ".mase", "workflows.yaml")
+RUNS_DIR = os.path.join(BASE, ".mase", "workflow_runs")
 os.makedirs(RUNS_DIR, exist_ok=True)
 
 def load():

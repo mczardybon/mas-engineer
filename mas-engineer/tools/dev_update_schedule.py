@@ -5,7 +5,7 @@ dev_update_schedule.py — Self-Improve Timing update
 Version: 1.0.0
 call: python3 dev_update_schedule.py <workspace> <findings_count> <duration_sec>
 
-Updates .state/schedule.yaml after a self-improvement round.
+Updates .mase/schedule.yaml after a self-improvement round.
 """
 
 import sys, yaml
@@ -16,7 +16,7 @@ from datetime import datetime
 def update_schedule(workspace: str, findings_count: int, duration_sec: int):
     """Adds a new round to schedule.yaml and calculates metrics."""
     
-    bp_path = Path(workspace) / "mas-engineer" / ".state" / "schedule.yaml"
+    bp_path = Path(workspace) / "mas-engineer" / ".mase" / "schedule.yaml"
     
     try:
         with open(bp_path) as f:

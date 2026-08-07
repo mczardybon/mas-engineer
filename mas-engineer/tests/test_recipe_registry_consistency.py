@@ -10,7 +10,7 @@ The 1218 R103-R108 recipe-sanity tests (per skill
 mas-engineer-recipe-yaml-pytest-coverage) check SINGLE-recipe YAML
 structure (10 functions per recipe). They do NOT check
 CROSS-recipe relationships — i.e. whether the registry in
-.state/workflows.yaml matches the actual recipe files on disk.
+.mase/workflows.yaml matches the actual recipe files on disk.
 
 Real bugs as of 2026-07-29 (NOT caught by existing tests):
 
@@ -54,7 +54,7 @@ DEMO_TEAM_RECIPES_DIR = DEMO_TEAM_DIR / "recipes"
 DEMO_TEAM_INSTRUCTIONS_DIR = DEMO_TEAM_DIR / "instructions"
 TEMPLATE_DIR = SUB_DIR / "template"
 LEGACY_DIR = SUB_DIR / "legacy"
-WORKFLOWS_YAML = REPO_ROOT / ".state" / "workflows.yaml"
+WORKFLOWS_YAML = REPO_ROOT / ".mase" / "workflows.yaml"
 
 # R110-39 + R110-52: registry scan includes multi-arch-30 sub/teams/ sub-recipes.
 # Tests of the multi-arch-30 demo itself live in

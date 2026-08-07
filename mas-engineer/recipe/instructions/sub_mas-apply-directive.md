@@ -12,7 +12,7 @@ general-improver delegates to sub_mas-apply-directive.
 
 ## INPUT
 
-- `<directive_path>` — absolute or relative path to `.directives/R<NR>-<topic>.md`
+- `<directive_path>` — absolute or relative path to `.mase/directives/R<NR>-<topic>.md`
 - `RECURSION_OVERRIDE=2` — operator-initiated, no 24h cooldown
 - `MAS_CONFIRM=yes` + `MAS_APPROVE=y` — operator pre-approved all changes
 
@@ -20,13 +20,13 @@ general-improver delegates to sub_mas-apply-directive.
 
 - applied patches to recipe/tools/docs per directive
 - `validation.yaml` with `CONFORM` verdict per applied patch
-- `.state/changes.json` entry with `via=apply_directive, directive=<path>`
+- `.mase/changes.json` entry with `via=apply_directive, directive=<path>`
 
 ## 5-STEP WORKFLOW (R110-115 DIREKTIVE 1)
 
 ### STEP 1: PARSE DIRECTIVE (read with read_file)
 
-Read the `.directives/R<NR>-<topic>.md` file. Extract:
+Read the `.mase/directives/R<NR>-<topic>.md` file. Extract:
 - **DIREKTIVE 1, 2, ...** blocks (each has: action, file, pattern, content)
 - **Scope** (which subdir: recipe/, tools/, docs/, tests/)
 - **Pre-conditions** (e.g. "after R110-NN fix applied")
@@ -54,7 +54,7 @@ For each patch:
 1. Verify pre-condition (e.g. `git log --oneline -1` shows required commit)
 2. Apply via sub_mas-yaml-editor OR `patch` tool
 3. Verify post-condition (e.g. `grep -rn 'expected-literal' file`)
-4. Log to `.state/changes.json`:
+4. Log to `.mase/changes.json`:
    ```json
    {"timestamp": "<ISO>", "via": "apply_directive",
     "directive": "<path>", "stage": "apply",
@@ -80,23 +80,23 @@ python3 tools/dev_im_finder_scan.py --scope=recipe,+demo-teams 2>&1 | \
 
 If both green → mark directive APPLIED in changes.json with `status=success`.
 If red → rollback all patches, mark `status=failed`, log error to
-`.state/directive_failures.json`.
+`.mase/directive_failures.json`.
 
 ## 3 HOOK POINTS (R110-115 section 6)
 
 1. **PRE-APPLY** (`tools/dev_directive_applier.py --hook pre-apply <directive>`)
-   — verifies pre-conditions, checks `.state/directive_already_applied.json`
+   — verifies pre-conditions, checks `.mase/directive_already_applied.json`
 2. **POST-APPLY** (`tools/dev_directive_applier.py --hook post-apply <directive>`)
-   — runs pytest, scans, writes `.state/directive_already_applied.json`
+   — runs pytest, scans, writes `.mase/directive_already_applied.json`
 3. **ERROR** (`tools/dev_directive_applier.py --hook error <directive> <err>`)
-   — rollback patches, write `.state/directive_failures.json`
+   — rollback patches, write `.mase/directive_failures.json`
 
 ## IDEMPOTENZ (R110-115 section 7)
 
-Before applying ANY patch, check `.state/directive_already_applied.json`:
+Before applying ANY patch, check `.mase/directive_already_applied.json`:
 ```bash
-test -f .state/directive_already_applied.json && \
-  python3 -c "import json; d=json.load(open('.state/directive_already_applied.json')); \
+test -f .mase/directive_already_applied.json && \
+  python3 -c "import json; d=json.load(open('.mase/directive_already_applied.json')); \
     exit(0 if '<directive_path>' in d.get('applied',[]) else 1)" \
   && echo "ALREADY APPLIED — skip" && exit 0
 ```
@@ -106,8 +106,8 @@ test -f .state/directive_already_applied.json && \
 Smoke test (R110-115 directive self-application):
 ```bash
 # Apply this very directive
-python3 tools/dev_directive_parser.py .directives/R110-115-sub-mas-apply-directive-spec.md --json
-python3 tools/dev_directive_applier.py --apply .directives/R110-115-sub-mas-apply-directive-spec.md
+python3 tools/dev_directive_parser.py .mase/directives/R110-115-sub-mas-apply-directive-spec.md --json
+python3 tools/dev_directive_applier.py --apply .mase/directives/R110-115-sub-mas-apply-directive-spec.md
 pytest tests/ -q  # MUST be 1281/1281 PASS
 ```
 

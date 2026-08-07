@@ -53,14 +53,14 @@ flowchart LR
         S1["recipe/\ndev-mas-engineer.yaml"]
         S2["recipe/sub/\nsub_mas-*.yaml (96)"]
         S3["tools/\ndev_*.py/.sh (57: 50 .py + 6 .sh + 1 YAML)"]
-        S4[".state/workflows.yaml\nknowledge/\n rules/"]
+        S4[".mase/workflows.yaml\nknowledge/\n rules/"]
         S5["docs/\n*.md"]
     end
     subgraph DEST["Installed (~/.config/goose/)"]
         D1["recipes/\ndev-mas-engineer.yaml"]
         D2["recipes/sub/\nsub_mas-*.yaml"]
         D3["recipes/mas-engineer-tools/\ndev_*.py/.sh"]
-        D4[".state/\nworkflows.yaml\nknowledge/ rules/"]
+        D4[".mase/\nworkflows.yaml\nknowledge/ rules/"]
         D5["docs/mas-engineer/\n*.md"]
     end
 
@@ -77,7 +77,7 @@ mas-engineer/                         mas-engineer/
 ├── recipe/dev-mas-engineer.yaml      ├── recipe/dev-mas-engineer.yaml
 ├── recipe/sub/sub_mas-*.yaml         ├── recipe/sub/sub_mas-*.yaml
 ├── tools/dev_*.py                    ├── tools/dev_*.py
-└── .state/workflows.yaml            └── .state/workflows.yaml
+└── .mase/workflows.yaml            └── .mase/workflows.yaml
 ```
 
 ## Start MAS-Engineer
@@ -105,7 +105,7 @@ goose run --recipe recipe/setup-dashboard.yaml
 
 This will:
 
-1. Install npm dependencies in `.mas/mcp/`
+1. Install npm dependencies in `.mase/mcp/`
 2. Register a Goose extension in `~/.config/goose/config.yaml`
 3. Set up a scheduler for data refresh (every 5 minutes)
 4. Generate initial dashboard data

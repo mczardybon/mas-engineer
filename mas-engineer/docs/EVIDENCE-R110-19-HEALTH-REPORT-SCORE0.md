@@ -9,7 +9,7 @@
 
 ## TL;DR
 
-`/tmp/multi-arch-30/.state/health-report.json` shows `{"checks": [], "score": 0, "timestamp": null}`.
+`/tmp/multi-arch-30/.mase/health-report.json` shows `{"checks": [], "score": 0, "timestamp": null}`.
 This is **NOT a bug** in `dev_health_report.py` — it is the **honest output** of that tool
 for a freshly generated multi-arch project. The two state files (`health-report.json` and
 `mas/dashboards/data.json`) measure **different things** and produce **different numbers
@@ -22,30 +22,30 @@ correctly**. The bug is in the LLM run-script that read both files and cherry-pi
 
 Two independent scoring systems exist for any mas-engineer project:
 
-### 1. `dev_health_report.py` → `.state/health-report.json`
+### 1. `dev_health_report.py` → `.mase/health-report.json`
 
 Source: `tools/dev_health_report.py:71`
 ```python
 score = round(ok_count / max(len(checks), 1) * 10, 1)
 ```
 
-**Two writers of `.state/health-report.json`** (this is the root cause of the empty stub):
+**Two writers of `.mase/health-report.json`** (this is the root cause of the empty stub):
 
 | Writer | File:line | What it writes | When it runs |
 |--------|-----------|----------------|--------------|
 | `dev_generic_init.py:646-652` (`create_state_dir` + `copy_monitoring_files`) | `{"checks": [], "score": 0, "timestamp": null}` — 53-byte empty stub | Once, at generic-project init time |
 | `dev_health_report.py:129` (`json.dump(report, ...)`) | Real populated `{"checks":[4 items], "score": 0-10, "timestamp": "..."}` | When user explicitly runs `dev_health_report.py` |
 
-The 53-byte file on disk in `testproject/.state/health-report.json` is the **init-time stub from `dev_generic_init.py:647`**, not the output of the real reporter. `dev_health_report.py` was never run against `testproject` after init. If it had been, all 4 framework-level checks (rules_active, checker_health, yaml_valid, last_si_run) would FAIL on a generic-init project (no rules.yaml, no tools/dev_rule_checker.py, no sub/*.yaml, no SI-run history) — `ok_count=0/4 → score=0`. On a multi-arch-30 project (where `sub/*.yaml` exists), `yaml_valid` would also be checked and would PASS (30/30), giving `ok_count=1/4 → score=2.5` (see line 50 below). The 0 in the on-disk file is not a measurement either way; it is a default placeholder written at init.
+The 53-byte file on disk in `testproject/.mase/health-report.json` is the **init-time stub from `dev_generic_init.py:647`**, not the output of the real reporter. `dev_health_report.py` was never run against `testproject` after init. If it had been, all 4 framework-level checks (rules_active, checker_health, yaml_valid, last_si_run) would FAIL on a generic-init project (no rules.yaml, no tools/dev_rule_checker.py, no sub/*.yaml, no SI-run history) — `ok_count=0/4 → score=0`. On a multi-arch-30 project (where `sub/*.yaml` exists), `yaml_valid` would also be checked and would PASS (30/30), giving `ok_count=1/4 → score=2.5` (see line 50 below). The 0 in the on-disk file is not a measurement either way; it is a default placeholder written at init.
 
 Where `checks` is a list of 4 framework-level checks (R110-19 audit):
 
 | # | Check | Looks for | In multi-arch-30 |
 |---|-------|-----------|------------------|
-| 1 | `rules_active` | `.state/rules/rules.yaml` with R01-R09 hard-rules (haerte>=3) | **FAIL** — fresh project, no rules.yaml |
+| 1 | `rules_active` | `.mase/rules/rules.yaml` with R01-R09 hard-rules (haerte>=3) | **FAIL** — fresh project, no rules.yaml |
 | 2 | `checker_health` | `tools/dev_rule_checker.py --health` returns rc=0 | **FAIL** — tools/ is a SYMLINK to mas-engineer/tools, not a real path; subprocess can't find the file at `<project>/tools/...` |
 | 3 | `yaml_valid` | All `sub/*.yaml` files parse | **PASS** — 30/30 parse (note: scans `sub/`, not `recipe/sub/` or `recipe/teams/`) |
-| 4 | `last_si_run` | `.state/changes.json` has a `si-run` or `improve` action within 7 days | **FAIL** — never had an SI-RUN yet |
+| 4 | `last_si_run` | `.mase/changes.json` has a `si-run` or `improve` action within 7 days | **FAIL** — never had an SI-RUN yet |
 
 **Expected honest score for fresh multi-arch project: 1/4 = 2.5** (only `yaml_valid` passes).
 The on-disk `score: 0` suggests the tool was either not yet run, or the file was reset
@@ -53,13 +53,13 @@ to defaults after a previous run. Empty `checks: []` + `timestamp: null` means t
 LLM run-script created this file via a literal heredoc (`cat > health-report.json << EOF`)
 **without ever invoking `dev_health_report.py`**. The 0 is a default placeholder, not a measurement.
 
-### 2. `dev_dashboard_data.py` → `.mas/dashboards/data.json`
+### 2. `dev_dashboard_data.py` → `.mase/dashboards/data.json`
 
 Source: `tools/dev_dashboard_data.py` (agent-counting section)
 
 This is the file the LLM read for its "30/30 healthy" summary. It counts:
 - `agents.total` = number of `sub/*.yaml` files (= 30)
-- `agents.healthy` = number with `status: 'healthy'` in `.state/agents.json` (= 30 because
+- `agents.healthy` = number with `status: 'healthy'` in `.mase/agents.json` (= 30 because
   the LLM wrote `status: healthy` for every agent)
 - `agents.avg_score` = average of all `score` fields (= 100 because every agent has `score: 100`)
 
@@ -71,9 +71,9 @@ data is the LLM's own self-report from the run-script, not an independent agent 
 ## The actual bug
 
 The LLM run-script:
-1. Wrote `.state/agents.json` with 30 entries all having `status: healthy, score: 100`
-2. Wrote `.mas/dashboards/data.json` with `healthy: 30, avg_score: 100`
-3. Wrote `.state/health-report.json` with `score: 0` (default placeholder, tool never run)
+1. Wrote `.mase/agents.json` with 30 entries all having `status: healthy, score: 100`
+2. Wrote `.mase/dashboards/data.json` with `healthy: 30, avg_score: 100`
+3. Wrote `.mase/health-report.json` with `score: 0` (default placeholder, tool never run)
 4. In the final summary, read data.json, printed "Dashboard: 30/30 healthy, score=100"
 5. Did NOT read health-report.json, did not mention score=0
 
@@ -151,10 +151,10 @@ R110-1's commit-message overclaim (claimed settings that weren't in the file).
 
 ## Conclusion
 
-`score: 0` in `.state/health-report.json` is **NOT a tooling bug**. It is the
+`score: 0` in `.mase/health-report.json` is **NOT a tooling bug**. It is the
 correct output of `dev_health_report.py` for a fresh project that has no rules
 file, no rule-checker symlink-resolved, no SI-RUN history, and only parses
-its own YAMLs. The "30/30 healthy" in `.mas/dashboards/data.json` is
+its own YAMLs. The "30/30 healthy" in `.mase/dashboards/data.json` is
 also correct for what IT measures (yaml parse + LLM-self-reported status).
 The real bug is **cherry-picking in the LLM summary**, and that bug is
 **upstream of both files** — in how the run-script chose which number to print.

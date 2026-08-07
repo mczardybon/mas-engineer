@@ -26,7 +26,7 @@ Exit codes:
     2 = usage error
 
 Output:
-    Writes YAML report to .state/pipeline/self_audit.yaml
+    Writes YAML report to .mase/pipeline/self_audit.yaml
     Prints PASS/WARN/FAIL summary to stdout
 """
 
@@ -337,13 +337,13 @@ def main():
     parser.add_argument('--workspace', default='.', help='Workspace root')
     parser.add_argument('--scope', help='Path to scope (e.g. logs/e2e-results, logs/e2e-results/2026-07-21, or "staged" to audit only git-cached files)')
     parser.add_argument('--file', help='Single file to audit')
-    parser.add_argument('--output', default='.state/pipeline/self_audit.yaml', help='Output report path')
+    parser.add_argument('--output', default='.mase/pipeline/self_audit.yaml', help='Output report path')
     parser.add_argument('--json', action='store_true', help='Output JSON to stdout instead of YAML')
     args = parser.parse_args()
 
     workspace = args.workspace
     # Path-spill guard: if the CWD is a repo root with a mas-engineer/ subdir,
-    # operate on mas-engineer/ so relative `.state/...` outputs land in the
+    # operate on mas-engineer/ so relative `.mase/...` outputs land in the
     # canonical state dir, not a root-level spill (2026-08-07 cleanup).
     if workspace == '.':
         cwd = Path('.').resolve()

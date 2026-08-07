@@ -85,7 +85,7 @@ def cmd_init_recovery(ws_dir):
         return
 
     target_sub = mas_dir / "recipe" / "sub"
-    target_checkpoints = mas_dir / ".state" / "checkpoints"
+    target_checkpoints = mas_dir / ".mase" / "checkpoints"
 
     recoveries = ["immune", "checkpoint", "safezone", "timeline", "defib"]
     for name in recoveries:
@@ -123,7 +123,7 @@ def cmd_init_recovery(ws_dir):
             yaml.dump(d, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     ok("Phoenix-Recovery: immune, checkpoint, safezone, timeline, defib")
-    ok("checkpoints/.state/ created")
+    ok("checkpoints/.mase/ created")
 
 def cmd_init(ws_dir: str):
     """Workspace mit copy des installierten frameworks create."""
@@ -268,7 +268,7 @@ def cmd_init(ws_dir: str):
     # Workspace .gitignore add
     gi = ws / ".gitignore"
     if gi.exists():
-        gi.write_text(gi.read_text() + "\n# Workspace runtime\n.state/\n.backups/\n")
+        gi.write_text(gi.read_text() + "\n# Workspace runtime\n.mase/\n.backups/\n")
     ok("project-files: pyproject.toml, .gitignore")
 
     # ── README.md create ──
@@ -293,7 +293,7 @@ def cmd_init(ws_dir: str):
 │   ├── tools/          ← Python-Developer-Tools
 │   └── docs/           ← MAS-Documentation
 ├── .git/               ← Git-Repository
-├── .state/             ← Change-Historie
+├── .mase/             ← Change-Historie
 ├── .backups/           ← Backups
 └── start-sessions.sh   ← 🆕 Zwei Goose-Sessions start
 
@@ -331,7 +331,7 @@ bash start-sessions.sh
 │   ├── tests/          ← Test-files (pytest)
 │   └── python/         ← Admin-Skripte
 ├── .git/               ← Git-Repository
-├── .state/             ← Change-Historie
+├── .mase/             ← Change-Historie
 ├── .backups/           ← Backups
 └── pyproject.toml
 
@@ -350,7 +350,7 @@ cd {ws} && python3 -m pytest framework/tests/ -q
     ok(f"README.md creates")
 
     # .state + .backups
-    (ws / ".state").mkdir(exist_ok=True)
+    (ws / ".mase").mkdir(exist_ok=True)
     (ws / ".backups").mkdir(exist_ok=True)
 
     # ── start-sessions.sh (only Dev-mode) ──
@@ -743,7 +743,7 @@ def cmd_status(ws_dir: str):
     log(f"  ⚙️  Config:   {n_config}")
 
     # Changes (via changes.json)
-    changes_file = ws / ".state" / "changes.json"
+    changes_file = ws / ".mase" / "changes.json"
     if changes_file.exists():
         import json
         try:

@@ -80,7 +80,7 @@ MAS_SKIP_TEST_COVERAGE_GATE=1 goose run --recipe mas-engineer/recipe/sub/sub_mas
   authenticated CI workflow, never silently.
 - **Documented justification required.** The push commit message MUST
   reference this policy and explain why the gate was bypassed.
-- **Logged in evidence.** The `.state/pre-push-test-coverage.json`
+- **Logged in evidence.** The `.mase/pre-push-test-coverage.json`
   file is still written, even when the gate is bypassed, so the
   bypass is auditable after the fact.
 - **One bypass per push at most.** Never combine a coverage-gate
@@ -135,7 +135,7 @@ per constitution).
 
 ## 6. Evidence
 
-Each pre-push run writes `.state/pre-push-test-coverage.json`:
+Each pre-push run writes `.mase/pre-push-test-coverage.json`:
 
 ```yaml
 checked_at: <ISO-8601>

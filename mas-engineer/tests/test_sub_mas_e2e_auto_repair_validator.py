@@ -63,10 +63,10 @@ def test_auto_repair_validator_step_4_position():
 
 
 def test_auto_repair_validator_reads_workflows_yaml():
-    """Spec: reads .state/workflows.yaml SOT."""
+    """Spec: reads .mase/workflows.yaml SOT."""
     content = RECIPE.read_text()
     assert "workflows.yaml" in content, \
-        "auto-repair-validator must read .state/workflows.yaml"
+        "auto-repair-validator must read .mase/workflows.yaml"
 
 
 def test_auto_repair_validator_python_check():

@@ -42,12 +42,12 @@ Interactive rebase of 11 commits (`9c73100^..f0026b1`):
   - `pick f0026b1` (R110-89 — KEEP AS-IS, the audit doc)
   - `reword 9c73100` → `fix: R110-78 -- correct 3 pytest spec-drifts (R110-71/R110-66 admitted)`
   - `reword 04afe4a` → `chore: R110-79 -- add IM-pipeline directives for mas-engineer`
-  - `reword 5f9418e` → `chore: R110-80 -- move .directives/ into mas-engineer/ subdir` (KEEP chore, it's a chore)
+  - `reword 5f9418e` → `chore: R110-80 -- move .mase/directives/ into mas-engineer/ subdir` (KEEP chore, it's a chore)
   - `reword b8f8bc7` → `docs: R110-81 -- add execution phases + stop-punkte to R110-78`
   - `reword 634f626` → `docs: R110-82 -- add concrete pytest-step spec to DIREKTIVE 1`
   - `reword 417650d` → `docs: R110-83/84 -- add concrete spec to DIREKTIVE 2 + 3`
-  - `reword f5204f5` → `docs: R110-85 -- add .directives/README.md index`
-  - `reword 74c6835` → `docs: R110-86 -- add .directives/STATUS.md tracker`
+  - `reword f5204f5` → `docs: R110-85 -- add .mase/directives/README.md index`
+  - `reword 74c6835` → `docs: R110-86 -- add .mase/directives/STATUS.md tracker`
   - `reword db5bdd0` → `docs: R110-87 -- add test-fixture template for PHASE 1`
   - `reword 2488cdf` → `fix: R110-88 -- correct 1295->1277 count drift in R110-78 spec`
 

@@ -289,7 +289,7 @@ would be verification theater (R110-78 lesson).
 5. **MODIFIED** `tests/test_sub_mas_framework_scan_agent.py` (2 tests)
    - `4_sub_agents` → `3_sub_recipes` (removed scanner, added negative assertions)
    - Added: scanner-director MUST NOT be in sub_recipes
-6. **MODIFIED** `.state/workflows.yaml` (1 line)
+6. **MODIFIED** `.mase/workflows.yaml` (1 line)
    - Removed `sub_mas-framework-scanner` from analyse registry
 
 ### Verification (R110-137)

@@ -26,7 +26,7 @@ I **never** edit my own files.
 | My recipe | `recipe/dev-mas-engineer.yaml` | ⛔ Never |
 | My tools | `tools/dev_*.py` | ⛔ Never |
 | My docs | `docs/*.md` | ⛔ Never |
-| My state | `.state/changes.json` | ✅ Yes (via dev_changes.py only) |
+| My state | `.mase/changes.json` | ✅ Yes (via dev_changes.py only) |
 
 ## Rule 3 — User Approval (Mandatory)
 

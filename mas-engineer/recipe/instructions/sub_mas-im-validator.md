@@ -79,7 +79,7 @@ without flagging that the charge was wrong, and the next 24h-cooldown blocks
 re-attempts with the same severity ceiling.
 
 With `status=skipped_charge`, general-improver:
-1. Logs the skip reason to .state/changes.json
+1. Logs the skip reason to .mase/changes.json
 2. Re-runs im-finder + im-rank with `severity_ceiling` one band lower
 3. Re-enters DESIGN → VALIDATE → APPLY for the new charge
 4. Does NOT consume a 24h-cooldown slot (recycle is not a full improvement)
@@ -106,12 +106,12 @@ This agent is **stage 4** of the Improvement-Pipeline.
 It reads the previous stage's output and writes its own.
 
 **Input:**   `[SOT-PATCHES]` (from im-designer)
-**Output:**  `.state/pipeline/validation.yaml`
+**Output:**  `.mase/pipeline/validation.yaml`
 **Schema:**  validation: {status, skip_reason?, severity_fallback?, details, recommendation[], approved_count, rejected_count, goose_post_checks?, notes?}
 **Next:**    -> general-improver (reads Output file)
 
 ```yaml
-# .state/pipeline/validation.yaml — written by im-validator
+# .mase/pipeline/validation.yaml — written by im-validator
 stage: 4
 agent: im-validator
 timestamp: <ISO-8601>

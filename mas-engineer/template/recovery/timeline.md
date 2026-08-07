@@ -15,7 +15,7 @@ sub_mas-recovery-timeline — Time-travel system
 - Picking the safest restore target automatically
 
 ## Steps
-1. Enumerate .state/checkpoints/ entries
+1. Enumerate .mase/checkpoints/ entries
 2. For each, run yaml.safe_load on all recipe files
 3. Score each checkpoint: recency + validity + completeness
 4. Cross-reference with changes.json deltas

@@ -93,7 +93,7 @@ dev_rule_checker.py enforces.
 
 6. SAVE via yaml-editor (R18):
    DELEGATE to sub_mas-yaml-editor
-   (task=PATCH, file="{workspace}/.state/framework-knowledge.yaml",
+   (task=PATCH, file="{workspace}/.mase/framework-knowledge.yaml",
     content=all findings)
    SUMMARY: "Framework analyzed: X Agents, Y Protocols, Z Modes, W Tiers, ..."
 

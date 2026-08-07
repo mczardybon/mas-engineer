@@ -14,17 +14,17 @@ import time
 
 BASE_DIR = os.path.abspath(".")
 MAS_DIR = os.path.join(BASE_DIR, "mas-engineer") if os.path.isdir(os.path.join(BASE_DIR, "mas-engineer")) else BASE_DIR
-# MAS-Rulen liegen in mas-engineer/.state/rules/ (not in .state/rules/)
+# MAS-Rulen liegen in mas-engineer/.mase/rules/ (not in .mase/rules/)
 
 # --mode generic: User-Projekt (rules.yaml)
 # --mode mas (default): MAS-eigene Rulen (rules_5_extreme.yaml + hard_rules.yaml)
-REGEL_DATEI = os.path.join(MAS_DIR, ".state/rules/rules_5_extreme.yaml")
-REGEL_4_DATEI = os.path.join(MAS_DIR, ".state/rules/rules_4_strong.yaml")
-REGEL_GENERIC_DATEI = os.path.join(BASE_DIR, ".state/rules/rules.yaml")
-HARTE_REGEL_DATEI = os.path.join(MAS_DIR, ".state/rules/hard_rules.yaml")
+REGEL_DATEI = os.path.join(MAS_DIR, ".mase/rules/rules_5_extreme.yaml")
+REGEL_4_DATEI = os.path.join(MAS_DIR, ".mase/rules/rules_4_strong.yaml")
+REGEL_GENERIC_DATEI = os.path.join(BASE_DIR, ".mase/rules/rules.yaml")
+HARTE_REGEL_DATEI = os.path.join(MAS_DIR, ".mase/rules/hard_rules.yaml")
 MODE_DATEI = os.path.join(BASE_DIR, ".mas-mode")
-WORKFLOWS_DATEI = os.path.join(MAS_DIR, ".state/workflows.yaml")
-CONFIRMATION_DATEI = os.path.join(MAS_DIR, ".state/.last_confirmation")
+WORKFLOWS_DATEI = os.path.join(MAS_DIR, ".mase/workflows.yaml")
+CONFIRMATION_DATEI = os.path.join(MAS_DIR, ".mase/.last_confirmation")
 
 def load_rules(path):
     if not os.path.exists(path):
@@ -119,7 +119,7 @@ def check_rule(rule_id, action=""):
             
             # Read Configuration
             base = _os9.path.dirname(_os9.path.dirname(_os9.path.abspath(__file__)))
-            reg_path = _os9.path.join(base, ".state/domains/registry.yaml")
+            reg_path = _os9.path.join(base, ".mase/domains/registry.yaml")
             mode_file = _os9.path.expanduser("~/.config/goose/.mas-mode")
             domain_file = _os9.path.expanduser("~/.config/goose/.active_domain")
             
@@ -191,7 +191,7 @@ def check_rule(rule_id, action=""):
                 cwd = _os.getcwd()
                 full_path = _os.path.join(cwd, path) if not _os.path.isabs(path) else path
                 
-                special_path = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), ".state/agents/special_agents.yaml")
+                special_path = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), ".mase/agents/special_agents.yaml")
                 if _os.path.exists(special_path):
                     with open(special_path) as _f:
                         special = _yaml.safe_load(_f)
@@ -360,7 +360,7 @@ def check_rule(rule_id, action=""):
                         "action": "OK"}
 
             # DOMAIN 1: check registration
-            wf_path = os.path.join(MAS_DIR, ".state/workflows.yaml")
+            wf_path = os.path.join(MAS_DIR, ".mase/workflows.yaml")
             if not os.path.exists(wf_path):
                 return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": f"DOMAIN 1 ({domain_source}) but workflows.yaml missing — "
@@ -498,7 +498,7 @@ def check_rule(rule_id, action=""):
                 # Read session counter
                 import yaml as _yaml
                 MAS_ROOT = "/workspace/mas-engineer-src/mas-engineer"
-                counter_path = f"{MAS_ROOT}/.state/pipeline/r55_session_count.yaml"
+                counter_path = f"{MAS_ROOT}/.mase/pipeline/r55_session_count.yaml"
                 session_count = 0
                 if _os.path.exists(counter_path):
                     try:
@@ -524,7 +524,7 @@ def check_rule(rule_id, action=""):
             1. action string contains 'before:' followed by placeholder patterns
                (NONEXISTENT_TEXT, XYZ, PLACEHOLDER, TODO_FILL, BLOCKED, MARKER, KEEP, dummy)
                AND contains 'after:' with the same placeholder (no-op edit)
-            2. consecutive edit failures in current session (tracked in .state/pipeline/r56_edit_history.yaml)
+            2. consecutive edit failures in current session (tracked in .mase/pipeline/r56_edit_history.yaml)
                if 3+ failures in last 60s, BLOCK subsequent edits
 
             The spin-loop pattern observed in R90 (subagent-184):
@@ -540,7 +540,7 @@ def check_rule(rule_id, action=""):
 
             # State file for tracking consecutive edit failures
             MAS_ROOT = "/workspace/mas-engineer-src/mas-engineer"
-            history_path = f"{MAS_ROOT}/.state/pipeline/r56_edit_history.yaml"
+            history_path = f"{MAS_ROOT}/.mase/pipeline/r56_edit_history.yaml"
 
             # Load history
             history = []
@@ -624,7 +624,7 @@ def check_rule(rule_id, action=""):
         if rule_id == "R12":
             """WORK_MAS_DECOUPLING: MAS lebt in ~/.config/goose/.state/mas/"""
             akt = action.lower()
-            if any(x in akt for x in [".state/", "checkpoints/", ".backups/"]) and "checkpoint" not in akt:
+            if any(x in akt for x in [".mase/", "checkpoints/", ".backups/"]) and "checkpoint" not in akt:
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": "MAS state in work/ detected! State belongs in ~/.config/goose/.state/mas/", "action": "WARNING"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
@@ -745,7 +745,7 @@ def check_rule(rule_id, action=""):
                         "detail": "No shell/write/edit action — R18 not applicable", "action": "OK"}
 
             # Check ob a passender Sub-Agent exists
-            wf_path = os.path.join(BASE_DIR, ".state/workflows.yaml")
+            wf_path = os.path.join(BASE_DIR, ".mase/workflows.yaml")
             sub_agent_found = False
             if os.path.exists(wf_path):
                 with open(WORKFLOWS_DATEI) as f:

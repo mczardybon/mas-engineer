@@ -1,7 +1,7 @@
 # sub_mas-workflow-engine — ⚙ SOT-Workflow Executor v2
 MAS-Engineer-internal.
 
-Runs workflows from `mas-engineer/.state/sub_mas-workflow-engine.yaml`.
+Runs workflows from `mas-engineer/.mase/sub_mas-workflow-engine.yaml`.
 Started via delegate(sub_mas-workflow-engine, "workflow: <name>").
 
 ## ════════════════════════════════════════════
@@ -15,7 +15,7 @@ Started via delegate(sub_mas-workflow-engine, "workflow: <name>").
 ## ════════════════════════════════════════════
 
 ### Procedure
-1. LOAD sub_mas-workflow-engine.yaml (cat {workspace}/mas-engineer/.state/sub_mas-workflow-engine.yaml)
+1. LOAD sub_mas-workflow-engine.yaml (cat {workspace}/mas-engineer/.mase/sub_mas-workflow-engine.yaml)
 2. FIND workflow with matching name (IN task_workflows OR workflows)
 3. LOAD workflow_defaults from SOT (timeout, on_error, retry, tier)
 4. MERGE: input params + workflow.params → workflow.variablebles
@@ -23,7 +23,7 @@ Started via delegate(sub_mas-workflow-engine, "workflow: <name>").
 6. EXECUTE each step from — according to action-type
 7. COLLECT outputs per step in result.variablebles.{step_id}
 8. ON error: on_error=abort|continue|retry|fallback according to definition
-9. WRITE result log to .state/workflow_runs/<name>_<ts>.json
+9. WRITE result log to .mase/workflow_runs/<name>_<ts>.json
 10. RETURN result struct as mas_result YAML
 
 ### Supported Action-typees
@@ -58,7 +58,7 @@ WAIT on result (max timeout)
 ```yaml
 - id: save
   action: write
-  path: ".state/workflow_runs/{name}_{ts}.json"
+  path: ".mase/workflow_runs/{name}_{ts}.json"
   content: "{result_json}"
   on_error: continue
 ```
@@ -67,7 +67,7 @@ WAIT on result (max timeout)
 ```yaml
 - id: load_config
   action: read
-  path: "mas-engineer/.state/sub_mas-workflow-engine.yaml"
+  path: "mas-engineer/.mase/sub_mas-workflow-engine.yaml"
   into: sot_config
   on_error: abort
 ```
@@ -155,7 +155,7 @@ OR:
       if_true:
         - id: add_finding
           action: shell
-          cmd: "echo '🔴 {item.type}: {item.detail}' >> .state/findings_report.md"
+          cmd: "echo '🔴 {item.type}: {item.detail}' >> .mase/findings_report.md"
   max_iterations: 50
 ```
 foreach: element name in the loop

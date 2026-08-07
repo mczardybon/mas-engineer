@@ -38,7 +38,7 @@ Every claim below is backed by a raw log on disk in this repository, not a curat
 |--------------------|--------|--------------------------|
 | **Demo-Team generation from natural language** (R38) | 9/9 successful runs across different team types (sales, marketing, translator) | `logs/e2e-results/2026-07-24-demo-team-generation-rate/` — `raw-results.json` + per-team logs |
 | **End-to-end infrastructure tests** (R39) | 8/8 PASS (100 %) — recipe-yaml, top-workflows, recovery-workflows | `logs/e2e-results/2026-07-24-run-3/raw-results.json` (post-cleanup run) |
-| **Pre-push validation** (every commit) | 11/11 PASS — P1 findings, paths, syntax, secrets, e2e-regression, constitution | `.state/pipeline/pre_push_validation.yaml` (regenerated each push) |
+| **Pre-push validation** (every commit) | 11/11 PASS — P1 findings, paths, syntax, secrets, e2e-regression, constitution | `.mase/pipeline/pre_push_validation.yaml` (regenerated each push) |
 | **Dogfooded user-bug fixes** (R37) | 2 real user-reported bugs fixed (F-BUG-001, F-BUG-002) | commit `b7e1264` |
 
 **What the numbers mean, in plain language:**

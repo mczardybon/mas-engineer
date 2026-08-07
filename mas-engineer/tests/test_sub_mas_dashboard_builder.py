@@ -76,7 +76,7 @@ def test_dashboard_builder_r01_r09():
 
 
 def test_dashboard_builder_output_path():
-    """Spec: writes to {workspace}/.mas/dashboards/project.json."""
+    """Spec: writes to {workspace}/.mase/dashboards/project.json."""
     content = RECIPE.read_text()
-    assert ".mas/dashboards" in content or "project.json" in content, \
+    assert ".mase/dashboards" in content or "project.json" in content, \
         "dashboard-builder must declare output path"

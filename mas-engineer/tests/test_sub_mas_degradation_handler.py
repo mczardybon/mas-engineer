@@ -58,7 +58,7 @@ def test_degradation_handler_only_orchestration():
 
 
 def test_degradation_handler_sot_workflow_control():
-    """Spec: SOT workflow control via .state/workflows.yaml."""
+    """Spec: SOT workflow control via .mase/workflows.yaml."""
     content = RECIPE.read_text()
     assert "workflows.yaml" in content, \
         "degradation-handler must reference workflows.yaml SOT"

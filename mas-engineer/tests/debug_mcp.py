@@ -7,7 +7,7 @@ import os
 import sys
 
 WS = os.getcwd()
-MCP = f'{WS}/.mas/mcp'
+MCP = f'{WS}/.mase/mcp'
 
 # Test 1: Does the server even start cleanly with manual JSON-RPC?
 print('=== Test: send raw JSON-RPC, capture all output ===')

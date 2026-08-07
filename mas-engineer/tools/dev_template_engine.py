@@ -14,7 +14,7 @@ DEFAULT_SETTINGS = {
 }
 
 def load_best_practices(path):
-    bp_path = Path(path) / 'mas-engineer' / '.state' / 'best-practices.yaml'
+    bp_path = Path(path) / 'mas-engineer' / '.mase' / 'best-practices.yaml'
     if bp_path.exists():
         with open(bp_path) as f:
             data = yaml.safe_load(f)
@@ -75,7 +75,7 @@ def generate_yaml(name, emoji, task, output, workspace, mode='mas', auto_commit=
     if auto_commit:
         prompt += '\n\n# AUTO-COMMIT AKTIV:\n'
         prompt += '# NACH Change: git add -A && git commit -m "[MAS] {action}"\n'
-        prompt += '# checkpoint .state/checkpoints/{ts}/ + changes.json + todo\n'
+        prompt += '# checkpoint .mase/checkpoints/{ts}/ + changes.json + todo\n'
 
     lines.append("")
     lines.append("## STEPS:")

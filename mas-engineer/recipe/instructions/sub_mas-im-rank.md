@@ -22,17 +22,17 @@ delegates to the duckling-constitution (Art.1-6), not goose-expert.
 This agent is **stage 2** of the Improvement-Pipeline.
 It reads the previous stage's output and writes its own.
 
-**Input:**   `.state/pipeline/findings.yaml` (from im-finder)
-**Output:**  `.state/pipeline/ranked_findings.yaml`
+**Input:**   `.mase/pipeline/findings.yaml` (from im-finder)
+**Output:**  `.mase/pipeline/ranked_findings.yaml`
 **Schema:**  ranked_findings[] with {id, priority, severity, type, file, rank_score, goose_verdict?}
 **Next:**    -> im-designer (reads Output file)
 
 ```yaml
-# .state/pipeline/ranked_findings.yaml — written by im-rank
+# .mase/pipeline/ranked_findings.yaml — written by im-rank
 stage: 2
 agent: im-rank
 timestamp: <ISO-8601>
-input_file: .state/pipeline/findings.yaml
+input_file: .mase/pipeline/findings.yaml
 # ranked_findings[] with {id, priority, severity, type, file, rank_score, goose_verdict?}
 ```
 

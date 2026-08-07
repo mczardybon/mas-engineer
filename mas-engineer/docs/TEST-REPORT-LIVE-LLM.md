@@ -50,7 +50,7 @@ Environment variables:
 - OK Tool calls (read_image, shell, cat) are executed
 - OK Instructions file loaded via `cat`
 - OK Output: 8/8 checks PASSED, push allowed
-- OK YAML report written: `.state/pipeline/pre_push_validation.yaml` (1700 bytes)
+- OK YAML report written: `.mase/pipeline/pre_push_validation.yaml` (1700 bytes)
 
 ---
 
@@ -93,10 +93,10 @@ rc=0 but no explicit success-marker in the log. Probably normal flow without "Do
 
 ### Real Outputs (pipelines, no mock data):
 
-- `.state/pipeline/findings.yaml` (24.8 KB) — from sub_mas-config-auditor
-- `.state/pipeline/pre_push_validation.yaml` (1.7 KB) — from pre-push-validator
-- `.state/pipeline/summarizer_result.yaml` (1.5 KB)
-- `.state/pipeline/summarizer_result_20260718.yaml` (1.6 KB)
+- `.mase/pipeline/findings.yaml` (24.8 KB) — from sub_mas-config-auditor
+- `.mase/pipeline/pre_push_validation.yaml` (1.7 KB) — from pre-push-validator
+- `.mase/pipeline/summarizer_result.yaml` (1.5 KB)
+- `.mase/pipeline/summarizer_result_20260718.yaml` (1.6 KB)
 - `docs/health-report-2026-07-18.md` — from health-reporter
 
 ---

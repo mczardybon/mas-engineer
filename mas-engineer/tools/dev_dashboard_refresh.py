@@ -5,13 +5,13 @@ Will be called on user refresh ONLY. NO daemon. NO polling.
 Generates Dashboard for den AKTUELLEN Workspace.
 
 call: python3 dev_dashboard_refresh.py
-Output: .mas/dashboards/project.json + formatierte Text-Output
+Output: .mase/dashboards/project.json + formatierte Text-Output
 """
 import json, os, subprocess, glob, re, sys
 from datetime import datetime
 
 WORKSPACE = os.environ.get('MAS_WORKSPACE', '.')
-DASH_DIR = os.path.join(WORKSPACE, '.mas', 'dashboards')
+DASH_DIR = os.path.join(WORKSPACE, '.mase', 'dashboards')
 HISTORY_FILE = os.path.join(DASH_DIR, 'history.json')
 
 
@@ -44,7 +44,7 @@ def load_json(path, default=None):
 def generate_dashboard(ws):
     ws_abs = os.path.abspath(ws)
     mas_dir = os.path.join(ws_abs, 'mas-engineer')
-    state_dir = os.path.join(mas_dir, '.state')
+    state_dir = os.path.join(mas_dir, '.mase')
     tools_dir = os.path.join(mas_dir, 'tools')
     sub_dir = os.path.join(mas_dir, 'recipe', 'sub')
     docs_dir = os.path.join(mas_dir, 'docs')

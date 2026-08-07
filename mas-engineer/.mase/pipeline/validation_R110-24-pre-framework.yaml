@@ -1,0 +1,63 @@
+stage: 4
+agent: im-validator
+timestamp: '2026-07-28T20:37:30+00:00'
+request_id: 20260728_115
+from: sub_mas-im-validator
+to: sub_mas-general-improver
+status: success
+input_file: .mase/pipeline/patches.yaml
+
+validation:
+  status: approved
+  skip_reason: null
+  severity_fallback: null
+  details:
+    - file: recipe/dev-mas-engineer-30agents.yaml
+      field: description
+      score_before:
+        prompt: 5.2
+        settings: 15.3
+        structure: 1.0
+      score_after:
+        prompt: 5.2
+        settings: 15.3
+        structure: 1.0
+      delta:
+        prompt: 0.0
+        settings: 0.0
+        structure: 0.0
+      notes: >
+        Description-only change (352 chars → ~153 chars).
+        Does not affect YAML structure, instructions, prompt, or sub_recipes.
+        Scores unchanged because fast_scan metrics unaffected by cosmetic description change.
+      syntax_valid: true
+      l01_check: "CONFORM — no Goose-native mechanism conflict (scope_reduction is internal convention)"
+  recommendation:
+    - APPROVE
+  approved_count: 1
+  rejected_count: 0
+  goose_post_checks:
+    - patch_id: F-002
+      verdict: CONFORM
+      confidence: HIGH
+      explanation: >
+        Description length reduction from ~352 to ~153 chars is purely cosmetic
+        and affects only the user-facing description field. Goose does not enforce
+        any character limits on description fields. The change consolidates from
+        3 domains (recipe, pipeline, session) to 1 domain (pipeline/build),
+        which is an internal MAS-NN3 convention, not a Goose rule.
+        Cross-references preserved: dev-mas-engineer.yaml references the file
+        by name ('recipe/dev-mas-engineer-30agents.yaml'), which does not change.
+        docs/DEMO-MULTI-ARCH-30.md reference in description is removed, but the
+        file still exists at that path and is still referenced from dev-mas-engineer.yaml.
+      sources:
+        - "dev_goose_expert_check.py --patches: OK (no conflicts)"
+        - "dev_goose_expert_check.py --check-mechanism: CONFORM"
+        - "yaml.safe_load: ✅ syntax valid"
+  notes:
+    - "1 patch (F-002) validated and approved."
+    - "13 findings (F-001, F-003-F-015) skipped by im-designer as FALSE POSITIVES — not in scope."
+    - "Cross-reference integrity checked: 2 files reference dev-mas-engineer-30agents.yaml (dev-mas-engineer.yaml, docs/DEMO-MULTI-ARCH-30.md). Both unaffected by description-only change."
+    - "No R10 coronashield violations: YAML parsed successfully."
+    - "No L01 conflicts: scope_reduction is a MAS-internal NN3 convention, not a Goose-native mechanism."
+    - "No all-restricted pattern detected (only 1 patch, verdict = CONFORM)."

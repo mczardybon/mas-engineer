@@ -26,10 +26,10 @@ research-orchestrator  (root, dispatches to specialists)
 ```
 
 Plus a complete dashboard:
-- `.mas/dashboards/data.json` (12 keys, 5 agents scored)
-- `.mas/mcp/server.js` (Node.js MCP server)
-- `.mas/mcp/dashboard.html` (chart.js webapp, 19.5KB)
-- `.mas/mcp/mas-dispatch-monitor.html` (second dashboard)
+- `.mase/dashboards/data.json` (12 keys, 5 agents scored)
+- `.mase/mcp/server.js` (Node.js MCP server)
+- `.mase/mcp/dashboard.html` (chart.js webapp, 19.5KB)
+- `.mase/mcp/mas-dispatch-monitor.html` (second dashboard)
 - `~/.config/goose/config.yaml`: `framework-dashboard` registered
 
 ## How to run
@@ -125,21 +125,21 @@ that references all 5 sub-recipes via sub_recipes field.
 STEP 4 — DASHBOARD SETUP (mandatory)
 a) Set up MCP dashboard for the new project:
    - cd /tmp/research-team
-   - mkdir -p .mas/mcp
+   - mkdir -p .mase/mcp
    - Copy MCP server files from mas-engineer:
-     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/server.js .mas/mcp/
-     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/package.json .mas/mcp/
-     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/dashboard.html .mas/mcp/
-     cp /tmp/mas-engineer/mas-engineer/.mas/mcp/mas-dispatch-monitor.html
-        .mas/mcp/
-   - Run: cd .mas/mcp && npm install
+     cp /tmp/mas-engineer/mas-engineer/.mase/mcp/server.js .mase/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mase/mcp/package.json .mase/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mase/mcp/dashboard.html .mase/mcp/
+     cp /tmp/mas-engineer/mas-engineer/.mase/mcp/mas-dispatch-monitor.html
+        .mase/mcp/
+   - Run: cd .mase/mcp && npm install
    - Register framework-dashboard extension in
      ~/.config/goose/config.yaml (under extensions:)
 b) First dashboard-data refresh:
    - python3 ~/.config/goose/recipes/tools/dev_dashboard_data.py
      /tmp/research-team
 c) Verify dashboard:
-   - cat /tmp/research-team/.mas/dashboards/data.json | python3 -m json.tool
+   - cat /tmp/research-team/.mase/dashboards/data.json | python3 -m json.tool
      (must have: version, timestamp, workspace, mode, project_name,
       agents, changes, improvement, dispatch, build, health,
       health_trend)
@@ -164,7 +164,7 @@ f) python3 -c "import yaml; [yaml.safe_load(open(f))
             '/tmp/research-team/recipe/sub/source-verifier.yaml',
             '/tmp/research-team/recipe/sub/fact-extractor.yaml',
             '/tmp/research-team/recipe/sub/synthesizer.yaml']]"
-g) Test MCP server starts: timeout 5 node /tmp/research-team/.mas/mcp/
+g) Test MCP server starts: timeout 5 node /tmp/research-team/.mase/mcp/
    server.js
    (should print "Framework Dashboard MCP Server running" on stderr
     before timeout)
@@ -210,7 +210,7 @@ echo "What are the main risks of quantum computing?" | \
 
 ## What you can do next
 
-- **Inspect the dashboard**: `cat /tmp/research-team/.mas/dashboards/data.json`
+- **Inspect the dashboard**: `cat /tmp/research-team/.mase/dashboards/data.json`
 - **Modify an agent**: edit one of the YAMLs and re-run `goose --explain`
 - **Add a new agent**: copy a sub-recipe and reference it from research-team.yaml
 - **Use it for real research**: replace the mock web_search with the real one

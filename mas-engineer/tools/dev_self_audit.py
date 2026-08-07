@@ -19,11 +19,11 @@ CLI:
         [--output <path>]
     exit 0 if clean, 1 if ≥1 finding.
 
-Writes a YAML report (default .state/pipeline/self_audit.yaml) with
+Writes a YAML report (default .mase/pipeline/self_audit.yaml) with
 the same audit_run/file_results structure as dev_self_auditor.py so
 downstream consumers (pre-push Check 9 / STEP 6.5) can parse it.
 
-Spec: .directives/R110-118-self-audit-implementation.md DIREKTIVE 1.
+Spec: .mase/directives/R110-118-self-audit-implementation.md DIREKTIVE 1.
 """
 
 import argparse
@@ -283,7 +283,7 @@ def run_self_audit(scope: Path, repo_root: Path) -> SelfAuditResult:
 
 def _write_report(result, output, repo_root, scope):
     if output is None:
-        output = repo_root / '.state' / 'pipeline' / 'self_audit.yaml'
+        output = repo_root / '.mase' / 'pipeline' / 'self_audit.yaml'
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     findings = result.to_findings()
@@ -328,7 +328,7 @@ def main(argv=None):
     ap.add_argument('--repo-root', type=Path, default=Path('.'),
                     help='Repository root (default: .)')
     ap.add_argument('--output', type=Path, default=None,
-                    help='Output YAML report path (default: .state/pipeline/self_audit.yaml)')
+                    help='Output YAML report path (default: .mase/pipeline/self_audit.yaml)')
     args = ap.parse_args(argv)
 
     result = run_self_audit(Path(args.scope), args.repo_root)

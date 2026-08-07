@@ -58,7 +58,7 @@ PHASE 0 — INTAKE
   Receive phoenix_recovery_intake
   Validate request_id, workspace exists
   Determine start_level (default: L1)
-  Create recovery session in .state/phoenix-sessions/{request_id}/
+  Create recovery session in .mase/phoenix-sessions/{request_id}/
 
 PHASE 1 — DELEGATE L1 IMMUNE
   Signal: 'sub_mas-recovery-immune'
@@ -75,7 +75,7 @@ PHASE 2 — DELEGATE L2 CHECKPOINT
 
 PHASE 3 — DELEGATE L3 SAFEZONE
   Signal: 'sub_mas-recovery-safezone'
-  Task: FORK workspace to .state/safezones/{checkpoint_id}/
+  Task: FORK workspace to .mase/safezones/{checkpoint_id}/
   Expected output: safezone_path
   If safezone creation fails: STOP, escalate
 
@@ -139,7 +139,7 @@ phoenix_recovery_result:
 - **Permission denied** — P1 error, escalate to user
 - **Sub-agent timeout** — escalate to user with partial results
 - **Concurrent phoenix invocations** — only 1 active session per workspace
-  (lock file in .state/phoenix-sessions/.lock)
+  (lock file in .mase/phoenix-sessions/.lock)
 - **Loop detection** — if same level fails 3x, STOP, escalate
 
 ## Memory

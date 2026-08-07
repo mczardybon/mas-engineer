@@ -2,7 +2,7 @@
 """
 bulk_findings_fixer.py — Auto-fix mas-engineer findings
 
-Reads .state/pipeline/findings.yaml + ranked_findings.yaml + validation.yaml
+Reads .mase/pipeline/findings.yaml + ranked_findings.yaml + validation.yaml
 and applies the highest-leverage auto-fixes via template-injection.
 
 Per user-correction 2026-07-23: This script is the FIXER, but it must be
@@ -69,7 +69,7 @@ ConnectionError, TimeoutError, PermissionError (race), OSError(EBUSY).
         'snippet': """
 <!-- BULK-FIX:U1:rollback-snippet -->
 ROLLBACK-POLICY: Before any change, capture backup in legacy/<filename>-ORIGINAL.yaml
-(or .state/backups/<timestamp>/). On failure, restore from backup. Track rollback-id
+(or .mase/backups/<timestamp>/). On failure, restore from backup. Track rollback-id
 in changes.json with stage="rollback".
 """,
     },
@@ -78,7 +78,7 @@ in changes.json with stage="rollback".
         'snippet': """
 <!-- BULK-FIX:L1:cleanup-snippet -->
 SESSION-CLEANUP: On task-completion or SIGTERM, run dev_session_cleanup.sh
-to remove tempfiles, close sessions, and emit DONE-signal to .state/pipeline/signals.log.
+to remove tempfiles, close sessions, and emit DONE-signal to .mase/pipeline/signals.log.
 """,
     },
     'G2': {
@@ -141,7 +141,7 @@ CONTEXT-INFO (always include in prompt):
         'trigger': '<!-- BULK-FIX:O1:output-schema -->',
         'snippet': """
 <!-- BULK-FIX:O1:output-schema -->
-OUTPUT-SCHEMA: Each phase emits YAML to .state/pipeline/ with keys:
+OUTPUT-SCHEMA: Each phase emits YAML to .mase/pipeline/ with keys:
   signal: DONE|FAILED|RETRY
   request_id: <uuid>
   from: <recipe-name>
@@ -206,7 +206,7 @@ def fix_c2(instructions: str) -> str:
 # Loader
 # ---------------------------------------------------------------------------
 
-def load_findings(path: Path = Path('.state/pipeline/findings.yaml')) -> list:
+def load_findings(path: Path = Path('.mase/pipeline/findings.yaml')) -> list:
     data = yaml.safe_load(open(path))
     if not data: return []
     return data.get('data', {}).get('findings',
@@ -214,7 +214,7 @@ def load_findings(path: Path = Path('.state/pipeline/findings.yaml')) -> list:
            data.get('findings', [])))
 
 
-def load_ranked(path: Path = Path('.state/pipeline/ranked_findings.yaml')) -> list:
+def load_ranked(path: Path = Path('.mase/pipeline/ranked_findings.yaml')) -> list:
     data = yaml.safe_load(open(path))
     if not data: return []
     return data.get('data', {}).get('ranked',
@@ -341,7 +341,7 @@ def main():
     ap.add_argument('--apply', action='store_true', help='Apply fixes to files')
     ap.add_argument('--types', type=str, default=None,
                     help='Comma-separated type list (e.g. K3,U1,L1). Default: all auto-fixable')
-    ap.add_argument('--findings', type=str, default='.state/pipeline/findings.yaml',
+    ap.add_argument('--findings', type=str, default='.mase/pipeline/findings.yaml',
                     help='Path to findings.yaml')
     args = ap.parse_args()
 

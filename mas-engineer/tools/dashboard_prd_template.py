@@ -7,7 +7,7 @@ Apps.createApp() with exact values.
 
 Path resolution:
   - Uses MAS_WORKSPACE env var, or
-  - Walks up the directory tree looking for .mas/dashboards/,
+  - Walks up the directory tree looking for .mase/dashboards/,
   - Falls back to current directory
 """
 import json, os, sys
@@ -18,13 +18,13 @@ def _resolve_workspace():
         return ws
     current = os.path.abspath('.')
     while current != os.path.dirname(current):
-        if os.path.isdir(os.path.join(current, '.mas', 'dashboards')):
+        if os.path.isdir(os.path.join(current, '.mase', 'dashboards')):
             return current
         current = os.path.dirname(current)
     return os.path.abspath('.')
 
 WORKSPACE = _resolve_workspace()
-DASHBOARD_DIR = os.path.join(WORKSPACE, '.mas', 'dashboards')
+DASHBOARD_DIR = os.path.join(WORKSPACE, '.mase', 'dashboards')
 STATUS_FILE = os.path.join(DASHBOARD_DIR, 'mas-dashboard-status.json')
 SIGNAL_FILE = os.path.join(DASHBOARD_DIR, 'mas-dashboard-signal.json')
 OUTPUT_FILE = os.path.join(DASHBOARD_DIR, 'dashboard_prd_current.txt')

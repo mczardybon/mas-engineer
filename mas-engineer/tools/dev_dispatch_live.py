@@ -7,7 +7,7 @@ the dashboard cache every N seconds.
 
 call:
   python3 dev_dispatch_live.py --daemon
-      → run as background daemon (writes .mas/live-daemon.pid)
+      → run as background daemon (writes .mase/live-daemon.pid)
   python3 dev_dispatch_live.py --status
       → print current dispatch summary
   python3 dev_dispatch_live.py --once
@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 DISPATCH_LOG = os.path.join(tempfile.gettempdir(), "mas-dispatch.ndjson")
-DASHBOARD_DATA_DIR = ".mas/dashboards"
+DASHBOARD_DATA_DIR = ".mase/dashboards"
 DASHBOARD_DATA_FILE = "data.json"
 REFRESH_INTERVAL = 5  # seconds
 
@@ -179,8 +179,8 @@ def main() -> int:
         return 0
 
     if args.daemon:
-        pid_file = args.pid_file or os.path.join(args.workspace, ".mas", "live-daemon.pid")
-        log_file = args.log_file or os.path.join(args.workspace, ".mas", "live-daemon.log")
+        pid_file = args.pid_file or os.path.join(args.workspace, ".mase", "live-daemon.pid")
+        log_file = args.log_file or os.path.join(args.workspace, ".mase", "live-daemon.log")
         return _run_daemon(args.workspace, pid_file, log_file)
 
     # No mode: print help

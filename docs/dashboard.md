@@ -21,7 +21,7 @@ flowchart TD
     end
 
     subgraph DATA["Dashboard Data"]
-        JSON["data.json\n.mas/dashboards/"]
+        JSON["data.json\n.mase/dashboards/"]
     end
 
     DATA_PY -->|writes| JSON
@@ -52,7 +52,7 @@ sequenceDiagram
 
     U->>G: goose run --recipe\nsetup-dashboard.yaml
     G->>S: execute setup recipe
-    S->>NPM: npm install in .mas/mcp/
+    S->>NPM: npm install in .mase/mcp/
     NPM-->>S: dependencies installed
     S->>CFG: register MCP extension\nframework-dashboard
     CFG-->>S: extension registered
@@ -66,7 +66,7 @@ sequenceDiagram
 
 The setup recipe:
 
-1. **npm install** in `.mas/mcp/` (installs server.js dependencies)
+1. **npm install** in `.mase/mcp/` (installs server.js dependencies)
 2. **Registers a Goose extension** in `~/.config/goose/config.yaml`:
    ```yaml
    extensions:
@@ -75,7 +75,7 @@ The setup recipe:
        name: framework-dashboard
        enabled: true
        cmd: node
-       args: ["{workspace}/.mas/mcp/server.js"]
+       args: ["{workspace}/.mase/mcp/server.js"]
        description: "Framework Dashboard MCP App"
        timeout: 300
    ```
@@ -99,7 +99,7 @@ When triggered, the scheduler runs `dev_dashboard_data.py` which collects:
 | Category | Data | Source |
 |----------|------|--------|
 | **Agents** | Total, healthy, degraded, dead | `recipe/sub/*.yaml` |
-| **Changes** | Total, today's, last change | `.state/changes.json` |
+| **Changes** | Total, today's, last change | `.mase/changes.json` |
 | **Sessions** | Total, today's, stale | `goose sessions DB` |
 | **Health** | YAML validity, rule compliance | `dev_rule_checker.py`, `dev_analyst.py` |
 | **Build** | ZIP size, last build date | `dev_build.sh --status` |
@@ -174,7 +174,7 @@ Each framework's dashboard files are stored within the framework project:
 
 ```
 {workspace}/
-└── .mas/
+└── .mase/
     ├── mcp/
     │   ├── server.js        # MCP server (Node.js)
     │   ├── dashboard.html   # Frontend

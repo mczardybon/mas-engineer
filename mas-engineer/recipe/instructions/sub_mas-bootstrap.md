@@ -65,9 +65,9 @@ chmod +x {project_path}/tools/*.py {project_path}/tools/*.sh
 → "✅ {count} tools ported"
 
 ## STEP 5 — PORT MCP SERVER (Dashboard)
-Copy .mas/mcp/ (server.js, dashboard.html, package.json):
-cp -r {mas_source}/.mas/mcp/ {project_path}/.mas/mcp/
-npm install in {project_path}/.mas/mcp/ (optional)
+Copy .mase/mcp/ (server.js, dashboard.html, package.json):
+cp -r {mas_source}/.mase/mcp/ {project_path}/.mase/mcp/
+npm install in {project_path}/.mase/mcp/ (optional)
 → "✅ Dashboard MCP server ported"
 
 ## STEP 6 — PORT RECOVERY TEMPLATES

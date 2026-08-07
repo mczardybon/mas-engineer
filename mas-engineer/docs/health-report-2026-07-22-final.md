@@ -41,7 +41,7 @@
 - DEFAULT_PARAMS for workflows that need them (--project/--name/--task etc.)
 - Wider param coverage for wf_generic_init_run, wf_team_package
 
-### Workflow YAML fixes (`.state/workflows.yaml`)
+### Workflow YAML fixes (`.mase/workflows.yaml`)
 
 | Workflow | Bug | Fix |
 |----------|-----|-----|

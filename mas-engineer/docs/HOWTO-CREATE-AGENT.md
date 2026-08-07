@@ -2,7 +2,7 @@
 
 This guide shows how to create a single sub-agent using MAS-Engineer's
 `intention-parser`. The agent is registered automatically in the SOT
-(`.state/workflows.yaml`) and the root orchestrator's `sub_recipes`.
+(`.mase/workflows.yaml`) and the root orchestrator's `sub_recipes`.
 
 ## When to use
 
@@ -152,7 +152,7 @@ recipe/sub/sub_mas-<agent-name>.yaml
 
 It is also registered in two places:
 
-- `.state/workflows.yaml` -> `agents.<agent-name>`
+- `.mase/workflows.yaml` -> `agents.<agent-name>`
 - `recipe/dev-mas-engineer.yaml` -> `sub_recipes`
 
 ## See also

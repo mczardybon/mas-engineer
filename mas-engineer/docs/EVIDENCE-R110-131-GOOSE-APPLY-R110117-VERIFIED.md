@@ -11,13 +11,13 @@
 The R110-117 spec required an end-to-end demonstration that
 `sub_mas-apply-directive` is actually invoked by the IM-pipeline
 when `RECURSION_OVERRIDE=2` is set, and that the dispatch writes
-a spec-exact log file to `.state/`. **For the first time since
+a spec-exact log file to `.mase/`. **For the first time since
 the spec was authored, the full chain executed successfully and
 left independently-verifiable artifacts on disk.**
 
 ## What was run
 
-- **Directive:** `.directives/R110-117-apply-directive-e2e-test.md`
+- **Directive:** `.mase/directives/R110-117-apply-directive-e2e-test.md`
 - **Recipe:** `recipe/sub/sub_mas-apply-directive.yaml` (post-R110-115 wiring, RECURSION-GUARD v3 + RECURSION_OVERRIDE=2)
 - **Operator:** goose recipe run loop operator → general-improver → DELEGATE to sub_mas-apply-directive
 - **Watchdog:** none (background, terminated when logs stopped growing)
@@ -28,7 +28,7 @@ left independently-verifiable artifacts on disk.**
 
 | # | Claim | Verification method | Result |
 |---|-------|---------------------|--------|
-| 1 | `.state/test_apply_directive_dispatch.log` exists | `find` + `stat` | ✅ 231 bytes, mtime 2026-08-05 04:26:13 UTC |
+| 1 | `.mase/test_apply_directive_dispatch.log` exists | `find` + `stat` | ✅ 231 bytes, mtime 2026-08-05 04:26:13 UTC |
 | 2 | Log content matches R110-117 spec format | `cat` of log file | ✅ ALL 4 lines spec-exact: timestamp + source + action + recipe + trigger |
 | 3 | Log mtime is the dispatch moment (not a manual echo) | `stat -c %y` | ✅ 04:26:13 UTC, BEFORE post-apply hook at 04:27:47 UTC |
 | 4 | `directive_already_applied.json` lists R110-117 | `cat` + `jq` | ✅ IN applied list, R110-125 + R110-117 |
@@ -62,7 +62,7 @@ left independently-verifiable artifacts on disk.**
 ## Files modified by this commit
 
 - **NEW:** `mas-engineer/docs/EVIDENCE-R110-131-GOOSE-APPLY-R110117-VERIFIED.md` (this file)
-- (Companion commit 🔧 R110-131 — marker: `mas-engineer/.state/directive_already_applied.json` +1 line for R110-117)
+- (Companion commit 🔧 R110-131 — marker: `mas-engineer/.mase/directive_already_applied.json` +1 line for R110-117)
 
 ## R-sprint progress
 
@@ -74,7 +74,7 @@ left independently-verifiable artifacts on disk.**
 
 ## Reference
 
-- R110-117 spec: `.directives/R110-117-apply-directive-e2e-test.md`
+- R110-117 spec: `.mase/directives/R110-117-apply-directive-e2e-test.md`
 - R110-115 wiring: `recipe/sub/sub_mas-apply-directive.yaml` (RECURSION-GUARD v3 + RECURSION_OVERRIDE=2)
 - R110-78 IM-pipeline: `docs/commit-push-protocol-2026-07-27.md` (post-R110-126 force-push, e89a0e5)
 - R110-89 honest audit: `mas-engineer/docs/EVIDENCE-R110-89-HONEST-REPOFMT-AND-EVIDENCE-AUDIT.md`

@@ -121,8 +121,8 @@ user workflow rule) addressed the structural verification-theater-recurrence
 problem:
 
 - **R110-17 + R110-19 (2026-07-28):** variant 5 of verification-theater-guard
-  (state-file stub trap). `.state/health-report.json` is an init-time
-  stub, NOT a measurement. `.mas/dashboards/data.json` is LLM self-report,
+  (state-file stub trap). `.mase/health-report.json` is an init-time
+  stub, NOT a measurement. `.mase/dashboards/data.json` is LLM self-report,
   NOT a measurement. The 0/0/null and 30/30 in those files are NOT
   contradictory — they're different metrics from different writers.
   See `findings/F-2026-07-28-state-file-stub-trap.md` (if exists) for

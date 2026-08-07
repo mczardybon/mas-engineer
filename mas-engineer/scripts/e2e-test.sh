@@ -22,7 +22,7 @@
 set -e
 
 # This script is meant to be run from the project root (the directory
-# containing recipe/, docs/, scripts/, .state/, etc.). It does NOT auto-
+# containing recipe/, docs/, scripts/, .mase/, etc.). It does NOT auto-
 # detect a parent git root, because the project is sometimes checked out
 # as a subfolder of a larger git workspace.
 cd "$(dirname "$0")/.."
@@ -138,7 +138,9 @@ if [ "$SCOPE" = "all" ]; then
     -not -path "./node_modules/*" \
     -not -path "*/node_modules/*" \
     -not -path "./.monitor/memory/*" \
-    -not -path "./.mas/*" \
+    -not -path "./.mase/pipeline/*" \
+    -not -path "./.mase/checkpoints/*" \
+    -not -path "./.mase/workflow_runs/*" \
     2>/dev/null | sort -u)
 else
   # Only yaml/yml files in the changed-file list
@@ -205,7 +207,7 @@ docs = []
 for r in roots:
   if os.path.isdir(r):
     for root, _, files in os.walk(r):
-      if any(x in root for x in ('/node_modules/', '/.git/', '/.monitor/memory/', '/.mas/mcp/')):
+      if any(x in root for x in ('/node_modules/', '/.git/', '/.monitor/memory/', '/.mase/mcp/')):
         continue
       for fn in files:
         if fn.endswith('.md'):
@@ -258,7 +260,7 @@ for root_dir, exts in roots:
   if not os.path.isdir(root_dir):
     continue
   for root, _, fns in os.walk(root_dir):
-    if any(x in root for x in ('/node_modules/', '/.git/', '/.monitor/memory/', '/.mas/mcp/')):
+    if any(x in root for x in ('/node_modules/', '/.git/', '/.monitor/memory/', '/.mase/mcp/')):
       continue
     for fn in fns:
       if fn.endswith(exts):
@@ -407,7 +409,7 @@ echo ""
 echo "[10/10] SOT consistency"
 python3 <<'PY' && check_pass "SOT consistency" || check_fail "SOT consistency — see above"
 import yaml, sys
-sot = yaml.safe_load(open('.state/workflows.yaml'))
+sot = yaml.safe_load(open('.mase/workflows.yaml'))
 agents = sot.get('agents', {})
 if not isinstance(agents, dict):
   print(f"  agents is {type(agents).__name__}, expected dict")

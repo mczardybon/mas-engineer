@@ -27,7 +27,7 @@ from typing import Optional
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RECIPES_DIR = REPO_ROOT / "recipe"
-LOG_DIR = REPO_ROOT / ".state" / "logs"
+LOG_DIR = REPO_ROOT / ".mase" / "logs"
 
 
 def yaml_safe_load(path: Path) -> tuple[bool, str]:
@@ -141,9 +141,9 @@ def check_runtime(state_dir: str = None) -> dict:
     """
     CHECK_RUNTIME: active sessions, stale agents, crash detection.
 
-    Reads .state/ for session files, counts active, flags stale (>1h), detects crashes.
+    Reads .mase/ for session files, counts active, flags stale (>1h), detects crashes.
     """
-    state = Path(state_dir) if state_dir else REPO_ROOT / ".state"
+    state = Path(state_dir) if state_dir else REPO_ROOT / ".mase"
     sessions = []
     stale = []
     crashes = []
@@ -204,7 +204,7 @@ def log_session(event: str, details: dict = None, log_dir: str = None) -> dict:
     """
     LOG_SESSION: write a cycle-log entry + session report.
 
-    Appends to .state/logs/cycle-{YYYY-MM-DD}.log with timestamp + event.
+    Appends to .mase/logs/cycle-{YYYY-MM-DD}.log with timestamp + event.
     """
     logs = Path(log_dir) if log_dir else LOG_DIR
     logs.mkdir(parents=True, exist_ok=True)
@@ -267,7 +267,7 @@ def main():
         recipes = sys.argv[2] if len(sys.argv) > 2 else str(RECIPES_DIR)
         result = check_health(recipes)
     elif cmd == "CHECK_RUNTIME":
-        state = sys.argv[2] if len(sys.argv) > 2 else str(REPO_ROOT / ".state")
+        state = sys.argv[2] if len(sys.argv) > 2 else str(REPO_ROOT / ".mase")
         result = check_runtime(state)
     elif cmd == "LOG_SESSION":
         event = sys.argv[2] if len(sys.argv) > 2 else "unspecified"

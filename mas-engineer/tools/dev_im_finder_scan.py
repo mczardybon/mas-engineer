@@ -480,7 +480,7 @@ for yp in ALL_YAMLS:
                   'configure', 'manage']
     found_roles = [v for v in role_verbs if v in combined.lower()]
     # Skip if already split (check skip_recently_split.yaml)
-    _skip_path = Path('.state/pipeline/skip_recently_split.yaml')
+    _skip_path = Path('.mase/pipeline/skip_recently_split.yaml')
     if _skip_path.exists():
         with open(_skip_path) as _sf:
             _skip_data = yaml.safe_load(_sf) or {}
@@ -598,7 +598,7 @@ for _pt in PY_TOOLS:
 # Detects test-files in tests/ that assert literals which no longer
 # appear anywhere in recipe/, tools/, or docs/ (R110-71 spec-drift
 # incident pattern). Emits SD-<test-basename>-<idx> findings.
-# Spec: .directives/R110-78-spec-drift.md PHASE 2 (R110-83 sub-spec).
+# Spec: .mase/directives/R110-78-spec-drift.md PHASE 2 (R110-83 sub-spec).
 _SD_STRING_IN_RE = re.compile(
     r'''assert\s+["']([^"']{4,80})["']\s+in\s+''')
 _SD_INT_EQ_RE = re.compile(
@@ -911,7 +911,7 @@ def check_spec_drift_reverse(findings, repo_root='.'):
 # R02: scanner is consumer, self_audit is producer — do NOT duplicate the
 # detection logic; lazy-import the module and reuse PATTERN_A_RE /
 # PATTERN_A_ACCEPT_CTX / _is_in_fence / _strip_inline_code / _scan_pattern_b
-# / _build_repo_literal_index. See: .directives/R110-124-scanner-pattern-ab.md
+# / _build_repo_literal_index. See: .mase/directives/R110-124-scanner-pattern-ab.md
 
 def check_hardcode_stale(findings, repo_root='.'):
     """R110-124: wrap dev_self_audit Pattern A (HARDCODE-* detection).

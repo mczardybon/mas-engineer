@@ -128,7 +128,7 @@ def test_recovery_workflows():
             )
             status = "ok" if "status: ok" in r.stdout else "fail"
             # Check log for auto_repair output
-            logs = sorted(glob.glob(f".state/workflow_runs/{wf}_*.json"), key=os.path.getmtime, reverse=True)
+            logs = sorted(glob.glob(f".mase/workflow_runs/{wf}_*.json"), key=os.path.getmtime, reverse=True)
             auto_repair_status = "n/a"
             if logs:
                 log_data = json.load(open(logs[0]))
@@ -145,7 +145,7 @@ def test_recovery_workflows():
 
 def test_task_workflows_sample(n_per_group=2):
     section(f"TEST 4: Task_workflows sample ({n_per_group} per category)")
-    d = yaml.safe_load(open(".state/workflows.yaml"))
+    d = yaml.safe_load(open(".mase/workflows.yaml"))
     all_wfs = list(d.get("task_workflows", {}).keys())
     # Default params for workflows that need them (smoke test only)
     DEFAULT_PARAMS = {
@@ -227,13 +227,13 @@ def main():
     parser.add_argument("--workflow", help="run single workflow by name")
     parser.add_argument(
         "--auto-confirm", action="store_true",
-        help="operator-sanctioned R01 bypass: update .state/.last_confirmation to now. "
+        help="operator-sanctioned R01 bypass: update .mase/.last_confirmation to now. "
              "ONLY use in CI/automated runs; never in interactive sessions."
     )
     args = parser.parse_args()
 
     # R01 BYPASS (R110-58): The R01 (CONFIRMATION_REQUIRED) rule
-    # blocks workflows when .state/.last_confirmation is older than
+    # blocks workflows when .mase/.last_confirmation is older than
     # 5 minutes. check_confirmation() in tools/dev_rule_checker.py:71-77
     # reads ONLY that file (not env-vars), so the bypass is a write
     # to that file. The R110-58 + R110-60 + R110-62 fix establishes
@@ -254,7 +254,7 @@ def main():
     auto_confirm_requested = args.auto_confirm or os.environ.get("MAS_AUTO_CONFIRM") == "1"
     auto_confirm_enabled = args.auto_confirm and os.environ.get("MAS_AUTO_CONFIRM") == "1"
     if auto_confirm_requested:
-        confirmation_path = os.path.join(ROOT, ".state/.last_confirmation")
+        confirmation_path = os.path.join(ROOT, ".mase/.last_confirmation")
         os.makedirs(os.path.dirname(confirmation_path), exist_ok=True)
         if auto_confirm_enabled:
             import time as _time

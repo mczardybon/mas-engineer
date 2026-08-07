@@ -2,7 +2,7 @@
 
 ## ✅ E2E-7: User Delegation Verification — SUCCESS
 
-**Task:** Register 10 unregistered agents in .state/guardian.yaml
+**Task:** Register 10 unregistered agents in .mase/guardian.yaml
 - bootstrap, demo-runner, doc-writer, git-operator, health-reporter, json-utility, pre-push-validator, python-repair, recipe-designer, web-researcher
 
 **Result via @sub_mas-agent-guardian delegation (e2e-USER-delegate):**
@@ -12,7 +12,7 @@
 - Guardian verdict: All clear
 
 **Files modified:**
-- `.state/guardian.yaml`: added 10 agents to `healthy_agents` list, updated counts (41→51)
+- `.mase/guardian.yaml`: added 10 agents to `healthy_agents` list, updated counts (41→51)
 
 **E2E-7 result:** ✅ dev-mas-engineer delegation pattern verified, agent-guardian check verified, registration action completed
 

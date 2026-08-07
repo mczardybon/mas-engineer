@@ -69,7 +69,7 @@ After PACKAGE_TEAM runs, you have a directory like:
 │       ├── sub_mas-dev-observer.yaml
 │       ├── sub_mas-dev-tester.yaml
 │       └── ... (one per agent)
-├── .state/
+├── .mase/
 │   ├── workflows.yaml                  # team-local SOT
 │   └── knowledge/
 │       ├── 01-rules.md                 # R01, R09, R10
@@ -99,8 +99,8 @@ The install script copies:
 
 - Root recipe to `~/.config/goose/recipes/dev-root.yaml`
 - Sub-agents to `~/.config/goose/recipes/sub/`
-- Team SOT to `~/.config/goose/recipes/.state/workflows.yaml`
-- Knowledge base to `~/.config/goose/recipes/.state/knowledge/`
+- Team SOT to `~/.config/goose/recipes/.mase/workflows.yaml`
+- Knowledge base to `~/.config/goose/recipes/.mase/knowledge/`
 - Mode file to `~/.config/goose/recipes/.mas-mode`
 
 ## How to run

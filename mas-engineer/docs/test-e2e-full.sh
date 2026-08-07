@@ -97,7 +97,7 @@ phase_0() {
     fi
 
     # Test 0.2: workspace clean
-    local size=$(du -sm .state/ 2>/dev/null | cut -f1)
+    local size=$(du -sm .mase/ 2>/dev/null | cut -f1)
     if [[ "$size" -lt 2 ]]; then
         log_test 0 "workspace_size" "PASS"
     else
@@ -115,7 +115,7 @@ phase_0() {
     local budget=$(python3 -c "
 import json, datetime, os
 try:
-    d = json.load(open('.state/changes.json'))
+    d = json.load(open('.mase/changes.json'))
     cutoff = datetime.datetime.now() - datetime.timedelta(hours=24)
     recent = [e for e in d.get('entries',[]) if 'timestamp' in e and e['timestamp'] > cutoff.isoformat()]
     full = [e for e in recent if e.get('type') == 'full_improvement_override']

@@ -25,7 +25,7 @@
 | Date | Hash | Message |
 |------|------|---------|
 | 2026-07-19 06:40 | `9849168` | fix: install recipes + provider config in dev_install; switch goose_provider deepseek->openai |
-| 2026-07-18 20:05 | `22e26f1` | cleanup: remove one-off German plan file from .state/pipeline/ |
+| 2026-07-18 20:05 | `22e26f1` | cleanup: remove one-off German plan file from .mase/pipeline/ |
 | 2026-07-18 20:05 | `b09013e` | cleanup: remove node_modules + duplicate PLAN_FINDINGS_FIX.md |
 | 2026-07-18 20:04 | `adf3d8f` | translate: convert all .state best-practices and knowledge docs to English |
 | 2026-07-18 18:20 | `d8d49a2` | cleanup: remove runtime state files from repo |
@@ -39,12 +39,12 @@
 
 | Status | File |
 |--------|------|
-| `??` | `mas-engineer/.mas/mcp/data.json` |
-| `??` | `mas-engineer/.state/cycle-log-20260719-0841.yaml` |
-| `??` | `mas-engineer/.state/session-report-20260719-0841.yaml` |
+| `??` | `mas-engineer/.mase/mcp/data.json` |
+| `??` | `mas-engineer/.mase/cycle-log-20260719-0841.yaml` |
+| `??` | `mas-engineer/.mase/session-report-20260719-0841.yaml` |
 | `??` | `mas-engineer/docs/health-report-2026-07-19.md` |
 
-> ℹ️ All 4 are runtime/generated files — consider adding `.state/` and `.mas/mcp/` to `.gitignore`.
+> ℹ️ All 4 are runtime/generated files — consider adding `.mase/` and `.mase/mcp/` to `.gitignore`.
 
 ---
 
@@ -155,7 +155,7 @@ All 51 sub-recipes pass YAML validation. No issues detected.
 
 | Severity | Title | Description |
 |----------|-------|-------------|
-| P3 | **4 uncommitted files** | Runtime state files — consider adding `.state/` and `.mas/mcp/` to `.gitignore` |
+| P3 | **4 uncommitted files** | Runtime state files — consider adding `.mase/` and `.mase/mcp/` to `.gitignore` |
 | P3 | **changes.json outdated** | Last update Jul 18 — 10+ new commits but no new change entries logged |
 | P3 | **36 agents unscored** | Only 15/51 agents have dashboard scoring data — consider running more agent workflows |
 | P3 | **No recent guardian runs** | Last schedule run on 2026-06-14 — guardian has been inactive for 35 days |

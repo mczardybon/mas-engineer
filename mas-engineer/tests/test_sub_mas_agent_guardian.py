@@ -3,7 +3,7 @@ test_sub_mas_agent_guardian.py — sanity tests for agent-guardian.
 
 Agent-guardian (v1.0.0) is the MAS-internal watchdog: monitors all
 sub-agents for death, drift, loops, and degradation. R10 CORONASHIELD
-validates YAML before storing. Writes to .state/guardian.yaml.
+validates YAML before storing. Writes to .mase/guardian.yaml.
 
 Run with:
     python3 -m pytest tests/test_sub_mas_agent_guardian.py -v
@@ -62,10 +62,10 @@ def test_agent_guardian_r10_coronashield():
 
 
 def test_agent_guardian_writes_to_health_yaml():
-    """Spec: writes Agent Health to .state/guardian.yaml."""
+    """Spec: writes Agent Health to .mase/guardian.yaml."""
     content = RECIPE.read_text()
     assert "guardian.yaml" in content, \
-        "agent-guardian must write to .state/guardian.yaml"
+        "agent-guardian must write to .mase/guardian.yaml"
     assert "Agent Health" in content, \
         "agent-guardian must declare Agent Health report"
 

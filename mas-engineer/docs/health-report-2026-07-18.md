@@ -21,11 +21,11 @@
 **Uncommitted files:**
 | Status | File |
 |--------|------|
-| `M` | `mas-engineer/.mas/live-daemon.log` |
-| `M` | `mas-engineer/.state/health-history.json` |
-| `M` | `mas-engineer/.state/health-report.json` |
-| `M` | `mas-engineer/.state/pipeline/pre_push_validation.yaml` |
-| `??` | `mas-engineer/.mas/dashboards/` |
+| `M` | `mas-engineer/.mase/live-daemon.log` |
+| `M` | `mas-engineer/.mase/health-history.json` |
+| `M` | `mas-engineer/.mase/health-report.json` |
+| `M` | `mas-engineer/.mase/pipeline/pre_push_validation.yaml` |
+| `??` | `mas-engineer/.mase/dashboards/` |
 | `??` | `mas-engineer/tests/` |
 
 ---

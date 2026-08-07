@@ -123,8 +123,8 @@ def test_phoenix_recovery_5_target_sub_agents_exist_on_disk():
 
 
 def test_phoenix_recovery_5_target_workflows_exist():
-    """Spec: all 5 wf_recovery_* workflows must exist in .state/workflows.yaml."""
-    wf_path = REPO_ROOT / ".state" / "workflows.yaml"
+    """Spec: all 5 wf_recovery_* workflows must exist in .mase/workflows.yaml."""
+    wf_path = REPO_ROOT / ".mase" / "workflows.yaml"
     with open(wf_path) as f:
         content = f.read()
     for level in FIVE_LEVELS:

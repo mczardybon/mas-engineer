@@ -2,7 +2,7 @@
 
 ## Purpose
 Snapshot-System. Creates complete workspace snapshots BEFORE changes.
-Stores recipe/, tools/, docs/, state/ under .state/checkpoints/{timestamp}/.
+Stores recipe/, tools/, docs/, state/ under .mase/checkpoints/{timestamp}/.
 Enables surgical restore ("Restore state from before 3 steps").
 
 ## Source Sub-Recipe
@@ -16,10 +16,10 @@ sub_mas-recovery-checkpoint — Snapshot-System
 
 ## Steps
 1. Generate timestamp (date +%Y%m%d_%H%M%S)
-2. Copy recipe/ tree to .state/checkpoints/{ts}/recipe/
-3. Copy tools/ tree to .state/checkpoints/{ts}/tools/
-4. Copy docs/ tree to .state/checkpoints/{ts}/docs/
-5. Copy state/ tree to .state/checkpoints/{ts}/state/
+2. Copy recipe/ tree to .mase/checkpoints/{ts}/recipe/
+3. Copy tools/ tree to .mase/checkpoints/{ts}/tools/
+4. Copy docs/ tree to .mase/checkpoints/{ts}/docs/
+5. Copy state/ tree to .mase/checkpoints/{ts}/state/
 6. Write manifest with file counts and hashes
 7. Emit signal DONE with snapshot path
 
@@ -29,7 +29,7 @@ sub_mas-recovery-checkpoint — Snapshot-System
 - target_timestamp (for RESTORE)
 
 ## Output
-- .state/checkpoints/{timestamp}/ (full mirror)
+- .mase/checkpoints/{timestamp}/ (full mirror)
 - checkpoint_manifest.json (hashes + counts)
 - mas_result with restore point reference
 

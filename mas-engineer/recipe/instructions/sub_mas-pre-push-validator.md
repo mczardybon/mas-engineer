@@ -237,9 +237,9 @@ or R108+ convention `🔧|📝|📚|📊 R<round>-<num> [follow-up] — desc` / 
 cd $WORKSPACE
 python3 - <<'PYEOF'
 import yaml, glob, os
-findings_path = ".state/pipeline/findings.yaml"
+findings_path = ".mase/pipeline/findings.yaml"
 if not os.path.exists(findings_path):
-    print("WARN: no .state/pipeline/findings.yaml — run im-finder first")
+    print("WARN: no .mase/pipeline/findings.yaml — run im-finder first")
     exit(0)
 with open(findings_path) as f:
     data = yaml.safe_load(f)
@@ -256,7 +256,7 @@ PYEOF
 ### Check 2: No hardcoded /home/<user>/ paths
 ```bash
 cd $WORKSPACE
-grep -rn '/home/[a-z]*/' tools/ recipe/ .mas/ 2>/dev/null
+grep -rn '/home/[a-z]*/' tools/ recipe/ .mase/ 2>/dev/null
 ```
 **Block if:** any hardcoded user-home path found.
 
@@ -325,7 +325,7 @@ git status --porcelain | head -20
 
 ### Check 7.5: No backup files in commits (NEW v2.0.0 — R36 bug guard)
 **Why:** R36 had a bug where `git add -A` accidentally committed 27k lines of
-backup files (`.backups/20260724_*/`, `.state/pipeline/backup-*/`).
+backup files (`.backups/20260724_*/`, `.mase/pipeline/backup-*/`).
 This check prevents that class of bug from ever reaching master again.
 ```bash
 cd $WORKSPACE
@@ -334,7 +334,7 @@ python3 - <<'PYEOF'
 import subprocess, re
 backup_patterns = [
     r'\.backups/',
-    r'\.state/pipeline/backup-',
+    r'\.mase/pipeline/backup-',
     r'\.bak\.',
     r'backup-pre-r\d+/',
 ]
@@ -368,8 +368,8 @@ if [ -n "$DIFF_CONTENT" ]; then
   python3 tools/dev_goose_expert_check.py --check-mechanism "$DIFF_CONTENT"
 else
   # No recent changes — check current SOT findings/patches instead
-  python3 tools/dev_goose_expert_check.py --findings .state/pipeline/findings.yaml 2>/dev/null || true
-  python3 tools/dev_goose_expert_check.py --patches .state/pipeline/patches.yaml 2>/dev/null || true
+  python3 tools/dev_goose_expert_check.py --findings .mase/pipeline/findings.yaml 2>/dev/null || true
+  python3 tools/dev_goose_expert_check.py --patches .mase/pipeline/patches.yaml 2>/dev/null || true
 fi
 ```
 **Block if:** any "missing Goose mechanism" pattern found in uncommitted
@@ -385,7 +385,7 @@ flagged on 2026-07-21.
 
 This check delegates to `sub_mas-self-auditor` (sub-agent). The
 self-auditor reads e2e-results/, docs/, and top-level `*.md`, then
-emits a report to `.state/pipeline/self_audit.yaml`.
+emits a report to `.mase/pipeline/self_audit.yaml`.
 
 ```bash
 cd $WORKSPACE
@@ -404,7 +404,7 @@ if [ -n "$STAGED_CERTS" ]; then
   # and cause whack-a-mole: fix one cert → expose 5 more in older reports).
   python3 tools/dev_self_auditor.py --scope staged
   # Read its report
-  cat .state/pipeline/self_audit.yaml
+  cat .mase/pipeline/self_audit.yaml
 fi
 ```
 
@@ -474,7 +474,7 @@ goose run --recipe recipe/sub/sub_mas-pre-push-validator.yaml
 **Note:** This check adds ~25-60s to the pre-push gate. If too slow for interactive use, can be skipped via `MAS_SKIP_E2E_BASELINE=1` env var (operator-initiated only, never auto-skip).
 
 **Evidence file (always written):**
-`.state/pre-push-e2e-baseline.json` — contains:
+`.mase/pre-push-e2e-baseline.json` — contains:
 ```yaml
 checked_at: <ISO-8601>
 baseline_source: <file path or "fallback">
@@ -567,7 +567,7 @@ print(json.dumps({
 - Documented in docs/TEST-COVERAGE-POLICY.md
 
 **Evidence file (always written):**
-`.state/pre-push-test-coverage.json` — contains:
+`.mase/pre-push-test-coverage.json` — contains:
 ```yaml
 checked_at: <ISO-8601>
 sub_agents: <int>
@@ -613,7 +613,7 @@ PYEOF
 
 ## Output Format
 
-Write a YAML report to `.state/pipeline/pre_push_validation.yaml`:
+Write a YAML report to `.mase/pipeline/pre_push_validation.yaml`:
 
 ```yaml
 signal: DONE
@@ -657,7 +657,7 @@ r1 = subprocess.run(
     capture_output=True, text=True, timeout=120, cwd=str(W),
 )
 # Parse the saved JSON
-coverage_dir = W / ".state" / "coverage"
+coverage_dir = W / ".mase" / "coverage"
 latest = max(coverage_dir.glob("coverage-*.json"), key=lambda p: p.stat().st_mtime, default=None)
 if latest:
     cov = json.loads(latest.read_text())
@@ -908,22 +908,22 @@ echo "  ✅ Check 18 passed: test count-assertions match recipe count-declaratio
 (CONFIRMATION_REQUIRED) is a hardness-5 rule. The actual bypass mechanism
 is NOT `RECURSION_OVERRIDE` / `MAS_NO_SESSION` (older docs may have
 claimed this — those were aspirational and never implemented). The
-real mechanism is `.state/.last_confirmation` (unix timestamp; valid
+real mechanism is `.mase/.last_confirmation` (unix timestamp; valid
 5 min, then auto-expires), checked in `check_confirmation()` at
 `tools/dev_rule_checker.py:71-77` and `tools/dev_rule_checker_generic.py:24-31`,
 and consumed by the R01 rule body at `tools/dev_rule_checker.py:102-106`
 (and the parallel site in the generic checker).
 
-Two ways to set `.state/.last_confirmation` programmatically:
+Two ways to set `.mase/.last_confirmation` programmatically:
 
   1. **Direct write (operator-initiated, e.g. CI step):**
-       echo "$(date +%s)" > .state/.last_confirmation
+       echo "$(date +%s)" > .mase/.last_confirmation
      The check `(time.time() - ts) < 300` then passes for 5 minutes.
 
   2. **Via e2e_run_all.py wrapper (R110-58, automation context):**
        export MAS_AUTO_CONFIRM=1
        python3 tools/e2e_run_all.py --auto-confirm ...
-     e2e_run_all.py refreshes `.state/.last_confirmation` BEFORE
+     e2e_run_all.py refreshes `.mase/.last_confirmation` BEFORE
      running the e2e tests, so the workflows it spawns (build-test,
      top_workflows, recovery) see a fresh confirmation. BOTH the
      `--auto-confirm` CLI flag AND the `MAS_AUTO_CONFIRM=1` env var

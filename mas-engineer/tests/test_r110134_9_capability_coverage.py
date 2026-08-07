@@ -14,7 +14,7 @@ The 9 capabilities (extracted from logs/e2e-results/2026-08-01-mas-pty-129/dev-m
   C3: Tool/script inventory            (tools/*.py + tools/*.sh count)
   C4: Sub-agent dispatch               (sub_recipes pattern works)
   C5: Mode-check guard                 (.mas-mode + .goosehints present)
-  C6: Dashboard MCP server             (.mas/mcp/server.js present)
+  C6: Dashboard MCP server             (.mase/mcp/server.js present)
   C7: Dashboard data refresh           (dev_dashboard_data.py or dev_dashboard_refresh.py)
   C8: Recovery chain                   (5 sub_mas-recovery-* recipes present)
   C9: R-number naming convention       (R-numbers referenced consistently)
@@ -39,7 +39,7 @@ from _recipe_helpers import REPO_ROOT, load_all_recipes  # noqa: E402
 TOOLS_DIR = REPO_ROOT / "tools"
 RECIPE_DIR = REPO_ROOT / "recipe"
 INSTRUCTIONS_DIR = RECIPE_DIR / "instructions"
-MCP_DIR = REPO_ROOT / ".mas" / "mcp"
+MCP_DIR = REPO_ROOT / ".mase" / "mcp"
 
 
 # C1: Generic framework initialization
@@ -115,7 +115,7 @@ def test_c5_mas_mode_and_goosehints_present():
 
 # C6: Dashboard MCP server
 def test_c6_dashboard_mcp_files_present():
-    """C6: .mas/mcp/ must contain server.js + dashboard.html + package.json."""
+    """C6: .mase/mcp/ must contain server.js + dashboard.html + package.json."""
     server = MCP_DIR / "server.js"
     html = MCP_DIR / "dashboard.html"
     pkg = MCP_DIR / "package.json"

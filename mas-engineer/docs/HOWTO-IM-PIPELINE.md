@@ -44,18 +44,18 @@ orchestrator. Find any duplication or missing documentation."
 
 The IM-Pipeline runs as an 8-stage orchestrator flow (`general-improver` dispatcher) with an optional S0 prerequisites check before it. Of those 8 stages, 5 are executed by dedicated `im-*` sub-agents (S1, S2, S3, S4, S6) and 3 by the general-improver dispatcher (S5 apply, S7 summary, S8 push):
 
-1. **READ SESSION DATA** (im-session-reader, S1): Reads past Goose session history from the SQLite DB into `.state/pipeline/session_data.yaml`. Feeds FIND in the next step.
+1. **READ SESSION DATA** (im-session-reader, S1): Reads past Goose session history from the SQLite DB into `.mase/pipeline/session_data.yaml`. Feeds FIND in the next step.
 
 2. **FIND** (im-finder, S2): Scans the target area and writes findings to
-   `.state/pipeline/findings.yaml`. Each finding has an id, type, location,
+   `.mase/pipeline/findings.yaml`. Each finding has an id, type, location,
    and severity. Detects 53 documented optimization patterns (A-MM).
 
 3. **RANK** (im-rank, S3): Reads the findings and produces
-   `.state/pipeline/ranked_findings.yaml`. Findings are sorted by severity
+   `.mase/pipeline/ranked_findings.yaml`. Findings are sorted by severity
    and impact, with Article 1-6 constitution check.
 
 4. **DESIGN** (im-designer, S4): Reads the ranked findings and produces
-   `.state/pipeline/patches.yaml`. Each patch has a target file, old string,
+   `.mase/pipeline/patches.yaml`. Each patch has a target file, old string,
    and new string.
 
 5. **IMPLEMENT** (dispatcher, S5): The user reviews patches; on approval
@@ -64,7 +64,7 @@ The IM-Pipeline runs as an 8-stage orchestrator flow (`general-improver` dispatc
 
 6. **VALIDATE** (im-validator, S6): Checks that the patches are correct, that
    the YAML files parse, and that the SOT is consistent. Results go to
-   `.state/pipeline/validation.yaml`. May also call `sub_mas-prompt-engineer`
+   `.mase/pipeline/validation.yaml`. May also call `sub_mas-prompt-engineer`
    (prompt score) and `sub_mas-agent-guardian` (drift check) for before/after
    comparison.
 
@@ -111,7 +111,7 @@ This skips the DESIGN and IMPLEMENT stages. It only analyzes the cost
 ### Error pattern analysis
 
 ```text
-"Run the IM-pipeline with task=ERROR_PATTERN on .state/audit.log.jsonl."
+"Run the IM-pipeline with task=ERROR_PATTERN on .mase/audit.log.jsonl."
 ```
 
 This finds recurring error patterns in the audit log and produces a
@@ -151,7 +151,7 @@ does it for new ones.
 
 After the IM-Pipeline runs:
 
-- `.state/workflows.yaml` has the new agent entries and workflow definitions.
+- `.mase/workflows.yaml` has the new agent entries and workflow definitions.
 - `recipe/dev-mas-engineer.yaml` has the new `sub_recipes` entries.
 - The original agent is archived (not deleted) under
   `recipe/sub/legacy/`.
