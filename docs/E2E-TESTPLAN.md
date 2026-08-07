@@ -2,7 +2,7 @@
 
 **Ziel:** Jederzeit wiederholbar. Alle Funktionen, Schalter, Modi abdecken. Echte runs (kein wrapper).
 
-> **⚠️ HISTORICAL TEST SPEC (2026-07-18).** "52 sub-agents" / "45 Python tools" referenced below reflect the catalog at that date. **Current state (2026-07-24): 96 sub-agents in 9 categories, 57 tools (50 Python, 6 Shell, 1 YAML), 8-stage IM pipeline (S1-S8 with S0 prerequisites) + general-improver dispatcher.** Update the operator-script if running today; the test logic remains valid.
+> **⚠️ HISTORICAL TEST SPEC (2026-07-18).** "52 sub-agents" / "45 Python tools" referenced below reflect the catalog at that date. **Current state (2026-08-07): 112 sub-agents in 9 categories, 65 tools (58 Python, 6 Shell, 1 YAML), 8-stage IM pipeline (S1-S8 with S0 prerequisites) + general-improver dispatcher.** Update the operator-script if running today; the test logic remains valid.
 Jede KI kann diesen Plan ausfuehren.
 
 **Stand:** 2026-07-23
