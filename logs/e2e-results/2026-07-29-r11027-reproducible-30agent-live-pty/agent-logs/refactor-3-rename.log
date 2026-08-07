@@ -1,0 +1,259 @@
+# R110-27 live log: refactor-3-rename
+# Started:    2026-07-29T13:51:57Z
+# Walltime:   24.63s
+# RC:         0
+# Bytes:      15127
+# Timed_out:  False
+# Error:      none
+# Wrapper:    /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/wrappers/refactor-3-rename.yaml
+# Task-file:  /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/tasks.yaml
+# ======================================================================
+
+Script started on 2026-07-29 13:51:57+00:00 [COMMAND="bash -c '/root/.local/bin/goose run --recipe /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/wrappers/refactor-3-rename.yaml --no-session 2>&1'" <not executed on terminal>]
+Loading recipe: R110-27 wrapper — refactor-3-rename
+Description: R110-27 wrapper injecting task for refactor-3-rename
+
+◒  starting 3 extensions: developer, analyze, summon                            
+◐  starting 3 extensions: developer, analyze, summon                            
+◐  starting 2 extensions: developer, analyze                                    
+◐  starting 1 extensions: developer                                             
+◐  starting 0 extensions:                                                       
+]0;🪿 mas-engineer
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260729_107 · /workspace/dev-branch/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ tree
+    path: /workspace/dev-branch/mas-engineer/sample-input
+    depth: 2
+
+    data_report.py  [116]
+    order_processor.py  [112]
+    pipeline_runner.py  [92]
+    user_importer.py  [114]
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/dev-branch/mas-engineer/sample-input/data_report.py
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/dev-branch/mas-engineer/sample-input/order_processor.py
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/dev-branch/mas-engineer/sample-input/pipeline_runner.py
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/dev-branch/mas-engineer/sample-input/user_importer.py
+
+    Error: unsupported image format; supported formats are png, jpeg, gif, and webp
+    Error: unsupported image format; supported formats are png, jpeg, gif, and webp
+    Error: unsupported image format; supported formats are png, jpeg, gif, and webp
+    Error: unsupported image format; supported formats are png, jpeg, gif, and webp
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/sample-input/data_report.py
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/sample-input/order_processor.py
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/sample-input/pipeline_runner.py
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/sample-input/user_importer.py
+
+    """Report generator — builds HTML/Markdown reports from raw data."""
+    import json
+    from collections import Counter
+    from datetime import date, datetime
+    from pathlib import Path
+    from typing import Any
+    
+    
+    def generate_report(data_path: str, report_type: str, output_path: str) -> dict[str, Any]:
+        """Load data, analyze, format, and write a report."""
+    ... (96 lines hidden, /toggle to show all)
+                "total_value": total_value,
+                "priorities": dict(priorities),
+                "assignees": dict(assignees),
+            }, indent=2)
+        else:
+            return {"success": False, "error": f"Unknown report type: {report_type}"}
+    
+        # Write
+        Path(output_path).write_text(content)
+        return {"success": True, "path": output_path, "type": report_type}
+    """Order processing — applies discounts, calculates totals, sends notifications."""
+    import json
+    import smtplib
+    from dataclasses import dataclass, field
+    from decimal import Decimal
+    from typing import Any
+    
+    
+    @dataclass
+    class OrderItem:
+    ... (92 lines hidden, /toggle to show all)
+        smtp = db.get("smtp_server", "localhost")
+        smtp_port = db.get("smtp_port", 25)
+        try:
+            with smtplib.SMTP(smtp, smtp_port) as server:
+                sender = db.get("from_email", "orders@shop.example")
+                server.sendmail(sender, [order.customer_email], msg)
+        except Exception as e:
+            return {"success": False, "error": f"Order saved but email failed: {e}"}
+    
+        return {"success": True, "order_id": order.id, "total": str(total)}
+    """ML pipeline — loads, transforms, trains, evaluates, deploys."""
+    import json
+    import os
+    import pickle
+    import shutil
+    from pathlib import Path
+    from typing import Any
+    
+    
+    class Pipeline:
+    ... (72 lines hidden, /toggle to show all)
+            shutil.copytree(self.model_dir, str(deploy_dir))
+            deploy_marker = deploy_dir / "deployed.txt"
+            deploy_marker.write_text(f"Deployed at {__import__('datetime').datetime.now().isoformat()}")
+    
+            return {
+                "accuracy": acc,
+                "model_path": model_path,
+                "result_path": result_path,
+                "deploy_path": str(deploy_dir),
+            }
+    """User import pipeline — processes CSV user data."""
+    import csv
+    import hashlib
+    import re
+    from datetime import datetime
+    from pathlib import Path
+    from typing import Any
+    
+    
+    def import_users(csv_path: str, output_dir: str, dry_run: bool = False) -> dict[str, Any]:
+    ... (94 lines hidden, /toggle to show all)
+        # Summary log
+        summary_path = out_dir / "import_summary.txt"
+        summary = (
+            f"Import completed at {datetime.now().isoformat()}\n"
+            f"Total: {len(rows)}, Valid: {len(valid)}, Errors: {len(errors)}\n"
+        )
+        summary_path.write_text(summary)
+        result["output_files"].append(str(summary_path))
+    
+        return result
+Here are the before/after naming suggestions for all four files.
+
+---
+
+## 1. `data_report.py`
+
+| Before               | After                | Reason                                                       |
+|----------------------|----------------------|--------------------------------------------------------------|
+| `raw`                | `raw_data`           | `raw` is too generic; it's parsed JSON data                  |
+| `records`            | —                    | already good                                                 |
+| `total`              | `record_count`       | unclear what it's a total of                                 |
+| `cat` / `categories` | —                    | `categories` is fine (but the loop var should be `category`) |
+| `st` / `statuses`    | —                    | `statuses` is fine (but the loop var should be `status`)     |
+| `created`            | `created_at`         | shadows data field, unclear it's a date string               |
+| `val`                | `value`              | abbreviated single-letter; full word costs nothing           |
+| `pri` / `pri`        | `priority`           | abbreviation adds no value                                   |
+| `a`                  | `assignee`           | single-letter loop var; always spell it out                  |
+| `lines`              | `markdown_lines`     | only used in the markdown branch, so be explicit             |
+| `rows_html`          | `record_rows_html`   | unclear which rows (categories or records?)                  |
+| `cat_html`           | `category_list_html` | `cat` is ambiguous (category vs concatenate)                 |
+| `content`            | —                    | acceptable in context, kept as the final output var          |
+**Key pattern:** single-letter loop variables (`a`, `st`, `pri`) and unnecessary abbreviations (`cat`, `val`, `created`).
+
+---
+
+## 2. `order_processor.py`
+
+| Before                                             | After            | Reason                                                 |
+|----------------------------------------------------|------------------|--------------------------------------------------------|
+| `it`                                               | `item`           | single-letter abbreviation of a domain concept         |
+| `disc_type`                                        | `discount_type`  | abbreviation; spell it out                             |
+| `disc_val`                                         | `discount_value` | abbreviation; spell it out                             |
+| `total_qty`                                        | `total_quantity` | abbreviation                                           |
+| `msg`                                              | `email_body`     | `msg` is ambiguous (could be error message, SMS, etc.) |
+| `smtp`                                             | `smtp_host`      | unclear it refers to a hostname, not the protocol      |
+| `sender`                                           | —                | good                                                   |
+| `subtotal`, `discount`, `tax`, `shipping`, `total` | —                | all fine (these are well-known domain terms)           |
+| `coupon`                                           | —                | fine                                                   |
+| `order`                                            | —                | fine                                                   |
+| `OrderItem`                                        | —                | fine                                                   |
+| `Order`                                            | —                | fine                                                   |
+**Key pattern:** abbreviations (`it`, `disc_type`, `disc_val`, `total_qty`) and ambiguous names (`msg`, `smtp`).
+
+---
+
+## 3. `pipeline_runner.py`
+
+| Before           | After                       | Reason                                                 |
+|------------------|-----------------------------|--------------------------------------------------------|
+| `cfg`            | `config`                    | abbreviation; 3 vs 6 chars — negligible                |
+| `df`             | —                           | widely recognized pandas convention; acceptable        |
+| `X`              | `features`                  | ML convention, but `features` is self-documenting      |
+| `y`              | `target`                    | ML convention, but `target` is self-documenting        |
+| `acc`            | `accuracy`                  | abbreviation; no reason to shorten                     |
+| `report`         | —                           | fine in the context of `classification_report`         |
+| `model`          | —                           | fine                                                   |
+| `available`      | `available_features`        | unclear what's "available" without reading the logic   |
+| `model_path`     | —                           | fine                                                   |
+| `result_path`    | —                           | fine                                                   |
+| `deploy_marker`  | `deploy_marker_file`        | unclear it's a file path until you see `.write_text()` |
+| `deploy_dir`     | —                           | fine                                                   |
+| `Pipeline.run()` | `execute` or `run_pipeline` | `run` is fine—this is a standard pattern               |
+**Key pattern:** over-abbreviated ML names (`X`, `y`, `acc`) and ambiguous names (`available`, `deploy_marker`).
+
+---
+
+## 4. `user_importer.py`
+
+| Before         | After               | Reason                                                                  |
+|----------------|---------------------|-------------------------------------------------------------------------|
+| `rows`         | `raw_rows`          | unclear these are unvalidated until you read further                    |
+| `valid`        | `valid_users`       | ambiguous: valid what?                                                  |
+| `errors`       | `import_errors`     | too generic in a module named `user_importer`                           |
+| `errs`         | `field_errors`      | single record's errors; be specific                                     |
+| `i`            | `line_number`       | single-letter index; `enumerate(..., start=2)` means it's a line number |
+| `age_str`      | `age_string`        | whole-word is more readable                                             |
+| `reader`       | `csv_reader`        | which kind of reader?                                                   |
+| `out_dir`      | `output_dir`        | abbreviation; matches the parameter name                                |
+| `valid_path`   | `valid_users_path`  | same pattern: "valid what?"                                             |
+| `err_path`     | `error_report_path` | same as above                                                           |
+| `summary_path` | `summary_file_path` | minor, but `path` alone is already implied by the type                  |
+| `dry_run`      | —                   | good parameter name                                                     |
+**Key pattern:** ambiguous plurals (`valid`, `errors`, `rows` need qualifiers), single-letter `i`, and abbreviations (`out_dir`, `errs`, `age_str`).
+
+---
+
+## Summary of recurring anti-patterns
+
+| Anti-pattern                    | Example                                | Fix                                                                       |
+|---------------------------------|----------------------------------------|---------------------------------------------------------------------------|
+| Single-letter loop vars         | `a`, `i`, `st`, `it`                   | Use full words: `assignee`, `line_number`, `status`, `item`               |
+| Unnecessary abbreviations       | `cat`, `pri`, `cfg`, `disc_val`, `acc` | Spell out: `category`, `priority`, `config`, `discount_value`, `accuracy` |
+| Ambiguous bare plurals          | `valid`, `errors`, `rows`, `raw`       | Qualify: `valid_users`, `validation_errors`, `raw_rows`, `raw_data`       |
+| ML tunnel-vision                | `X`, `y`                               | Prefer domain terms: `features`, `target`                                 |
+| Missing qualifier on file paths | `deploy_marker`, `valid_path`          | Add type: `deploy_marker_file`, `valid_users_path`                        |
+
+Script done on 2026-07-29 13:52:22+00:00 [COMMAND_EXIT_CODE="0"]

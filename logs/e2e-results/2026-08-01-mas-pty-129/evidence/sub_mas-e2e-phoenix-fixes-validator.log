@@ -1,0 +1,76 @@
+Loading recipe: ✅ E2E-PHOENIX-FIXES-VALIDATOR — Phoenix Fixes Validator (Sub-Agent)
+Description: v1.0.0 | MAS-internal: e2e verification — Validates phoenix-recovery fix state (T1-T5, T7)
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260801_80 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+Running the T1–T5, T7 validation checks (read-only) against `.state/workflows.yaml`:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat .state/workflows.yaml | grep -c "wf_recovery_immune"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat .state/workflows.yaml | grep -c "wf_recovery_"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_checkpoint']; print(any('restore' in s.get('cmd','').lower() for s in wf.get('steps',[])))"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_defib']; print(any('defib' in s.get('cmd','').lower() for s in wf.get('steps',[])))"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_safezone']; print(any('safezone' in s.get('cmd','').lower() for s in wf.get('steps',[])))"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "import yaml; d=yaml.safe_load(open('.state/workflows.yaml')); wf=d['task_workflows']['wf_recovery_timeline']; print(any('timeline' in s.get('cmd','').lower() for s in wf.get('steps',[])))"
+
+318TrueTrueTrueTrueRaw counts differ from expectations — let me inspect the file to give accurate details in the report:
+  ────────────────────────────────────────
+  ▸ shell
+    command: grep -o "wf_recovery_immune" .state/workflows.yaml | wc -l; echo "---"; grep -o "wf_recovery_[a-z_]*" .state/workflows.yaml | sort | uniq -c
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import yaml
+d = yaml.safe_load(open('.state/workflows.yaml'))
+wfs = d['task_workflows']
+rec = [k for k in wfs if k.startswith('wf_recovery_')]
+print('recovery workflows:', sorted(rec))
+for k in sorted(rec):
+    steps = wfs[k].get('steps', [])
+    cmds = [s.get('cmd','') for s in steps]
+    print(k, '->', len(steps), 'steps')
+"
+
+3
+---
+      2 wf_recovery_checkpoint
+      1 wf_recovery_checkpoint_diff
+      1 wf_recovery_checkpoint_list
+      2 wf_recovery_defib
+      1 wf_recovery_defib_diagnose
+      1 wf_recovery_defib_resurrect
+      3 wf_recovery_immune
+      2 wf_recovery_safezone
+      1 wf_recovery_safezone_abort
+      1 wf_recovery_safezone_merge
+      3 wf_recovery_timeline
+      1 wf_recovery_timeline_analyzerecovery workflows: ['wf_recovery_checkpoint', 'wf_recovery_defib', 'wf_recovery_immune', 'wf_recovery_safezone', 'wf_recovery_timeline']
+wf_recovery_checkpoint -> 4 steps
+wf_recovery_defib -> 4 steps
+wf_recovery_immune -> 4 steps
+wf_recovery_safezone -> 4 steps
+wf_recovery_timeline -> 4 steps

@@ -1,0 +1,704 @@
+Loading recipe: 📦 SUB-MAS-RECOVERY-TIMELINE — Automatic Best-Point Search (Sub-Agent)
+Description: v1.0.0 | MAS-internal: Automatically finds the best checkpoint, restores, analyzes damage.
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260730_115 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: recipe/instructions/sub_mas-recovery-timeline.md
+
+Error: unsupported image format; supported formats are png, jpeg, gif, and webp
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat recipe/instructions/sub_mas-recovery-timeline.md 2>/dev/null || echo "FILE NOT FOUND"
+
+⛔ INVENTORY-CHECK: → Check whether Sub-Agent/Tool/Function already exists → Use existing, build ONLY if nothing suitable exists
+
+# sub_mas-recovery-timeline — Time-travel system
+
+MAS-Engineer-internal. Analyzes ALL Checkpoints for YAML validity. Finds the BEST (most recent valid) Checkpoint automatically. Combines checkpoint data + changes.json + YAML health.
+
+╔══════════════════════════════════════════════╗
+  ║  SOT WORKFLOW CONTROL                     ║
+  ║  → workflows.yaml → agents.recovery-timeline║
+  ║     .task_workflows.FIND_BEST               ║
+╚══════════════════════════════════════════════╝
+
+## Input
+```yaml
+timeline_intake:
+  signal: 'HANDOVER'
+  request_id: string
+  from: 'dev-mas-engineer'
+  to: 'sub_mas-recovery-timeline'
+  task: 'FIND_BEST|RESTORE_BEST|SHOW_PATH|ANALYZE'
+  workspace: string
+```
+
+## Output
+```yaml
+mas_result:
+  signal: 'DONE'|'ERROR'|'HANDOVER'
+  observations:
+    - severity: 'P1'|'P2'|'P3'
+      title: string
+      description: string
+  best_checkpoint: string
+  score: int
+```
+
+## Task FIND_BEST — Automatically find best checkpoint
+
+STEP 1 — Test all checkpoints (most recent first):
+  checkpoint_dir={workspace}/mas-engineer/.state/checkpoints
+  best=''
+  for d in $(ls -t $checkpoint_dir 2>/dev/null); do
+    python3 -c "import yaml; yaml.safe_load(open('$checkpoint_dir/$d/recipe/dev-mas-engineer.yaml'))"
+    2>/dev/null
+    if [ $? -eq 0 ]; then
+      best=$d
+      break
+    fi
+  done
+
+STEP 2 — Result:
+  if [ -n "$best" ]; then
+    label=$(cat $checkpoint_dir/$best/.label 2>/dev/null || echo 'no label')
+    signal='DONE': 'Best checkpoint: $best — $label'
+  else
+    signal='DONE': 'No valid Checkpoint — Search in .backups/'
+    # Fallback: Search Backups
+    for d in $(ls -t {workspace}/mas-engineer/.backups 2>/dev/null); do
+      for f in {workspace}/mas-engineer/.backups/$d/*dev-mas-engineer*; do
+        python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null && echo "$f" && break 2
+      done
+    done
+  fi
+
+### Edge Cases FIND_BEST
+- No Checkpoints → 'INFO' info + backup search
+- All Checkpoints corrupt → 'ERROR' error + Defib recommended
+- checkpoint_dir missing → mkdir + 'INFO' info
+
+## Task RESTORE_BEST — Restore
+
+STEP 1 — Find best (see FIND_BEST)
+STEP 2 — Restore:
+  rm -rf {workspace}/mas-engineer/recipe
+  rm -rf {workspace}/mas-engineer/tools
+  rm -rf {workspace}/mas-engineer/docs
+  cp -r {workspace}/mas-engineer/.state/checkpoints/$best/recipe  {workspace}/mas-engineer/
+  cp -r {workspace}/mas-engineer/.state/checkpoints/$best/tools  {workspace}/mas-engineer/
+  cp -r {workspace}/mas-engineer/.state/checkpoints/$best/docs   {workspace}/mas-engineer/
+
+STEP 3 — Validation + Snapshot:
+  python3 -c "import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))"
+  delegate to sub_mas-recovery-checkpoint (task=SNAPSHOT, label='after_restore_best')
+  signal='DONE': 'Restored to $best — New snapshot: after_restore_best'
+
+### Edge Cases RESTORE_BEST
+- No best Checkpoint → 'ERROR' error + 'Defib recommended'
+- Restoration failed → 'ERROR' error + suggest manual rollback
+
+## Task SHOW_PATH — You are here
+
+STEP 1 — Show timeline:
+  echo '=== TIMELINE ==='
+  for d in $(ls -t {workspace}/mas-engineer/.state/checkpoints 2>/dev/null); do
+    label=$(cat {workspace}/mas-engineer/.state/checkpoints/$d/.label 2>/dev/null || echo '?')
+    status=$(python3 -c "import yaml; yaml.safe_load(open('{workspace}/mas-engineer/.state/checkpoints/$d/recipe/dev-mas-engineer.yaml'))" 2>/dev/null && echo '✓' || echo '✗')
+    echo '$status $d — $label'
+  done
+
+STEP 2 — Current Position:
+  current=$(python3 -c "import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))" 2>/dev/null && echo '✓' || echo '✗')
+  echo '$current CURRENT (here)'
+  if echo "$current" | grep -q '✗'; then
+    echo 'Recommendation: recovery --restore-best'
+  else
+    echo 'System running — Checkpoint recommended for next change'
+  fi
+
+## Task ANALYZE — Damage analysis
+
+STEP 1 — 7-check diagnosis:
+  Q1: [ -d {workspace} ]                         || echo 'XX Workspace missing'
+  Q2: [ -d {workspace}/mas-engineer ]             || echo 'XX MAS missing'
+  Q3: [ -f {workspace}/mas-engineer/recipe/dev-mas-engineer.yaml ] || echo 'XX Main recipe missing'
+  Q4: [ -d {workspace}/mas-engineer/recipe/sub ]  || echo 'XX Sub recipes missing'
+  Q5: [ -d {workspace}/mas-engineer/tools ]       || echo 'XX Tools missing'
+  Q6: [ -d {workspace}/mas-engineer/.state ]      || echo 'XX State missing'
+  Q7: python3 -c "import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))" 2>&1 || echo 'XX Main corrupt'
+
+STEP 2 — Damage level:
+  0 Errors: '✓' — 'No damage'
+  1-3 Errors: '⚠' — 'Partial corruption — restore-best'
+  4-5 Errors: '🔴' — 'Severe damage — resurrect'
+  6-7 Errors: '💀' — 'Total damage — defib + --init'
+
+STEP 3 — Recommendation:
+  signal='✓' or '⚠' or '🔴' depending on damage level
+  'Diagnosis: {error}/7 Errors — Recommendation: {action}'
+
+CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation.
+MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.I'm standing by as **sub_mas-recovery-timeline** (v1.0.0). Let me first assess the current state and understand what's needed.
+
+**Checking workspace, state, and SOT configuration...**
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== WORKSPACE ===" && ls -la /tmp/mas-engineer-test/mas-engineer/ 2>/dev/null || echo "DIR NOT FOUND"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== CHECKPOINTS ===" && ls -lt /tmp/mas-engineer-test/mas-engineer/.state/checkpoints/ 2>/dev/null || echo "NO CHECKPOINTS DIR"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== BACKUPS ===" && ls -lt /tmp/mas-engineer-test/mas-engineer/.backups/ 2>/dev/null || echo "NO BACKUPS DIR"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== SOT ===" && cat /tmp/mas-engineer-test/mas-engineer/workflows.yaml 2>/dev/null | head -100 || echo "NO workflows.yaml"
+
+=== WORKSPACE ===
+total 152
+drwxr-xr-x 24 root root  4096 Jul 30 05:02 .
+drwxr-xr-x 14 root root  4096 Jul 30 04:16 ..
+drwxr-xr-x  3 root root  4096 Jul 29 20:13 .backups
+drwxr-xr-x  4 root root  4096 Jul 30 04:56 .dev-team
+-rw-------  1 root root   735 Jul 29 19:12 .env
+-rw-r--r--  1 root root  1333 Jul 29 19:02 .env.example
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 .githooks
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 .github
+-rw-r--r--  1 root root  1644 Jul 29 19:02 .gitignore
+-rw-r--r--  1 root root   467 Jul 29 19:02 .goosehints
+drwxr-xr-x  5 root root  4096 Jul 29 20:12 .mas
+-rw-r--r--  1 root root     4 Jul 29 19:02 .mas-mode
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 .pytest_cache
+drwxr-xr-x 11 root root  4096 Jul 30 04:59 .state
+-rw-r--r--  1 root root 13566 Jul 29 19:02 DATA-QUALITY-REPORT.md
+-rw-r--r--  1 root root  6368 Jul 29 19:02 README.md
+drwxr-xr-x  2 root root  4096 Jul 30 04:47 docs
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 e2e-evidence
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 e2e-evidence-gen2
+drwxr-xr-x 30 root root  4096 Jul 30 04:31 e2e-results
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 findings
+drwxr-xr-x  4 root root  4096 Jul 29 19:02 mas-engineer
+drwxr-xr-x  4 root root  4096 Jul 29 19:02 prompts
+drwxr-xr-x  6 root root  4096 Jul 29 20:23 recipe
+-rw-r--r--  1 root root  2413 Jul 29 19:02 run_translators.py
+drwxr-xr-x  2 root root  4096 Jul 29 20:10 sample-input
+drwxr-xr-x  2 root root  4096 Jul 29 20:10 sample-output
+drwxr-xr-x  2 root root  4096 Jul 30 03:57 scripts
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 template
+drwxr-xr-x  5 root root  4096 Jul 29 19:02 testproject
+drwxr-xr-x  3 root root 12288 Jul 30 04:32 tests
+drwxr-xr-x  4 root root  4096 Jul 30 04:39 tools=== CHECKPOINTS ===
+total 4
+drwxr-xr-x 2 root root 4096 Jul 30 04:31 si_20260730_043151=== BACKUPS ===
+total 4
+drwxr-xr-x 2 root root 4096 Jul 29 20:13 1785355998=== SOT ===
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== CHECKPOINT CONTENT ===" && ls -la /tmp/mas-engineer-test/mas-engineer/.state/checkpoints/si_20260730_043151/ 2>/dev/null
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== CHECKPOINT LABEL ===" && cat /tmp/mas-engineer-test/mas-engineer/.state/checkpoints/si_20260730_043151/.label 2>/dev/null || echo "NO LABEL"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== CHECKPOINT CONTENT TREE ===" && find /tmp/mas-engineer-test/mas-engineer/.state/checkpoints/si_20260730_043151/ -type f 2>/dev/null
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== BACKUP CONTENT ===" && find /tmp/mas-engineer-test/mas-engineer/.backups/ -type f 2>/dev/null
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== CURRENT RECIPE ===" && ls -la /tmp/mas-engineer-test/mas-engineer/recipe/ 2>/dev/null
+
+=== CHECKPOINT CONTENT ===
+total 8
+drwxr-xr-x 2 root root 4096 Jul 30 04:31 .
+drwxr-xr-x 3 root root 4096 Jul 30 04:31 ..=== CHECKPOINT LABEL ===
+NO LABEL=== CHECKPOINT CONTENT TREE ====== BACKUP CONTENT ====== CURRENT RECIPE ===
+total 80
+drwxr-xr-x  6 root root  4096 Jul 29 20:23 .
+drwxr-xr-x 24 root root  4096 Jul 30 05:02 ..
+-rw-r--r--  1 root root  1020 Jul 29 19:02 dashboard-data-refresh.yaml
+-rw-r--r--  1 root root  8468 Jul 29 19:02 dev-mas-engineer-30agents.yaml
+-rw-r--r--  1 root root  1581 Jul 29 20:23 dev-mas-engineer.yaml
+-rw-r--r--  1 root root  1099 Jul 29 19:02 e2e-verify-auto-repair.yaml
+-rw-r--r--  1 root root  1468 Jul 29 19:02 e2e-verify-german-fixes.yaml
+-rw-r--r--  1 root root  1272 Jul 29 19:02 e2e-verify-phoenix-fixes.yaml
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 instructions
+drwxr-xr-x  6 root root  4096 Jul 29 19:02 multi-arch-30
+-rw-r--r--  1 root root   872 Jul 29 19:02 root_recipe.yaml
+-rw-r--r--  1 root root  3600 Jul 29 19:02 setup-dashboard.yaml
+drwxr-xr-x  5 root root 12288 Jul 29 20:23 sub
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 template
+-rw-r--r--  1 root root  1299 Jul 29 19:02 test-fix-failures.yaml
+-rw-r--r--  1 root root   995 Jul 29 19:02 test-mas-user.yamlLet me run a full **ANALYZE** diagnosis and check the current YAML health.
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== YAML VALIDITY CHECK ===" && python3 -c "import yaml; yaml.safe_load(open('/tmp/mas-engineer-test/mas-engineer/recipe/dev-mas-engineer.yaml'))" 2>&1 && echo "✓ VALID" || echo "✗ INVALID"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== WORKFLOWS.YAML CHECK ===" && python3 -c "import yaml; yaml.safe_load(open('/tmp/mas-engineer-test/mas-engineer/workflows.yaml'))" 2>&1 && echo "✓ VALID" || echo "✗ INVALID/MISSING"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== MASTER DIAGNOSTIC (7-CHECK) ===" 
+WS=/tmp/mas-engineer-test/mas-engineer
+
+# Q1
+[ -d /tmp/mas-engineer-test ] && echo "Q1 ✓ Workspace exists" || echo "Q1 ✗ Workspace missing"
+# Q2
+[ -d $WS ] && echo "Q2 ✓ MAS exists" || echo "Q2 ✗ MAS missing"
+# Q3
+[ -f $WS/recipe/dev-mas-engineer.yaml ] && echo "Q3 ✓ Main recipe exists" || echo "Q3 ✗ Main recipe missing"
+# Q4
+[ -d $WS/recipe/sub ] && echo "Q4 ✓ Sub recipes exist" || echo "Q4 ✗ Sub recipes missing"
+# Q5
+[ -d $WS/tools ] && echo "Q5 ✓ Tools exist" || echo "Q5 ✗ Tools missing"
+# Q6
+[ -d $WS/.state ] && echo "Q6 ✓ State exists" || echo "Q6 ✗ State missing"
+# Q7
+python3 -c "import yaml; yaml.safe_load(open('$WS/recipe/dev-mas-engineer.yaml'))" 2>&1 && echo "Q7 ✓ Main recipe valid" || echo "Q7 ✗ Main recipe corrupt/cannot validate"
+
+=== YAML VALIDITY CHECK ===
+✓ VALID=== WORKFLOWS.YAML CHECK ===
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/mas-engineer-test/mas-engineer/workflows.yaml'
+✗ INVALID/MISSING=== MASTER DIAGNOSTIC (7-CHECK) ===
+Q1 ✓ Workspace exists
+Q2 ✓ MAS exists
+Q3 ✓ Main recipe exists
+Q4 ✓ Sub recipes exist
+Q5 ✓ Tools exist
+Q6 ✓ State exists
+Q7 ✓ Main recipe valid
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/mas-engineer-test/mas-engineer/.mas-mode 2>/dev/null
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls -la /tmp/mas-engineer-test/mas-engineer/.mas/ 2>/dev/null
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls -la /tmp/mas-engineer-test/mas-engineer/.state/ 2>/dev/null
+
+mastotal 20
+drwxr-xr-x  5 root root 4096 Jul 29 20:12 .
+drwxr-xr-x 24 root root 4096 Jul 30 05:02 ..
+drwxr-xr-x  2 root root 4096 Jul 29 19:02 config
+drwxr-xr-x  2 root root 4096 Jul 30 04:21 dashboards
+drwxr-xr-x  2 root root 4096 Jul 29 19:02 mcptotal 364
+drwxr-xr-x 11 root root   4096 Jul 30 04:59 .
+drwxr-xr-x 24 root root   4096 Jul 30 05:02 ..
+-rw-r--r--  1 root root      0 Jul 30 04:36 .immune_clean
+-rw-r--r--  1 root root    316 Jul 30 04:39 analysis.json
+-rw-r--r--  1 root root  11543 Jul 29 19:02 best-practices.yaml
+-rw-r--r--  1 root root    189 Jul 29 19:02 changelog.txt
+-rw-r--r--  1 root root   5145 Jul 29 19:02 changes.archive-2026-07-23.json
+-rw-r--r--  1 root root   3709 Jul 29 19:02 changes.archive-2026-07-24-r37.json
+-rw-r--r--  1 root root   8198 Jul 29 19:02 changes.archive-2026-07-24.json
+-rw-r--r--  1 root root   1619 Jul 30 04:55 changes.json
+-rw-r--r--  1 root root   2294 Jul 29 19:02 changes.unlimited-archive-20260723-222630.json
+drwxr-xr-x  3 root root   4096 Jul 30 04:31 checkpoints
+drwxr-xr-x  2 root root   4096 Jul 29 20:33 coverage
+-rw-r--r--  1 root root   1493 Jul 29 19:02 framework-best-practices.yaml
+-rw-r--r--  1 root root   1441 Jul 29 19:02 goose-defaults.env
+-rw-r--r--  1 root root      3 Jul 30 04:36 immune_severity
+-rw-r--r--  1 root root      0 Jul 30 04:36 immune_violations.log
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 knowledge
+drwxr-xr-x  2 root root   4096 Jul 30 04:59 logs
+drwxr-xr-x  2 root root   4096 Jul 30 04:54 pipeline
+-rw-r--r--  1 root root    312 Jul 29 20:25 pre-push-e2e-baseline.json
+-rw-r--r--  1 root root    162 Jul 29 20:25 pre-push-test-coverage.json
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 pre_check_benchmark
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 rules
+-rw-r--r--  1 root root    877 Jul 30 04:44 schedule.yaml
+-rw-r--r--  1 root root   1933 Jul 29 19:02 sot_schema.yaml
+drwxr-xr-x  3 root root   4096 Jul 29 19:02 templates
+-rw-r--r--  1 root root    726 Jul 30 04:31 todo.md
+drwxr-xr-x  2 root root  20480 Jul 30 04:36 workflow_runs
+-rw-r--r--  1 root root 111978 Jul 30 03:42 workflows.yaml
+-rw-r--r--  1 root root 107528 Jul 29 19:55 workflows.yaml.backup-r11036-fix
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== SOT (workflows.yaml in .state) ===" && python3 -c "
+import yaml
+with open('/tmp/mas-engineer-test/mas-engineer/.state/workflows.yaml') as f:
+    data = yaml.safe_load(f)
+import json
+print(json.dumps(data, indent=2)[:3000])
+" 2>&1 || echo "PARSING ERROR"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== CHANGES.JSON (recent) ===" && python3 -c "
+import json
+with open('/tmp/mas-engineer-test/mas-engineer/.state/changes.json') as f:
+    data = json.load(f)
+print(json.dumps(data, indent=2)[:2000])
+" 2>&1
+
+=== SOT (workflows.yaml in .state) ===
+{
+  "version": "1.0.0",
+  "configs": {
+    "mas-self": {
+      "type": "main-agent",
+      "version": "2.0.0",
+      "first_session": {
+        "steps": [
+          "load(source: 'sub_mas-system-knowledge')",
+          "cat .mas-mode \u2192 work_on = mas | framework | <project>  (R14)",
+          "IF work_on == \"mas\": cat mas-engineer/.state/workflows.yaml \u2192 restrictions, task_workflows, recovery, enforcement, signals, token_budgets",
+          "IF work_on != \"mas\": MAS-Configuration will NICHT loaded (R13) \u2014 weiter msg Frage",
+          "cat .state/knowledge/{thema}.md (at Bemay)"
+        ],
+        "then": "Question: What should I do?"
+      },
+      "paths": {
+        "mas": {
+          "source_dir": "{workspace}/mas-engineer",
+          "install_dir": "~/.config/goose/recipe",
+          "tools_install": "~/.config/goose/recipe/mas-engineer-tools",
+          "state_dir": "{workspace}/mas-engineer/.state"
+        },
+        "projekt": {
+          "work_dir": "{workspace} (dynamic, dynamically set by caller)"
+        },
+        "mode": {
+          "current": "mas",
+          "current_via": "cat {workspace}/mas-engineer/.mas-mode || cat ~/.config/goose/.mas-mode",
+          "modi": [
+            "mas",
+            "framework",
+            "generic"
+          ],
+          "_r11031_note": "The mode controls which DOMAIN a sub-agent belongs to (see R110-31):\n  work_on=mas       \u2192 DOMAIN 1: mas-self sub-agents. All sub_mas-*.yaml in\n                        recipe/sub/ MUST be registered in configs.mas-self.\n                        sub_agents (below). Enforced by R18 + R110-31.\n  work_on=framework \u2192 DOMAIN 2: mas-generated team (orchestrator + sub-agents).\n                        NO mas-self registration. Orchestrator's instructions.md\n                        is the registry. Example: team-packager-* in this file's\n                        `agents:` section.\n  work_on=generic   \u2192 DOMAIN 3: project in framework mode. mas-engineer\n                        workflows.yaml is NOT involved. Project owns its own.\nDetection priority in R110-31: .mas-mode (this value) > action string heuristic.\n",
+          "_r14_rule": "work_on is a HARD RULE (R14). Set it BEFORE writing/editing any sub-agent recipe. Default for mas-engineer development = \"mas\"."
+        }
+      },
+      "restrictions": {
+        "r01_confirmation": {
+          "level": "extreme",
+          "description": "Before EVERY write/edit/shell: check if confirmation needed",
+          "details": [
+            "IF action YAML/Code changes: SHOW Plan + WAIT auf \u2705",
+            "IF action only reads/analyzes: NO confirmation"
+          ]
+        },
+        "r02_bestand": {
+          "level": "extreme",
+          "description": "INVENTORY before new build \u2014 Check ob Tool/Agent/Function already exists"
+        },
+        "r03_reserved": {
+          "level": "info",
+          "description": "Reserved for future use"
+        },
+        "r04_general_improver"=== CHANGES.JSON (recent) ===
+[
+  {
+    "timestamp": "20260729_201320",
+    "action": "CREATE",
+    "description": "Neuer Agent: sub_mas-clone"
+  },
+  {
+    "timestamp": "20260730_044455",
+    "stage": "apply_only",
+    "task": "APPLY_ONLY",
+    "mode": "mas",
+    "recursion_override": true,
+    "findings_total": 19,
+    "findings_conform": 19,
+    "already_fixed_in_source": 15,
+    "install_fixes_needed": 4,
+    "install_fixes_applied": 0,
+    "install_dir_exists": false,
+    "note": "Source files already clean. Install dir (~/.config/goose/recipes/sub/) does not exist in this test environment. All 19 findings are effectively resolved.",
+    "validation_file": ".state/pipeline/validation_author_fixes.yaml",
+    "status": "done"
+  },
+  {
+    "timestamp": "20260730_045400",
+    "stage": "im-validator",
+    "agent": "sub_mas-im-validator",
+    "status": "partial",
+    "approved": 3,
+    "rejected": 1,
+    "patches": [
+      {
+        "id": "F-PTY-001",
+        "verdict": "APPROVE",
+        "file": "tools/mas_e2e_pty_all.sh"
+      },
+      {
+        "id": "F-001",
+        "verdict": "APPROVE",
+        "file": "recipe/multi-arch-30/multi-arch-30.yaml (prompt)"
+      },
+      {
+        "id": "F-002",
+        "verdict": "APPROVE",
+        "file": "recipe/multi-arch-30/multi-arch-30.yaml (settings)"
+      },
+      {
+        "id": "F-093",
+        "verdict": "REJECT",
+        "file": "recipe/sub/sub_mas-clone.yaml (file does not exist)"
+      }
+    ],
+    "validation_file": ".state/pipeline/validation.yaml",
+    "note": "3/4 patches CONFORM and already applied. 1 REJECTED (F-093: target file missing, EDIT/CREATE mismatch)."
+  }
+]
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import yaml, json
+with open('/tmp/mas-engineer-test/mas-engineer/.state/workflows.yaml') as f:
+    data = yaml.safe_load(f)
+# Find recovery-related sections
+config = data.get('configs', {})
+mas_self = config.get('mas-self', {})
+agents = mas_self.get('sub_agents', {})
+rt = {k:v for k,v in agents.items() if 'time' in k.lower() or 'recovery' in k.lower() or 'timeline' in k.lower()}
+print('=== RECOVERY-TIMELINE CONFIG ===')
+print(json.dumps(rt, indent=2))
+print()
+# Check restrictions
+restrictions = mas_self.get('restrictions', {})
+print('=== RESTRICTIONS (key list) ===')
+print(list(restrictions.keys()))
+" 2>&1
+
+=== RECOVERY-TIMELINE CONFIG ===
+{
+  "recovery": [
+    "sub_mas-recovery-checkpoint",
+    "sub_mas-recovery-defib",
+    "sub_mas-recovery-immune",
+    "sub_mas-recovery-safezone",
+    "sub_mas-recovery-timeline",
+    "sub_mas-degradation-analyzer",
+    "sub_mas-degradation-director",
+    "sub_mas-degradation-planner",
+    "sub_mas-degradation-reporter"
+  ]
+}
+
+=== RESTRICTIONS (key list) ===
+['r01_confirmation', 'r02_bestand', 'r03_reserved', 'r04_general_improver', 'r05_auto_commsg', 'r06_sub_agent', 'r07_signal', 'r08_token', 'r09_domain', 'r10_coronashield', 'r11_si_rate_limsg', 'r12_work_mas_entkopplung', 'r13_newes_projekt_ignore', 'r14_work_on_mode', 'r15_architektur_genehmigung', 'r16_tool_vor_experte', 'r17_improvement_push', 'r18_delegation', 'r19_path_hierarchie', 'r20_write_entzug', 'r21_audit_pflicht', 'r22_responsibility_matrix', 'r23_monitoring_agnostic', '_dedup_note', 'verbote', 'verstoesse']
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import yaml, json
+with open('/tmp/mas-engineer-test/mas-engineer/.state/workflows.yaml') as f:
+    data = yaml.safe_load(f)
+config = data.get('configs', {})
+mas_self = config.get('mas-self', {})
+
+# Check for task_workflows
+tw = mas_self.get('task_workflows', {})
+print('=== TASK WORKFLOWS ===')
+print(json.dumps(tw, indent=2)[:3000])
+" 2>&1
+
+=== TASK WORKFLOWS ===
+{}
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 -c "
+import yaml, json
+with open('/tmp/mas-engineer-test/mas-engineer/.state/workflows.yaml') as f:
+    data = yaml.safe_load(f)
+
+# Search for recovery-timeline in all sections
+def find_key(data, target, path=''):
+    results = []
+    if isinstance(data, dict):
+        for k, v in data.items():
+            p = f'{path}.{k}' if path else k
+            if target in str(k).lower() or target in str(v).lower()[:50]:
+                results.append(f'{p}: {json.dumps(v)[:300]}')
+            results.extend(find_key(v, target, p))
+    elif isinstance(data, list):
+        for i, item in enumerate(data):
+            p = f'{path}[{i}]'
+            results.extend(find_key(item, target, p))
+    return results
+
+for r in find_key(data, 'timeline'):
+    print(r)
+print('---')
+for r in find_key(data, 'recovery'):
+    print(r)
+" 2>&1
+
+configs.mas-self.recovery.5_leveln.timeline: {"befehl": "recovery --timeline", "workflow": "wf_recovery_timeline", "sub_agent": "sub_mas-recovery-timeline", "subbefehle": ["recovery --restore-best \u2192 wf_timeline_restore", "recovery --analyze \u2192 wf_recovery_timeline_analyze"]}
+configs.mas-self.recovery.5_leveln.timeline.befehl: "recovery --timeline"
+configs.mas-self.recovery.5_leveln.timeline.workflow: "wf_recovery_timeline"
+configs.mas-self.recovery.5_leveln.timeline.sub_agent: "sub_mas-recovery-timeline"
+configs.mas-self.recovery.5_leveln.timeline.subbefehle: ["recovery --restore-best \u2192 wf_timeline_restore", "recovery --analyze \u2192 wf_recovery_timeline_analyze"]
+agents.recovery-timeline: {"tier": "balanced", "token_budget": 15000, "task_workflows": {"FIND_BEST": "wf_timeline_findbest", "RESTORE_BEST": "wf_timeline_restore", "SHOW_PATH": "wf_timeline_showpath", "ANALYZE": "wf_timeline_analyze"}}
+agents.recovery-timeline.task_workflows: {"FIND_BEST": "wf_timeline_findbest", "RESTORE_BEST": "wf_timeline_restore", "SHOW_PATH": "wf_timeline_showpath", "ANALYZE": "wf_timeline_analyze"}
+agents.recovery-timeline.task_workflows.FIND_BEST: "wf_timeline_findbest"
+agents.recovery-timeline.task_workflows.RESTORE_BEST: "wf_timeline_restore"
+agents.recovery-timeline.task_workflows.SHOW_PATH: "wf_timeline_showpath"
+agents.recovery-timeline.task_workflows.ANALYZE: "wf_timeline_analyze"
+task_workflows.wf_session_correlate.steps[1].cmd: "echo 'Timeline created. Pattern will be extracted.'"
+task_workflows.wf_recovery_timeline: {"desc": "Find best recovery point", "steps": [{"id": "find_latest", "action": "shell", "cmd": "ls -1t .state/checkpoints/ 2>/dev/null | head -1", "timeout": 15}, {"id": "count_checkpoints", "action": "shell", "cmd": "ls -1 .state/checkpoints/ 2>/dev/null | wc -l", "timeout": 10}, {"id": "score_late
+task_workflows.wf_recovery_defib.steps[2].id: "verify_immune_timeline"
+task_workflows.wf_timeline_findbest: {"desc": "Find best checkpoint", "steps": [{"id": "scan_checkpoints", "action": "shell", "cmd": "for d in $(ls -1t {workspace}/.state/checkpoints/ 2>/dev/null); do python3 -c \"import yaml; yaml.safe_load(open('{workspace}/.state/checkpoints/$d/recipe/dev-mas-engineer.yaml'))\" 2>/dev/null && echo \
+task_workflows.wf_timeline_restore: {"desc": "Restore best checkpoint", "steps": [{"id": "find_best", "action": "shell", "cmd": "for d in $(ls -1t {workspace}/.state/checkpoints/ 2>/dev/null); do python3 -c \"import yaml; yaml.safe_load(open('{workspace}/.state/checkpoints/$d/recipe/dev-mas-engineer.yaml'))\" 2>/dev/null && echo \"$d\
+task_workflows.wf_timeline_showpath: {"desc": "Show timeline tree", "steps": [{"id": "show", "action": "shell", "cmd": "for d in $(ls -1t {workspace}/.state/checkpoints/ 2>/dev/null | head -10); do python3 -c \"import yaml; yaml.safe_load(open('{workspace}/.state/checkpoints/$d/recipe/dev-mas-engineer.yaml'))\" 2>/dev/null && echo \"\u
+task_workflows.wf_timeline_showpath.desc: "Show timeline tree"
+task_workflows.wf_timeline_analyze: {"desc": "Pityn systematisch analyze", "steps": [{"id": "diagnose", "action": "shell", "cmd": "SCHADEN=0; [ -f {workspace}/recipe/dev-mas-engineer.yaml ] || SCHADEN=$((SCHADEN+1)); python3 -c \"import yaml; yaml.safe_load(open('{workspace}/recipe/dev-mas-engineer.yaml'))\" 2>/dev/null || SCHADEN=$((
+task_workflows.wf_defib_resurrect.steps: [{"id": "try_timeline", "action": "shell", "cmd": "echo 'Timeline: bestn Checkpoint search...'; for d in $(ls -1t {workspace}/.state/checkpoints/ 2>/dev/null); do python3 -c \"import yaml; yaml.safe_load(open('{workspace}/.state/checkpoints/$d/recipe/dev-mas-engineer.yaml'))\" 2>/dev/null && echo \"
+task_workflows.wf_defib_resurrect.steps[0].id: "try_timeline"
+task_workflows.wf_defib_resurrect.steps[0].cmd: "echo 'Timeline: bestn Checkpoint search...'; for d in $(ls -1t {workspace}/.state/checkpoints/ 2>/dev/null); do python3 -c \"import yaml; yaml.safe_load(open('{workspace}/.state/checkpoints/$d/recipe/dev-mas-engineer.yaml'))\" 2>/dev/null && echo \"Bitt: $d\" && break; done"
+task_workflows.wf_defib_resurrect.steps[1].depends_on: ["try_timeline"]
+---
+configs.mas-self.restrictions.r10_coronashield.description: "EVERY YAML must be validated via sub_mas-recovery-immune CHECK_YAML before storing"
+configs.mas-self.recovery: {"5_leveln": {"immune": {"befehl": "recovery --immune", "workflow": "wf_recovery_immune", "sub_agent": "sub_mas-recovery-immune"}, "checkpoint": {"befehl": "recovery --checkpoint", "workflow": "wf_recovery_checkpoint", "sub_agent": "sub_mas-recovery-checkpoint", "subbefehle": ["recovery --list \u219
+configs.mas-self.recovery.5_leveln: {"immune": {"befehl": "recovery --immune", "workflow": "wf_recovery_immune", "sub_agent": "sub_mas-recovery-immune"}, "checkpoint": {"befehl": "recovery --checkpoint", "workflow": "wf_recovery_checkpoint", "sub_agent": "sub_mas-recovery-checkpoint", "subbefehle": ["recovery --list \u2192 wf_recovery
+configs.mas-self.recovery.5_leveln.immune: {"befehl": "recovery --immune", "workflow": "wf_recovery_immune", "sub_agent": "sub_mas-recovery-immune"}
+configs.mas-self.recovery.5_leveln.immune.befehl: "recovery --immune"
+configs.mas-self.recovery.5_leveln.immune.workflow: "wf_recovery_immune"
+configs.mas-self.recovery.5_leveln.immune.sub_agent: "sub_mas-recovery-immune"
+configs.mas-self.recovery.5_leveln.checkpoint: {"befehl": "recovery --checkpoint", "workflow": "wf_recovery_checkpoint", "sub_agent": "sub_mas-recovery-checkpoint", "subbefehle": ["recovery --list \u2192 wf_recovery_checkpoint_list", "recovery --restore <id> \u2192 wf_checkpoint_restore", "recovery --diff <a>..<b> \u2192 wf_recovery_checkpoint_d
+configs.mas-self.recovery.5_leveln.checkpoint.befehl: "recovery --checkpoint"
+configs.mas-self.recovery.5_leveln.checkpoint.workflow: "wf_recovery_checkpoint"
+configs.mas-self.recovery.5_leveln.checkpoint.sub_agent: "sub_mas-recovery-checkpoint"
+configs.mas-self.recovery.5_leveln.checkpoint.subbefehle: ["recovery --list \u2192 wf_recovery_checkpoint_list", "recovery --restore <id> \u2192 wf_checkpoint_restore", "recovery --diff <a>..<b> \u2192 wf_recovery_checkpoint_diff"]
+configs.mas-self.recovery.5_leveln.safezone: {"befehl": "recovery --safezone", "workflow": "wf_recovery_safezone", "sub_agent": "sub_mas-recovery-safezone", "subbefehle": ["recovery --merge \u2192 wf_recovery_safezone_merge", "recovery --abort \u2192 wf_recovery_safezone_abort"]}
+configs.mas-self.recovery.5_leveln.safezone.befehl: "recovery --safezone"
+configs.mas-self.recovery.5_leveln.safezone.workflow: "wf_recovery_safezone"
+configs.mas-self.recovery.5_leveln.safezone.sub_agent: "sub_mas-recovery-safezone"
+configs.mas-self.recovery.5_leveln.safezone.subbefehle: ["recovery --merge \u2192 wf_recovery_safezone_merge", "recovery --abort \u2192 wf_recovery_safezone_abort"]
+configs.mas-self.recovery.5_leveln.timeline: {"befehl": "recovery --timeline", "workflow": "wf_recovery_timeline", "sub_agent": "sub_mas-recovery-timeline", "subbefehle": ["recovery --restore-best \u2192 wf_timeline_restore", "recovery --analyze \u2192 wf_recovery_timeline_analyze"]}
+configs.mas-self.recovery.5_leveln.timeline.befehl: "recovery --timeline"
+configs.mas-self.recovery.5_leveln.timeline.workflow: "wf_recovery_timeline"
+configs.mas-self.recovery.5_leveln.timeline.sub_agent: "sub_mas-recovery-timeline"
+configs.mas-self.recovery.5_leveln.timeline.subbefehle: ["recovery --restore-best \u2192 wf_timeline_restore", "recovery --analyze \u2192 wf_recovery_timeline_analyze"]
+configs.mas-self.recovery.5_leveln.defib: {"befehl": "recovery --defib", "workflow": "wf_recovery_defib", "sub_agent": "sub_mas-recovery-defib", "subbefehle": ["recovery --diagnose \u2192 wf_recovery_defib_diagnose", "recovery --resurrect \u2192 wf_recovery_defib_resurrect"]}
+configs.mas-self.recovery.5_leveln.defib.befehl: "recovery --defib"
+configs.mas-self.recovery.5_leveln.defib.workflow: "wf_recovery_defib"
+configs.mas-self.recovery.5_leveln.defib.sub_agent: "sub_mas-recovery-defib"
+configs.mas-self.recovery.5_leveln.defib.subbefehle: ["recovery --diagnose \u2192 wf_recovery_defib_diagnose", "recovery --resurrect \u2192 wf_recovery_defib_resurrect"]
+configs.mas-self.recovery._mode_note: "Recovery-agents are MAS-internal. In Generic/framework-Mode via delegate() aus MAS-Installation available. Target-Pathe muitsen auf Project-Workspace show."
+configs.mas-self.sub_agents.recovery: ["sub_mas-recovery-checkpoint", "sub_mas-recovery-defib", "sub_mas-recovery-immune", "sub_mas-recovery-safezone", "sub_mas-recovery-timeline", "sub_mas-degradation-analyzer", "sub_mas-degradation-director", "sub_mas-degradation-planner", "sub_mas-degradation-reporter"]
+configs.mas-self.signals.typen[4].signal: "RECOVERY_START"
+configs.mas-self.signals.typen[4].bei: "recovery --*"
+configs.mas-self.signals.typen[6].bei: "recovery --resurrect"
+agents.recovery-immune: {"tier": "balanced", "token_budget": 10000, "task_workflows": {"CHECK_YAML": "wf_immune_check_yaml", "CHECK_SYNTAX": "wf_immune_check_syntax", "VERIFY_STATE": "wf_immune_verify_state"}}
+agents.recovery-checkpoint: {"tier": "balanced", "token_budget": 10000, "task_workflows": {"SNAPSHOT": "wf_checkpoint_snapshot", "LIST": "wf_checkpoint_list", "RESTORE": "wf_checkpoint_restore", "DIFF": "wf_checkpoint_diff"}}
+agents.recovery-safezone: {"tier": "balanced", "token_budget": 15000, "task_workflows": {"FORK": "wf_safezone_fork", "MERGE": "wf_safezone_merge", "ABORT": "wf_safezone_abort", "DIFF": "wf_safezone_diff"}}
+agents.recovery-timeline: {"tier": "balanced", "token_budget": 15000, "task_workflows": {"FIND_BEST": "wf_timeline_findbest", "RESTORE_BEST": "wf_timeline_restore", "SHOW_PATH": "wf_timeline_showpath", "ANALYZE": "wf_timeline_analyze"}}
+agents.recovery-defib: {"tier": "balanced", "token_budget": 15000, "task_workflows": {"DEFIB": "wf_defib_execute", "RESURRECT": "wf_defib_resurrect", "DIAGNOSE": "wf_defib_diagnose"}}
+agents.monitor-recovery: {"tier": "balanced", "token_budget": 10000, "task_workflows": {"RECOVER": "wf_monitor_recovery_run"}}
+agents.monitor-recovery.task_workflows: {"RECOVER": "wf_monitor_recovery_run"}
+agents.monitor-recovery.task_workflows.RECOVER: "wf_monitor_recovery_run"
+task_workflows.wf_recovery_immune: {"desc": "YAML preflight check before every edit (4-step, check then list then categorize then auto_repair)", "steps": [{"id": "check", "action": "shell", "cmd": "python3 tools/dev_rule_checker.py --all 2>&1 | tail -5", "timeout": 60}, {"id": "list_violations", "action": "shell", "cmd": "python3 too
+task_workflows.wf_recovery_checkpoint: {"desc": "Checkpoint content validation + C-01/C-02 fix", "steps": [{"id": "list_checkpoints", "action": "shell", "cmd": "test -d .state/checkpoints/ && ls -1 .state/checkpoints/ | head -5", "timeout": 30}, {"id": "validate_latest", "action": "shell", "cmd": "LATEST=$(ls -1t .state/checkpoints/ 2>/d
+task_workflows.wf_recovery_safezone: {"desc": "Recovery templates in template/recovery/", "steps": [{"id": "list_templates", "action": "shell", "cmd": "ls -1 template/recovery/ 2>&1 | head -5", "timeout": 15}, {"id": "validate_templates", "action": "shell", "cmd": "python3 -c \"import glob; files = glob.glob('template/recovery/*.md'); 
+task_workflows.wf_recovery_safezone.desc: "Recovery templates in template/recovery/"
+task_workflows.wf_recovery_safezone.steps[0].cmd: "ls -1 template/recovery/ 2>&1 | head -5"
+task_workflows.wf_recovery_timeline: {"desc": "Find best recovery point", "steps": [{"id": "find_latest", "action": "shell", "cmd": "ls -1t .state/checkpoints/ 2>/dev/null | head -1", "timeout": 15}, {"id": "count_checkpoints", "action": "shell", "cmd": "ls -1 .state/checkpoints/ 2>/dev/null | wc -l", "timeout": 10}, {"id": "score_late
+task_workflows.wf_recovery_timeline.desc: "Find best recovery point"
+task_workflows.wf_recovery_defib: {"desc": "Defibrillator: reanimate agent on death/drift/loop", "steps": [{"id": "list_defib", "action": "shell", "cmd": "ls -1 .state/defib/ 2>/dev/null | head -3", "timeout": 15}, {"id": "check_emergency_config", "action": "shell", "cmd": "test -f recipe/dev-mas-engineer.yaml && echo \"Config prese
+task_workflows.wf_monitor_recovery_run: {"desc": "Agent-Recovery at Death/Timeout (max 3 tries)", "tier": "balanced", "on_error": "continue", "steps": [{"id": "detect_mode", "action": "shell", "cmd": "cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/null || cat ~/.config/goose/.mas-mode 2>/dev/null || echo 'generic'", "timeout": 5}, {
+task_workflows.wf_monitor_recovery_run.desc: "Agent-Recovery at Death/Timeout (max 3 tries)"
+task_workflows.wf_monitor_recovery_run.steps[2].cmd: "echo 'Recovery: goose run --ritume {agent} (max 3x)'"## 📊 FULL DIAGNOSTIC REPORT — `sub_mas-recovery-timeline` v1.0.0
+
+---
+
+### 🔍 7-CHECK ANALYZE (Damage Assessment)
+
+| Check | Status | Description |
+|-------|--------|-------------|
+| Q1 | ✅ | Workspace exists |
+| Q2 | ✅ | MAS directory exists |
+| Q3 | ✅ | Main recipe `dev-mas-engineer.yaml` exists |
+| Q4 | ✅ | Sub recipes directory exists |
+| Q5 | ✅ | Tools directory exists |
+| Q6 | ✅ | State directory exists |
+| Q7 | ✅ | `dev-mas-engineer.yaml` — **valid YAML** (passes `yaml.safe_load`) |
+
+> **Damage Level: ✅ 0/7 Errors — No damage**
+
+---
+
+### 📂 Checkpoint & Backup Inventory
+
+| Item | Count | Details |
+|------|-------|---------|
+| **Checkpoints** | 1 | `si_20260730_043151` — **EMPTY** (no files in directory) |
+| **Backups** | 1 | `1785355998` — **EMPTY** (no files) |
+
+**⚠️ Note:** The only checkpoint is an **empty directory** — it contains no recipe/dev-mas-engineer.yaml to validate. No valid recovery point currently exists.
+
+---
+
+### ⏳ Timeline Visualization
+
+```
+Backups:   1785355998 (empty)
+Checkpoint: si_20260730_043151 (empty)
+─────────────────────────────────────────────
+▶ CURRENT (here):   dev-mas-engineer.yaml ✓ VALID
+```
+
+---
+
+### 📋 Available Tasks (per SOT `agents.recovery-timeline`)
+
+| Task | Description |
+|------|-------------|
+| **`FIND_BEST`** | Scan all checkpoints for the most recent valid YAML |
+| **`RESTORE_BEST`** | Restore workspace from best checkpoint |
+| **`SHOW_PATH`** | Show full timeline with YAML health indicators |
+| **`ANALYZE`** | Full damage analysis (7-check already done above) |
+
+---
+
+### 🧠 Recommendation
+
+The **current system is healthy** — `dev-mas-engineer.yaml` passes validation and all 7 checks are green. However, no usable checkpoint exists for rollback, which means **you should create a fresh checkpoint** after any change to protect against future damage.
+
+**What would you like me to do?** Please specify one of:
+- `FIND_BEST` — exhaustive search of checkpoints + backups
+- `RESTORE_BEST` — restore from best (will warn if none valid)
+- `SHOW_PATH` — full timeline with YAML health per checkpoint
+- `ANALYZE` — deeper analysis including sub-recipes and tools
+- Or suggest a different action

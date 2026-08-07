@@ -1,0 +1,581 @@
+Loading recipe: 🔧 IM-Validator
+Description: ✅ Before/after comparison & recommend rollback
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260801_101 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat recipe/instructions/sub_mas-im-validator.md 2>/dev/null || find . -path ./node_modules -prune -o -name "sub_mas-im-validator.md" -print 2>/dev/null | head -5
+
+# sub_mas-im-validator — ✅ Validate changes
+Is called by sub_mas-general-improver Orchestrator after patches are applied.
+Compares Before/After and recommends rollback if needed.
+
+╔══════════════════════════════════════════════════════════╗
+║  SOT WORKFLOW CONTROL                                    ║
+║  → workflows.yaml → agents.im-validator                  ║
+║     .task_workflows.VALIDATE                             ║
+╚══════════════════════════════════════════════════════════╝
+
+## ⛔ STEP 0.5 — GOOSE-EXPERT POST-VALIDATION (MANDATORY)
+
+**For EACH approved patch, you MUST summon `sub_mas-goose-expert` to verify
+the patch is actually Goose-architecture-compliant in its APPLIED state.**
+
+This is a different check from im-designer's pre-design consultation:
+- im-designer asked: "is the proposed patch Goose-compliant?"
+- im-validator asks: "is the APPLIED patch still Goose-compliant in context?
+  Does it integrate correctly with the existing recipe? Does it preserve
+  cross-references to other recipes?"
+
+**Procedure:**
+1. For each approved patch, after the YAML-syntax and score checks pass,
+   SUMMON sub_mas-goose-expert:
+   ```yaml
+   goose_expert_intake:
+     signal: "🟣 HANDOVER"
+     request_id: "<uuid>"
+     from: "im-validator"
+     to: "sub_mas-goose-expert"
+     task: "CHECK RULE COMPLIANCE"
+     context:
+       what: "Post-apply validation of applied patch"
+       scope: "<the scope of the changed file>"
+       current: "<the file BEFORE the patch was applied>"
+       planned: "<the file AFTER the patch was applied>"
+       question: "Is the resulting file still Goose-compliant? Does it still
+         integrate with cross-references (e.g. workflows.yaml)? Are required
+         field combinations still valid? Any new conflicts?"
+   ```
+2. WAIT for verdict (CONFORM / RESTRICTED / NOT POSSIBLE).
+3. If verdict is NOT POSSIBLE: ADD to `recommendation[]` with severity=critical
+   → orchestrator will trigger ROLLBACK.
+4. If verdict is RESTRICTED: include caveat in `details[].notes`.
+
+### STEP 0.5b — ALL-RESTRICTED DETECTION (MM6 fix by Hermes 2026-07-23)
+
+**If ALL patches in this charge received verdict=RESTRICTED from goose-expert,
+this is the "all-restricted" pattern. The charge is too ambitious for the
+current Goose-architecture constraints and must be recycled with a lower
+severity ceiling instead of being silently skipped.**
+
+Detection logic:
+```python
+verdicts = [check.verdict for check in goose_post_checks]
+if len(verdicts) > 0 and all(v == "RESTRICTED" for v in verdicts):
+    # All restricted — set skip signal
+    validation.status = "skipped_charge"
+    validation.skip_reason = "all_restricted"
+    validation.severity_fallback = "next_lower_band"  # orchestrator interprets
+    # Do NOT set approved_count=0 + status=rejected (that signals hard failure)
+    # Do NOT set status=partial (that mixes success/failure)
+```
+
+Output additions (when all_restricted):
+- `validation.status: "skipped_charge"`
+- `validation.skip_reason: "all_restricted"`
+- `validation.severity_fallback: "next_lower_band"`
+- `validation.approved_count: 0`
+- `validation.rejected_count: 0` (RESTRICTED is not a rejection, it's a deferral)
+- `validation.notes[]: "All N patches returned RESTRICTED from goose-expert.
+   Severity ceiling too high for current architecture. Recycled with
+   severity_fallback=next_lower_band."`
+
+**Why this matters (lesson L04 from 2026-07-23 0/9 e2e):**
+Without this signal, general-improver sees `status=approved + 0 approved_count`
+and treats the run as a no-op (apply-only with 0 patches). The pipeline ends
+without flagging that the charge was wrong, and the next 24h-cooldown blocks
+re-attempts with the same severity ceiling.
+
+With `status=skipped_charge`, general-improver:
+1. Logs the skip reason to .state/changes.json
+2. Re-runs im-finder + im-rank with `severity_ceiling` one band lower
+3. Re-enters DESIGN → VALIDATE → APPLY for the new charge
+4. Does NOT consume a 24h-cooldown slot (recycle is not a full improvement)
+
+**When to NOT trigger this signal:**
+- If ANY patch got CONFORM → use normal logic, do not skip
+- If ANY patch got NOT POSSIBLE → use ROLLBACK logic, not skip
+- If 0 patches in charge (empty) → not applicable
+
+**Why this is mandatory:**
+- im-validator previously only ran YAML-syntax and score-checks. It caught
+  bad numbers but missed architectural issues (e.g. applying a patch that
+  removes a required field that another recipe depends on).
+- The goose-expert is the ONLY agent with full goose-docs.ai knowledge
+  and can detect cross-recipe integration issues.
+- See also: `docs/lessons-learned.md` L01-L03, and `tools/dev_goose_expert_check.py`
+  which automatically detects the "missing mechanism" anti-pattern.
+
+⛔ FAILING TO SUMMON GOOSE-EXPERT = validation is REJECTED downstream.
+
+## Pipeline Contract (Stage 4/5)
+
+This agent is **stage 4** of the Improvement-Pipeline.
+It reads the previous stage's output and writes its own.
+
+**Input:**   `[SOT-PATCHES]` (from im-designer)
+**Output:**  `.state/pipeline/validation.yaml`
+**Schema:**  validation: {status, skip_reason?, severity_fallback?, details, recommendation[], approved_count, rejected_count, goose_post_checks?, notes?}
+**Next:**    -> general-improver (reads Output file)
+
+```yaml
+# .state/pipeline/validation.yaml — written by im-validator
+stage: 4
+agent: im-validator
+timestamp: <ISO-8601>
+input_file: [SOT-PATCHES]
+# validation: {status, details, recommendation[], approved_count, rejected_count, goose_post_checks?}
+```
+
+ ## Input (from Pipeline-Orchestrator)
+- task: VALIDATE
+- request_id: string (UUID)
+- data:
+    before_scores: {prompt, settings, structure, health, config}
+    patches: [{file, field, from, to, goose_verdict?}]
+    workspace: path
+
+## STEP 1 — YAML-SYNTAX CHECK
+For EACH changed file in patches:
+  1. EXECUTE: python3 -c "import yaml; yaml.safe_load(open('{workspace}/{file}'))"
+  2. IF Error: → FAILED for this file
+  3. IF OK: → ✅ Syntax valid
+
+## STEP 1.5 — AUTOMATIC L01 CHECK (codifies L01 lessons-learned.md)
+For each applied patch, run:
+```bash
+python3 tools/dev_goose_expert_check.py --check-mechanism "<patch.reason>"
+```
+If exit code = 1 (conflict) → ADD to recommendation[] with severity=critical
+and note "Goose already provides native mechanism — see L01".
+
+## STEP 2 — AFTER-SCORES
+1. EXECUTE: python3 {workspace}/tools/dev_fast_scan.py --workspace {workspace} --validate
+   → Extract: prompt_score, settings_score, structure_score, health_score
+
+2. IF sub_mas-prompt-engineer available:
+   Delegate to sub_mas-prompt-engineer (task=REVIEW, file=changed_file)
+   → Extract: score, critique
+
+3. IF sub_mas-agent-guardian available:
+   Delegate to sub_mas-agent-guardian (task=REVIEW, file=changed_file)
+   → Extract: compliance_verdict
+
+4. IF sub_mas-goose-expert available:
+   SUMMON for each applied patch (see STEP 0.5) — NEW MANDATORY
+   → Extract: post-apply verdict
+
+## STEP 3 — RECOMMEND
+For each change:
+  - IF yaml_syntax FAIL → recommendation: ROLLBACK
+  - IF score < before → recommendation: KEEP (might still be net positive)
+  - IF goose-expert NOT_POSSIBLE → recommendation: ROLLBACK (critical)
+  - IF score >= before AND goose-conform → recommendation: APPROVE
+  - **NEW (MM6 fix): IF all goose-expert verdicts are RESTRICTED →
+    recommendation: RECYCLE_CHARGE (not APPROVE, not ROLLBACK).
+    See STEP 0.5b for full signal.**
+
+## OUTPUT
+As YAML-Struct via stdout:
+- signal: DONE
+- request_id: UUID
+- from: sub_mas-im-validator
+- to: sub_mas-general-improver
+- status: ok | warn | error
+- data:
+    validation:
+      status: approved | partial | rejected | **skipped_charge** (NEW)
+      skip_reason: null | **"all_restricted"** (NEW, when status=skipped_charge)
+      severity_fallback: null | **"next_lower_band"** (NEW, when status=skipped_charge)
+      details: [{file, score_before, score_after, delta, notes}]
+      recommendation: ["ROLLBACK"|"KEEP"|"APPROVE"|**"RECYCLE_CHARGE"** (NEW), ...]
+      approved_count: int
+      rejected_count: int
+      goose_post_checks: [{patch_id, verdict, explanation}]
+      notes: ["..."] (NEW — populated when all_restricted, see STEP 0.5b)
+
+⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions.
+dev_rule_checker.py enforces.
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on ✅.
+⛔ R09 DOMAIN — ONLY {target_workspace}. NO domain-overreach.
+⛔ R11 GOOSE-EXPERT-POST-CHECK — ALWAYS summon sub_mas-goose-expert for
+   each applied patch (post-apply validation).
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.I'm im-validator (v1.0.0) — mode confirmed: **mas-engineer | VALIDATE | Analysis-only**. Let me orient myself in the current workspace state.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && ls -la && echo "---STATE---" && ls -la .state/ 2>/dev/null && echo "---PIPELINE---" && ls -la .state/pipeline/ 2>/dev/null
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && find . -maxdepth 3 -name "*.yaml" -o -maxdepth 3 -name "*.yml" | grep -v node_modules | head -40
+
+total 156
+drwxr-xr-x 25 root root  4096 Aug  1 08:04 .
+drwxr-xr-x 14 root root  4096 Jul 30 04:16 ..
+drwxr-xr-x  4 root root  4096 Aug  1 10:19 .backups
+drwxr-xr-x  4 root root  4096 Jul 30 04:56 .dev-team
+-rw-------  1 root root   735 Jul 29 19:12 .env
+-rw-r--r--  1 root root  1333 Jul 29 19:02 .env.example
+drwxr-xr-x  2 root root  4096 Aug  1 09:45 .git
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 .githooks
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 .github
+-rw-r--r--  1 root root  1644 Jul 29 19:02 .gitignore
+-rw-r--r--  1 root root   467 Jul 29 19:02 .goosehints
+drwxr-xr-x  5 root root  4096 Jul 29 20:12 .mas
+-rw-r--r--  1 root root     4 Jul 29 19:02 .mas-mode
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 .pytest_cache
+drwxr-xr-x 12 root root  4096 Aug  1 10:25 .state
+-rw-r--r--  1 root root 13566 Jul 29 19:02 DATA-QUALITY-REPORT.md
+-rw-r--r--  1 root root  6368 Jul 29 19:02 README.md
+drwxr-xr-x  2 root root  4096 Aug  1 10:18 docs
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 e2e-evidence
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 e2e-evidence-gen2
+drwxr-xr-x 48 root root  4096 Aug  1 10:25 e2e-results
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 findings
+drwxr-xr-x  4 root root  4096 Jul 29 19:02 mas-engineer
+drwxr-xr-x  4 root root  4096 Jul 29 19:02 prompts
+drwxr-xr-x  6 root root  4096 Aug  1 10:20 recipe
+-rw-r--r--  1 root root  2413 Jul 29 19:02 run_translators.py
+drwxr-xr-x  2 root root  4096 Jul 29 20:10 sample-input
+drwxr-xr-x  2 root root  4096 Jul 29 20:10 sample-output
+drwxr-xr-x  2 root root  4096 Jul 30 03:57 scripts
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 template
+drwxr-xr-x  6 root root  4096 Aug  1 10:20 testproject
+drwxr-xr-x  3 root root 12288 Aug  1 10:35 tests
+drwxr-xr-x  4 root root  4096 Aug  1 10:37 tools
+---STATE---
+total 384
+drwxr-xr-x 12 root root   4096 Aug  1 10:25 .
+drwxr-xr-x 25 root root   4096 Aug  1 08:04 ..
+-rw-r--r--  1 root root      0 Aug  1 10:25 .immune_clean
+-rw-r--r--  1 root root    316 Aug  1 10:37 analysis.json
+drwxr-xr-x  2 root root   4096 Aug  1 06:34 backups
+-rw-r--r--  1 root root  11543 Jul 29 19:02 best-practices.yaml
+-rw-r--r--  1 root root    189 Jul 29 19:02 changelog.txt
+-rw-r--r--  1 root root   5145 Jul 29 19:02 changes.archive-2026-07-23.json
+-rw-r--r--  1 root root   3709 Jul 29 19:02 changes.archive-2026-07-24-r37.json
+-rw-r--r--  1 root root   8198 Jul 29 19:02 changes.archive-2026-07-24.json
+-rw-r--r--  1 root root   1736 Aug  1 10:19 changes.json
+-rw-r--r--  1 root root   2294 Jul 29 19:02 changes.unlimited-archive-20260723-222630.json
+drwxr-xr-x  3 root root   4096 Aug  1 10:25 checkpoints
+drwxr-xr-x  2 root root   4096 Aug  1 07:48 coverage
+-rw-r--r--  1 root root   1493 Jul 29 19:02 framework-best-practices.yaml
+-rw-r--r--  1 root root   1441 Jul 29 19:02 goose-defaults.env
+-rw-r--r--  1 root root      3 Aug  1 10:25 immune_severity
+-rw-r--r--  1 root root      0 Aug  1 10:25 immune_violations.log
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 knowledge
+drwxr-xr-x  2 root root   4096 Jul 30 04:59 logs
+drwxr-xr-x  2 root root   4096 Jul 31 04:55 pipeline
+-rw-r--r--  1 root root    312 Jul 31 04:55 pre-push-e2e-baseline.json
+-rw-r--r--  1 root root    162 Jul 29 20:25 pre-push-test-coverage.json
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 pre_check_benchmark
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 rules
+-rw-r--r--  1 root root    623 Jul 31 04:55 schedule.yaml
+-rw-r--r--  1 root root   1933 Jul 29 19:02 sot_schema.yaml
+drwxr-xr-x  3 root root   4096 Jul 29 19:02 templates
+-rw-r--r--  1 root root    693 Aug  1 10:25 todo.md
+drwxr-xr-x  2 root root  32768 Aug  1 10:25 workflow_runs
+-rw-r--r--  1 root root 111812 Aug  1 10:20 workflows.yaml
+-rw-r--r--  1 root root 107528 Jul 29 19:55 workflows.yaml.backup-r11036-fix
+---PIPELINE---
+total 296
+drwxr-xr-x  2 root root  4096 Jul 31 04:55 .
+drwxr-xr-x 12 root root  4096 Aug  1 10:25 ..
+-rw-r--r--  1 root root  1183 Jul 29 19:02 README.md
+-rw-r--r--  1 root root 85332 Jul 31 05:07 findings.yaml
+-rw-r--r--  1 root root  5071 Jul 29 19:02 findings_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root  2611 Jul 29 19:02 findings_R47_structural.yaml
+-rw-r--r--  1 root root  3030 Jul 29 19:02 findings_R49_structural.yaml
+-rw-r--r--  1 root root  1843 Jul 29 19:02 findings_R51_consumer.yaml
+-rw-r--r--  1 root root   799 Jul 29 19:02 findings_R55_goose_expert.yaml
+-rw-r--r--  1 root root 29259 Jul 29 19:02 patches.yaml
+-rw-r--r--  1 root root 28529 Jul 29 19:02 patches_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root  2987 Jul 31 04:42 pre_push_validation.yaml
+-rw-r--r--  1 root root  2465 Jul 29 19:02 ranked_findings_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root  3906 Jul 29 19:02 round33_findings.json
+-rw-r--r--  1 root root  2138 Jul 29 19:02 round34_findings.json
+-rw-r--r--  1 root root  4183 Jul 29 19:02 round36_findings.json
+-rw-r--r--  1 root root  3260 Jul 29 19:02 round37_findings.json
+-rw-r--r--  1 root root 26820 Jul 29 19:02 round41_findings.json
+-rw-r--r--  1 root root   481 Jul 29 19:02 signal_apply_only_done_20260724_1746.yaml
+-rw-r--r--  1 root root   968 Jul 29 19:02 signal_apply_only_done_20260725_0746.yaml
+-rw-r--r--  1 root root  1018 Jul 29 19:02 signal_apply_only_done_20260725_0849.yaml
+-rw-r--r--  1 root root   918 Jul 30 04:45 signal_apply_only_done_20260730_044513.yaml
+-rw-r--r--  1 root root   436 Jul 29 19:02 signal_cp_done_20260724_1602.yaml
+-rw-r--r--  1 root root   995 Jul 29 19:02 signal_general_improver_done_20260725_0735.yaml
+-rw-r--r--  1 root root  1131 Jul 29 19:02 signal_general_improver_done_20260725_1223.yaml
+-rw-r--r--  1 root root  3267 Jul 29 19:02 signals.log
+-rw-r--r--  1 root root  8705 Jul 30 04:54 validation.yaml
+-rw-r--r--  1 root root  2687 Jul 29 19:02 validation_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root  9960 Jul 30 03:43 validation_author_fixes.yaml./e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/tasks.yaml
+./e2e-evidence-gen2/validation_author_fixes-R51.yaml
+./recipe/dev-mas-engineer.yaml
+./recipe/e2e-verify-phoenix-fixes.yaml
+./recipe/e2e-verify-auto-repair.yaml
+./recipe/setup-dashboard.yaml
+./recipe/test-fix-failures.yaml
+./recipe/root_recipe.yaml
+./recipe/multi-arch-30/multi-arch-30.yaml
+./recipe/sub/sub_mas-team-packager-builder.yaml
+./recipe/sub/sub_mas-agent-guardian.yaml
+./recipe/sub/sub_mas-verification-runner.yaml
+./recipe/sub/sub_mas-web-researcher.yaml
+./recipe/sub/sub_mas-interpreter.yaml
+./recipe/sub/sub_mas-dev-analyzer.yaml
+./recipe/sub/sub_mas-monitor-health.yaml
+./recipe/sub/sub_mas-tff-crossref-validator.yaml
+./recipe/sub/sub_mas-test-executor.yaml
+./recipe/sub/sub_mas-seo-researcher.yaml
+./recipe/sub/static-analyzer.yaml
+./recipe/sub/sub_mas-goose-admin.yaml
+./recipe/sub/sub_mas-test-director.yaml
+./recipe/sub/sub_mas-recovery-immune.yaml
+./recipe/sub/sub_mas-dev-tester.yaml
+./recipe/sub/sub_mas-unix-test-runner.yaml
+./recipe/sub/sub_mas-dev-director.yaml
+./recipe/sub/sub_mas-pre-push-validator.yaml
+./recipe/sub/sub_mas-workflow-engine.yaml
+./recipe/sub/sub_mas-test-validator.yaml
+./recipe/sub/sub_mas-test-reporter-analyzer.yaml
+./recipe/sub/sub_mas-security-sqli-scanner.yaml
+./recipe/sub/sub_mas-doc-generator.yaml
+./recipe/sub/sub_mas-test-fix-failures-applier.yaml
+./recipe/sub/sub_mas-framework-auditor.yaml
+./recipe/sub/sub_mas-framework-knowledge.yaml
+./recipe/sub/sub_mas-python-fixer.yaml
+./recipe/sub/sub_mas-team-packager-validator.yaml
+./recipe/sub/sub_mas-recovery-safezone.yaml
+./recipe/sub/sub_mas-im-validator.yaml
+./recipe/sub/sub_mas-recipe-designer.yamlNow let me find the current pipeline inputs — the SOT-PATCHES from im-designer and the current state.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && echo "===todo.md===" && cat .state/todo.md && echo "===analysis.json===" && cat .state/analysis.json && echo "===changes.json===" && cat .state/changes.json
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && echo "===latest pipeline files by mtime===" && ls -lat .state/pipeline/ | head -15 && echo "===recent patches files===" && find . -name "*patch*" -newer .state/changelog.txt 2>/dev/null | head -20
+
+===todo.md===
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+===analysis.json===
+{
+  "timestamp": "2026-08-01T10:37:43Z",
+  "agent_path": "/tmp/mas-engineer-test/mas-engineer",
+  "total_files": 693,
+  "total_size_kb": 3277.0,
+  "total_lines": 81218,
+  "yaml_count": 303,
+  "md_count": 165,
+  "py_count": 207,
+  "with_slash": 0,
+  "without_slash": 303,
+  "specialist_count": 0,
+  "sub_count": 136
+}===changes.json===
+[
+  {
+    "timestamp": "20260729_201320",
+    "action": "CREATE",
+    "description": "Neuer Agent: sub_mas-clone"
+  },
+  {
+    "timestamp": "20260730_044455",
+    "stage": "apply_only",
+    "task": "APPLY_ONLY",
+    "mode": "mas",
+    "recursion_override": true,
+    "findings_total": 19,
+    "findings_conform": 19,
+    "already_fixed_in_source": 15,
+    "install_fixes_needed": 4,
+    "install_fixes_applied": 0,
+    "install_dir_exists": false,
+    "note": "Source files already clean. Install dir (~/.config/goose/recipes/sub/) does not exist in this test environment. All 19 findings are effectively resolved.",
+    "validation_file": ".state/pipeline/validation_author_fixes.yaml",
+    "status": "done"
+  },
+  {
+    "timestamp": "20260730_045400",
+    "stage": "im-validator",
+    "agent": "sub_mas-im-validator",
+    "status": "partial",
+    "approved": 3,
+    "rejected": 1,
+    "patches": [
+      {
+        "id": "F-PTY-001",
+        "verdict": "APPROVE",
+        "file": "tools/mas_e2e_pty_all.sh"
+      },
+      {
+        "id": "F-001",
+        "verdict": "APPROVE",
+        "file": "recipe/multi-arch-30/multi-arch-30.yaml (prompt)"
+      },
+      {
+        "id": "F-002",
+        "verdict": "APPROVE",
+        "file": "recipe/multi-arch-30/multi-arch-30.yaml (settings)"
+      },
+      {
+        "id": "F-093",
+        "verdict": "REJECT",
+        "file": "recipe/sub/sub_mas-clone.yaml (file does not exist)"
+      }
+    ],
+    "validation_file": ".state/pipeline/validation.yaml",
+    "note": "3/4 patches CONFORM and already applied. 1 REJECTED (F-093: target file missing, EDIT/CREATE mismatch)."
+  },
+  {
+    "timestamp": "20260801_101922",
+    "action": "CREATE",
+    "description": "Neuer Agent: sub_mas-clone"
+  }
+]===latest pipeline files by mtime===
+total 296
+drwxr-xr-x 12 root root  4096 Aug  1 10:25 ..
+-rw-r--r--  1 root root 85332 Jul 31 05:07 findings.yaml
+drwxr-xr-x  2 root root  4096 Jul 31 04:55 .
+-rw-r--r--  1 root root  2987 Jul 31 04:42 pre_push_validation.yaml
+-rw-r--r--  1 root root  8705 Jul 30 04:54 validation.yaml
+-rw-r--r--  1 root root   918 Jul 30 04:45 signal_apply_only_done_20260730_044513.yaml
+-rw-r--r--  1 root root  9960 Jul 30 03:43 validation_author_fixes.yaml
+-rw-r--r--  1 root root  5071 Jul 29 19:02 findings_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root 29259 Jul 29 19:02 patches.yaml
+-rw-r--r--  1 root root 28529 Jul 29 19:02 patches_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root  2465 Jul 29 19:02 ranked_findings_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root  3267 Jul 29 19:02 signals.log
+-rw-r--r--  1 root root  2687 Jul 29 19:02 validation_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root  1183 Jul 29 19:02 README.md
+===recent patches files===
+./e2e-results/2026-07-29-r11024-pty-full-test/state-snapshots/patches.yaml
+./.state/workflow_runs/wf_im_design_patches_20260729_201258.json
+./.state/workflow_runs/wf_im_design_patches_20260801_101857.jsonLet me examine the most recent workflow run — that's likely the current SOT-PATCHES from im-designer.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && ls -lat .state/workflow_runs/ | head -10 && echo "===latest design patches run===" && cat .state/workflow_runs/wf_im_design_patches_20260801_101857.json
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && ls -lat .backups/ 2>/dev/null | head -10 && echo "===git status===" && git status --short 2>/dev/null | head -30 && echo "===git log===" && git log --oneline -10 2>/dev/null
+
+total 1584
+drwxr-xr-x  2 root root 32768 Aug  1 10:25 .
+-rw-r--r--  1 root root   605 Aug  1 10:25 wf_recovery_defib_20260801_102517.json
+-rw-r--r--  1 root root   511 Aug  1 10:25 wf_recovery_timeline_20260801_102516.json
+-rw-r--r--  1 root root   539 Aug  1 10:25 wf_recovery_safezone_20260801_102516.json
+-rw-r--r--  1 root root   519 Aug  1 10:25 wf_recovery_checkpoint_20260801_102515.json
+-rw-r--r--  1 root root   608 Aug  1 10:25 wf_recovery_immune_20260801_102515.json
+-rw-r--r--  1 root root   393 Aug  1 10:25 knowledge-refresh_20260801_102515.json
+-rw-r--r--  1 root root   552 Aug  1 10:25 si-analyse_20260801_102514.json
+drwxr-xr-x 12 root root  4096 Aug  1 10:25 ..
+===latest design patches run===
+{
+  "workflow": "wf_im_design_patches",
+  "timestamp": "2026-08-01T10:18:57.851042",
+  "status": "ok",
+  "results": {
+    "detect_mode": {
+      "status": "ok",
+      "output": "generic"
+    },
+    "design": {
+      "status": "ok",
+      "output": "Patchit entworfen. Type-Logic per Feature-Type: A1=\u00d71.5, B1=Prompt, LL1=Klarstellung..."
+    }
+  }
+}total 16
+drwxr-xr-x  4 root root 4096 Aug  1 10:19 .
+drwxr-xr-x  2 root root 4096 Aug  1 10:19 1785579561
+drwxr-xr-x 25 root root 4096 Aug  1 08:04 ..
+drwxr-xr-x  2 root root 4096 Jul 29 20:13 1785355998
+===git status===
+ M .state/todo.md
+ M e2e-results/2026-07-22-verify-phoenix-fixes/REPORT.md
+?? .state/immune_severity
+?? docs/health-report-2026-08-01.md
+===git log===
+406138d wrench R110-51 -- translate 25+ german strings to english in dev_architecture_checker.py (1 file, +44/-42)
+9832e28 wrench R110-50 -- import tempfile in e2e_run_all.py (1 file, +1)
+5c804fa chore: remove obsolete e2e-german-fixes recipes
+a02447e 🔧 R110-49 — analytics-reporter schema + extensions block + README link (2 files, +9/-3)
+e9f9af9 🔧 R110-48 — Detector self-match exclude + early-kill (2 files, +67/-31)
+86497e9 🔧 R110-45 — BUG-2 shim + detector over-broad (3 files, +29/-8)
+f14fd8d R110-44 — data-path resolution (CLI/env/glob) + tool-syntax-check pre-commit script
+7d8cad2 R110-39..43 — registry consistency hardening (path-based classification, 26 ghosts removed, multi-arch + e2e-results tests, abs-path hygiene)
+dfaf0c2 🔧 R110-38 — extend wf_recovery_immune from 2 to 4 steps (auto_repair now at position 4)
+504d0d8 🔧 R110-37 — fix R110-36's 4 fail (description patches + 1 typo + 71 D1 orphans + D2-leak) (13 files, +650/-282)Let me check the backup dir (10:19) — likely the pre-patch snapshot — and diff against current state to identify applied changes.

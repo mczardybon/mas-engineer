@@ -1,0 +1,43 @@
+==== STEP 0: Verify setup ====
+ 1.43.0
+[20:07:14] DEEPSEEK_API_KEY set: sk-YOUR-KE...
+[20:07:14] demo-runner recipe installed
+==== STEP 1: Invoke sub_mas-demo-runner — build research-team ====
+[20:07:14] goose run: demo-runner-build (timeout 600s)
+==== STEP 2: Verify generated research-team framework ====
+ls: cannot access '/tmp/research-team/recipe/': No such file or directory
+ls: cannot access '/tmp/research-team/recipe/sub/': No such file or directory
+ls: cannot access '/tmp/research-team/.mas/': No such file or directory
+==== STEP 3: Run 14 verification tests INDEPENDENTLY (outside the runner) ====
+[20:07:15] Test 1-5: goose run --explain on each recipe
+[20:07:15]   Testing /tmp/research-team/recipe/research-team.yaml
+[20:07:15]     PASS: research-team --explain
+[20:07:15]   Testing /tmp/research-team/recipe/sub/web-searcher.yaml
+[20:07:15]     PASS: web-searcher --explain
+[20:07:15]   Testing /tmp/research-team/recipe/sub/source-verifier.yaml
+[20:07:15]     PASS: source-verifier --explain
+[20:07:15]   Testing /tmp/research-team/recipe/sub/fact-extractor.yaml
+[20:07:15]     PASS: fact-extractor --explain
+[20:07:15]   Testing /tmp/research-team/recipe/sub/synthesizer.yaml
+[20:07:15]     PASS: synthesizer --explain
+[20:07:15] Test 6-11: python yaml.safe_load
+  FAIL: /tmp/research-team/recipe/research-team.yaml: [Errno 2] No such file or directory: '/tmp/research-team/recipe/research-team.yaml'
+  FAIL: /tmp/research-team/recipe/sub/web-searcher.yaml: [Errno 2] No such file or directory: '/tmp/research-team/recipe/sub/web-searcher.yaml'
+  FAIL: /tmp/research-team/recipe/sub/source-verifier.yaml: [Errno 2] No such file or directory: '/tmp/research-team/recipe/sub/source-verifier.yaml'
+  FAIL: /tmp/research-team/recipe/sub/fact-extractor.yaml: [Errno 2] No such file or directory: '/tmp/research-team/recipe/sub/fact-extractor.yaml'
+  FAIL: /tmp/research-team/recipe/sub/synthesizer.yaml: [Errno 2] No such file or directory: '/tmp/research-team/recipe/sub/synthesizer.yaml'
+  FAIL: /tmp/research-team/.mas/dashboards/data.json: [Errno 2] No such file or directory: '/tmp/research-team/.mas/dashboards/data.json'
+YAMLs: 0 OK, 6 FAIL
+[20:07:15] Test 12-14: dashboard files
+[20:07:15]   FAIL: /tmp/research-team/.mas/mcp/server.js (missing)
+[20:07:15]   FAIL: /tmp/research-team/.mas/mcp/dashboard.html (missing)
+[20:07:15]   FAIL: /tmp/research-team/.mas/mcp/mas-dispatch-monitor.html (missing)
+==== STEP 4: Test 1 — actually use the research-team on a real query ====
+[20:07:15] goose run: research-team-task1 (timeout 600s)
+==== STEP 5: Test 2 — second query to verify reusability ====
+[20:07:16] goose run: research-team-task2 (timeout 600s)
+==== STEP 6: Improvement cycle ====
+[20:07:17] goose run: improve-research-team (timeout 600s)
+==== STEP 7: Re-test after improvement ====
+[20:07:17] goose run: research-team-task1-retry (timeout 600s)
+==== STEP 8: Copy evidence to git-tracked location (NOT the research-team files) ====

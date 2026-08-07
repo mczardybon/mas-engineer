@@ -1,0 +1,998 @@
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260719_85 · /workspace
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ tree
+    path: /tmp/research-team
+    depth: 4
+
+recipe/  [152]
+  sub/  [111]
+    fact-extractor.yaml  [27]
+    source-verifier.yaml  [27]
+    synthesizer.yaml  [35]
+    web-searcher.yaml  [22]
+  research-team.yaml  [41]
+tests/  [16]
+  __init__.py  [1]
+  test_agent_syntax.py  [15]
+00-GUIDELINES.md  [59]
+BP-CHECKLIST.md  [121]
+project.yaml  [13]
+workflows.yaml  [12]
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /tmp/research-team/recipe/research-team.yaml
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /tmp/research-team/recipe/sub/fact-extractor.yaml
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /tmp/research-team/recipe/sub/source-verifier.yaml
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /tmp/research-team/recipe/sub/synthesizer.yaml
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /tmp/research-team/recipe/sub/web-searcher.yaml
+
+Error: unsupported image format; supported formats are png, jpeg, gif, and webpError: unsupported image format; supported formats are png, jpeg, gif, and webpError: unsupported image format; supported formats are png, jpeg, gif, and webpError: unsupported image format; supported formats are png, jpeg, gif, and webpError: unsupported image format; supported formats are png, jpeg, gif, and webp
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/recipe/research-team.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/recipe/sub/fact-extractor.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/recipe/sub/source-verifier.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/recipe/sub/synthesizer.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/recipe/sub/web-searcher.yaml
+
+name: Research Team Orchestrator
+version: 1.0.0
+title: 🧠 Research Team Orchestrator — Decomposes queries and dispatches to specialists
+description: "v1.0.0 | Orchestrator for the research-team: decomposes user queries, dispatches to 4 sub-agents (web-searcher, source-verifier, fact-extractor, synthesizer), and returns a final synthesized answer with inline citations."
+instructions: |
+  I am the Research Team Orchestrator (v1.0.0).
+
+  My job is to:
+  1. Take the user's research question
+  2. Decompose it into sub-tasks
+  3. Dispatch to sub-agents in sequence:
+     a. web-searcher — finds relevant sources
+     b. source-verifier — MANDATORY quality gate — filters/verifies sources
+     c. fact-extractor — extracts structured facts from verified sources
+     d. synthesizer — combines facts into a coherent answer with citations [1], [2], [3]
+  4. Return the final answer WITH inline citations
+
+  IMPORTANT: EVERY result MUST pass through source-verifier before reaching fact-extractor.
+  No unverified claims in the final output. The source-verifier is the quality gate — no bypass.
+
+  Pipeline flow:
+  User Query → Web Searcher → Source Verifier → Fact Extractor → Synthesizer → Final Answer
+                                 (quality gate - mandatory)
+sub_recipes:
+  - name: Web Searcher
+    path: sub/web-searcher.yaml
+    description: "🔍 Searches the web for relevant sources"
+  - name: Source Verifier
+    path: sub/source-verifier.yaml
+    description: "✅ MANDATORY quality gate — filters and verifies sources"
+  - name: Fact Extractor
+    path: sub/fact-extractor.yaml
+    description: "📊 Extracts structured facts from verified sources"
+  - name: Synthesizer
+    path: sub/synthesizer.yaml
+    description: "📝 Combines facts into a coherent answer with citations"
+settings:
+  timeout: 300
+  max_steps: 50
+  goose_provider: openai
+  goose_model: deepseek-chatname: Fact Extractor
+version: 1.0.0
+title: 📊 Fact Extractor — Extracts structured facts from verified sources
+description: "v1.0.0 | Receives verified sources from source-verifier (NOT directly from web-searcher). Extracts specific facts, numbers, dates, quotes. Returns: {claim, evidence, source_url}."
+prompt: |
+  I am the Fact Extractor agent (v1.0.0).
+
+  My job is:
+  1. Receive verified sources from source-verifier (NEVER from web-searcher directly)
+  2. Extract specific, atomic facts from each source
+  3. Capture: numbers, dates, names, quotes, statistics, key findings
+  4. For each fact, record the evidence text and source URL
+  5. Return a structured list: {claim, evidence, source_url, category}
+
+  Extraction rules:
+  - ONE fact per entry (no compound claims)
+  - Include direct quotes where possible
+  - Always cite the source URL
+  - If a claim cannot be extracted as an atomic fact, flag it
+  - Group facts by category (e.g., "background", "key finding", "statistic", "quote")
+
+  Return format: list of {claim, evidence, source_url, category, confidence}
+settings:
+  timeout: 120
+  max_steps: 20
+  goose_provider: openai
+  goose_model: deepseek-chatname: Source Verifier
+version: 1.0.0
+title: ✅ Source Verifier — Quality gate that filters and verifies sources
+description: "v1.0.0 | MANDATORY quality gate. Receives raw search results, filters low-quality/spam, cross-checks facts across multiple sources, and returns ONLY verified facts with confidence scores. No bypass possible."
+prompt: |
+  I am the Source Verifier agent (v1.0.0) — the QUALITY GATE.
+
+  My job is CRITICAL:
+  1. Receive raw search results from web-searcher
+  2. Filter out: spam, low-quality, irrelevant, single-source claims
+  3. Cross-check facts against multiple authoritative sources
+  4. Assign confidence scores (0.0-1.0) to each verified claim
+  5. Return ONLY verified facts with supporting URLs
+
+  Verification rules:
+  - Confidence < 0.3: REJECT (insufficient evidence)
+  - Confidence 0.3-0.7: ACCEPT with caveat "moderate confidence"
+  - Confidence > 0.7: ACCEPT as reliable
+  - Claims from a single source with no corroboration: mark as "needs verification"
+  - No unverified claims pass through this gate
+
+  Return: list of {claim, confidence, sources: [{url, title}], verified: bool}
+settings:
+  timeout: 120
+  max_steps: 20
+  goose_provider: openai
+  goose_model: deepseek-chatname: Synthesizer
+version: 1.0.0
+title: 📝 Synthesizer — Combines facts into a coherent answer with citations
+description: "v1.0.0 | Receives structured facts from fact-extractor, combines them into a coherent research answer with inline citations [1], [2], [3]. Returns the final research report."
+prompt: |
+  I am the Synthesizer agent (v1.0.0).
+
+  My job is:
+  1. Receive structured facts from fact-extractor
+  2. Organize facts into a coherent, well-structured answer
+  3. Add inline citations [1], [2], [3] referencing each source
+  4. Include a "Sources" section at the end with full URLs
+  5. Return the final research report
+
+  Report structure:
+  - Title/Question
+  - Executive Summary (2-3 sentences)
+  - Key Findings (bulleted or numbered, each with citations)
+  - Detailed Analysis (paragraphs with inline citations)
+  - Conclusion
+  - Sources (numbered list with full URLs matching [1], [2], [3], etc.)
+
+  Citation rules:
+  - Every factual claim MUST have at least one citation
+  - Multiple claims from the same source: re-use the same [N] number
+  - Citation format: "text here [1]" or "text here [1][2]"
+  - If a claim has no source, mark it as "[unverified]" in the text
+  - Sources section must include full URLs
+
+  NEVER output claims without citations. This is a hard rule.
+settings:
+  timeout: 120
+  max_steps: 20
+  goose_provider: openai
+  goose_model: deepseek-chatname: Web Searcher
+version: 1.0.0
+title: 🔍 Web Searcher — Searches the web for relevant sources
+description: "v1.0.0 | Searches the web for information relevant to the research query. Returns a list of {url, title, snippet, source_domain} for downstream processing."
+prompt: |
+  I am the Web Searcher agent (v1.0.0).
+
+  My job is:
+  1. Receive a research sub-query from the orchestrator
+  2. Use web_search to find relevant, high-quality sources
+  3. Return a structured list of results: {url, title, snippet, source_domain}
+  4. Prioritize authoritative sources (academic, official, reputable news)
+  5. Return at least 3-5 sources per sub-query
+
+  Return results as a JSON-serializable list.
+settings:
+  timeout: 120
+  max_steps: 20
+  goose_provider: openai
+  goose_model: deepseek-chat
+tools:
+  - web_searchNow let me read the supporting documentation files.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/00-GUIDELINES.md
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/BP-CHECKLIST.md
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/project.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/workflows.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/research-team/tests/test_agent_syntax.py
+
+# 00-GUIDELINES.md — Projekt-Guidelines
+
+Initialisiert mit dev_generic_init.py v1.0.0
+
+## Reasonprinzipien
+- Jeder Agent = 1 YAML-file in `recipe/sub/`
+- Agenten are Goose-Sub-Agents (no external Services)
+- Communication via YAML-Structs
+- Domain separation: only im eigenen Projekt-Directory write
+
+## Agent-Typen (reference)
+^| type | Task | Example |
+|-----|---------|----------|
+| Analyse | Data read + pattern detect | sub_research-team-analyst |
+| Recovery | Aus Errorn erholen | sub_research-team-checkpoint |
+| Monitoring | Monitor metrics | sub_research-team-health |
+| Generator | Documents/Signale generate | sub_research-team-docgen |
+| Verbetterung | Analyzen + Optimieren | sub_research-team-improver |
+
+## YAML-Struktur
+```yaml
+name: sub_research-team-mein-agent
+version: 1.0.0
+settings:
+  timeout: 120
+  max_steps: 30
+instructions: |
+  # sub_{project}-mein-agent — 🎯 Kurzdescription
+  ...
+```
+
+## Best Practices
+1. **Prompts**: < 300 Zeichen
+2. **Instructions**: < 2000 Zeichen
+3. **⛔ Rules**: Run before each critical step
+4. **Version**: always in erster line
+5. **Namen**: sub_{project}-analyst
+
+## Tools (Symlink auf MAS-Installation)
+- `dev_template_generator.py` — Agenten-Generator
+- `dev_rule_checker.py` — Rule-validation
+- `dev_yaml_generator.py` — YAML-Generator
+- `dev_workflow_runner.py` — Workflow-Execution
+- `dev_goose_db.py` — Session-Analyse
+
+## Analyse (Remote via im-* Agenten)
+The im-* agents of the MAS installation can analyze your project:
+```
+sub_mas-im-pipeline → Verbetterungs-Pipeline
+sub_mas-im-finder  → Optimierungspotential (36 Typen)
+sub_mas-im-rank    → Priorisierung
+sub_mas-im-designer → Patch-Draft
+sub_mas-im-validator → validation
+```
+
+## Distribution
+```bash
+dev_build.sh --project research-team   # → standalone ZIP without MAS
+```# BP-CHECKLIST.md — Best-Practices-Checklist
+
+## Settings optimization (A)
+- [ ] A1: timeout too low? (2+ timeouts in 10 calls?)
+- [ ] A2: max_steps too low? (will be reached before completion?)
+- [ ] A3: timeout too high? (Ø-Duration < 20% timeout?)
+- [ ] A4: max_steps too high? (Ø-Steps < 30% max?)
+
+## Prompt-Quality (B)
+- [ ] B1: Prompt too vague? (User asks 3× "what are you doing?")
+- [ ] B2: Prompt too long? (> 500 Zeichen)
+- [ ] B3: Context missing? (Agent asks after Infos)
+- [ ] B4: Prompt ≠ Instructions? (Contradiction?)
+
+## Instructions (C)
+- [ ] C1: ⛔-Rule missing? (Agent tut Verbotenes)
+- [ ] C2: Procedure unclear? (Agent asks for sequence/order)
+- [ ] C3: Boundaries missing? (Agent exceeds Scope)
+- [ ] C4: referenceen veraltet? (not-existente files)
+
+## Workflow (D)
+- [ ] D1: Step sequence wrong?
+- [ ] D2: Step forgotten?
+- [ ] D3: Redundant step? (80% skipped)
+- [ ] D4: Unclear question?
+
+## Detectionspattern (E)
+- [ ] E1: Command without match?
+- [ ] E2: pattern matcht wrong?
+- [ ] E3: Dead detection? (> 50 sessions no match)
+
+## Prompt-Block (F)
+- [ ] F1: Command without prompt entry?
+- [ ] F2: Wrong sort order? (Most frequent not on top)
+- [ ] F3: Description unklar?
+- [ ] F4: MODE-GUARD missing?
+
+## Health (G)
+- [ ] G1: Agent degraded? (Score < 80)
+- [ ] G2: High failure rate? (> 10%)
+- [ ] G3: Loops detected?
+- [ ] G4: Agent dead?
+
+## Anomalien (H)
+- [ ] H1: Duration > 2× Ø?
+- [ ] H2: Tokens > 3× Ø?
+- [ ] H3: Kosten > 5× Ø?
+- [ ] H4: Session stale? (> 60min idle)
+
+## Prompt-Quality (I)
+- [ ] I1: Score < 5/10?
+- [ ] I2: Identity missing? ("Who am I")
+- [ ] I3: No ⛔-Boundaries?
+- [ ] I4: Zu long? (> 500 Zeichen)
+- [ ] I5: Not self-contained?
+
+## Config (J)
+- [ ] J1: Config ❌?
+- [ ] J2: Config-Value obsolete?
+
+## Docs (K)
+- [ ] K1: Doc veraltet?
+- [ ] K2: Doc missing?
+
+## Goose (L)
+- [ ] L1: Too many sessions?
+- [ ] L2: Too many skills?
+- [ ] L3: Logs too large?
+
+## Migration (M)
+- [ ] M1: Breaking Changes?
+- [ ] M2: Non-Breaking?
+
+## Recipe (N)
+- [ ] N1: Duplicate recipes?
+- [ ] N2: Old Version?
+- [ ] N3: Missing Dependencies?
+
+## Structure (Type O)
+- [ ] O1: Instructions ≠ Ist-State?
+- [ ] O2: reference auf not-existente file?
+- [ ] O3: Outdated counter?
+- [ ] O4: Hardcoded path?
+
+## Tools (P)
+- [ ] P1: Syntax-Error?
+- [ ] P2: Hardcoded paths?
+- [ ] P3: Import-Error?
+
+## Calibration (Q)
+- [ ] Q1: Oversized? (< 20% Auslastung)
+- [ ] Q2: Tightly sized? (> 80% Auslastung)
+
+## Git (R)
+- [ ] R1: Code reduziert? (✅ positivee)
+- [ ] R2: Code bloated? (⚠️ negativee)
+- [ ] R3: ⛔ Rules increased? (✅ Safety)
+- [ ] R4: Prompt shortened? (✅ Token-Effizienz)
+- [ ] R5: New file? (⚠️ Only if needed)
+
+## Tests (V)
+- [ ] V1: No Tests?
+- [ ] V2: < 50% tested?
+
+## Prompt-Erosion (GG)
+- [ ] GG1: ⛔ missing im prompt?
+- [ ] GG2: Version missing?
+- [ ] GG3: Emoji missing?
+- [ ] GG4: Prompt zu short? (< 100 Zeichen)
+- [ ] GG5: Instructions too long? (> 2000 Zeichen)
+
+## Drift (FF + JJ)
+- [ ] FF1: timeout deviating?
+- [ ] FF2: max_steps deviating?
+- [ ] JJ1: Installation deviating?
+
+## Backup (HH)
+- [ ] HH1: > 50 Backup-directoryse?
+- [ ] HH2: > 100 .bak-files?
+- [ ] HH3: No backup before change?
+- [ ] HH4: Backup > 30 days old?name: research-team
+version: 1.0.0
+type: generic-project
+created_with: dev_generic_init.py v1.0.0
+mas_dependency:
+  type: symlink
+  tools_source: /root/.config/goose/recipes/tools
+  analysis: remote (im-* Agenten aus MAS-Installation)
+structure:
+  tools: symlink (no copy)
+  agents: selbst creates (dev_template_generator.py --create)
+  rules: .state/rules/rules.yaml
+  templates: recipe/template/agent_template.yamlversion: 1.0.0
+project: research-team
+workflows:
+  build-test:
+    description: Build and Test
+    steps: []
+  analyse:
+    description: Analyse (remote via im-* Agenten)
+    steps: []
+  deploy:
+    description: Deployment
+    steps: []"""Test: YAML-Syntax allr Agenten."""
+import os
+import yaml
+
+SUBS_DIR = os.path.join(os.path.dirname(__file__), "..", "recipe", "sub")
+
+
+def test_all_agent_yamls():
+    """Checks ob all Sub-Agent-YAMLs valide are."""
+    if not os.path.exists(SUBS_DIR):
+        return  # No agents yet
+    for f in os.listdir(SUBS_DIR):
+        if f.endswith(".yaml"):
+            with open(os.path.join(SUBS_DIR, f)) as fh:
+                yaml.safe_load(fh)  # raises on invalidNow I have a complete picture. Let me also check if there are any tests:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/research-team && python3 -c "import yaml; print('PyYAML available:', yaml.__version__)"
+
+PyYAML available: 6.0.3
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Research Team - Review & Improvement
+
+## Audit Findings
+- [ ] Read all 5 recipe files + orchestrator + guidelines
+- [ ] Identify issues (unclear prompts, missing fields, weak verification, no source attribution)
+
+## Improvements to Make
+- [ ] **Fix orchestrator (research-team.yaml)**: Add tools declaration, edge-case handling, explicit delegation
+- [ ] **Fix web-searcher.yaml**: Add source attribution tracking, empty-results handling, standardize field name
+- [ ] **Fix source-verifier.yaml**: Add all-rejected handling, standardize field name, explicit output schema
+- [ ] **Fix fact-extractor.yaml**: Add no-facts handling, clarify categories, standardize field name
+- [ ] **Fix synthesizer.yaml**: Add no-input handling, clarify citation scheme, standardize field name
+
+## Validation
+- [ ] Validate all YAML syntax
+- [ ] Run test suite
+- [ ] List all improvements made
+
+
+Great, I've read everything. Here's my audit analysis:
+
+## Audit Findings
+
+| # | Issue | File(s) |
+|---|-------|---------|
+| 1 | **Missing `tools:` declaration** — orchestrator needs `delegate` to dispatch | `research-team.yaml` |
+| 2 | **Inconsistent key name** — sub-recipes use `prompt:` but guidelines & orchestrator use `instructions:` | All 4 sub-recipes |
+| 3 | **No source-attribution tracking** — web-searcher results can't be traced to original queries | `web-searcher.yaml` |
+| 4 | **No empty-results handling** — what if search returns nothing? | `web-searcher.yaml` |
+| 5 | **No all-rejected handling** — what if verifier rejects everything? | `source-verifier.yaml` |
+| 6 | **No no-facts handling** — what if extractor finds no facts? | `fact-extractor.yaml` |
+| 7 | **No no-input handling** — what if synthesizer gets no facts? | `synthesizer.yaml` |
+| 8 | **Delegation mechanism implicit** — orchestrator says "dispatch" but doesn't name `delegate` tool | `research-team.yaml` |
+
+Let me fix these systematically.
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Research Team - Review & Improvement
+
+## Audit Findings
+- [x] Read all 5 recipe files + orchestrator + guidelines
+- [x] Identify issues (unclear prompts, missing fields, weak verification, no source attribution)
+
+## Improvements to Make
+- [ ] **Fix orchestrator (research-team.yaml)**: Add tools declaration, edge-case handling, explicit delegation
+- [ ] **Fix web-searcher.yaml**: Add source attribution tracking, empty-results handling, standardize field name
+- [ ] **Fix source-verifier.yaml**: Add all-rejected handling, standardize field name, explicit output schema
+- [ ] **Fix fact-extractor.yaml**: Add no-facts handling, clarify categories, standardize field name
+- [ ] **Fix synthesizer.yaml**: Add no-input handling, clarify citation scheme, standardize field name
+
+## Validation
+- [ ] Validate all YAML syntax
+- [ ] Run test suite
+- [ ] List all improvements made
+
+
+### 1. Fix Orchestrator — add `tools`, edge-case handling, explicit delegation
+  ────────────────────────────────────────
+  ▸ write
+    path /tmp/research-team/recipe/research-team.yaml
+    content: name: Research Team Orchestrator
+version: 1.0.1
+title: 🧠 Research Team Orchestrator — Decomposes queries and dispatches to specialists
+description: "v1.0.1 | Orchestrator for the research-team: decomposes user queries, dispatches to 4 sub-agents (web-searcher, source-verifier, fact-extractor, synthesizer), and returns a final synthesized answer with inline citations."
+instructions: |
+  I am the Research Team Orchestrator (v1.0.1).
+
+  My job is to:
+  1. Take the user's research question
+  2. Decompose it into sub-tasks
+  3. Dispatch to sub-agents in sequence using the `delegate` tool:
+     a. web-searcher — finds relevant sources
+     b. source-verifier — MANDATORY quality gate — filters/verifies sources
+     c. fact-extractor — extracts structured facts from verified sources
+     d. synthesizer — combines facts into a coherent answer with citations [1], [2], [3]
+  4. Return the final answer WITH inline citations
+
+  IMPORTANT: EVERY result MUST pass through source-verifier before reaching fact-extractor.
+  No unverified claims in the final output. The source-verifier is the quality gate — no bypass.
+
+  Pipeline flow:
+  User Query → Web Searcher → Source Verifier → Fact Extractor → Synthesizer → Final Answer
+                                 (quality gate - mandatory)
+
+  Edge-case handling:
+  - If web-searcher returns 0 results: report "No sources found" to user and stop.
+  - If source-verifier rejects ALL sources: report "All sources failed verification — unable to produce reliable answer" and stop.
+  - If source-verifier rejects SOME sources: pass only the accepted ones to fact-extractor.
+  - If fact-extractor finds 0 facts: report "No extractable facts from verified sources" and stop.
+  - If synthesizer receives empty facts: report "Cannot synthesize — no facts available" and stop.
+  - If any sub-agent errors out: retry once, then escalate with partial results.
+
+  Input: A research question from the user (any topic).
+  Output: A final research report with inline citations and a "Sources" section.
+sub_recipes:
+  - name: Web Searcher
+    path: sub/web-searcher.yaml
+    description: "🔍 Searches the web for relevant sources"
+  - name: Source Verifier
+    path: sub/source-verifier.yaml
+    description: "✅ MANDATORY quality gate — filters and verifies sources"
+  - name: Fact Extractor
+    path: sub/fact-extractor.yaml
+    description: "📊 Extracts structured facts from verified sources"
+  - name: Synthesizer
+    path: sub/synthesizer.yaml
+    description: "📝 Combines facts into a coherent answer with citations"
+settings:
+  timeout: 300
+  max_steps: 50
+  goose_provider: openai
+  goose_model: deepseek-chat
+tools:
+  - delegate
+
+
+Wrote /tmp/research-team/recipe/research-team.yaml (54 lines)### 2. Fix Web Searcher — add source attribution, empty-results handling, standardize key
+  ────────────────────────────────────────
+  ▸ write
+    path /tmp/research-team/recipe/sub/web-searcher.yaml
+    content: name: Web Searcher
+version: 1.0.1
+title: 🔍 Web Searcher — Searches the web for relevant sources
+description: "v1.0.1 | Searches the web for information relevant to the research query. Returns a list of {search_query_id, url, title, snippet, source_domain} for downstream processing."
+instructions: |
+  I am the Web Searcher agent (v1.0.1).
+
+  My job is:
+  1. Receive a research sub-query from the orchestrator
+  2. Use `web_search` to find relevant, high-quality sources
+  3. Return a structured list of results: {search_query_id, url, title, snippet, source_domain}
+  4. Prioritize authoritative sources (academic, official, reputable news)
+  5. Return at least 3-5 sources per sub-query
+
+  Source attribution:
+  - Assign a unique `search_query_id` to every result so it can be traced back to the original query
+  - Include the full URL — never truncate
+
+  Empty-results handling:
+  - If no results found: return `{"status": "no_results", "message": "No sources found for query: <query>"}`
+  - Do NOT fabricate sources
+
+  Return results as a JSON-serializable list.
+settings:
+  timeout: 120
+  max_steps: 20
+  goose_provider: openai
+  goose_model: deepseek-chat
+tools:
+  - web_search
+
+
+Wrote /tmp/research-team/recipe/sub/web-searcher.yaml (30 lines)### 3. Fix Source Verifier — all-rejected handling, standardize key, explicit output schema
+  ────────────────────────────────────────
+  ▸ write
+    path /tmp/research-team/recipe/sub/source-verifier.yaml
+    content: name: Source Verifier
+version: 1.0.1
+title: ✅ Source Verifier — Quality gate that filters and verifies sources
+description: "v1.0.1 | MANDATORY quality gate. Receives raw search results, filters low-quality/spam, cross-checks facts across multiple sources, and returns ONLY verified facts with confidence scores. No bypass possible."
+instructions: |
+  I am the Source Verifier agent (v1.0.1) — the QUALITY GATE.
+
+  My job is CRITICAL:
+  1. Receive raw search results from web-searcher (never bypass this gate)
+  2. Filter out: spam, low-quality, irrelevant, single-source claims
+  3. Cross-check facts against multiple authoritative sources
+  4. Assign confidence scores (0.0-1.0) to each verified claim
+  5. Return ONLY verified facts with supporting URLs
+
+  Verification rules:
+  - Confidence < 0.3: REJECT (insufficient evidence)
+  - Confidence 0.3-0.7: ACCEPT with caveat "moderate confidence"
+  - Confidence > 0.7: ACCEPT as reliable
+  - Claims from a single source with no corroboration: mark as "needs verification"
+  - No unverified claims pass through this gate
+
+  All-rejected handling:
+  - If ALL sources fail verification: return `{"status": "all_rejected", "message": "All sources failed verification. No verified facts to pass downstream."}`
+  - If SOME pass and some fail: return only the accepted ones with their confidence scores
+
+  Output schema:
+  ```json
+  [
+    {
+      "claim": "string",
+      "confidence": 0.0-1.0,
+      "sources": [{"url": "string", "title": "string"}],
+      "verified": true
+    }
+  ]
+  ```
+settings:
+  timeout: 120
+  max_steps: 20
+  goose_provider: openai
+  goose_model: deepseek-chat
+
+
+Wrote /tmp/research-team/recipe/sub/source-verifier.yaml (41 lines)### 4. Fix Fact Extractor — no-facts handling, clarify categories, standardize key
+  ────────────────────────────────────────
+  ▸ write
+    path /tmp/research-team/recipe/sub/fact-extractor.yaml
+    content: name: Fact Extractor
+version: 1.0.1
+title: 📊 Fact Extractor — Extracts structured facts from verified sources
+description: "v1.0.1 | Receives verified sources from source-verifier (NOT directly from web-searcher). Extracts specific facts, numbers, dates, quotes. Returns: {claim, evidence, source_url, category, confidence}."
+instructions: |
+  I am the Fact Extractor agent (v1.0.1).
+
+  My job is:
+  1. Receive verified sources from source-verifier (NEVER from web-searcher directly)
+  2. Extract specific, atomic facts from each source
+  3. Capture: numbers, dates, names, quotes, statistics, key findings
+  4. For each fact, record the evidence text and source URL
+  5. Return a structured list: {claim, evidence, source_url, category, confidence}
+
+  Extraction rules:
+  - ONE fact per entry (no compound claims)
+  - Include direct quotes where possible
+  - Always cite the source URL
+  - If a claim cannot be extracted as an atomic fact, flag it
+  - Group facts by category
+
+  Allowed categories: "background", "key finding", "statistic", "quote"
+  If none of these fit, use "other" and explain why.
+
+  No-facts handling:
+  - If no atomic facts can be extracted from the verified sources: return `{"status": "no_facts", "message": "No extractable facts from verified sources. Reason: <reason>"}`
+  - Do NOT fabricate facts
+
+  Return format: list of {claim, evidence, source_url, category, confidence}
+settings:
+  timeout: 120
+  max_steps: 20
+  goose_provider: openai
+  goose_model: deepseek-chat
+
+
+Wrote /tmp/research-team/recipe/sub/fact-extractor.yaml (34 lines)### 5. Fix Synthesizer — no-input handling, clarify citation scheme, standardize key
+  ────────────────────────────────────────
+  ▸ write
+    path /tmp/research-team/recipe/sub/synthesizer.yaml
+    content: name: Synthesizer
+version: 1.0.1
+title: 📝 Synthesizer — Combines facts into a coherent answer with citations
+description: "v1.0.1 | Receives structured facts from fact-extractor, combines them into a coherent research answer with inline citations [1], [2], [3]. Returns the final research report."
+instructions: |
+  I am the Synthesizer agent (v1.0.1).
+
+  My job is:
+  1. Receive structured facts from fact-extractor
+  2. Organize facts into a coherent, well-structured answer
+  3. Add inline citations [1], [2], [3] referencing each source
+  4. Include a "Sources" section at the end with full URLs
+  5. Return the final research report
+
+  Report structure:
+  - Title/Question
+  - Executive Summary (2-3 sentences)
+  - Key Findings (bulleted or numbered, each with citations)
+  - Detailed Analysis (paragraphs with inline citations)
+  - Conclusion
+  - Sources (numbered list with full URLs matching [1], [2], [3], etc.)
+
+  Citation rules:
+  - Every factual claim MUST have at least one citation
+  - Multiple claims from the same source: re-use the same [N] number
+  - Citation numbers [1], [2], [3] correspond to the Sources list (1-indexed)
+  - Citation format: "text here [1]" or "text here [1][2]"
+  - If a claim has no source, mark it as "[unverified]" in the text
+  - Sources section must include full URLs in the order they appear as [1], [2], [3], ...
+
+  NEVER output claims without citations. This is a hard rule.
+
+  No-input handling:
+  - If no facts received (status: "no_facts"): return a summary ending with "Insufficient verified data to produce a full research report."
+  - If the facts list is empty: same as above
+settings:
+  timeout: 120
+  max_steps: 20
+  goose_provider: openai
+  goose_model: deepseek-chat
+
+
+Wrote /tmp/research-team/recipe/sub/synthesizer.yaml (40 lines)
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Research Team - Review & Improvement
+
+## Audit Findings
+- [x] Read all 5 recipe files + orchestrator + guidelines
+- [x] Identify issues (unclear prompts, missing fields, weak verification, no source attribution)
+
+## Improvements to Make
+- [x] **Fix orchestrator (research-team.yaml)**: Add tools declaration, edge-case handling, explicit delegation
+- [x] **Fix web-searcher.yaml**: Add source attribution tracking, empty-results handling, standardize field name
+- [x] **Fix source-verifier.yaml**: Add all-rejected handling, standardize field name, explicit output schema
+- [x] **Fix fact-extractor.yaml**: Add no-facts handling, clarify categories, standardize field name
+- [x] **Fix synthesizer.yaml**: Add no-input handling, clarify citation scheme, standardize field name
+
+## Validation
+- [ ] Validate all YAML syntax
+- [ ] Run test suite
+- [ ] List all improvements made
+
+
+### 6. Validate all YAML files
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/research-team && python3 -c "
+import yaml, os, sys
+
+files = [
+    'recipe/research-team.yaml',
+    'recipe/sub/web-searcher.yaml',
+    'recipe/sub/source-verifier.yaml',
+    'recipe/sub/fact-extractor.yaml',
+    'recipe/sub/synthesizer.yaml',
+]
+
+errors = []
+for path in files:
+    try:
+        with open(path) as f:
+            data = yaml.safe_load(f)
+        print(f'✅ {path} — valid YAML')
+        print(f'   keys: {list(data.keys()) if isinstance(data, dict) else type(data).__name__}')
+    except yaml.YAMLError as e:
+        errors.append((path, str(e)))
+        print(f'❌ {path} — INVALID: {e}')
+
+if errors:
+    print(f'\n{len(errors)} file(s) FAILED validation')
+    sys.exit(1)
+else:
+    print(f'\n🎉 All {len(files)} files valid!')
+"
+
+
+✅ recipe/research-team.yaml — valid YAML
+   keys: ['name', 'version', 'title', 'description', 'instructions', 'sub_recipes', 'settings', 'tools']
+✅ recipe/sub/web-searcher.yaml — valid YAML
+   keys: ['name', 'version', 'title', 'description', 'instructions', 'settings', 'tools']
+✅ recipe/sub/source-verifier.yaml — valid YAML
+   keys: ['name', 'version', 'title', 'description', 'instructions', 'settings']
+✅ recipe/sub/fact-extractor.yaml — valid YAML
+   keys: ['name', 'version', 'title', 'description', 'instructions', 'settings']
+✅ recipe/sub/synthesizer.yaml — valid YAML
+   keys: ['name', 'version', 'title', 'description', 'instructions', 'settings']
+
+🎉 All 5 files valid!All 5 files parse clean. Now run the test suite:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/research-team && python3 -m pytest tests/ -v 2>&1
+
+============================= test session starts ==============================
+platform linux -- Python 3.11.15, pytest-9.1.1, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /tmp/research-team
+plugins: anyio-4.13.0
+collecting ... collected 1 item
+
+tests/test_agent_syntax.py::test_all_agent_yamls PASSED                  [100%]
+
+============================== 1 passed in 0.02s ===============================Let me also do a deeper content validation:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/research-team && python3 -c "
+import yaml
+
+# Load all
+with open('recipe/research-team.yaml') as f:
+    orch = yaml.safe_load(f)
+with open('recipe/sub/web-searcher.yaml') as f:
+    ws = yaml.safe_load(f)
+with open('recipe/sub/source-verifier.yaml') as f:
+    sv = yaml.safe_load(f)
+with open('recipe/sub/fact-extractor.yaml') as f:
+    fe = yaml.safe_load(f)
+with open('recipe/sub/synthesizer.yaml') as f:
+    sy = yaml.safe_load(f)
+
+# Check sub_recipes paths exist
+print('=== Sub-recipe path validation ===')
+import os
+for sub in orch.get('sub_recipes', []):
+    exists = os.path.exists(os.path.join('recipe', sub['path']))
+    print(f'  {sub[\"name\"]}: {sub[\"path\"]} → {\"✅ exists\" if exists else \"❌ MISSING\"} ')
+
+# Check tools field
+print()
+print('=== Tools declarations ===')
+for name, data in [('orchestrator', orch), ('web-searcher', ws), ('source-verifier', sv), ('fact-extractor', fe), ('synthesizer', sy)]:
+    tools = data.get('tools', [])
+    print(f'  {name}: {tools}')
+
+# Check standardized key
+print()
+print('=== Key standardization check ===')
+for name, data in [('orchestrator', orch), ('web-searcher', ws), ('source-verifier', sv), ('fact-extractor', fe), ('synthesizer', sy)]:
+    has_instructions = 'instructions' in data
+    has_prompt = 'prompt' in data
+    print(f'  {name}: instructions={\"✅\" if has_instructions else \"❌\"}, prompt={\"⚠️ present\" if has_prompt else \"✅ absent\"} ')
+
+# Check version consistency
+print()
+print('=== Version checks ===')
+for name, data in [('orchestrator', orch), ('web-searcher', ws), ('source-verifier', sv), ('fact-extractor', fe), ('synthesizer', sy)]:
+    print(f'  {name}: version={data.get(\"version\", \"❌ MISSING\")}')
+
+print()
+print('=== Required field check ===')
+for name, data in [('orchestrator', orch), ('web-searcher', ws), ('source-verifier', sv), ('fact-extractor', fe), ('synthesizer', sy)]:
+    required = ['name', 'version', 'title', 'description', 'instructions', 'settings']
+    missing = [k for k in required if k not in data]
+    if missing:
+        print(f'  {name}: ❌ missing fields: {missing}')
+    else:
+        print(f'  {name}: ✅ all required fields present')
+"
+
+
+=== Sub-recipe path validation ===
+  Web Searcher: sub/web-searcher.yaml → ✅ exists 
+  Source Verifier: sub/source-verifier.yaml → ✅ exists 
+  Fact Extractor: sub/fact-extractor.yaml → ✅ exists 
+  Synthesizer: sub/synthesizer.yaml → ✅ exists 
+
+=== Tools declarations ===
+  orchestrator: ['delegate']
+  web-searcher: ['web_search']
+  source-verifier: []
+  fact-extractor: []
+  synthesizer: []
+
+=== Key standardization check ===
+  orchestrator: instructions=✅, prompt=✅ absent 
+  web-searcher: instructions=✅, prompt=✅ absent 
+  source-verifier: instructions=✅, prompt=✅ absent 
+  fact-extractor: instructions=✅, prompt=✅ absent 
+  synthesizer: instructions=✅, prompt=✅ absent 
+
+=== Version checks ===
+  orchestrator: version=1.0.1
+  web-searcher: version=1.0.1
+  source-verifier: version=1.0.1
+  fact-extractor: version=1.0.1
+  synthesizer: version=1.0.1
+
+=== Required field check ===
+  orchestrator: ✅ all required fields present
+  web-searcher: ✅ all required fields present
+  source-verifier: ✅ all required fields present
+  fact-extractor: ✅ all required fields present
+  synthesizer: ✅ all required fields presentAll validations pass. Let me mark everything complete:
+  ────────────────────────────────────────
+  ▸ todo_write todo
+    content: # Research Team - Review & Improvement
+
+## Audit Findings
+- [x] Read all 5 recipe files + orchestrator + guidelines
+- [x] Identify issues (unclear prompts, missing fields, weak verification, no source attribution)
+
+## Improvements to Make
+- [x] **Fix orchestrator (research-team.yaml)**: Add tools declaration, edge-case handling, explicit delegation
+- [x] **Fix web-searcher.yaml**: Add source attribution tracking, empty-results handling, standardize field name
+- [x] **Fix source-verifier.yaml**: Add all-rejected handling, standardize field name, explicit output schema
+- [x] **Fix fact-extractor.yaml**: Add no-facts handling, clarify categories, standardize field name
+- [x] **Fix synthesizer.yaml**: Add no-input handling, clarify citation scheme, standardize field name
+
+## Validation
+- [x] Validate all YAML syntax
+- [x] Run test suite
+- [x] List all improvements made
+
+
+All done. Here's the full summary of improvements:
+
+---
+
+## Improvements Made — Complete List
+
+### 1. Orchestrator (`research-team.yaml`) — v1.0.0 → v1.0.1
+| Issue | Fix |
+|-------|-----|
+| **Missing `tools:` field** | Added `tools: [delegate]` so the orchestrator explicitly declares the tool it uses to dispatch sub-agents |
+| **Implicit delegation** | Instructions now name the `delegate` tool explicitly: "Dispatch to sub-agents using the `delegate` tool" |
+| **No edge-case handling** | Added 6 edge cases: 0 search results, all sources rejected, partial rejection, 0 facts extracted, empty facts for synthesizer, and sub-agent error retry |
+| **No input/output contract** | Added explicit "Input: ... Output: ..." contract at the end of instructions |
+
+### 2. Web Searcher (`web-searcher.yaml`) — v1.0.0 → v1.0.1
+| Issue | Fix |
+|-------|-----|
+| **Used `prompt:` instead of `instructions:`** | Standardized to `instructions:` for consistency with guidelines |
+| **No source-attribution tracking** | Added `search_query_id` field to every result for full traceability back to the original query |
+| **No empty-results handling** | Added explicit `no_results` status response instead of fabricating sources |
+| **No anti-fabrication rule** | Added "Do NOT fabricate sources" as a hard rule |
+
+### 3. Source Verifier (`source-verifier.yaml`) — v1.0.0 → v1.0.1
+| Issue | Fix |
+|-------|-----|
+| **Used `prompt:` instead of `instructions:`** | Standardized to `instructions:` |
+| **No all-rejected handling** | Added explicit `all_rejected` status response when every source fails verification |
+| **No structured output schema** | Added a formal JSON schema showing the exact output format with field types and ranges |
+| **Tools not declared** | (Bypassed — verifier doesn't need tools, just analysis; explicit empty list is acceptable) |
+
+### 4. Fact Extractor (`fact-extractor.yaml`) — v1.0.0 → v1.0.1
+| Issue | Fix |
+|-------|-----|
+| **Used `prompt:` instead of `instructions:`** | Standardized to `instructions:` |
+| **Categories were open-ended** | Limited to 4 explicit categories: `background`, `key finding`, `statistic`, `quote` — with `other` as fallback with explanation |
+| **No no-facts handling** | Added explicit `no_facts` status response with reason when extraction yields nothing |
+| **No anti-fabrication rule** | Added "Do NOT fabricate facts" as a hard rule |
+
+### 5. Synthesizer (`synthesizer.yaml`) — v1.0.0 → v1.0.1
+| Issue | Fix |
+|-------|-----|
+| **Used `prompt:` instead of `instructions:`** | Standardized to `instructions:` |
+| **Citation numbering was ambiguous** | Clarified that `[1], [2], [3]` are 1-indexed and correspond to the Sources list in order |
+| **No no-input handling** | Added graceful degradation when no facts are received: produces a partial summary with "Insufficient verified data" message |
+
+### Cross-Cutting Validations
+- ✅ **All 5 YAML files** parse as valid YAML (confirmed via `yaml.safe_load`)
+- ✅ **All 1 test** passes (`test_all_agent_yamls`)
+- ✅ **All sub-recipe paths** referenced in orchestrator exist
+- ✅ **All required fields** present in every file (`name`, `version`, `title`, `description`, `instructions`, `settings`)
+- ✅ **All versions** bumped to `1.0.1` consistently
+- ✅ **No remaining `prompt:` keys** — all standardized to `instructions:`
