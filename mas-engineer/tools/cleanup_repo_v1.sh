@@ -28,20 +28,21 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 
-# Detection: monorepo vs standalone
-if [ -d "$SCRIPT_DIR/../e2e-evidence-gen2" ]; then
+# Detection: monorepo vs standalone (e2e-evidence-gen2 liegt seit 2026-08-07
+# im zentralen logs/ Ordner auf Repo-Root-Ebene)
+if [ -d "$SCRIPT_DIR/../logs/e2e-evidence-gen2" ]; then
     # mas-engineer IST im monorepo
     REPO_ROOT="$GIT_ROOT"
     MAS_ENGINEER="$SCRIPT_DIR/.."
     PREFIX="mas-engineer"
-elif [ -d "$SCRIPT_DIR/e2e-evidence-gen2" ]; then
+elif [ -d "$SCRIPT_DIR/logs/e2e-evidence-gen2" ]; then
     # mas-engineer IST repo root
     REPO_ROOT="$SCRIPT_DIR"
     MAS_ENGINEER="$SCRIPT_DIR"
     PREFIX=""
 else
-    echo "FEHLER: Kann e2e-evidence-gen2/ nicht finden von $SCRIPT_DIR aus" >&2
-    echo "  Erwartet: $SCRIPT_DIR/../e2e-evidence-gen2/ ODER $SCRIPT_DIR/e2e-evidence-gen2/" >&2
+    echo "FEHLER: Kann logs/e2e-evidence-gen2/ nicht finden von $SCRIPT_DIR aus" >&2
+    echo "  Erwartet: $SCRIPT_DIR/../logs/e2e-evidence-gen2/ ODER $SCRIPT_DIR/logs/e2e-evidence-gen2/" >&2
     exit 1
 fi
 
@@ -91,7 +92,7 @@ preflight() {
     
     # Gate 2: yaml-valid (sample)
     for f in "$(MP recipe/sub/sub_mas-pre-push-validator.yaml)" \
-             "$(MP e2e-evidence-gen2/findings_R51_consumer.yaml)"; do
+             "$REPO_ROOT/logs/e2e-evidence-gen2/findings_R51_consumer.yaml"; do
         if [ -f "$f" ]; then
             python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null || abort "yaml-invalid: $f"
         fi
@@ -116,7 +117,7 @@ preflight() {
 # ========================================================================
 p1_r58_r74_evidence() {
     log "P1: R58-R74 EVIDENCE.md generieren (17 files)"
-    local out="$(MP e2e-evidence-gen2)"
+    local out="$REPO_ROOT/logs/e2e-evidence-gen2"
     log "Output dir: $out"
     
     # R58
@@ -495,7 +496,7 @@ p2_duplicate() {
     # - e2e-evidence-gen2/findings_R51_consumer.yaml (R48-commit-bug)
     # Lösung: e2e-evidence-gen2/ version löschen
     
-    local dup="$(MP e2e-evidence-gen2/findings_R51_consumer.yaml)"
+    local dup="$REPO_ROOT/logs/e2e-evidence-gen2/findings_R51_consumer.yaml"
     local keep="$(MP .state/pipeline/findings_R51_consumer.yaml)"
     
     if [ ! -f "$dup" ]; then

@@ -36,8 +36,8 @@ Every claim below is backed by a raw log on disk in this repository, not a curat
 
 | What was verified | Result | Where the evidence lives |
 |--------------------|--------|--------------------------|
-| **Demo-Team generation from natural language** (R38) | 9/9 successful runs across different team types (sales, marketing, translator) | `e2e-results/2026-07-24-demo-team-generation-rate/` — `raw-results.json` + per-team logs |
-| **End-to-end infrastructure tests** (R39) | 8/8 PASS (100 %) — recipe-yaml, top-workflows, recovery-workflows | `e2e-results/2026-07-24-run-3/raw-results.json` (post-cleanup run) |
+| **Demo-Team generation from natural language** (R38) | 9/9 successful runs across different team types (sales, marketing, translator) | `logs/e2e-results/2026-07-24-demo-team-generation-rate/` — `raw-results.json` + per-team logs |
+| **End-to-end infrastructure tests** (R39) | 8/8 PASS (100 %) — recipe-yaml, top-workflows, recovery-workflows | `logs/e2e-results/2026-07-24-run-3/raw-results.json` (post-cleanup run) |
 | **Pre-push validation** (every commit) | 11/11 PASS — P1 findings, paths, syntax, secrets, e2e-regression, constitution | `.state/pipeline/pre_push_validation.yaml` (regenerated each push) |
 | **Dogfooded user-bug fixes** (R37) | 2 real user-reported bugs fixed (F-BUG-001, F-BUG-002) | commit `b7e1264` |
 
@@ -46,7 +46,7 @@ Every claim below is backed by a raw log on disk in this repository, not a curat
 - The 8/8 and 11/11 figures are about the framework's own plumbing, not about user-facing team generation.
 - The 2 dogfooded bugs are the first time the project ate its own cooking on real user input, not synthetic test cases.
 
-For full traceability, see the commit graph (`git log --oneline`) and the `e2e-results/` directory.
+For full traceability, see the commit graph (`git log --oneline`) and the `logs/e2e-results/` directory.
 
 ---
 
@@ -395,7 +395,7 @@ flowchart LR
 
 | | Feature | What It Does |
 |---|---|---|
-| 🛡️ | **96 Sub-Agents** | Monitoring, Recovery, Improvement, Analysis, Management, Documentation, Utilities — YAML-defined; core IM-pipeline E2E-tested via `e2e-results/2026-07-19/` |
+| 🛡️ | **96 Sub-Agents** | Monitoring, Recovery, Improvement, Analysis, Management, Documentation, Utilities — YAML-defined; core IM-pipeline E2E-tested via `logs/e2e-results/2026-07-19/` |
 | 🔄 | **8-Stage Self-Improvement** | IM pipeline: 5 `im-*` sub-agents (`im-session-reader` → `im-finder` → `im-rank` → `im-designer` → `im-validator`) in an 8-stage orchestrator flow (S1-S8 with S0 prerequisites), plus `general-improver` dispatcher. 53 documented patterns. |
 | 🏥 | **5-Stage Phoenix Recovery** | Immune (prevention) → Checkpoint (snapshots) → Safezone (isolated fork) → Timeline (best-point search) → Defib (emergency minimal config) |
 | 📊 | **Per-Project Dashboard** | MCP app with health status, agent list, change history, performance metrics. Refreshable via Goose scheduler. Free. |
@@ -457,10 +457,10 @@ MAS-Engineer is built on five beliefs:
 A: CrewAI is a Python SDK. You write code. MAS-Engineer is a conversational assistant. You talk. If you love coding and want full API control, CrewAI is great. If you want results without coding, MAS-Engineer is the only option that works this way.
 
 **Q: Is this production-ready?**  
-A: This is a **High-Confidence Architecture Lab**. It demonstrates a verified, self-improving multi-agent system running on Goose. The core system installs and runs. The MCP dashboard server requires `npm install` (not available in all sandbox environments). See the [e2e-results](e2e-results/) folder for documented test evidence, including how a `401 Unauthorized` failure was caught, documented, and resolved in the follow-up run.
+A: This is a **High-Confidence Architecture Lab**. It demonstrates a verified, self-improving multi-agent system running on Goose. The core system installs and runs. The MCP dashboard server requires `npm install` (not available in all sandbox environments). See the [logs/e2e-results](logs/e2e-results/) folder for documented test evidence, including how a `401 Unauthorized` failure was caught, documented, and resolved in the follow-up run.
 
 **Q: Where can I see evidence of how this project handles test failures?**  
-A: See [`e2e-results/2026-07-19-demo-runner-ARCHIVED-script-failure/`](e2e-results/2026-07-19-demo-runner-ARCHIVED-script-failure/). That folder preserves a 2026-07-19 e2e test that was originally reported as "15/15 PASS" but had actually produced 5 consecutive `401 Unauthorized` responses because the wrapper script passed a REDACTED API key placeholder to goose. The same folder contains `TRUTHFUL_REPORT.md` which documents the failure and explains the script-vs-manual distinction. The successful follow-up test is at `e2e-results/2026-07-19-demo-runner-v2/`.
+A: See [`logs/e2e-results/2026-07-19-demo-runner-ARCHIVED-script-failure/`](logs/e2e-results/2026-07-19-demo-runner-ARCHIVED-script-failure/). That folder preserves a 2026-07-19 e2e test that was originally reported as "15/15 PASS" but had actually produced 5 consecutive `401 Unauthorized` responses because the wrapper script passed a REDACTED API key placeholder to goose. The same folder contains `TRUTHFUL_REPORT.md` which documents the failure and explains the script-vs-manual distinction. The successful follow-up test is at `logs/e2e-results/2026-07-19-demo-runner-v2/`.
 
 **Q: Can I use my own LLM?**  
 A: Yes. MAS-Engineer runs on Goose, which supports OpenAI, Ollama (local), Groq, DeepSeek, and any OpenAI-compatible provider.

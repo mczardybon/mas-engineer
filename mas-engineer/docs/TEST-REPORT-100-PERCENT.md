@@ -2,7 +2,7 @@
 
 **Date**: 2026-07-18
 
-> **⚠️ HISTORICAL SNAPSHOT.** Numbers in this report reflect the state on 2026-07-18. The "52 sub-agent recipes" tested here were 50/52 of the catalog at that time. **Current state (2026-07-24): 96 sub-agents, 57 tools, 10 active hard rules, 5-stage IM pipeline + general-improver dispatcher.** For the latest run, see `e2e-results/2026-07-24-demo-team-generation-rate/`.
+> **⚠️ HISTORICAL SNAPSHOT.** Numbers in this report reflect the state on 2026-07-18. The "52 sub-agent recipes" tested here were 50/52 of the catalog at that time. **Current state (2026-07-24): 96 sub-agents, 57 tools, 10 active hard rules, 5-stage IM pipeline + general-improver dispatcher.** For the latest run, see `logs/e2e-results/2026-07-24-demo-team-generation-rate/`.
 
 **Test method**: Real LLM runs of all 52 sub-agent recipes (50 tested, 2 excluded as test-only) via DeepSeek through the openai-provider
 **Final result**: **50/52 tested (96.2% coverage)**

@@ -24,7 +24,7 @@ This way:
 ```
 ?? mas-engineer/.state/pipeline/signal_apply_only_done_20260724_1746.yaml
 ?? mas-engineer/docs/E2E-SELF-IMPROVEMENT-REPORT-2026-07-24.md
-?? mas-engineer/e2e-evidence-gen2/                         (4 logs)
+?? mas-engineer/logs/e2e-evidence-gen2/                         (4 logs)
 ```
 
 Plus modified state files:

@@ -34,8 +34,9 @@ set -o pipefail
 # === CONFIG ===
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MAS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+LOGS_ROOT="$(cd "$MAS_ROOT/.." && pwd)/logs"
 RECIPE_DIR="$MAS_ROOT/recipe/sub"
-RESULT_DIR_BASE="$MAS_ROOT/e2e-results"
+RESULT_DIR_BASE="$LOGS_ROOT/e2e-results"
 TIMESTAMP="$(date -u +%Y-%m-%d)"
 RESULT_DIR="$RESULT_DIR_BASE/${TIMESTAMP}-r11070-mas-engineer-all-functions-pty"
 GOOSE_BIN="/root/.local/bin/goose"

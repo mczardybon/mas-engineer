@@ -49,7 +49,7 @@ else
   exit 1
 fi
 
-export EVIDENCE=/workspace/e2e-evidence-30agent
+export EVIDENCE=/workspace/logs/e2e-evidence-30agent
 mkdir -p "$EVIDENCE"
 log() { echo "[$(date +%H:%M:%S)] $*" | tee -a "$EVIDENCE/run.log"; }
 section() { echo ""; echo "==== $*" | tee -a "$EVIDENCE/run.log"; }

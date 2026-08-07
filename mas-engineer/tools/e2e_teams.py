@@ -38,8 +38,8 @@ USAGE:
   python3 tools/e2e_teams.py --dry-run          # check team presence only
 
 OUTPUT:
-  - e2e-results/<date>-teams-<n>/raw-results.json
-  - e2e-results/<date>-teams-<n>/logs/<team>-<level>.log
+  - logs/e2e-results/<date>-teams-<n>/raw-results.json
+  - logs/e2e-results/<date>-teams-<n>/logs/<team>-<level>.log
   - Exit 0 if all PRESENT (non-skip) tests pass.
 """
 
@@ -518,9 +518,9 @@ def main():
     levels = [args.level] if args.level else ["easy", "medium", "hard"]
 
     today = datetime.now().strftime("%Y-%m-%d")
-    existing = sorted(glob.glob(f"e2e-results/{today}-teams-*"))
+    existing = sorted(glob.glob(f"logs/e2e-results/{today}-teams-*"))
     run_n = len(existing) + 1
-    out_dir = f"e2e-results/{today}-teams-{run_n}"
+    out_dir = f"logs/e2e-results/{today}-teams-{run_n}"
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(f"{out_dir}/logs", exist_ok=True)
     log(f"results dir: {out_dir}")

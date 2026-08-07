@@ -27,10 +27,13 @@ from typing import Any, Dict, List, Set, Tuple
 import yaml as _yaml
 
 REPO_ROOT = _Path(__file__).parent.parent.resolve()
+# Central logs/ folder at the git repo root (single destination for all
+# mas-generated artifacts: e2e results, evidence, reports).
+LOGS_ROOT = REPO_ROOT.parent / "logs"
 RECIPE_DIR = REPO_ROOT / "recipe"
 INSTRUCTIONS_DIR = RECIPE_DIR / "instructions"
-SKILLS_DIR = REPO_ROOT / "mas-engineer" / "skills"
-E2E_RESULTS_DIR = REPO_ROOT / "e2e-results"
+SKILLS_DIR = REPO_ROOT / "mas-state" / "skills"
+E2E_RESULTS_DIR = LOGS_ROOT / "e2e-results"
 EVIDENCE_DIRS = [E2E_RESULTS_DIR]  # R110-74a gitignored
 
 

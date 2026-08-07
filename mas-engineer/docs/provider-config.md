@@ -4,7 +4,7 @@
 **Date:** 2026-07-27
 **Updated:** 2026-07-28 — deepseek-chat → deepseek-v4-flash (R110-1)
 **Updated:** 2026-07-28 — R110-3 fix: OPENAI_HOST reverted (do NOT add /v1, goose does that)
-**Evidence:** `e2e-results/2026-07-28-r1101-pty-verification/README.md` (R110-2)
+**Evidence:** `logs/e2e-results/2026-07-28-r1101-pty-verification/README.md` (R110-2)
 
 ## Problem
 
@@ -96,7 +96,7 @@ echo "OPENAI_HOST=$OPENAI_HOST"           # expected: https://api.deepseek.com (
 
 **Important (R110-3 lesson):** R110-1 had the OPENAI_HOST row of the common-errors table INVERTED
 ("without /v1 → 404, fix: append /v1"). Reality is exactly the opposite: WITH /v1 → 404 (doubled),
-WITHOUT /v1 → 18/18 PASS. PTY evidence: `e2e-results/2026-07-28-r1101-pty-verification/`.
+WITHOUT /v1 → 18/18 PASS. PTY evidence: `logs/e2e-results/2026-07-28-r1101-pty-verification/`.
 
 ## R108-11 References
 

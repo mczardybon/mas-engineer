@@ -67,7 +67,7 @@
 
 ## Test Artifacts (no longer committed)
 
-`e2e-results/2026-07-22-run-{1..14}/` are working documents, not deliverables.
+`logs/e2e-results/2026-07-22-run-{1..14}/` are working documents, not deliverables.
 They live in `.gitignore` and prove the score progression.
 
 ## Reproducibility

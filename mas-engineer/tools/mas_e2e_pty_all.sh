@@ -1,7 +1,7 @@
 #!/bin/bash
 # mas_e2e_pty_all.sh — run all 132 mas-recipes in PTY, background-friendly.
 #
-# Output: e2e-results/<date>-pty-all-132/{evidence,SUMMARY.tsv,RESULT.md}
+# Output: logs/e2e-results/<date>-pty-all-132/{evidence,SUMMARY.tsv,RESULT.md}
 # Each recipe: 180s timeout, log to evidence/<name>.log, status in SUMMARY.tsv
 
 set -u
@@ -44,7 +44,8 @@ fi
 
 # output dirs
 DATE=$(date +%F)
-RUN_DIR="$MAS_ROOT/e2e-results/${DATE}-pty-all-132"
+LOGS_ROOT="$(cd "$MAS_ROOT/.." && pwd)/logs"
+RUN_DIR="$LOGS_ROOT/e2e-results/${DATE}-pty-all-132"
 EVIDENCE_DIR="$RUN_DIR/evidence"
 mkdir -p "$EVIDENCE_DIR"
 

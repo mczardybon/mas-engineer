@@ -31,7 +31,7 @@ def _resolve_data_path():
     """Find sample-input/data.csv via (in order):
       1. CLI arg --data
       2. env DQ_DATA_PATH
-      3. e2e-results/*/sample-input/data.csv glob (latest)
+      3. logs/e2e-results/*/sample-input/data.csv glob (latest)
       4. ./sample-input/data.csv relative
       5. ../sample-input/data.csv relative
     Returns absolute path or raises FileNotFoundError.
@@ -50,7 +50,7 @@ def _resolve_data_path():
     if os.environ.get("DQ_DATA_PATH"):
         candidates.append(os.environ["DQ_DATA_PATH"])
     import glob
-    candidates.extend(sorted(glob.glob("e2e-results/*/sample-input/data.csv"),
+    candidates.extend(sorted(glob.glob("logs/e2e-results/*/sample-input/data.csv"),
                               reverse=True))   # latest first
     candidates.extend(["./sample-input/data.csv", "../sample-input/data.csv"])
     for c in candidates:
@@ -58,7 +58,7 @@ def _resolve_data_path():
             return os.path.abspath(c)
     raise FileNotFoundError(
         "data.csv not found. Tried: CLI --data, env DQ_DATA_PATH, "
-        "e2e-results/*/sample-input/data.csv, ./sample-input/data.csv, "
+        "logs/e2e-results/*/sample-input/data.csv, ./sample-input/data.csv, "
         "../sample-input/data.csv"
     )
 

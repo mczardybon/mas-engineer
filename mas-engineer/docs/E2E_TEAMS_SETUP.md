@@ -155,7 +155,7 @@ python3 tools/e2e_teams.py --dry-run
 ## What gets saved
 
 ```
-e2e-results/2026-07-22-teams-N/
+logs/e2e-results/2026-07-22-teams-N/
 ├── raw-results.json          # full structured results
 └── logs/
     ├── translator-easy.log   # last 2k chars of output
@@ -182,7 +182,7 @@ A test passes only if:
 
 ## What if a test fails?
 
-1. **Check the log** at `e2e-results/<date>-teams-N/logs/<team>-<level>.log`
+1. **Check the log** at `logs/e2e-results/<date>-teams-N/logs/<team>-<level>.log`
    (ANSI color codes are stripped automatically for readability)
 2. Look for the `▸ delegate` tool call — is it pointing at your team?
 3. Look for the sub-agent's tool calls (`▸ [subagent:XXX] shell`) — are they

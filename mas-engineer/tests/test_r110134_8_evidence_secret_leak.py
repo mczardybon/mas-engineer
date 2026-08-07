@@ -57,27 +57,30 @@ def test_evidence_logs_are_gitignored():
 
 
 def test_no_staged_evidence_logs():
-    """No *.log file under e2e-results/ should be in `git status` as added/modified.
-    Defense-in-depth: even if .gitignore is wrong, this catches committed leaks."""
+    """No *.log file under logs/e2e-results/ should be in `git status` as added/modified.
+    Defense-in-depth: even if .gitignore is wrong, this catches committed leaks.
+    EVIDENCE-*.md/REPORT.md/SUMMARY.* ARE intentionally committed (traceability),
+    but raw .log files must never be."""
     import subprocess
     if not E2E_RESULTS_DIR.exists():
         pytest.skip(f"{E2E_RESULTS_DIR} not present")
     r = subprocess.run(
-        ["git", "status", "--porcelain", "--", "e2e-results/"],
+        ["git", "status", "--porcelain", "--", "logs/e2e-results/"],
         capture_output=True, text=True, timeout=10,
-        cwd=str(E2E_RESULTS_DIR.parent.parent),  # mas-engineer/
+        cwd=str(E2E_RESULTS_DIR.parent.parent),  # git repo root
     )
     if r.returncode != 0:
         pytest.skip("git status failed — not in a git repo?")
-    # Empty output = nothing tracked
+    # Only raw .log files are the leak risk; EVIDENCE-*/REPORT.md/SUMMARY.* are
+    # deliberately committed for traceability.
     bad = [
         line for line in r.stdout.splitlines()
-        if line and not line.startswith("??")  # ?? = untracked (gitignored)
+        if line and not line.startswith("??") and ".log" in line
     ]
     assert not bad, (
-        f"{len(bad)} evidence logs are STAGED (would be committed!):\n"
+        f"{len(bad)} evidence LOG files are STAGED (would be committed!):\n"
         + "\n".join(f"  - {l}" for l in bad[:10])
-        + "\n\nRun `git restore --staged e2e-results/` and verify .gitignore."
+        + "\n\nRun `git restore --staged logs/e2e-results/` and verify .gitignore."
     )
 
 

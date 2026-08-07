@@ -424,9 +424,9 @@ at the end of this file — it is empty.
 
 ### Run identifiers
 - Recipe commit: `1c7d033` (R110-8), branch: `new-agent`
-- Evidence dir: `e2e-results/2026-07-28-r1108-30agents-run/`
+- Evidence dir: `logs/e2e-results/2026-07-28-r1108-30agents-run/`
   (relative to mas-engineer/ repo root; the run.log is gitignored
-  per the existing `e2e-results/` rule in .gitignore, so it stays
+  per the existing `logs/e2e-results/` rule in .gitignore, so it stays
   on disk but is not committed)
 - Evidence file: `evidence/run.log` (5483 lines, 214 KB)
 - Generated project: `/tmp/multi-arch-30/`
@@ -530,7 +530,7 @@ single-turn, and worked — but that doesn't mean PTY would. R110-10
 ran the same recipe with `pty.openpty()` instead of `--no-session`.
 
 ### PTY runner
-- Python script: `r11010-pty-skill.py` (in e2e-results/)
+- Python script: `r11010-pty-skill.py` (in logs/e2e-results/)
 - Allocates a real PTY via `pty.openpty()`, attaches it to
   `subprocess.Popen(...)` stdin/stdout/stderr
 - Bash wrapper: `r11010-pty-skill.sh` (in /tmp/), sources .env,

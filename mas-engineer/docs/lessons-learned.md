@@ -332,7 +332,7 @@ Three process gaps in the commit-authoring loop:
 - Replaced "Adds 3 new tests" with "NO new tests added; 4 existing
   tests re-purposed".
 - Archived the v1 body in
-  `e2e-evidence-gen2/r11056-body-v1-72457b8.md` for full history.
+  `logs/e2e-evidence-gen2/r11056-body-v1-72457b8.md` for full history.
 
 **Structural (this lesson):**
 For every commit, before drafting the body, run:
@@ -369,7 +369,7 @@ git log --oneline -20 --grep "<previous-round-tag>"
 > rewrite history.
 
 ### Reference
-- Bad example (archived): `e2e-evidence-gen2/r11056-body-v1-72457b8.md`
+- Bad example (archived): `logs/e2e-evidence-gen2/r11056-body-v1-72457b8.md`
 - Fixed example: commit `3aef534` on branch `cleanup`
 - Related skills: `mas-engineer-commit-protocol` (R110-16),
   `verification-theater-guard` (the body is a verification artifact)

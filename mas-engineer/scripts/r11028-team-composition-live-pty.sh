@@ -47,7 +47,7 @@ echo "  API: HTTP $http ✓"
 echo
 
 # --- Step 2: recipe discovery ---
-RESULT_DIR="e2e-results/2026-07-29-r11028-team-composition-live-pty"
+RESULT_DIR="logs/e2e-results/2026-07-29-r11028-team-composition-live-pty"
 # Wrapper-recipes live NEXT to the sub_recipes (gotcha #11: sub_recipe paths
 # resolve relative to the recipe's own dir, not cwd). So we put the wrappers
 # at /tmp/multi-arch-30/recipe/wrappers-r11028/ and use absolute sub_recipe paths.

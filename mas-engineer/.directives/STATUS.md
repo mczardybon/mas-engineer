@@ -180,7 +180,7 @@ Pro direktive ein eintrag mit:
 - Implementation details (die gehoeren in commits/diffs)
 - Performance metrics (die gehoeren in mas-engineer
   monitoring + dashboard)
-- User-discussion (die gehoeren in e2e-results/<session>/
+- User-discussion (die gehoeren in logs/e2e-results/<session>/
   oder in user-side notes, nicht hier)
 - "Was hat NICHT funktioniert" retros (die gehoeren in
   commit messages der jeweiligen fix-commits)
