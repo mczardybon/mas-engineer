@@ -206,10 +206,19 @@ def test_mas_engineer_interactive():
     log("  running goose run --recipe recipe/test-mas-user.yaml...")
     log("  (this can take 15-25 minutes)")
     log("  tail the log: tail -f logs/e2e-results/<date>/logs/pty-test-mas-user.log")
+    # R110-148: goose 1.45 requires GOOSE_PROVIDER + GOOSE_MODEL in env to
+    # initialize a provider session. Without them it aborts with
+    # "No provider configured. Run 'goose configure' first." even when
+    # OPENAI_API_KEY is set. Forward os.environ and fall back to
+    # 'openai'/'deepseek-v4-flash' so TEST 5 works in a fresh shell.
+    run_env = {**os.environ, "GOOSE_PROVIDER": os.environ.get("GOOSE_PROVIDER", "openai"),
+               "GOOSE_MODEL": os.environ.get("GOOSE_MODEL", "deepseek-v4-flash"),
+               "MAS_ENGINEER_ROOT": ROOT}
     try:
         r = subprocess.run(
             ["goose", "run", "--recipe", "recipe/test-mas-user.yaml"],
             capture_output=True, text=True, timeout=1500, cwd=ROOT,
+            env=run_env,
         )
         # Check if it produced a meaningful response
         ok = "subagent" in r.stdout or "sub_mas" in r.stdout or len(r.stdout) > 500
