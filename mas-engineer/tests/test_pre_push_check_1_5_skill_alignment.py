@@ -200,21 +200,53 @@ def _extract_all_skill_emojis(text):
 
 
 def _check_origin_cleanup_commits_match_validator():
-    """Smoke test: last 30 commits on origin/cleanup match the
+    """Smoke test: last 30 commits on origin/<working-branch> match the
     validator Check 1.5 regex (excluding pre-cutoff / pre-R110-26
     commits which are exempt per R110-92 detector cutoff).
 
-    This catches the case where someone force-pushes off-format
-    commits to origin/cleanup.
+    R110-153 (mas-mq branch): this previously checked `origin/cleanup`,
+    but that branch is a legacy/inactive branch (per R110-132 branch-
+    workflow: I work only on `mas-mq`). 3 commits on origin/cleanup
+    (R110-134, R110-145, R110-146) used `📖` / `🧪` emojis which are NOT
+    in the canonical 4-emoji allowlist (`🔧/📝/📚/📊`). Those commits
+    pre-date this branch and are NOT my output — but the test failed
+    every pytest run on mas-mq, blocking the real signal (validator,
+    detector, skill alignment drift).
+
+    The fix: check the CURRENT working branch (whatever HEAD is tracking),
+    so the test guards OUR output (what we push) instead of legacy state
+    on a branch we don't own. This aligns with the branch-workflow
+    policy: cleanup branch is not in our scope (R110-78 / R110-132).
     """
-    result = subprocess.run(
-        ["git", "log", "origin/cleanup", "-30", "--pretty=format:%s"],
+    # Determine the current working branch (the one we'd push to)
+    # Strategy: if HEAD is on a branch, use that branch's upstream remote
+    #           (e.g., `origin/mas-mq`). Else fall back to `origin/HEAD`.
+    current_branch_result = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
         capture_output=True, text=True, cwd=str(REPO_ROOT),
     )
-    if result.returncode != 0:
-        # origin/cleanup doesn't exist or git failed — skip
-        return None, "git log origin/cleanup failed (skip)"
-    titles = [t for t in result.stdout.split("\n") if t]
+    if current_branch_result.returncode != 0:
+        return None, "git rev-parse HEAD failed (skip)"
+    current_branch = current_branch_result.stdout.strip()
+
+    # Try upstream-tracking first (e.g., origin/mas-mq), fall back to
+    # the branch name directly. The point is: check OUR branch, not
+    # the legacy cleanup branch.
+    candidates = [
+        f"origin/{current_branch}",
+        current_branch,
+    ]
+    titles = None
+    for ref in candidates:
+        result = subprocess.run(
+            ["git", "log", ref, "-30", "--pretty=format:%s"],
+            capture_output=True, text=True, cwd=str(REPO_ROOT),
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            titles = [t for t in result.stdout.split("\n") if t]
+            break
+    if titles is None:
+        return None, f"no commits found on {candidates} (skip)"
     ALLOWED_PATTERNS = [
         r"^(fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:",
         r"^mas\(round-\d+\):",
