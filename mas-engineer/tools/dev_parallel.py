@@ -83,16 +83,25 @@ class ParalllPool:
             self._results[task_id] = {'status': 'pending'}
         return task_id
 
-    def run(self, tasks: List[Dict]) -> Dict[str, Any]:
+    def run(self, tasks: List[Dict], backpressure: Optional[int] = None) -> Dict[str, Any]:
         """Runs all Tasks paralll via ThreadPoolExecutor aus.
-        
+
         Args:
             tasks: list from Dictionaries mit:
                 - 'id' (str): Eindeutige Task-ID
                 - 'fn' (callable): Function to execute
                 - 'args' (tuple, optional): Positions-arguments
                 - 'kwargs' (dict, optional): Keyword-arguments
-                
+            backpressure: (NEW R110-158) if set, limits the number
+                of CONCURRENTLY EXECUTING tasks to this value via
+                threading.BoundedSemaphore. Tasks beyond the limit
+                wait in a queue (in-process) until a slot frees.
+                Use this when N tasks share an external resource
+                (e.g. dev_message_queue dispatches, network calls,
+                disk I/O) and the resource has a max-concurrency.
+                Default: None (no backpressure — all tasks start as
+                soon as a worker is free, up to max_workers).
+
         Returns:
             Dict {task_id: result} — Results allr Tasks.
             Bei Errorn: {task_id: {'error': str(e)}}
@@ -105,6 +114,24 @@ class ParalllPool:
         workers = min(self.max_workers, len(tasks), cpu_count * 4)
         workers = max(workers, 1)
 
+        # ─── BoundedSemaphore backpressure (R110-158) ─────
+        # When `backpressure` is set, we wrap each task in a
+        # semaphore-acquire/release so no more than `backpressure`
+        # tasks are concurrently executing in the thread pool. This
+        # prevents overwhelming a downstream resource (e.g. MQ
+        # enqueue, HTTP API) when N >> max_workers.
+        sem = (threading.BoundedSemaphore(backpressure)
+               if backpressure else None)
+
+        def _run_with_bp(fn, args, kwargs):
+            if sem is not None:
+                sem.acquire()
+            try:
+                return fn(*args, **kwargs)
+            finally:
+                if sem is not None:
+                    sem.release()
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
             future_to_task = {}
             for task in tasks:
@@ -112,7 +139,7 @@ class ParalllPool:
                 fn = task['fn']
                 args = task.get('args', ())
                 kwargs = task.get('kwargs', {})
-                future = executor.submit(fn, *args, **kwargs)
+                future = executor.submit(_run_with_bp, fn, args, kwargs)
                 future_to_task[future] = tid
 
             for future in concurrent.futures.as_completed(future_to_task):
@@ -121,7 +148,7 @@ class ParalllPool:
                     results[task_id] = future.result()
                 except Exception as e:
                     results[task_id] = {'error': str(e)}
-                    
+
                 with self._lock:
                     self._results[task_id] = results[task_id]
 
