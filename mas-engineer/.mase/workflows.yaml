@@ -1330,38 +1330,91 @@ task_workflows:
         action: shell
         cmd: echo '❌ Scope {scope} unknown'
   wf_signal_cpdone:
-    desc: CP_DONE Signal send
+    desc: CP_DONE Signal — enqueue to message queue (R110-154)
     steps:
-    - id: send
-      action: signal
-      type: CP_DONE
-      via: sub_mas-signal-generator
-      params:
+    - id: enqueue_cpdone
+      action: enqueue
+      topic: cpdone
+      payload:
         request_id: '{request_id}'
         from: '{from}'
         to: '{to}'
+        signal_type: CP_DONE
+        timestamp: '{timestamp}'
+      idempotency_key: 'cpdone-{request_id}'
+      retry_policy:
+        max: 3
+        backoff: [1, 2, 4, 8]
+      request_id: '{request_id}'
   wf_signal_error:
-    desc: ERROR Signal send
+    desc: ERROR Signal — enqueue to message queue (R110-154)
     steps:
-    - id: send
-      action: signal
-      type: ERROR
-      via: sub_mas-signal-generator
-      params:
+    - id: enqueue_error
+      action: enqueue
+      topic: error
+      payload:
         request_id: '{request_id}'
         from: '{from}'
         to: '{to}'
+        signal_type: ERROR
+        error: '{error}'
+        timestamp: '{timestamp}'
+      idempotency_key: 'error-{request_id}'
+      retry_policy:
+        max: 3
+        backoff: [1, 2, 4, 8]
+      request_id: '{request_id}'
   wf_signal_sessionend:
-    desc: SESSION_END Signal send
+    desc: SESSION_END Signal — enqueue to message queue (R110-154)
     steps:
-    - id: send
-      action: signal
-      type: SESSION_END
-      via: sub_mas-signal-generator
-      params:
+    - id: enqueue_sessionend
+      action: enqueue
+      topic: cpdone
+      payload:
         request_id: '{request_id}'
         from: '{from}'
         to: '{to}'
+        signal_type: SESSION_END
+        timestamp: '{timestamp}'
+      idempotency_key: 'sessionend-{request_id}'
+      retry_policy:
+        max: 3
+        backoff: [1, 2, 4, 8]
+      request_id: '{request_id}'
+  wf_mq_consumer_cpdone:
+    desc: Consume + ack CP_DONE messages from queue (R110-154)
+    steps:
+    - id: consume
+      action: consume
+      topic: cpdone
+      timeout_sec: 30.0
+      consumer_id: wf_mq_consumer_cpdone
+      on_error: continue
+    - id: process
+      action: shell
+      cmd: 'echo "📨 consumed CP_DONE: msg_id={msg_id}, from={from}, request_id={request_id}" >> {workspace}/.mase/cpdone_consumed.log'
+      on_error: continue
+    - id: ack
+      action: ack
+      msg_id: '{consume.msg_id}'
+      on_error: continue
+  wf_mq_consumer_error:
+    desc: Consume + ack ERROR messages from queue (R110-154)
+    steps:
+    - id: consume
+      action: consume
+      topic: error
+      timeout_sec: 30.0
+      consumer_id: wf_mq_consumer_error
+      on_error: continue
+    - id: process
+      action: shell
+      cmd: 'echo "🚨 consumed ERROR: msg_id={msg_id}, from={from}, request_id={request_id}, error={error}" >> {workspace}/.mase/error_consumed.log'
+      on_error: continue
+    - id: ack
+      action: ack
+      msg_id: '{consume.msg_id}'
+      on_error: continue
   wf_guardian_check:
     desc: Sub-agents-result auf 5 Dimensionen checkn
     steps:

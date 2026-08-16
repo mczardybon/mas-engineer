@@ -83,6 +83,83 @@ into: variableble name in which the content is saved
 ```
 type: CP_DONE | ERROR | SESSION_END (from SOT signals.types)
 
+#### action: enqueue — Enqueue a message on the dev message queue (R110-154)
+```yaml
+- id: enqueue_cpdone
+  action: enqueue
+  topic: cpdone
+  payload: {request_id: "{request_id}", from: "workflow-engine", status: "success"}
+  idempotency_key: "cpdone-{request_id}"   # optional: dedupe duplicates
+  retry_policy: {max: 3, backoff: [1, 2, 4, 8]}   # optional
+  request_id: "{request_id}"   # optional: for traceability
+  on_error: continue
+```
+topic: a topic name (NDJSON file at `.mase/mq/<topic>.ndjson`)
+payload: arbitrary JSON-serializable dict
+idempotency_key: if provided AND a pending/in_flight message with the same key
+  already exists, the existing msg_id is returned (deduplication)
+retry_policy: {max: N, backoff: [s1, s2, ...]} — N failures before DLQ (default 3, [1,2,4,8]s)
+request_id: optional tracking id propagated to consumer
+Output (saved in result.variables.{step_id}):
+  msg_id: string  (UUID)
+  topic: string
+Use case: decouple a slow/blocking consumer from the workflow —
+enqueue returns immediately, the actual signal is processed
+asynchronously by a consumer (e.g. a parallel workflow).
+
+#### action: consume — Consume the next message from a topic (R110-154)
+```yaml
+- id: consume_cpdone
+  action: consume
+  topic: cpdone
+  timeout_sec: 30.0
+  consumer_id: "wf-{workflow_name}"   # optional
+  on_error: continue
+```
+topic: topic name to consume from
+timeout_sec: max wait for a pending message (default 5.0)
+consumer_id: identifier for the consumer (default: anon-<pid>)
+Output (saved in result.variables.{step_id}):
+  msg_id, payload, enqueued_at, retry_count, status, ... (full message dict)
+  OR null if timeout reached with no message available
+Side effect: marks the message `in_flight` (it stays in the topic file
+until ack/nack). Use follow-up steps `action: ack` or `action: nack`
+to complete the cycle.
+Use case: process signals/results dispatched by other workflows or
+agents without blocking the producer.
+
+#### action: ack — Acknowledge a consumed message (R110-154)
+```yaml
+- id: ack_done
+  action: ack
+  msg_id: "{variables.consume_cpdone.msg_id}"
+  on_error: continue
+```
+msg_id: the message id returned by a previous `action: consume` step
+Side effect: removes the message from the live topic file and writes
+it to `<topic>.completed.ndjson` (archive). Returns true on success.
+Use case: finalize a consume→process→ack pattern (at-least-once).
+
+#### action: nack — Negative-acknowledge a consumed message (R110-154)
+```yaml
+- id: nack_failed
+  action: nack
+  msg_id: "{variables.consume_cpdone.msg_id}"
+  reason: "downstream service unavailable: {error_msg}"
+  on_error: continue
+```
+msg_id: the message id returned by a previous `action: consume` step
+reason: human-readable error string (recorded in last_error)
+Side effect:
+  - Increments retry_count.
+  - If retry_count < max_retries: reschedules (status=pending,
+    next_retry_at = now + backoff[retry_count-1]).
+  - If retry_count >= max_retries: routes to signals_dlq.ndjson
+    (DLQ — full failure context preserved).
+Returns true on success.
+Use case: failed processing → re-queue with backoff, or DLQ for
+manual inspection.
+
 #### action: rule_check — Rule check
 ```yaml
 - id: check_rules
