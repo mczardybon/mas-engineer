@@ -70,18 +70,37 @@ def run_workflow(name, params, wfs):
         print(f"  ▶  {sid}...", end=" ")
         sys.stdout.flush()
         action = step["action"]
-        # Substitute {placeholder} tokens from params, env, and step inputs
+        # Substitute {placeholder} tokens from params, env, step inputs, and prior step outputs
         def _substitute(s):
             if not isinstance(s, str):
                 return s
             # Strip "inputs." namespace prefix from {inputs.X} → {X} so params substitution works
             s = re.sub(r"\{inputs\.([a-zA-Z_][a-zA-Z0-9_.]*)\}", r"{\1}", s)
+            # Standard params + step input substitution FIRST so cross-refs don't eat them
             for k, v in params.items():
                 s = s.replace("{" + k + "}", str(v))
             for k, v in (step.get("input") or {}).items():
                 s = s.replace("{" + k + "}", str(v))
             for k, v in (step.get("inputs") or {}).items():
                 s = s.replace("{" + k + "}", str(v))
+            # Cross-step reference: {step_id.field} → fetch from prior results
+            # Only matches if the prefix is a known step id (so we don't eat {request_id} etc.)
+            def _cross_ref(m):
+                ref = m.group(1)
+                if "." in ref:
+                    sid_ref, field = ref.split(".", 1)
+                else:
+                    sid_ref, field = ref, None
+                if sid_ref not in results:
+                    return m.group(0)  # leave untouched; final cleanup will strip
+                prior = results.get(sid_ref, {})
+                val = prior.get("output", "")
+                if field and isinstance(val, str) and field == "msg_id":
+                    mm = re.search(r"msg_id=([a-f0-9-]+)", val)
+                    if mm:
+                        return mm.group(1)
+                return str(val)
+            s = re.sub(r"\{([a-zA-Z_][a-zA-Z0-9_.]*)\}", _cross_ref, s)
             s = s.replace("{tools_dir}", os.environ.get("MAS_ENGINEER_ROOT", BASE) + "/tools") if "MAS_ENGINEER_ROOT" in os.environ else s.replace("{tools_dir}", TOOLS_DIR)
             s = s.replace("{workspace}", BASE)
             s = re.sub(r"\{[a-zA-Z_][a-zA-Z0-9_.]*\}", "", s)
@@ -172,6 +191,89 @@ def run_workflow(name, params, wfs):
             elif action == "rule_check":
                 r = subprocess.run(["python3", "tools/dev_rule_checker.py", "--all"], capture_output=True, text=True, timeout=30)
                 ok = r.returncode == 0; out = r.stdout.strip()
+            elif action == "enqueue":
+                # R110-164: enqueue a message onto a dev_message_queue topic.
+                # step keys: topic (str, required), payload (dict, required),
+                #            idempotency_key (str, optional),
+                #            request_id (str, optional, embedded in payload if not present),
+                #            retry_policy (dict, optional, e.g. {"max":3,"backoff":[1,2,4,8]}),
+                #            into (str, optional, exposes msg_id to downstream steps)
+                topic = _substitute(step.get("topic", ""))
+                payload = step.get("payload") or {}
+                # Substitute placeholders inside payload values too
+                payload = {k: _substitute(v) for k, v in payload.items()}
+                idem = step.get("idempotency_key")
+                if idem is not None:
+                    idem = _substitute(idem)
+                request_id = step.get("request_id")
+                if request_id is not None:
+                    request_id = _substitute(request_id)
+                retry_policy = step.get("retry_policy")
+                try:
+                    import importlib
+                    _mq_mod = importlib.import_module("dev_message_queue")
+                    msg_id = _mq_mod.enqueue(
+                        topic, payload,
+                        idempotency_key=idem,
+                        request_id=request_id,
+                        retry_policy=retry_policy,
+                    )
+                    ok = True
+                    out = f"enqueued msg_id={msg_id} topic={topic}"
+                    if "into" in step:
+                        params[step["into"]] = msg_id
+                except Exception as e:
+                    ok = False; out = f"enqueue-err: {e}"
+            elif action == "consume":
+                # R110-164: consume next message from a topic (marks in_flight).
+                # step keys: topic (str, required),
+                #            consumer_id (str, optional, default 'workflow-runner'),
+                #            timeout_sec (float, optional, default 5.0),
+                #            into (str, optional, exposes full message dict to downstream steps)
+                topic = _substitute(step.get("topic", ""))
+                consumer_id = _substitute(step.get("consumer_id", "workflow-runner"))
+                timeout_sec = float(step.get("timeout_sec", 5.0))
+                try:
+                    import importlib
+                    _mq_mod = importlib.import_module("dev_message_queue")
+                    # dev_message_queue.consume signature: (topic, timeout_sec, *, consumer_id)
+                    msg = _mq_mod.consume(topic, timeout_sec, consumer_id=consumer_id)
+                    if msg is None:
+                        ok = False
+                        out = f"consume: no message on topic={topic} within {timeout_sec}s"
+                    else:
+                        ok = True
+                        out = f"consumed msg_id={msg.get('msg_id','?')} topic={topic}"
+                        if "into" in step:
+                            params[step["into"]] = msg
+                except Exception as e:
+                    ok = False; out = f"consume-err: {e}"
+            elif action == "ack":
+                # R110-164: acknowledge a consumed message (archives to .completed).
+                # step keys: msg_id (str, required, may reference prior step via {step_id.msg_id})
+                msg_id = _substitute(step.get("msg_id", ""))
+                try:
+                    import importlib
+                    _mq_mod = importlib.import_module("dev_message_queue")
+                    _mq_mod.ack(msg_id)
+                    ok = True
+                    out = f"acked msg_id={msg_id}"
+                except Exception as e:
+                    ok = False; out = f"ack-err: {e}"
+            elif action == "nack":
+                # R110-164: nack a message — triggers retry+backoff or routes to DLQ.
+                # step keys: msg_id (str, required),
+                #            reason (str, required, stored as last_error)
+                msg_id = _substitute(step.get("msg_id", ""))
+                reason = _substitute(step.get("reason", "nack"))
+                try:
+                    import importlib
+                    _mq_mod = importlib.import_module("dev_message_queue")
+                    _mq_mod.nack(msg_id, reason=reason)
+                    ok = True
+                    out = f"nacked msg_id={msg_id} reason={reason}"
+                except Exception as e:
+                    ok = False; out = f"nack-err: {e}"
             else:
                 ok = False; out = f"Unbekannte Action: {action}"
             if ok:
