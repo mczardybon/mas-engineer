@@ -1951,6 +1951,25 @@ task_workflows:
       timeout: 10
       depends_on:
       - run_recovery
+  # R110-168 phase 3: phoenix.recovery.completed consumer
+  # Persists a structured per-run log to .mase/phoenix_logs/<request_id>.json
+  wf_phoenix_log_persist:
+    desc: 'Consumer: phoenix.recovery.completed → per-run log + classification (R110-168 phase 3)'
+    steps:
+    - id: consume
+      action: shell
+      cmd: python3 tools/dev_mq_consumer.py --topic phoenix.recovery.completed --consumer-id
+        wf_phoenix_log_persist --processor dev_phoenix_log_persister:process_msg --timeout
+        30
+      timeout: 60
+      on_error: continue
+    - id: verify_log
+      action: shell
+      cmd: 'if [ -f .mase/phoenix_logs/{request_id}.json ]; then echo "PHOENIX_OK: .mase/phoenix_logs/{request_id}.json";
+        cat .mase/phoenix_logs/{request_id}.json; else echo "PHOENIX_NO_LOG (consumer
+        idle — no phoenix completion in queue)"; fi'
+      timeout: 5
+      on_error: skip
   wf_immune_check_yaml:
     desc: YAML-Syntax ar individualen file checkn
     steps:
