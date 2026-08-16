@@ -2,7 +2,7 @@ name: MAS Signal Generator
 version: 1.0.0
 constitution: sub_mas-master-constitution.yaml
 title: 📡 SUB-SIGNAL-GENERATOR — Signal Generator (Sub-Agent)
-description: 'v1.0.0 | MAS-internal: Generates CP_DONE, ERROR, SESSION_END signals'
+description: 'v1.1.0 | MAS-internal: Generates CP_DONE, ERROR, SESSION_END signals (at-least-once)'
 instructions: '╔══════════════════════════════════════════════╗
 
   ║  SOT WORKFLOW CONTROL                       ║
@@ -49,6 +49,27 @@ settings:
   goose_provider: openai
   goose_model: deepseek-v4-flash
   temperature: 0.3
+  # R110-160: retry-policy (at-least-once delivery semantics)
+  # Signal generation must be idempotent + retryable.  The MQ
+  # (dev_message_queue, R110-154) handles retries on the queue
+  # side; the agent itself must also retry transient failures
+  # (e.g. dev_dispatch_tracker error, file lock contention).
+  retry_policy:
+    max_attempts: 3
+    backoff_sec: [1, 2, 4]   # exponential, cap at 4s
+    retry_on:
+      - transient_io_error
+      - file_lock_contention
+      - dispatch_tracker_timeout
+    do_not_retry_on:
+      - schema_validation_error   # permanent, fix the data
+      - permission_denied
+  # R110-160: at-least-once delivery is guaranteed by the combination
+  # of (a) idempotency_key=cpdone-{request_id} on the MQ side and
+  # (b) the retry_policy above.  Signals are durable in
+  # .mase/mq/{cpdone,error}.ndjson and survive process restarts.
+  delivery_guarantee: at_least_once
+  idempotency: true
 extensions:
 - type: platform
   name: summon
