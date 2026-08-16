@@ -33,8 +33,10 @@ import dev_message_queue as mq  # noqa: E402
 
 @pytest.fixture
 def tmp_workspace(tmp_path, monkeypatch):
-    """Build a minimal mas-engineer workspace in tmp_path with
-    isolated MAS_MQ_ROOT."""
+    """Minimal mas-engineer workspace in tmp_path with isolated MQ,
+    patches, and recovery-log directories. Each env-var override
+    keeps a test's writes inside its own tmp dir so we never pollute
+    the real install or the live queue."""
     ws = tmp_path / "mas-ws"
     ws.mkdir()
     (ws / "recipe" / "sub").mkdir(parents=True)
@@ -42,10 +44,15 @@ def tmp_workspace(tmp_path, monkeypatch):
     (ws / ".mase" / "dashboards").mkdir()
     (ws / ".mase" / "guardian.yaml").write_text("guardian: {}\n")
     (ws / ".mas-mode").write_text("mas\n")
+    # Per-test sub-dirs (the consumer processors also read these)
+    (ws / ".mase" / "im" / "patches").mkdir(parents=True)
+    (ws / ".mase" / "recovery" / "log").mkdir(parents=True)
     # Isolated MQ root
     mq_root = tmp_path / "mq"
     mq_root.mkdir()
     monkeypatch.setenv("MAS_MQ_ROOT", str(mq_root))
+    monkeypatch.setenv("MAS_PATCHES_DIR", str(ws / ".mase" / "im" / "patches"))
+    monkeypatch.setenv("MAS_RECOVERY_LOG_DIR", str(ws / ".mase" / "recovery" / "log"))
     return ws
 
 
@@ -213,3 +220,161 @@ def test_retry_rate_is_mean_across_topics(tmp_workspace):
              for t in data["mq"]["by_topic"].values()]
     expected_mean = round(sum(rates) / len(rates), 4) if rates else 0.0
     assert data["mq"]["retry_rate"] == expected_mean
+
+
+# ─── R110-166 phase 2.3: phase1_topics block ────────────────
+
+def test_phase1_topics_block_present(tmp_workspace):
+    """(P2.3.1) phase1_topics is always present in the mq block."""
+    data = dd.generate_data(str(tmp_workspace))
+    assert "phase1_topics" in data["mq"]
+
+
+def test_phase1_topics_has_all_three_topics(tmp_workspace):
+    """(P2.3.2) phase1_topics has all 3 logical topic names, even when empty."""
+    data = dd.generate_data(str(tmp_workspace))
+    pt = data["mq"]["phase1_topics"]
+    expected = {
+        "im.finding.created",
+        "monitor.health.degraded",
+        "phoenix.recovery.completed",
+    }
+    assert set(pt.keys()) == expected, (
+        f"missing topics: {expected - set(pt.keys())}"
+    )
+
+
+def test_phase1_topics_empty_state(tmp_workspace):
+    """(P2.3.3) When topics have no data, entries have depth=0 and last_msg=None."""
+    data = dd.generate_data(str(tmp_workspace))
+    pt = data["mq"]["phase1_topics"]
+    for topic, entry in pt.items():
+        assert entry["depth"] == 0, f"{topic} depth should be 0"
+        assert entry["completed_total"] == 0
+        assert entry["last_msg"] is None, (
+            f"{topic} should have last_msg=None when empty, got {entry['last_msg']}"
+        )
+
+
+def test_phase1_topics_im_finding_last_msg(tmp_workspace):
+    """(P2.3.4) After enqueueing on im.finding.created, the entry
+    surfaces the request_id + by_severity in the last_msg digest."""
+    mq.enqueue(
+        "im.finding.created",
+        {
+            "request_id": "r110-166-test-im-dash",
+            "source": "dev_im_finder_scan",
+            "findings_total": 7,
+            "findings_by_severity": {"high": 3, "medium": 4},
+            "findings_by_type": {"yaml_typo": 7},
+            "findings_top": [],
+        },
+    )
+    data = dd.generate_data(str(tmp_workspace))
+    im = data["mq"]["phase1_topics"]["im.finding.created"]
+    assert im["depth"] == 1
+    assert im["last_msg"] is not None
+    assert im["last_msg"]["status"] == "pending"
+    digest = im["last_msg"]["digest"]
+    assert digest["request_id"] == "r110-166-test-im-dash"
+    assert digest["findings_total"] == 7
+    assert digest["by_severity"] == {"high": 3, "medium": 4}
+
+
+def test_phase1_topics_health_degraded_last_msg(tmp_workspace):
+    """(P2.3.5) After enqueueing on monitor.health.degraded, the entry
+    surfaces the command + has_problem in the last_msg digest."""
+    mq.enqueue(
+        "monitor.health.degraded",
+        {
+            "request_id": "r110-166-test-mon-dash",
+            "source": "dev_health_monitor",
+            "command": "CHECK_DAEMON",
+            "has_problem": True,
+            "issues_found": 1,
+            "findings_count": 1,
+            "summary": {"daemon_alive": False},
+        },
+    )
+    data = dd.generate_data(str(tmp_workspace))
+    mon = data["mq"]["phase1_topics"]["monitor.health.degraded"]
+    assert mon["depth"] == 1
+    assert mon["last_msg"] is not None
+    digest = mon["last_msg"]["digest"]
+    assert digest["command"] == "CHECK_DAEMON"
+    assert digest["has_problem"] is True
+    assert digest["issues_found"] == 1
+
+
+def test_phase1_topics_phoenix_last_msg(tmp_workspace):
+    """(P2.3.6) After enqueueing on phoenix.recovery.completed, the entry
+    surfaces levels_passed + final_status in the last_msg digest."""
+    mq.enqueue(
+        "phoenix.recovery.completed",
+        {
+            "request_id": "r110-166-test-phx-dash",
+            "source": "dev_phoenix_recovery_run",
+            "levels_total": 5,
+            "levels_passed": 5,
+            "final_status": "ok",
+            "levels": {
+                "immune": {"ok": True},
+                "checkpoint": {"ok": True},
+                "safezone": {"ok": True},
+                "timeline": {"ok": True},
+                "defib": {"ok": True},
+            },
+        },
+    )
+    data = dd.generate_data(str(tmp_workspace))
+    phx = data["mq"]["phase1_topics"]["phoenix.recovery.completed"]
+    assert phx["depth"] == 1
+    assert phx["last_msg"] is not None
+    digest = phx["last_msg"]["digest"]
+    assert digest["levels_passed"] == 5
+    assert digest["levels_total"] == 5
+    assert digest["final_status"] == "ok"
+
+
+def test_phase1_topics_uses_sanitized_lookup(tmp_workspace):
+    """(P2.3.7) mq.stats() keys topics by sanitized name; the dashboard
+    extension must reverse the sanitization to look up by logical name."""
+    # Enqueue 2 msgs on im.finding.created, 1 on monitor.health.degraded.
+    # mq.stats() would key them as im_finding_created and
+    # monitor_health_degraded, but the dashboard extension must
+    # surface them under the LOGICAL names with depth=2 and 1
+    # respectively.
+    mq.enqueue("im.finding.created", {"request_id": "r1", "findings_total": 1,
+                                       "findings_by_severity": {}})
+    mq.enqueue("im.finding.created", {"request_id": "r2", "findings_total": 1,
+                                       "findings_by_severity": {}})
+    mq.enqueue("monitor.health.degraded",
+               {"request_id": "r3", "command": "X", "has_problem": True,
+                "issues_found": 1, "findings_count": 0})
+    data = dd.generate_data(str(tmp_workspace))
+    pt = data["mq"]["phase1_topics"]
+    assert pt["im.finding.created"]["depth"] == 2
+    assert pt["monitor.health.degraded"]["depth"] == 1
+    assert pt["phoenix.recovery.completed"]["depth"] == 0
+
+
+def test_phase1_topics_last_msg_after_ack(tmp_workspace):
+    """(P2.3.8) After consume+ack, last_msg surfaces the ACKed message
+    (status=done, acked_at set) — not a phantom pending entry."""
+    mid = mq.enqueue(
+        "im.finding.created",
+        {"request_id": "r110-166-ack-dash", "findings_total": 1,
+         "findings_by_severity": {"low": 1}},
+    )
+    # Consume + ack it
+    msg = mq.consume("im.finding.created")
+    assert msg is not None
+    mq.ack(msg["msg_id"])
+    data = dd.generate_data(str(tmp_workspace))
+    im = data["mq"]["phase1_topics"]["im.finding.created"]
+    assert im["depth"] == 0  # nothing pending
+    assert im["completed_total"] >= 1
+    assert im["last_msg"] is not None
+    assert im["last_msg"]["status"] == "done"
+    assert im["last_msg"]["acked_at"] is not None
+    assert im["last_msg"]["digest"]["request_id"] == "r110-166-ack-dash"

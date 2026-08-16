@@ -63,6 +63,119 @@ def get_git_log(path, count=10):
     except:
         return []
 
+def _phase1_topics_summary(topics: dict) -> dict:
+    """R110-166 phase 2.3: per-phase-1-topic summary for the dashboard.
+
+    For each of the 3 phase-1 producer topics, surface the depth,
+    completed count, and a "last_msg" projection (one-line digest
+    of the most recent message payload). Tells the user at a glance
+    what the publishers in phase 1 have been emitting and what the
+    consumers in phase 2.1/2.2 have been processing.
+
+    Always returns a dict with all 3 keys (even when empty), so the
+    dashboard template can iterate safely.
+    """
+    PHASE1 = (
+        "im.finding.created",
+        "monitor.health.degraded",
+        "phoenix.recovery.completed",
+    )
+    # mq.stats() keys topics by the SANITIZED name (dots→underscores).
+    # Reverse that here so we can look up by the logical name.
+    def _safe(t: str) -> str:
+        return "".join(c if c.isalnum() or c in "_-" else "_" for c in t)
+    safe_to_logical = {_safe(t): t for t in PHASE1}
+    out = {}
+    for topic in PHASE1:
+        info = topics.get(_safe(topic)) or {}
+        entry = {
+            "depth": int(info.get("depth", 0)),
+            "completed_total": int(info.get("completed_total", 0)),
+            "lag_p95_ms": int(info.get("lag_p95_ms", 0)),
+            "dlq_count": int(info.get("dlq_count", 0)),
+            "last_msg": None,
+        }
+        # Try to surface the most recent message on the topic. We look
+        # in the live topic first (status==pending); if none pending,
+        # we read the completed file (status==done) and pick the latest
+        # by acked_at. Best-effort: if anything goes wrong, leave
+        # last_msg=None (we never want the dashboard refresh to fail).
+        try:
+            from pathlib import Path
+            import json as _json
+            import os as _os
+            mq_root_env = _os.environ.get("MAS_MQ_ROOT")
+            if mq_root_env:
+                mq_root = Path(mq_root_env)
+            else:
+                mq_root = Path(".mase/mq")
+            safe = "".join(c if c.isalnum() or c in "_-" else "_" for c in topic)
+            live = mq_root / f"{safe}.ndjson"
+            done = mq_root / f"{safe}.completed.ndjson"
+            last = None
+            if live.exists():
+                with open(live) as f:
+                    for line in f:
+                        try:
+                            d = _json.loads(line)
+                        except Exception:
+                            continue
+                        if d.get("status") == "pending":
+                            last = d  # we keep overwriting → newest pending
+            if last is None and done.exists():
+                # Latest by acked_at
+                candidates = []
+                with open(done) as f:
+                    for line in f:
+                        try:
+                            d = _json.loads(line)
+                        except Exception:
+                            continue
+                        if d.get("status") == "done":
+                            candidates.append(d)
+                if candidates:
+                    candidates.sort(key=lambda d: d.get("acked_at") or "")
+                    last = candidates[-1]
+            if last is not None:
+                payload = last.get("payload") or {}
+                # Topic-specific digest: keep payload small + readable
+                if topic == "im.finding.created":
+                    digest = {
+                        "request_id": payload.get("request_id"),
+                        "findings_total": payload.get("findings_total"),
+                        "by_severity": payload.get("findings_by_severity"),
+                    }
+                elif topic == "monitor.health.degraded":
+                    digest = {
+                        "request_id": payload.get("request_id"),
+                        "has_problem": payload.get("has_problem"),
+                        "issues_found": payload.get("issues_found"),
+                        "command": payload.get("command"),
+                    }
+                elif topic == "phoenix.recovery.completed":
+                    digest = {
+                        "request_id": payload.get("request_id"),
+                        "levels_passed": payload.get("levels_passed"),
+                        "levels_total": payload.get("levels_total"),
+                        "final_status": payload.get("final_status"),
+                    }
+                else:
+                    digest = {"request_id": payload.get("request_id")}
+                entry["last_msg"] = {
+                    "msg_id": last.get("msg_id"),
+                    "consumer_id": last.get("consumer_id"),
+                    "enqueued_at": last.get("enqueued_at"),
+                    "acked_at": last.get("acked_at"),
+                    "status": last.get("status"),
+                    "digest": digest,
+                }
+        except Exception:
+            # Best-effort: never let a broken topic file break the dashboard
+            pass
+        out[topic] = entry
+    return out
+
+
 def generate_data(ws):
     ws_abs = os.path.abspath(ws)
     # Find the mas-engineer workspace (may be ws itself or ws/mas-engineer)
@@ -230,7 +343,7 @@ def generate_data(ws):
     # ─── PROJECT NAME ───
     project_name = os.path.basename(ws_abs)
 
-    # ─── MQ (R110-161) ───
+    # ─── MQ (R110-161, R110-166 phase 2.3) ───
     # Reads dev_message_queue stats and surfaces them as `mq.*` keys.
     # Graceful: returns an empty stub if MQ module is unavailable or
     # the .mase/mq/ directory doesn't exist yet (first run).
@@ -244,6 +357,10 @@ def generate_data(ws):
         "completed_total": 0,
         "topic_count": 0,
         "by_topic": {},
+        # R110-166 phase 2.3: per-phase-1-topic summary so the dashboard
+        # surfaces what the publishers in phase 1 actually emitted and
+        # what the consumers in phase 2.1/2.2 actually processed.
+        "phase1_topics": {},
     }
     if _MQ_AVAILABLE:
         try:
@@ -265,6 +382,8 @@ def generate_data(ws):
             rates = [t.get('retry_rate', 0.0) for t in topics.values()]
             mq_block['retry_rate'] = (
                 round(sum(rates) / len(rates), 4) if rates else 0.0)
+            # Phase-1 topics summary (R110-166 phase 2.3)
+            mq_block['phase1_topics'] = _phase1_topics_summary(topics)
         except Exception:
             # MQ is best-effort; never let a broken queue break the
             # dashboard refresh.

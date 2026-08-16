@@ -1921,31 +1921,20 @@ task_workflows:
       timeout: 15
       on_error: skip
   wf_recovery_defib:
-    desc: 'Defibrillator: reanimate agent on death/drift/loop'
+    desc: 'Consumer: monitor.health.degraded → classify + dispatch recovery (R110-166 phase 2.2)'
     steps:
-    - id: list_defib
+    - id: consume
       action: shell
-      cmd: ls -1 .mase/defib/ 2>/dev/null | head -3
-      timeout: 15
-    - id: check_emergency_config
+      cmd: python3 tools/dev_mq_consumer.py --topic monitor.health.degraded --consumer-id
+        wf_recovery_defib --processor dev_recovery_defib:process_msg --timeout 30
+      timeout: 60
+      on_error: continue
+    - id: verify_log
       action: shell
-      cmd: test -f recipe/dev-mas-engineer.yaml && echo "Config present" || echo "MISSING
-        — write emergency config"
-      timeout: 10
-    - id: verify_immune_timeline
-      action: shell
-      cmd: python3 -c "import yaml; d=yaml.safe_load(open('.mase/workflows.yaml'));
-        print(d['task_workflows']['wf_recovery_immune']['desc']); print(d['task_workflows']['wf_recovery_timeline']['desc'])"
-      timeout: 15
-    - id: auto_repair
-      action: shell
-      cmd: 'if [ ! -f recipe/dev-mas-engineer.yaml ]; then printf ''version: 1.0.0\ntitle:
-        emergency dev-mas-engineer\ndescription: minimal recovery-mode config\ninstructions:
-        |\n  Emergency mode: only recovery workflows available.\n  All other agents
-        disabled.\n'' > recipe/dev-mas-engineer.yaml && echo "[AUTO_REPAIR] restored
-        emergency dev-mas-engineer.yaml" || echo "[AUTO_REPAIR] restore failed"; else
-        echo "[AUTO_REPAIR] config present — no action needed"; fi'
-      timeout: 15
+      cmd: 'if [ -f .mase/recovery/log/{request_id}.json ]; then echo "DEFIB_OK: .mase/recovery/log/{request_id}.json";
+        cat .mase/recovery/log/{request_id}.json; else echo "DEFIB_NO_LOG (consumer
+        idle — no degraded health message in queue)"; fi'
+      timeout: 5
       on_error: skip
   # R110-165 phase 1.1: phoenix-recovery publisher workflow
   # Runs all 5 recovery levels + enqueues phoenix.recovery.completed
@@ -2374,17 +2363,22 @@ task_workflows:
       action: shell
       cmd: 'echo ''Top 5: Severity DESC, Impact DESC, Aufwand ASC'''
   wf_im_design_patches:
-    desc: Design patches from findings
+    desc: 'Consumer: im.finding.created → design-patch YAML (R110-166 phase 2.1)'
     steps:
-    - id: detect_mode
+    - id: consume
       action: shell
-      cmd: cat {inputs.workspace}/mas-engineer/.mas-mode 2>/dev/null || cat ~/.config/goose/.mas-mode
-        2>/dev/null || echo 'generic'
+      cmd: python3 tools/dev_mq_consumer.py --topic im.finding.created --consumer-id
+        wf_im_design_patches --processor dev_im_design_patches:process_msg --timeout
+        30
+      timeout: 60
+      on_error: continue
+    - id: verify_patch
+      action: shell
+      cmd: 'if [ -f .mase/im/patches/{request_id}.yaml ]; then echo "PATCH_OK: .mase/im/patches/{request_id}.yaml";
+        ls -la .mase/im/patches/{request_id}.yaml; else echo "PATCH_MISSING (consumer
+        either idle or failed — check helper output above)"; fi'
       timeout: 5
-    - id: design
-      action: shell
-      cmd: 'echo ''Patchit entworfen. Type-Logic per Feature-Type: A1=×1.5, B1=Prompt,
-        LL1=Klarstellung...'''
+      on_error: skip
   wf_im_validate_changes:
     desc: Changeen validate
     steps:
