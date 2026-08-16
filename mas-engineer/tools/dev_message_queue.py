@@ -380,6 +380,25 @@ def stats() -> dict:
     out = {"topics": {}, "generated_at": _now_iso()}
     if not _mq_root().exists():
         return out
+    # R110-163: pre-compute completed counts per topic BEFORE
+    # the live scan.  Otherwise glob() iteration order (alphabetical:
+    # `dispatches.completed.ndjson` < `dispatches.ndjson`) processes
+    # the .completed file first (sets only completed_total), then
+    # the live .ndjson branch overwrites the topic dict with a new
+    # one that omits completed_total.
+    completed_counts = {}
+    for ndjson in _mq_root().glob("*.ndjson"):
+        if ndjson.name.startswith("_"):
+            continue
+        if ndjson.name == "signals_dlq.ndjson":
+            continue
+        if ndjson.name.endswith(".completed.ndjson"):
+            base = ndjson.name.replace(".completed.ndjson", "")
+            try:
+                with open(ndjson) as f:
+                    completed_counts[base] = sum(1 for _ in f)
+            except OSError:
+                completed_counts[base] = 0
     for ndjson in _mq_root().glob("*.ndjson"):
         if ndjson.name.startswith("_"):
             continue
@@ -387,11 +406,7 @@ def stats() -> dict:
             continue
         topic = ndjson.name.replace(".ndjson", "")
         if ndjson.name.endswith(".completed.ndjson"):
-            base = ndjson.name.replace(".completed.ndjson", "")
-            comp_count = sum(1 for _ in open(ndjson))
-            out["topics"][base] = out["topics"].get(base, {})
-            out["topics"][base]["completed_total"] = comp_count
-            continue
+            continue  # already counted in completed_counts
         live = _read_topic(topic)
         lats = sorted([l for l in (_lag_ms(m) for m in live) if l is not None])
         lag_p95 = lats[int(0.95 * len(lats))] if lats else 0
@@ -402,6 +417,7 @@ def stats() -> dict:
             "lag_p95_ms": lag_p95,
             "dlq_count": _dlq_count(),
             "retry_rate": (retried / len(live)) if live else 0.0,
+            "completed_total": completed_counts.get(topic, 0),
         }
     return out
 

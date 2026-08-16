@@ -287,6 +287,57 @@ def test_stats_includes_lag_and_dlq_count(mq_root):
     assert "generated_at" in s
 
 
+def test_stats_completed_total_after_all_acked(mq_root):
+    """(R110-163) Regression: when all messages on a topic are acked,
+    stats()[topic]['completed_total'] must still report the count.
+
+    The bug: glob('*.ndjson') returns files in alphabetical order, so
+    `topic.completed.ndjson` was processed before `topic.ndjson` in
+    the same loop. The .completed branch set only completed_total,
+    then the live .ndjson branch OVERWROTE the topic dict with a
+    fresh one that omitted completed_total.
+
+    Fix: pre-compute completed_counts in a separate first pass, then
+    the live branch includes completed_total in its initial dict."""
+    mq.enqueue("c", {"i": 0})
+    mq.enqueue("c", {"i": 1})
+    mq.enqueue("c", {"i": 2})
+    # Consume + ack all
+    m1 = mq.consume("c")
+    m2 = mq.consume("c")
+    m3 = mq.consume("c")
+    mq.ack(m1["msg_id"])
+    mq.ack(m2["msg_id"])
+    mq.ack(m3["msg_id"])
+    # Now the live .ndjson is empty (0 bytes), but .completed.ndjson
+    # has 3 entries.
+    s = mq.stats()
+    assert "c" in s["topics"]
+    assert s["topics"]["c"]["depth"] == 0
+    assert s["topics"]["c"]["completed_total"] == 3, (
+        f"completed_total lost when live .ndjson is empty: "
+        f"got {s['topics']['c']}"
+    )
+
+
+def test_stats_completed_total_preserved_with_pending(mq_root):
+    """(R110-163) Even with some messages pending AND some acked,
+    completed_total reflects only the acked count, and depth reflects
+    the pending count — both keys present simultaneously."""
+    mq.enqueue("m", {"i": 0})
+    mq.enqueue("m", {"i": 1})
+    mq.enqueue("m", {"i": 2})
+    mq.enqueue("m", {"i": 3})
+    # Ack 2, leave 2 pending
+    m1 = mq.consume("m")
+    m2 = mq.consume("m")
+    mq.ack(m1["msg_id"])
+    mq.ack(m2["msg_id"])
+    s = mq.stats()
+    assert s["topics"]["m"]["depth"] == 2
+    assert s["topics"]["m"]["completed_total"] == 2
+
+
 def test_replay_returns_messages_since_timestamp(mq_root):
     """(15) replay(since=X) returns only messages enqueued on/after X."""
     mq.enqueue("r", {"i": 0})
