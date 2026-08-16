@@ -282,6 +282,57 @@ def main():
         result = {"error": f"unknown command: {cmd}"}
 
     print(json.dumps(result, indent=2))
+
+    # --- R110-165 phase 1.3: optional --publish to enqueue monitor.health.degraded ---
+    # Only publishes when result indicates problems (issues_found, findings, escalate, or error).
+    if any(a == '--publish' or a.startswith('--publish=') for a in sys.argv):
+        _has_problem = bool(
+            result.get("issues_found") or result.get("findings")
+            or result.get("escalate") or result.get("error")
+        )
+        # Honor --publish=always|on-degraded|never (default: on-degraded)
+        _publish_mode = "on-degraded"
+        for a in sys.argv:
+            if a.startswith("--publish="):
+                _publish_mode = a.split("=", 1)[1]
+        _should_publish = (
+            _publish_mode == "always"
+            or (_publish_mode == "on-degraded" and _has_problem)
+        )
+        if _should_publish:
+            _request_id = next(
+                (a.split("=", 1)[1] for a in sys.argv
+                 if a.startswith("--publish-request-id=")),
+                f"monitor-{cmd.lower()}-{int(time.time())}",
+            )
+            _payload = {
+                "request_id": _request_id,
+                "source": "dev_health_monitor",
+                "command": cmd,
+                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "has_problem": _has_problem,
+                "issues_found": result.get("issues_found", 0),
+                "findings_count": len(result.get("findings", [])) if isinstance(result.get("findings"), list) else 0,
+                "escalate": result.get("escalate", False),
+                "summary": {k: v for k, v in result.items() if k not in ("findings",)},
+            }
+            try:
+                _enq = subprocess.run(
+                    ["python3", str(Path(__file__).resolve().parent / "dev_message_queue.py"),
+                     "--enqueue", "monitor.health.degraded", json.dumps(_payload),
+                     "--idempotency-key", f"{_request_id}-monitor",
+                     "--request-id", _request_id],
+                    capture_output=True, text=True, timeout=30,
+                    cwd=Path(__file__).resolve().parent.parent,
+                )
+                _msg_id = (_enq.stdout or "").strip()
+                if _enq.returncode != 0 or not _msg_id:
+                    print(f"[PUBLISH-ERROR] enqueue failed: exit={_enq.returncode} stderr={_enq.stderr.strip()}", file=sys.stderr)
+                else:
+                    print(f"[PUBLISH-OK] monitor.health.degraded msg_id={_msg_id}", file=sys.stderr)
+            except Exception as _e:
+                print(f"[PUBLISH-ERROR] {_e!r}", file=sys.stderr)
+
     # Exit code: 0=OK, 1=issues found
     if result.get("issues_found") or result.get("findings") or result.get("escalate"):
         sys.exit(1)

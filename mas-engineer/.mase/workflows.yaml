@@ -1947,6 +1947,21 @@ task_workflows:
         echo "[AUTO_REPAIR] config present — no action needed"; fi'
       timeout: 15
       on_error: skip
+  # R110-165 phase 1.1: phoenix-recovery publisher workflow
+  # Runs all 5 recovery levels + enqueues phoenix.recovery.completed
+  wf_phoenix_recovery_publish:
+    desc: 'Phoenix recovery — run 5 levels (immune,checkpoint,safezone,timeline,defib) and publish phoenix.recovery.completed'
+    steps:
+    - id: run_recovery
+      action: shell
+      cmd: 'python3 tools/dev_phoenix_recovery_run.py --request_id {request_id} --from {from} --to {to} 2>&1 | tail -10'
+      timeout: 180
+    - id: verify_published
+      action: shell
+      cmd: 'python3 tools/dev_mq_topic_depth.py phoenix.recovery.completed'
+      timeout: 10
+      depends_on:
+      - run_recovery
   wf_immune_check_yaml:
     desc: YAML-Syntax ar individualen file checkn
     steps:

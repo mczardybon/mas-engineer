@@ -7,7 +7,7 @@ RECIPE_DIR='recipe' which meant user-installed demo teams in
 --scope (CLI arg) or the SCAN_SCOPE env var to extend coverage.
 Default behavior is unchanged (backward-compatible).
 """
-import yaml, os, glob, re, json, sys, argparse
+import yaml, os, glob, re, json, sys, argparse, time
 from pathlib import Path
 from collections import Counter
 
@@ -1106,3 +1106,43 @@ print(json.dumps({'findings': findings, 'summary': {
     'by_type': dict(by_type),
     'by_severity': dict(by_sev)
 }}, indent=2))
+
+# --- R110-165 phase 1.2: optional --publish to enqueue im.finding.created ---
+# Detect flag in sys.argv (we don't use argparse for backward compat).
+if any(a == '--publish' or a.startswith('--publish=') for a in sys.argv):
+    _publish_topic = 'im.finding.created'
+    _request_id = next(
+        (a.split('=', 1)[1] for a in sys.argv
+         if a.startswith('--publish-request-id=')),
+        f'im-finder-{int(time.time())}'
+    )
+    _payload = {
+        'request_id': _request_id,
+        'source': 'dev_im_finder_scan',
+        'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+        'findings_total': len(findings),
+        'findings_by_severity': dict(by_sev),
+        'findings_by_type': dict(by_type),
+        # only ship the high+medium findings inline; low-severity are counted but not listed
+        'findings_top': [
+            {k: f[k] for k in ('type', 'severity', 'location', 'description')}
+            for f in findings
+            if f.get('severity') in ('high', 'blocker')
+        ][:20],
+    }
+    try:
+        import subprocess as _sp
+        _enq = _sp.run(
+            ['python3', str(Path(__file__).resolve().parent / 'dev_message_queue.py'),
+             '--enqueue', _publish_topic, json.dumps(_payload),
+             '--idempotency-key', f'{_request_id}-im-finder',
+             '--request-id', _request_id],
+            capture_output=True, text=True, timeout=30, cwd=Path(__file__).resolve().parent.parent,
+        )
+        _msg_id = (_enq.stdout or '').strip()
+        if _enq.returncode != 0 or not _msg_id:
+            print(f'[PUBLISH-ERROR] enqueue failed: exit={_enq.returncode} stderr={_enq.stderr.strip()}', file=sys.stderr)
+        else:
+            print(f'[PUBLISH-OK] {_publish_topic} msg_id={_msg_id}', file=sys.stderr)
+    except Exception as _e:
+        print(f'[PUBLISH-ERROR] {_e!r}', file=sys.stderr)
