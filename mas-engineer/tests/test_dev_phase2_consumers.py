@@ -213,7 +213,8 @@ def test_im_consumer_drains_max_messages(tmp_workspace):
     assert r.returncode == 0
     out = json.loads(r.stdout)
     assert out["result"] == "acked"
-    assert "3 messages" in out["reason"]
+    assert out["count"] == 3
+    assert "drained 3" in out["reason"]
 
 
 # ─── Phase 2.2: monitor → defib ───────────────────────────

@@ -218,7 +218,8 @@ def main():
         "consumer_id": args.consumer_id,
         "elapsed_ms": int((time.monotonic() - overall_start) * 1000),
         "processor": args.processor,
-        "reason": f"processed {processed} messages",
+        "count": processed,
+        "reason": f"max-messages reached (drained {processed})",
     }, indent=2))
     return 0
 
