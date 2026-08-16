@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""dev_dashboard_data.py v1.0.0 - Dashboard Data Generator for MCP App
+"""dev_dashboard_data.py v1.1.0 - Dashboard Data Generator for MCP App
 ======================================================================
 Reads Monitoring data and writes JSON for the framework dashboard.
 Will be called via Goose Scheduler every 5 Min OR on User-Refresh.
@@ -11,12 +11,26 @@ Features:
 - Auto-generates data.json on each run
 - Sends MCP notification for realtime dashboard updates
 - Tracks health trend over time
+- R110-161: Surfaces MQ aggregate (dev_message_queue) as `mq.*` keys
+  in data.json so the dashboard can show queue depth, lag, DLQ count,
+  and per-topic stats without needing a separate MQ-UI page.
 
 call: python3 dev_dashboard_data.py --workspace /path
+
 """
 import json, os, subprocess, glob, sys, re
 from datetime import datetime
 
+# R110-161: dev_message_queue is optional (graceful degradation if
+# the MQ module is missing — the dashboard still renders, just
+# without the `mq` block).
+try:
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+    import dev_message_queue as mq
+    _MQ_AVAILABLE = True
+except ImportError:
+    mq = None
+    _MQ_AVAILABLE = False
 def shell(cmd, timeout=10):
     try:
         r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
@@ -216,9 +230,49 @@ def generate_data(ws):
     # ─── PROJECT NAME ───
     project_name = os.path.basename(ws_abs)
 
+    # ─── MQ (R110-161) ───
+    # Reads dev_message_queue stats and surfaces them as `mq.*` keys.
+    # Graceful: returns an empty stub if MQ module is unavailable or
+    # the .mase/mq/ directory doesn't exist yet (first run).
+    mq_block = {
+        "available": _MQ_AVAILABLE,
+        "generated_at": datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),
+        "depth_total": 0,
+        "lag_p95_ms": 0,
+        "dlq_count": 0,
+        "retry_rate": 0.0,
+        "completed_total": 0,
+        "topic_count": 0,
+        "by_topic": {},
+    }
+    if _MQ_AVAILABLE:
+        try:
+            mq_stats = mq.stats()  # see dev_message_queue.stats()
+            topics = mq_stats.get('topics', {})
+            mq_block['by_topic'] = topics
+            mq_block['topic_count'] = len(topics)
+            mq_block['depth_total'] = sum(
+                t.get('depth', 0) for t in topics.values())
+            mq_block['completed_total'] = sum(
+                t.get('completed_total', 0) for t in topics.values())
+            mq_block['dlq_count'] = sum(
+                t.get('dlq_count', 0) for t in topics.values())
+            # Worst-case lag across topics
+            lags = [t.get('lag_p95_ms', 0) for t in topics.values()
+                    if t.get('lag_p95_ms', 0) > 0]
+            mq_block['lag_p95_ms'] = max(lags) if lags else 0
+            # Average retry rate across topics
+            rates = [t.get('retry_rate', 0.0) for t in topics.values()]
+            mq_block['retry_rate'] = (
+                round(sum(rates) / len(rates), 4) if rates else 0.0)
+        except Exception:
+            # MQ is best-effort; never let a broken queue break the
+            # dashboard refresh.
+            pass
+
     # ─── RESULT ───
     return {
-        "version": "1.0.0",
+        "version": "1.1.0",
         "timestamp": datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),
         "workspace": ws_abs,
         "mode": mode,
@@ -255,6 +309,7 @@ def generate_data(ws):
             "checks": health_checks,
         },
         "health_trend": history['health_trend'],
+        "mq": mq_block,
     }
 
 
