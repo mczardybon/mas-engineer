@@ -133,14 +133,65 @@ def process_msg(msg: dict) -> dict:
         "duration_ms": int(payload.get("duration_ms", 0)),
         "level_digest": _digest_levels(levels),
         "classification": classification,
-        # Phase 4 will populate this from the defib-consumer if
-        # the run is degraded. For now it is always None.
+        # Phase 4 (R110-169): when the run is degraded we
+        # auto-escalate by enqueuing a monitor.health.degraded
+        # message that the defib consumer classifies as
+        # phoenix_recovery_incomplete. Filled below.
         "escalation_msg_id": None,
     }
 
     log_path = LOG_DIR / f"{request_id}.json"
     with open(log_path, "w") as f:
         json.dump(log_entry, f, indent=2)
+
+    # Phase 4 (R110-169): auto-escalate degraded runs. We import
+    # the MQ module here (not at top of file) so that this module
+    # remains importable in test environments that do not have the
+    # MQ runtime dir set up — same pattern used in
+    # dev_recovery_defib._dispatch.
+    escalation_msg_id = None
+    if classification["attention_required"]:
+        try:
+            import dev_message_queue as _mq
+            failed_levels = [d["level"] for d in _digest_levels(levels)
+                             if not d.get("ok", False)]
+            esc_payload = {
+                "request_id": request_id,
+                "source": "dev_phoenix_log_persister",
+                "command": "PHOENIX_DEGRADED",
+                "has_problem": True,
+                "issues_found": classification["levels_failed"],
+                "findings_count": 0,
+                "summary": {
+                    "phoenix_request_id": request_id,
+                    "levels_passed": levels_passed,
+                    "levels_total": levels_total,
+                    "final_status": final_status,
+                    "degraded_levels": failed_levels,
+                },
+            }
+            escalation_msg_id = _mq.enqueue(
+                "monitor.health.degraded", esc_payload
+            )
+            # Re-write the log with the escalation msg id
+            log_entry["escalation_msg_id"] = escalation_msg_id
+            with open(log_path, "w") as f:
+                json.dump(log_entry, f, indent=2)
+        except Exception as e:
+            # Escalation failure must not lose the original log.
+            # Surface the error in the return value; defib can
+            # still pick up the run via the persisted log file.
+            try:
+                rel = str(log_path.relative_to(REPO_ROOT))
+            except ValueError:
+                rel = str(log_path)
+            return {
+                "log_written": rel,
+                "final_status": final_status,
+                "levels_passed": levels_passed,
+                "attention_required": True,
+                "escalation_error": repr(e),
+            }
 
     try:
         rel = str(log_path.relative_to(REPO_ROOT))
@@ -151,6 +202,7 @@ def process_msg(msg: dict) -> dict:
         "final_status": final_status,
         "levels_passed": levels_passed,
         "attention_required": classification["attention_required"],
+        "escalation_msg_id": escalation_msg_id,
     }
 
 

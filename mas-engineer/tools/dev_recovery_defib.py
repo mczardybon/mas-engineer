@@ -128,6 +128,11 @@ def _classify(command: str, summary: dict) -> list:
     # Knowledge base stale
     if summary.get("rules_last_refresh_age_hours", 0) > 168:  # > 1 week
         classes.append("knowledge_stale")
+    # Phoenix recovery incomplete (R110-169 phase 4)
+    # A phoenix-recovery run finished degraded (>=1 level failed).
+    # The defib consumer escalates the rebuild for the run.
+    if command == "PHOENIX_DEGRADED":
+        classes.append("phoenix_recovery_incomplete")
     # Generic fallback
     if not classes:
         classes.append("generic_health_degraded")
@@ -163,6 +168,22 @@ def _dispatch(problem_class: str, request_id: str, summary: dict) -> dict:
         return {"action": "refresh_knowledge", "age_hours": age_h,
                 "problem_class": problem_class,
                 "note": "delegated to wf_knowledge_refresh (separate workflow)"}
+    if problem_class == "phoenix_recovery_incomplete":
+        phoenix_req = (summary.get("phoenix_request_id")
+                       or request_id)
+        levels_passed = summary.get("levels_passed", 0)
+        levels_total = summary.get("levels_total", 0)
+        degraded_levels = summary.get("degraded_levels", [])
+        return {
+            "action": "rebuild_phoenix",
+            "problem_class": problem_class,
+            "phoenix_request_id": phoenix_req,
+            "levels_passed": levels_passed,
+            "levels_total": levels_total,
+            "degraded_levels": degraded_levels,
+            "note": ("delegated to wf_phoenix_recovery_publish "
+                     "(re-run for the failed request_id)"),
+        }
     # generic_health_degraded — escalate to on-call
     return {"action": "escalate_oncall", "problem_class": problem_class,
             "summary_keys": list(summary.keys())[:10]}
