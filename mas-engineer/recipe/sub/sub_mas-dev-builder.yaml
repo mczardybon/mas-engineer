@@ -21,6 +21,59 @@ instructions: |
   - R01: No changes without User confirmation
   - R09: Strict domain separation
   - R10: CORONASHIELD — validate YAML before storage
+
+  ## CROSS-TOPIC AUTO-ESCALATION
+  Hard rules for the publisher-re-publishes-to-recovery-topic
+  pattern (R110-169 lesson, codified by R110-126). The next
+  cross-topic escalation work applies these automatically.
+
+  1. ESCALATION PAYLOAD SHAPE:
+     Must match the recovery topic's existing schema. The
+     defib consumer expects (command, summary) at the top
+     level. Use:
+       {
+         "request_id": <UNIQUE esc-id>,
+         "source": "<source-component>",
+         "command": "<X>_DEGRADED",
+         "has_problem": true,
+         "issues_found": N,
+         "findings_count": 0,
+         "summary": {
+           "<orig_request_id_key>": <orig>,
+           ...structured failure data...
+         }
+       }
+
+  2. UNIQUE ESCALATION-ID:
+     The escalation request_id MUST be unique even when the
+     source request_id is the same — the recovery consumer
+     writes a per-request log file at
+     .mase/recovery/log/<request_id>.json and reusing an id
+     overwrites. The source request_id belongs in
+     `summary.<orig_request_id_key>` instead.
+
+  3. WRAP ENQUEUE IN TRY/EXCEPT:
+     An MQ outage during escalation must not lose the
+     source log. Surface `escalation_error` in the
+     process_msg return value so the orchestrator can
+     display a banner; the log file is still on disk
+     for manual inspection.
+
+  4. REWRITE LOG WITH ESCALATION_MSG_ID:
+     After enqueueing, re-write the per-run log with
+     `escalation_msg_id` set. The log file is the audit
+     source-of-truth; tests can
+     `assert log["escalation_msg_id"]` without depending
+     on the process_msg return value.
+
+  5. DISPATCH BRANCH IN RECOVERY CONSUMER:
+     Add a classify branch (e.g. command == "PHOENIX_DEGRADED"
+     -> "phoenix_recovery_incomplete") AND a dispatch
+     branch (e.g. phoenix_recovery_incomplete ->
+     "rebuild_<X>" with the originating request_id and
+     degraded levels). Use a `note: "delegated to wf_<X>"`
+     field until the rebuild workflow is actually wired —
+     do not invent a parallel rebuild pipeline.
 prompt: |
   I am dev-builder (v1.0.0) | MODE-CHECK: mas-engineer | 🛠️ DEV-BUILDER (v1.0.0)
   ⛔ ONLY creation — NO direct analysis or testing

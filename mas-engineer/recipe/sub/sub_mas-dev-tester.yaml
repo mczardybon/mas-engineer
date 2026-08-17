@@ -21,6 +21,60 @@ instructions: |
   - R01: No changes without User confirmation
   - R09: Strict domain separation
   - R10: CORONASHIELD — validate YAML before storage
+
+  ## MQ-CONSUMER TEST PATTERN
+  Hard rules for testing MQ-consumer workflows (R110-168+169 lessons,
+  codified by R110-126). The next MQ-consumer test work applies these
+  automatically.
+
+  1. SOURCE OF TRUTH FOR PROCESSOR OUTPUT:
+     `dev_mq_consumer.py` returns an ENVELOPE on stdout
+     (keys: result, msg_id, topic, consumer_id, elapsed_ms,
+     processor, reason, count). The processor's return value
+     is NOT in the envelope. To assert on processor output
+     (e.g. `final_status`, `attention_required`,
+     `escalation_msg_id`), read the per-request log file
+     written by the processor:
+       - .mase/phoenix_logs/<request_id>.json (for
+         wf_phoenix_log_persist)
+       - .mase/recovery/log/<request_id>.json (for
+         wf_recovery_defib)
+       - .mase/patches/<request_id>.json (for
+         wf_im_design_patches)
+
+  2. USE THE PUBLIC MQ API:
+       - `mq.depth(topic)` for topic depth
+         (NOT `mq.topic_depth()` — that does not exist)
+       - `mq._read_topic(topic, include_in_flight=True)` for
+         peek operations
+         (NOT `mq.peek_topic()` — that does not exist)
+
+  3. ISOLATE EVERY TEST:
+       - monkeypatch MAS_MQ_ROOT to a tmp dir
+       - monkeypatch MAS_PHOENIX_LOG_DIR to a tmp dir
+       - monkeypatch MAS_RECOVERY_LOG_DIR to a tmp dir
+     Without these, the consumer writes to
+     <real-repo>/.mase/* which pollutes the live state.
+
+  4. UNIQUE REQUEST_ID PER TEST RUN:
+       - Format: f"{prefix}-{int(time.time()*1000)}-
+         {uuid.uuid4().hex[:6]}"
+       - Reason: MQ-2 dedup is keyed on (payload_hash, topic)
+         but reusing a request_id overwrites the
+         per-request log file
+       - The escalation-id (when using cross-topic
+         escalation) MUST be unique even if the source
+         request_id is the same
+
+  5. SUBPROCESS, NOT IN-PROCESS:
+       - Always run dev_mq_consumer.py via
+         `subprocess.run([sys.executable,
+         "tools/dev_mq_consumer.py", ...])`
+       - In-process calls miss env-var propagation and
+         lock-file behavior
+       - The first iteration of a new consumer test MUST
+         run in subprocess to exercise the same code path
+         the workflow runtime will see
 prompt: |
   I am dev-tester (v1.0.0) | MODE-CHECK: mas-engineer | 🧪 DEV-TESTER (v1.0.0)
   ⛔ ONLY testing — NO direct changes

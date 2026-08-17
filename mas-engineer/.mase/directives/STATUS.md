@@ -140,17 +140,16 @@ total, verified 2026-08-04 via pytest --collect-only). 4 BLOCKER
   registry 9/9 PASS, dev_spec_invariant 0 BLOCKER, dev_self_audit
   20 HARDCODE + 0 STALE-LITERAL, grep 'sub_mas-sales' recipe/+docs/ = 0.
 
-### R110-126-mq-consumer-test-pattern (neu 2026-08-17, DRAFT)
+### R110-126-mq-consumer-test-pattern (neu 2026-08-17, APPLIED)
 - **Datei**: `R110-126-mq-consumer-test-pattern.md` (227 lines, 2026-08-17)
 - **Ziel**: 5+5 hard rules aus R110-168+R110-169 lessons in
-  recipe/instructions/ verankern (MQ-consumer test pattern +
-  cross-topic auto-escalation pattern), sodass zukuenftige
-  MQ-consumer-arbeit die rules automatisch anwendet ohne
-  hermes-side prompting.
-- **Created**: 2026-08-17, lokal in `.mase/directives/`
-  (noch nicht committed, da `.mase/` per `.gitignore`
-  grundsatzentscheidung nicht-git-tracked fuer directives;
-  mas consumed beim IM-pipeline run via filesystem-read)
+  den dev-tester/dev-builder sub-agent instructions verankern
+  (MQ-consumer test pattern + cross-topic auto-escalation
+  pattern), sodass zukuenftige MQ-consumer-arbeit die rules
+  automatisch anwendet ohne hermes-side prompting.
+- **Applied**: 2026-08-17 via sub_mas-apply-directive
+  (RECURSION_OVERRIDE=2, operator-initiated, MAS_CONFIRM=yes
+  + MAS_APPROVE=y, task="per directive R110-126")
 - **Refs**: R110-168 (phoenix.recovery.completed consumer,
   221a520), R110-169 (phoenix->monitor auto-escalation,
   838ce0d), R110-165 (MQ-1 publishers, 266ceb7), R110-166
@@ -160,17 +159,46 @@ total, verified 2026-08-04 via pytest --collect-only). 4 BLOCKER
 
 | PHASE | DIREKTIVE | Status | Started | Completed | Commit | Effekt |
 |---|---|---|---|---|---|---|
-| 1 | MQ-consumer test pattern (5 rules) in sub_mas-dev-tester.md | DRAFT | 2026-08-17 | (pending) | (pending) | naechster IM-pipeline run wendet die 5 rules an: envelope vs processor-output, depth()/_read_topic API, MAS_MQ_ROOT isolation, unique request_id, subprocess.run |
-| 2 | Cross-topic auto-escalation pattern (5 rules) in sub_mas-dev-builder.md | DRAFT | 2026-08-17 | (pending) | (pending) | naechster IM-pipeline run wendet die 5 rules an: payload-shape match, unique esc-id, try/except enqueue, rewrite log mit msg-id, dispatch branch mit note |
-| 3 | STATUS.md update mit R110-126 eintrag | DRAFT | 2026-08-17 | (pending) | (pending) | dieser eintrag selbst (R110-126 DRAFT marker) — mas wendet DIREKTIVE 3 als self-confirmation an |
-| 4 | Regression verification: 11 tests + 10 key phrases grep | DRAFT | 2026-08-17 | (pending) | (pending) | nach apply: `pytest tests/test_dev_phase3_phoenix_log.py tests/test_dev_phase4_escalation.py -v` = 11 passed; grep fuer 10 key phrases in den updated instruction files |
+| 1 | MQ-consumer test pattern (5 rules) → sub_mas-dev-tester instructions | DONE | 2026-08-17 | 2026-08-17 | (uncommitted, apply-directive run) | `## MQ-CONSUMER TEST PATTERN` in `recipe/sub/sub_mas-dev-tester.yaml` `instructions:` block (envelope vs processor-output, depth()/_read_topic API, MAS_MQ_ROOT isolation, unique request_id, subprocess.run) |
+| 2 | Cross-topic auto-escalation pattern (5 rules) → sub_mas-dev-builder instructions | DONE | 2026-08-17 | 2026-08-17 | (uncommitted, apply-directive run) | `## CROSS-TOPIC AUTO-ESCALATION` in `recipe/sub/sub_mas-dev-builder.yaml` `instructions:` block (payload-shape match, unique esc-id, try/except enqueue, rewrite log mit msg-id, dispatch branch mit note) |
+| 3 | STATUS.md update mit R110-126 eintrag | DONE | 2026-08-17 | 2026-08-17 | (uncommitted, apply-directive run) | dieser eintrag selbst — DRAFT → APPLIED flipped als self-confirmation |
+| 4 | Regression verification: 11 tests + 10 key phrases grep | DONE | 2026-08-17 | 2026-08-17 | (uncommitted, apply-directive run) | `pytest tests/test_dev_phase3_phoenix_log.py tests/test_dev_phase4_escalation.py -v` = 11/11 passed; full suite 1528 passed / 16 skipped; 10/10 key phrases grep-treffer (6 tester + 4 builder) |
 
-**Overall**: 0/4 PHASEN done (alle DRAFT). Status: DRAFT-PENDING
-(alle 4 acceptance-kriterien aus dem VERIFICATION block der
-directive offen; naechster `RECURSION_OVERRIDE=2
-sub_mas-apply-directive` run mit task="per directive R110-126"
-wendet die 2 DIREKTIVE blocks an und schliesst PHASE 1+2+3 ab;
-PHASE 4 = regression-test lauf danach).
+**Overall**: 4/4 PHASEN done. Status: **APPLIED** (2026-08-17,
+sub_mas-apply-directive run; R11 goose-expert CONFORM HIGH —
+beide YAMLs bestehen offizielles `goose recipe validate` exit 0,
+idempotent, no-fork; Backups in `.backups/20260817_045607/`).
+
+**Abweichungen (R110-116 ehrlich dokumentiert)**:
+  1. **Path-drift**: DIREKTIVE 1+2 nennen
+     `recipe/instructions/sub_mas-dev-tester.md` /
+     `sub_mas-dev-builder.md` — diese Dateien existierten in
+     diesem Repo nie (verifiziert via voller git-history).
+     Tatsaechliche SOT fuer die Agent-Instructions ist der
+     `instructions:` block-scalar in
+     `recipe/sub/sub_mas-dev-tester.yaml` /
+     `recipe/sub/sub_mas-dev-builder.yaml` (dev-director
+     delegiert ueber die YAML-Rezepte). Directive-Intent
+     ("recipe sub-agent instructions") wurde auf die
+     tatsaechliche SOT angewendet.
+  2. **Anker-drift**: Sektionen "PYTEST ISOLATION" (tester)
+     und "PUBLISHER PATTERN" (builder) existieren in diesem
+     Repo nicht → neue Sektionen nach `## RULES` (Ende des
+     instructions-blocks) eingefuegt statt nach den
+     genannten Ankern.
+  3. **Scanner-delta**: dev_im_finder_scan.py
+     --scope=recipe,+demo-teams 77 → 79 findings (+2 NN1
+     multi_role_agent medium: F-006 tester, F-016 builder).
+     Ursache: beide Dateien kreuzten die 60-Zeilen
+     micro-agent-guard (R98: <60 Zeilen = skip) durch die
+     directive-pflicht-content-Erweiterung; NN1 zaehlt
+     role-verbs aus instructions-text (u.a. "dispatch",
+     "read", "write", "design" aus den verbatim-key-phrases
+     der directive). Nicht-blockierend: pre-push Check 1
+     gatet nur high-severity (P1); immune_severity=OK;
+     NN1 ist advisory (SRP-suggestion), kein Regressions-
+     Blocker. Verbatim-content bleibt (directive-Acceptance
+     = 11 tests + 10 phrases, vollstaendig gruen).
 
 **Hermes-side mirrors** (fuer wenn hermes selbst MQ-consumer
 test code schreibt, z.B. bei hotfixes): skills
