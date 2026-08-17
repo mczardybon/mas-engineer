@@ -52,6 +52,45 @@ input_file: .mase/pipeline/findings.yaml
 2. Keep only the first per group
 3. Count removed duplicates
 
+## STEP 1.4 — APPLY ISSUE-DB STATUS FILTER (R110-177, PHASE 3)
+
+**🚨 NEW IN R110-177: filter against persistent issue-db. 🚨**
+
+Before sorting by severity, consult `.mase/pipeline/issue_db.json` and
+REMOVE any finding whose `issue_hash` is already in the db with
+status=fixed, wontfix, or false_positive.
+
+Procedure:
+1. LOAD:
+   ```bash
+   cd {workspace} && python3 -c "from dev_issue_db import IssueDB; db=IssueDB(); print(','.join(db.list_by_status('fixed')+db.list_by_status('wontfix')+db.list_by_status('false_positive')))"
+   ```
+2. BUILD: set `excluded_hashes = {h for h in db.list_by_status('fixed')} | {h for h in db.list_by_status('wontfix')} | {h for h in db.list_by_status('false_positive')}`
+3. FILTER: for each finding in findings[], if `finding.issue_hash in excluded_hashes`: DROP + log `ISSUE-DB-SKIP: <hash> (<status>)`
+4. LOG: `issue_db_filtered: <count> findings dropped (status=fixed/wontfix/false_positive)` — write this count into the ranked_findings.yaml header (see OUTPUT).
+
+**Why this is correct:**
+- R110-176 had 1690 findings, all "new" (no prior db). After PHASE 7
+  (bulk-import), re-runs see most scanner-emits already in db as open →
+  rank only promotes genuinely NEW issues to top-N.
+- The filter is RANK-TIME, not FINDER-TIME. Finder still records
+  instances for history. Rank just doesn't promote already-resolved
+  issues.
+
+**Edge case: hash missing in db (finder didn't add it).**
+- Defensive: if `finding.issue_hash` is None or empty, KEEP finding
+  (finder will catch on next run after PHASE 2 fully deployed)
+- Log "WARNING: finding without issue_hash, keeping for rank"
+
+**Helper (equivalent, if python available):** use the library directly:
+```python
+from dev_issue_db import IssueDB
+db = IssueDB()
+kept, dropped = db.filter_findings(findings)
+```
+(`db.filter_findings` returns `(kept, dropped)`; findings without
+`issue_hash` are kept with a warning.)
+
 ## STEP 1.5 — APPLY SEVERITY CEILING (MM6 fix)
 1. Determine active ceiling: input.severity_ceiling ?? "high"
 2. Define ceiling_order: ["high", "medium", "low", "info"]  (index 0 = strictest)
@@ -138,6 +177,9 @@ As YAML-Struct via stdout:
     skipped: [{id, reason}]
     **ceiling_filtered: int (NEW, MM6 fix — count of findings filtered by severity_ceiling)**
     **active_ceiling: "high"|"medium"|"low"|"info" (NEW — ceiling that was applied)**
+    **issue_db_filtered: int (NEW, R110-177 — count of findings dropped by issue-db status filter)**
+    **issue_db_status_counts: {fixed: int, wontfix: int, false_positive: int} (NEW, R110-177)**
+    ranked_findings[] entries include `issue_hash` (NEW, R110-177 — pass-through from finder)
 
 ⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions.
 dev_rule_checker.py enforces.

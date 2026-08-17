@@ -100,6 +100,69 @@ With `status=skipped_charge`, general-improver:
 
 ⛔ FAILING TO SUMMON GOOSE-EXPERT = validation is REJECTED downstream.
 
+## STEP 0.5c — RECORD VALIDATION OUTCOME TO ISSUE-DB (R110-177, PHASE 5)
+
+After receiving post-validation verdict in STEP 0.5, RECORD the
+validation outcome in `.mase/pipeline/issue_db.json`:
+
+```python
+from dev_issue_db import IssueDB
+
+for patch_validation in validation_results:
+    db = IssueDB()
+    if patch_validation['verdict'] == 'APPROVED':
+        # APPROVED + applied: mark as fixed
+        db.mark_fixed(
+            issue_hash=patch_validation['issue_hash'],
+            commit_sha=patch_validation.get('commit_sha', 'unknown'),
+            validated_by='im-validator',
+        )
+    else:
+        # REJECTED or SKIPPED: just record outcome
+        db.record_validation(
+            issue_hash=patch_validation['issue_hash'],
+            verdict=patch_validation['verdict'],
+            reason=patch_validation.get('reason', ''),
+            commit_sha=patch_validation.get('commit_sha'),
+            validated_by='im-validator',
+        )
+db.save()
+```
+
+**Why mark-fixed ONLY at validator (not at apply):**
+- Validator is the source of truth for "patch was applied correctly"
+- If validator says APPROVED → mark fixed (commit_sha recorded)
+- If validator says REJECTED → status stays open, but
+  past_validation_outcomes has the rejection (for debugging)
+- General-improver (apply stage) doesn't write to issue-db directly —
+  it just applies the patch, validator confirms, validator marks fixed
+
+**Idempotency:** mark_fixed is one-shot (re-validating an already-fixed
+issue returns False, no duplicate outcome). record_validation appends
+monotonically (history grows).
+
+## STEP 0.5d — RECORD CORONASHIELD-BLOCK OUTCOME (R110-177, PHASE 5)
+
+For issues that are coronashield-blocked, append outcome with a SPECIFIC
+reason (so future runs know NOT to re-attempt):
+
+```python
+if patch_validation.get('rejection_source', '').startswith('coronashield'):
+    db.record_validation(
+        issue_hash=patch_validation['issue_hash'],
+        verdict='SKIPPED',
+        reason=f"coronashield:{patch_validation['rejection_source']}:"
+               f"{patch_validation.get('reason', '')}",
+        validated_by='im-validator',
+    )
+```
+
+**Why:**
+- Future runs can grep `past_validation_outcomes[].reason` for
+  `coronashield:R10` and KNOW this issue is permanently blocked
+- Enables a future PHASE 8 "wontfix-auto-coronashield" that
+  auto-marks blocked issues as wontfix after N attempts
+
 ## Pipeline Contract (Stage 4/5)
 
 This agent is **stage 4** of the Improvement-Pipeline.

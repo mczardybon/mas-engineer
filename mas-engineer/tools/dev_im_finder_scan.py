@@ -25,6 +25,85 @@ _env_sev = os.environ.get('SEVERITY_FILTER')
 if _env_sev:
     SEVERITY_FILTER = {s.strip() for s in _env_sev.split(',') if s.strip()}
 
+# --- R110-177 PHASE 2: Issue-DB integration (issue-centric dedup) ---
+# Deviance note (documented in R110-177 apply commit): the directive
+# specified unconditional dedup in add_finding(). That would break the
+# existing 1544-test suite (e.g. test_scanner_detects_hardcode_stale
+# re-runs the scanner and asserts findings are EMITTED) and the
+# R110-124 standalone behavior. Dedup is therefore OPT-IN via
+# --issue-db[=PATH] (or MAS_ISSUE_DB=1). Without the flag the scanner
+# behaves exactly as before R110-177. The im-finder recipe passes the
+# flag so the pipeline gets the issue-centric behavior.
+_ISSUE_DB_MOD = None
+_ISSUE_DB = None
+_ISSUE_DB_ACTIVE = False
+_ISSUE_DB_PATH = '.mase/pipeline/issue_db.json'
+
+
+def _issue_db_module():
+    """Lazy-import dev_issue_db.py from this script's dir (R02 consumer)."""
+    global _ISSUE_DB_MOD
+    if _ISSUE_DB_MOD is None:
+        import importlib.util as _ilu
+        _path = os.path.join(os.path.dirname(__file__) or '.',
+                             'dev_issue_db.py')
+        _spec = _ilu.spec_from_file_location('dev_issue_db', _path)
+        _mod = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        _ISSUE_DB_MOD = _mod
+    return _ISSUE_DB_MOD
+
+
+def _issue_db_settings():
+    """Parse --issue-db[=PATH] / --no-issue-db / MAS_ISSUE_DB env."""
+    global _ISSUE_DB_ACTIVE, _ISSUE_DB_PATH
+    for _a in sys.argv[1:]:
+        if _a == '--no-issue-db':
+            _ISSUE_DB_ACTIVE = False
+            return
+        if _a == '--issue-db':
+            _ISSUE_DB_ACTIVE = True
+            _ISSUE_DB_PATH = '.mase/pipeline/issue_db.json'
+            return
+        if _a.startswith('--issue-db='):
+            _ISSUE_DB_ACTIVE = True
+            _ISSUE_DB_PATH = _a.split('=', 1)[1]
+    _env = os.environ.get('MAS_ISSUE_DB')
+    if _env and _env.lower() in ('1', 'true', 'yes'):
+        _ISSUE_DB_ACTIVE = True
+
+
+_issue_db_settings()
+
+
+def _get_issue_db():
+    """Lazy-init IssueDB (R110-177 2.3). None when issue-db inactive."""
+    global _ISSUE_DB
+    if not _ISSUE_DB_ACTIVE:
+        return None
+    if _ISSUE_DB is None:
+        _ISSUE_DB = _issue_db_module().IssueDB(db_path=_ISSUE_DB_PATH)
+    return _ISSUE_DB
+
+
+def compute_issue_hash(file, type, structural_pattern):
+    """R110-177 1.3: stable issue identity hash (delegates to dev_issue_db)."""
+    return _issue_db_module().compute_issue_hash(file, type,
+                                                 structural_pattern)
+
+
+def compute_structural_pattern(ftype, file, **kwargs):
+    """R110-177 2.2: stable structural pattern per finding-type.
+
+    R110-177-ADAPTATION: specified as a scanner-internal helper; the
+    implementation lives in dev_issue_db.py (unit-testable without
+    triggering the scanner's module-level scan). The scanner exposes
+    the same name for spec-faithfulness.
+    """
+    return _issue_db_module().compute_structural_pattern(ftype, file,
+                                                         **kwargs)
+
+
 # SCAN_SCOPE may be a single directory, a comma-separated list, or multiple
 # --scope args.  Default = 'recipe' (backward compatible).
 def _collect_scope_dirs():
@@ -113,20 +192,63 @@ for f in glob.glob('*.yaml') + glob.glob('*.yml'):
 findings = []
 fid = 0
 
-def add_finding(ftype, severity, file, issue, impact, fix):
+def add_finding(ftype, severity, file, issue, impact, fix,
+                *, line_start=None, line_end=None, **pattern_kwargs):
+    """Register a scanner finding.
+
+    R110-177 PHASE 2: every finding gets a stable issue_hash +
+    structural_pattern (identity triple file|type|pattern). When the
+    issue-db is ACTIVE (--issue-db / MAS_ISSUE_DB=1), known issues are
+    deduplicated: open issues get instance++ (no re-emit), fixed /
+    wontfix / false_positive are skipped entirely. Backward-compatible:
+    all new kwargs have defaults; without the flag behavior is
+    unchanged (all findings emitted, no db side-effects).
+    """
     global fid
     # R28: respect SEVERITY_FILTER
     if severity not in SEVERITY_FILTER:
         return
     fid += 1
+    finding_id = f'F-{fid:03d}'
+
+    # R110-177 PHASE 2: compute structural pattern + issue_hash
+    struct_pattern = compute_structural_pattern(
+        ftype, file,
+        line_start=line_start, line_end=line_end, **pattern_kwargs
+    )
+    issue_hash = compute_issue_hash(file, ftype, struct_pattern)
+
+    # R110-177 PHASE 2: dedup against IssueDB (opt-in)
+    db = _get_issue_db()
+    if db is not None:
+        _known = db.exists(issue_hash)
+        instance = {
+            "file": file,
+            "line_start": line_start,
+            "line_end": line_end,
+            "context": pattern_kwargs.get('context', 'unknown'),
+            "scanner_version": "dev_im_finder_scan.py:1.5.0",
+            "finding_id": finding_id,
+        }
+        db.register(
+            hash=issue_hash, type=ftype, severity=severity, file=file,
+            structural_pattern=struct_pattern, issue_summary=issue,
+            fix_summary=fix, instance=instance,
+        )
+        if _known:
+            # already known (open/fixed/wontfix/false_positive) -> skip emit
+            return
+
     findings.append({
-        'id': f'F-{fid:03d}',
+        'id': finding_id,
         'type': ftype,
         'severity': severity,
         'file': file,
         'issue': issue,
         'impact': impact,
-        'fix': fix
+        'fix': fix,
+        'issue_hash': issue_hash,
+        'structural_pattern': struct_pattern,
     })
 
 for yp in sorted(ALL_YAMLS):
@@ -259,7 +381,8 @@ for yp in sorted(ALL_YAMLS):
         add_finding('Q3', 'low', yp,
                     f'extra/unknown fields: {", ".join(sorted(unknown))}',
                     'Non-standard fields may not be processed',
-                    'Remove or rename unknown fields')
+                    'Remove or rename unknown fields',
+                    field_name=", ".join(sorted(unknown)))
 
     # Q4: schema drift between similar recipes (R110-12)
     # Detects when recipes in the same category have inconsistent
@@ -505,7 +628,8 @@ for yp in ALL_YAMLS:
         add_finding('NN1', 'medium', yp,
                     f'multi_role_agent: {len(found_roles)} distinct roles ({found_roles[:5]})',
                     'Agent may violate single-responsibility principle',
-                    'Consider splitting into orchestrator + sub-agents')
+                    'Consider splitting into orchestrator + sub-agents',
+                    roles=found_roles)
 
     # NN2: tool_overload
     extensions = data.get('extensions', [])
@@ -513,7 +637,8 @@ for yp in ALL_YAMLS:
         add_finding('NN2', 'medium', yp,
                     f'tool_overload: {len(extensions)} extensions declared',
                     'Too many tools may confuse the agent',
-                    'Distribute tools across specialized sub-agents')
+                    'Distribute tools across specialized sub-agents',
+                    extension_count=len(extensions))
 
     # NN3: scope_bloat
     desc = data.get('description', '')
@@ -526,7 +651,8 @@ for yp in ALL_YAMLS:
             add_finding('NN3', 'medium', yp,
                         f'scope_bloat: description > 200 chars with {len(found_domains)} domains ({found_domains[:3]})',
                         'Agent scope too broad',
-                        'Split into domain-specific sub-agents')
+                        'Split into domain-specific sub-agents',
+                        domains=found_domains)
 
 # --- Python tool scanner (R110-13): catches R110-10 bugs #2 and #3 ---
 # The YAML scanner above cannot see into .py files. R110-10 documented
@@ -979,7 +1105,8 @@ def check_hardcode_stale(findings, repo_root='.'):
                         f"'default {num}', or derive from source of truth.",
                         f"Run: grep -rn '{num} {word}' recipe/ ; if all "
                         f"matches lack env/default context: hardcode is "
-                        f"stale (R110-78 spec-drift lesson).")
+                        f"stale (R110-78 spec-drift lesson).",
+                        literal=f'{num} {word}', file_dir=rel)
 
 
 def check_stale_literal(findings, repo_root='.'):
@@ -1051,7 +1178,8 @@ def check_stale_literal(findings, repo_root='.'):
                     f.description.replace(file_stem + ':', ''),
                     f.suggested_fix,
                     f"Pattern B (R110-78): literal {f.description!r} "
-                    f"appears nowhere in repo.")
+                    f"appears nowhere in repo.",
+                    literal=f.description, file_dir=rel)
 
 
 # IDEMPOTENZ (spec section 7): grep-based check avoids re-inserting
@@ -1106,6 +1234,18 @@ print(json.dumps({'findings': findings, 'summary': {
     'by_type': dict(by_type),
     'by_severity': dict(by_sev)
 }}, indent=2))
+
+# --- R110-177 PHASE 2: persist issue-db (only when active) ---
+# ISSUE_DB summary goes to STDERR so the stdout JSON block stays
+# parseable (existing consumers split on ---JSON_START---).
+_issue_db = _get_issue_db()
+if _issue_db is not None:
+    _issue_db.save()  # atomic write
+    _sum = _issue_db._data['summary']
+    print(f"ISSUE_DB: total={_sum['total_issues']} "
+          f"open={_sum['by_status']['open']} "
+          f"fixed={_sum['by_status']['fixed']} "
+          f"wontfix={_sum['by_status']['wontfix']}", file=sys.stderr)
 
 # --- R110-165 phase 1.2: optional --publish to enqueue im.finding.created ---
 # Detect flag in sys.argv (we don't use argparse for backward compat).

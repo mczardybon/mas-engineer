@@ -74,6 +74,41 @@ you MUST summon `sub_mas-goose-expert` BEFORE designing the patch:**
 
 ⛔ FAILING TO SUMMON GOOSE-EXPERT = patch is REJECTED by im-validator downstream.
 
+## STEP 0.5b — RECORD DESIGN INTENT TO ISSUE-DB (R110-177, PHASE 4)
+
+For EACH finding the goose-expert was consulted on, AFTER the verdict
+arrives, RECORD the design decision in `.mase/pipeline/issue_db.json`:
+
+```python
+import uuid
+from dev_issue_db import IssueDB
+
+design_run_id = str(uuid.uuid4())  # one per im-designer invocation
+
+for f in findings_with_verdicts:
+    db = IssueDB()
+    db.record_design(
+        issue_hash=f['issue_hash'],
+        patch=f.get('proposed_patch', {}),  # may be empty at STEP 0.5b
+        goose_verdict=f['goose_verdict']['verdict'],
+        verdict_explanation=f['goose_verdict']['explanation'],
+        design_run_id=design_run_id,
+    )
+db.save()
+```
+
+**Why at STEP 0.5b (not STEP 1):**
+- The verdict is the design CONSTRAINT (CONFORM/RESTRICTED/NOT_POSSIBLE).
+- Recording the verdict tells future runs "this issue was consulted
+  on at <timestamp>, expert said X". If the verdict was NOT_POSSIBLE,
+  the future run knows: don't re-summon, just skip.
+- Recording proposed_patch (even if empty) is the COMMITMENT — from now on,
+  the issue has a past_design entry. If the run aborts before STEP 1,
+  past_designs still shows the design attempt.
+
+**Idempotency:** record_design is append-only (new design_run_id per
+invocation) — history is preserved, never overwritten.
+
 ## ⛔ STEP 0.7 — WRITE PATCHES.YAML (NO R01 GATE)
 
 **🚨 NEW IN IM-009 (parity with im-finder): I write patches.yaml AUTOMATICALLY without R01 gate. 🚨**
@@ -168,6 +203,41 @@ Determine for each Finding:
 3. Old value (current in file)
 4. New value (calculated after Type-Logic)
 5. Reason (Why this change? — MUST include goose-expert verdict from STEP 0.5)
+
+## STEP 1.4 — UPDATE PROPOSED_PATCH IN ISSUE-DB (R110-177, PHASE 4)
+
+R110-177-ADAPTATION (anchor-drift, documented in apply commit): the
+directive specified this as "STEP 1.5", but STEP 1.5 (AUTOMATIC L01
+CHECK) already exists below — the new step is numbered STEP 1.4 to
+avoid renumbering the existing L01 check (referenced by im-validator).
+
+For each patch drafted in STEP 1, UPDATE the past_designs entry with
+the actual proposed patch (which may differ from the STEP 0.5b intent):
+
+```python
+for patch in patches_yaml:
+    db = IssueDB()
+    # Find the past_design entry for this finding+run, update its patch
+    issue = db.get(patch['issue_hash'])
+    if not issue:
+        continue
+    for entry in issue.get('past_designs', []):
+        if entry.get('design_run_id') == design_run_id:
+            entry['patch'] = {
+                'file': patch['file'],
+                'field': patch['field'],
+                'from': patch['from'],
+                'to': patch['to'],
+            }
+            break
+db.save()
+```
+
+**Why split (STEP 0.5b + STEP 1.4):**
+- STEP 0.5b captures VERDICT (cheap, before patch exists)
+- STEP 1.4 captures PATCH (expensive, after draft)
+- If run aborts between, db has verdict but not patch — recoverable
+  on next run by re-deriving patch from finding
 
 ## STEP 1.5 — AUTOMATIC L01 CHECK (codifies L01 lessons-learned.md)
 Before writing patches.yaml, run:

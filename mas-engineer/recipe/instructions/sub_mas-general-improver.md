@@ -331,6 +331,69 @@ IF task == CORRECTION_LOG:
 IF task == USAGE_PATTERN:
   → Count Workflow-Usage → Identify unused patterns
 
+## STEP 2.7 — INTERACTIVE WONTFIX PROMPT (R110-177, PHASE 6)
+
+**🚨 NEW IN R110-177: explicit wontfix-action available to user. 🚨**
+
+BEFORE proceeding to STEP 3 (PRIORITIZE FINDINGS), ASK the user once
+whether they want to mark any open issues as `wontfix` for this run
+(only at FULL_IMPROVEMENT / REVIEW, after findings are detected):
+
+```
+📋 ISSUE-DB STATUS: <open> open, <wontfix> wontfix, <fixed> fixed
+
+Top-5 open issues (after rank):
+1. K1: recipe/sub/sub_mas-foo.yaml — missing try/except
+2. K3: recipe/sub/sub_mas-bar.yaml — no retry on transient errors
+3. NN1: recipe/sub/sub_mas-baz.yaml — multi-role
+4. Q3: recipe/sub/sub_mas-qux.yaml — extra field
+5. L1: recipe/sub/sub_mas-quux.yaml — session cleanup
+
+Mark any of these as wontfix? Format: <hash>,<reason> (or 'no' to skip)
+
+Examples:
+- sha256:abc123...,not applicable for this single-purpose recipe
+- sha256:def456...,covered by external linter rule X
+```
+
+Procedure:
+1. Query status:
+   ```bash
+   python3 -c "from dev_issue_db import IssueDB; db=IssueDB(); s=db._data['summary']['by_status']; print(s['open'], s['wontfix'], s['fixed'])"
+   ```
+2. Wait for user response:
+   - `no` or empty → proceed to STEP 3 (no wontfix)
+   - comma-separated `<hash>,<reason>` pairs → mark each as wontfix
+   - `all` → DON'T auto-mark. List all open hashes with summaries, let
+     user pick individually.
+3. Validate each reason via `dev_issue_db.validate_wontfix_reason()`
+   (non-empty, >= 10 chars, <= 500 chars, not todo/tbd/fixme/wip).
+   Invalid reason → ASK ONCE for re-prompt; still invalid → mark
+   'skipped' (log) and proceed.
+4. For each valid pair:
+   ```python
+   from dev_issue_db import IssueDB
+   db = IssueDB()
+   for hash, reason in user_marked_pairs:
+       db.mark_wontfix(
+           issue_hash=hash,
+           reason=reason,
+           marked_by='general-improver',
+       )
+   db.save()
+   ```
+5. The marked-wontfix issues are EXCLUDED from this run's STEP 3
+   onward (rank STEP 1.4 re-filters them on next run; for THIS run
+   apply the same exclusion in memory).
+
+**Idempotency:** mark_wontfix is one-shot (re-marking returns False).
+Wontfix is permanent — no auto-un-wontfix in any phase. A renamed/moved
+file produces a NEW hash (new open issue); the old wontfix entry stays
+historical.
+
+**Edge case:** user may also mark wontfix manually later via
+`python3 tools/dev_issue_db.py mark-wontfix <hash> --reason "..."`.
+
 ## STEP 3 — PRIORITIZE FINDINGS (ONLY at FULL_IMPROVEMENT or REVIEW)
 IF task in (FULL_IMPROVEMENT, REVIEW):
   → DELEGATE to sub_mas-im-rank (task=RANK, data={findings, scores}, mode={DETECTED_MODE})
