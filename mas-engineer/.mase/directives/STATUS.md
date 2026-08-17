@@ -332,10 +332,44 @@ hermes-initiated docs-only commit, +13 files, 0 code-changes,
   a SEPARATE step from the e2e-result documentation. Skipping
   it on self-authored prose (assuming "I just wrote it, must
   be right") is the meta-failure mode.
-- **Verification (hermes-side, R110-173 push)**: 0 secrets,
-  pytest 1528/16/0 (283.69s sequential, 257.64s xdist -n 4),
-  sub_recipe_ref audit 114/77/0/100.0%
-  (logs/e2e-evidence-gen2/post-flight-audit-R110-173.json)
+### R110-174-body-claim-drift-correction (new 2026-08-17, APPLIED)
+- **Commit**: 37374fd
+- **Goal**: self-caught and fixed R110-173 body-claim-drifts
+  in the same session (no amend+force-push per re-translation-pattern)
+- **Drifts caught**:
+  1. "115-line directive" — actual R110-172 directive is 155 lines
+  2. "115 sub-agents" — actual count is 114 yaml files in
+     mas-engineer/recipe/sub/ (excluding *ORIGINAL*)
+- **Meta-lesson**: pre-push-body-claim-verification is a SEPARATE
+  step from e2e-result documentation. Self-authored prose needs
+  explicit verification, not "I just wrote it" assumption.
+- **Files**: 1 modified (STATUS.md, +20 lines) + 1 added
+  (logs/e2e-evidence-gen2/post-flight-audit-R110-174.json, 13 lines)
+- **Verification**: 0 secrets, 2 files, +33 lines, all transparent
+
+### R110-174-goose-e2e-41-tests-green (new 2026-08-17, EVIDENCE)
+- **Tests run**: 41 total
+  - T6 (5 recovery workflows load): PASS
+  - T2 (wf_recovery_immune has auto_repair step): PASS
+  - T3 (auto_repair is step 4 in wf_recovery_immune): PASS
+  - pytest test_sub_mas_e2e_phoenix_fixes_runner: 8/8 PASS
+  - pytest test_sub_mas_e2e_auto_repair_runner: 12/12 PASS
+  - pytest test_sub_mas_goose_admin: 10/10 PASS
+  - pytest test_sub_mas_goose_expert: 11/11 PASS
+- **Result**: 41/41 PASS
+- **Evidence**: logs/e2e-evidence-gen2/2026-08-17T13-12-59Z-R110-174-goose-e2e/
+  (SUMMARY.json + T2/T3/T6 outputs + pytest log)
+
+### R110-175-pre-push-validator-check17-timeout-fix (new 2026-08-17, OPEN)
+- **File**: .mase/directives/R110-175-pre-push-validator-check17-timeout-fix.md
+- **Goal**: mas-side fix for pre-push-validator Check 17 (pytest-run)
+  timeout. With 1544 tests the 180s spec-script cap + 200s framework
+  cap + double-run = ~560s needed, > 420s outer. Fix: branch on
+  test-count, skip sequential when >800, single xdist -n 4 instead.
+- **Hit**: R110-173 push (48813e1) — validator crashed at Check 17
+- **Hermes-side workaround**: pytest manuell, dokumentiert im body
+- **Mas-side fix**: 4 PHASEN (recipe spec + tool + tests + verification)
+  -- mas-side; not hermes-implementable per MAS/MODIFY-SEPARATION rule
 
 ## PHASE-Status-Legende
 
