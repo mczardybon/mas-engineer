@@ -253,6 +253,14 @@ def _check_origin_cleanup_commits_match_validator():
         r"^[🔧📝📚📊] (FIX|DOCS|STATE|TEST|FEAT|CHORE|ARCH) — ",
         r"^[🔧📝📚📊] R\d+-[\w-]+( follow-up)? — ",
         r"^📊 EVIDENCE — R\d+-",
+        # R110-179: cover the "emoji + conventional-commit" hybrid style
+        # (e.g. "📝 docs(directives): R110-177 ..."). Without these two
+        # patterns, the test flags 7 valid recent commits as off-format
+        # even though the convention allowlist (detector Check 1.5) accepts
+        # the hybrid form. Pure emoji legacy + pure conventional + new
+        # hybrid all 3 styles must match.
+        r"^[🔧📝📚📊] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:",
+        r"^[🔧📝📚📊] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert):",
     ]
     compiled = [re.compile(p) for p in ALLOWED_PATTERNS]
     nonmatching = [t for t in titles if not any(p.match(t) for p in compiled)]
