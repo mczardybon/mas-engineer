@@ -140,6 +140,50 @@ total, verified 2026-08-04 via pytest --collect-only). 4 BLOCKER
   registry 9/9 PASS, dev_spec_invariant 0 BLOCKER, dev_self_audit
   20 HARDCODE + 0 STALE-LITERAL, grep 'sub_mas-sales' recipe/+docs/ = 0.
 
+### R110-126-mq-consumer-test-pattern (neu 2026-08-17, DRAFT)
+- **Datei**: `R110-126-mq-consumer-test-pattern.md` (227 lines, 2026-08-17)
+- **Ziel**: 5+5 hard rules aus R110-168+R110-169 lessons in
+  recipe/instructions/ verankern (MQ-consumer test pattern +
+  cross-topic auto-escalation pattern), sodass zukuenftige
+  MQ-consumer-arbeit die rules automatisch anwendet ohne
+  hermes-side prompting.
+- **Created**: 2026-08-17, lokal in `.mase/directives/`
+  (noch nicht committed, da `.mase/` per `.gitignore`
+  grundsatzentscheidung nicht-git-tracked fuer directives;
+  mas consumed beim IM-pipeline run via filesystem-read)
+- **Refs**: R110-168 (phoenix.recovery.completed consumer,
+  221a520), R110-169 (phoenix->monitor auto-escalation,
+  838ce0d), R110-165 (MQ-1 publishers, 266ceb7), R110-166
+  (MQ-2 consumers, 2e0963b), R110-167 (INVARIANT fix,
+  5372734), R110-118 (sub_mas-self-audit, 27d8cb7),
+  R110-120 (STEP 0.6 in im-finder, 4050394)
+
+| PHASE | DIREKTIVE | Status | Started | Completed | Commit | Effekt |
+|---|---|---|---|---|---|---|
+| 1 | MQ-consumer test pattern (5 rules) in sub_mas-dev-tester.md | DRAFT | 2026-08-17 | (pending) | (pending) | naechster IM-pipeline run wendet die 5 rules an: envelope vs processor-output, depth()/_read_topic API, MAS_MQ_ROOT isolation, unique request_id, subprocess.run |
+| 2 | Cross-topic auto-escalation pattern (5 rules) in sub_mas-dev-builder.md | DRAFT | 2026-08-17 | (pending) | (pending) | naechster IM-pipeline run wendet die 5 rules an: payload-shape match, unique esc-id, try/except enqueue, rewrite log mit msg-id, dispatch branch mit note |
+| 3 | STATUS.md update mit R110-126 eintrag | DRAFT | 2026-08-17 | (pending) | (pending) | dieser eintrag selbst (R110-126 DRAFT marker) — mas wendet DIREKTIVE 3 als self-confirmation an |
+| 4 | Regression verification: 11 tests + 10 key phrases grep | DRAFT | 2026-08-17 | (pending) | (pending) | nach apply: `pytest tests/test_dev_phase3_phoenix_log.py tests/test_dev_phase4_escalation.py -v` = 11 passed; grep fuer 10 key phrases in den updated instruction files |
+
+**Overall**: 0/4 PHASEN done (alle DRAFT). Status: DRAFT-PENDING
+(alle 4 acceptance-kriterien aus dem VERIFICATION block der
+directive offen; naechster `RECURSION_OVERRIDE=2
+sub_mas-apply-directive` run mit task="per directive R110-126"
+wendet die 2 DIREKTIVE blocks an und schliesst PHASE 1+2+3 ab;
+PHASE 4 = regression-test lauf danach).
+
+**Hermes-side mirrors** (fuer wenn hermes selbst MQ-consumer
+test code schreibt, z.B. bei hotfixes): skills
+`mas-engineer-mq-ecosystem-test-pattern` (5 rules, mit
+LOAD-TRIGGER condition) und
+`mas-engineer-mq-cross-topic-escalation` (5 rules). Die
+skills und die directive haben den gleichen inhalt, aber
+leben in verschiedenen layern (hermes skills vs mas
+directives). Bei R110-126 application kann mas optional die
+skills verifizieren oder updaten (PHASE nicht spezifiziert
+in DIREKTIVE 1+2+3 — bewusst out-of-scope, um
+layer-bleed zu vermeiden).
+
 ## PHASE-Status-Legende
 
 - `OPEN` -- spec existiert, implementation ausstehend
