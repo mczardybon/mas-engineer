@@ -371,6 +371,32 @@ hermes-initiated docs-only commit, +13 files, 0 code-changes,
 - **Mas-side fix**: 4 PHASEN (recipe spec + tool + tests + verification)
   -- mas-side; not hermes-implementable per MAS/MODIFY-SEPARATION rule
 
+### R110-176-im-pipeline-e2e-baseline (new 2026-08-17, CLOSED)
+- **File**: (no directive, e2e was exploratory)
+- **Goal**: Establish e2e baseline of current IM-pipeline (R110-176 run)
+- **Result**: 5/5 phases PASS, 0 patches applied
+- **Findings**: 1690 raw, 257 goose-verdicts (15.2%), 35 medium (2.1%),
+  top-10 = 10 NN1 (FP-prone)
+- **Diagnose**: Scanner is file-centric, not issue-centric. Same issues
+  re-emitted every run, goose only sees 15% of signal, top-10 = noise
+- **Action**: R110-177 directive specifies the fix (issue-db)
+
+### R110-177-im-pipeline-issue-db (new 2026-08-17, OPEN)
+- **File**: .mase/directives/R110-177-im-pipeline-issue-db.md (1428 lines)
+- **Goal**: Make IM-pipeline issue-centric instead of file-centric.
+  Persistent `.mase/pipeline/issue_db.json` tracks issue identity via
+  `issue_hash = hash(file + type + structural_pattern)`. Re-runs
+  dedup against db. Wontfix-action available. Mark-fixed on validator
+  approve.
+- **Hit**: R110-176 e2e (0 patches) — same scanner-emits re-emitted
+  every run, no signal-to-noise improvement
+- **Plan**: 8 PHASEN (library + scanner-integration + rank-filter +
+  designer-record + validator-mark-fixed + general-improver-wontfix +
+  bulk-import + e2e verification)
+- **Expected**: +46 tests (1544→1590), R110-178 e2e 0 patches
+  (because all R110-176 issues now known), but R110-179 e2e (~1 week
+  of normal commits) → 5-20 new findings → much higher patch-yield
+
 ## PHASE-Status-Legende
 
 - `OPEN` -- spec existiert, implementation ausstehend
