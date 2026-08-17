@@ -317,6 +317,26 @@ so future runs do not fall into the same trap.
 hermes-initiated docs-only commit, +13 files, 0 code-changes,
 0 recipe-changes).
 
+### R110-173-i18n-forward-fix-for-R110-172 (new 2026-08-17, APPLIED)
+- **Commits**: 48813e1 (i18n fix), 4d387c1 (post-flight archive)
+- **Goal**: translate R110-172's 16 docs-files to clean English,
+  preserving every number/path/SHA/command/test-name verbatim
+- **Body-claim-drift (self-caught, fixed by R110-174)**: R110-173
+  body contained two off-by-1 drifts:
+  - "115-line directive" — actual R110-172 directive is 155 lines
+    (R110-172's own body said "155 lines" correctly; R110-173
+    conflated with R110-78 context)
+  - "115 sub-agents" — actual count is 114 yaml files in
+    mas-engineer/recipe/sub/ (excluding *ORIGINAL*)
+- **Meta-lesson**: pre-push-body-claim-verification skill is
+  a SEPARATE step from the e2e-result documentation. Skipping
+  it on self-authored prose (assuming "I just wrote it, must
+  be right") is the meta-failure mode.
+- **Verification (hermes-side, R110-173 push)**: 0 secrets,
+  pytest 1528/16/0 (283.69s sequential, 257.64s xdist -n 4),
+  sub_recipe_ref audit 114/77/0/100.0%
+  (logs/e2e-evidence-gen2/post-flight-audit-R110-173.json)
+
 ## PHASE-Status-Legende
 
 - `OPEN` -- spec existiert, implementation ausstehend
