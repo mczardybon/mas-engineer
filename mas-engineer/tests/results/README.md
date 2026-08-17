@@ -48,7 +48,7 @@ tests/results/
 ```
 
 Each `.txt` file MUST have:
-- Header: `=== R<NR>-<something> EVIDENCE ===` + datum + commit-sha
+- Header: `=== R<NR>-<something> EVIDENCE ===` + date + commit-sha
 - The verbatim command
 - The output (full or relevant tail)
 - A `Conclusion:` line stating which body claim is proven
@@ -57,7 +57,7 @@ Each `.txt` file MUST have:
 
 | Dir | Commit | What it proves |
 |---|---|---|
-| `r110-171-flake-fix/` | 3ba2bfd | R110-171 body claims: 14/14 flake-suite 3x + 1528/16/0 full suite + 1544 collect-only + phantom test-namen + secret-scan |
+| `r110-171-flake-fix/` | 3ba2bfd | R110-171 body claims: 14/14 flake-suite 3x + 1528/16/0 full suite + 1544 collect-only + phantom test-names + secret-scan |
 | `r110-126-mq-pattern/` | 42cda98 | R110-126 body claims: 11/11 phase3+4 regression + 10/10 key-phrases sections (with case-sensitivity correction) |
 
 ## R110-172 lesson: R110-126's "10/10 key phrases" was imprecise
@@ -72,6 +72,6 @@ was misleading.
 This is recorded in
 `r110-126-mq-pattern/02-key-phrases-grep-10-10.txt` so future
 readers see the exact grep output, not a hand-wave. Future commits
-should use the **theme-form** ("10/10 themes verankert in section
-bodies, section headers bestätigt") instead of **grep-form** when
+should use the **theme-form** ("10/10 themes anchored in section
+bodies, section headers confirmed") instead of **grep-form** when
 the user-facing meaning is the themes.

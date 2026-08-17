@@ -1,67 +1,67 @@
-=== R110-126 KEY-PHRASES EVIDENCE (korrigiert) ===
-Datum: 2026-08-17
+=== R110-126 KEY-PHRASES EVIDENCE (corrected) ===
+Date: 2026-08-17
 Commit: 42cda98 'chore: R110-126 apply'
 
-NOTE (ehrlich): R110-126 body behauptete "10/10 key phrases grep-treffer
-(6 tester + 4 builder)". Bei strikter case-sensitive wort-grep sind
-nur 5/10 exakt. ABER: alle 10 themen SIND in den sections drin, nur
-in anderer gross/kleinschreibung oder mit underscores statt
-hyphens. Sections-headers (## MQ-CONSUMER TEST PATTERN,
-## CROSS-TOPIC AUTO-ESCALATION) sind drin, also der directive-intent
-ist vollstaendig wirksam.
+NOTE (honest): R110-126 body claimed "10/10 key phrases grep-treffer
+(6 tester + 4 builder)". Under strict case-sensitive word-grep only
+5/10 are exact. BUT: all 10 themes ARE present in the sections, just
+in different upper/lower-case or with underscores instead of
+hyphens. Section-headers (## MQ-CONSUMER TEST PATTERN,
+## CROSS-TOPIC AUTO-ESCALATION) are present, so the directive-intent
+is fully effective.
 
---- SECTIONS-CHECK (das eigentliche akzeptanz-kriterium) ---
+--- SECTIONS-CHECK (the actual acceptance-criterion) ---
 
 $ grep -c '## MQ-CONSUMER TEST PATTERN' recipe/sub/sub_mas-dev-tester.yaml
 1
 $ grep -c '## CROSS-TOPIC AUTO-ESCALATION' recipe/sub/sub_mas-dev-builder.yaml
 1
 
-=> beide sections drin.
+=> both sections present.
 
---- EXAKTE WORT-GREP (das was R110-126 body behauptet hat) ---
+--- EXACT WORD-GREP (what the R110-126 body claimed) ---
 
 tester:
   phrase 'envelope': 1 occurrences
-  phrase 'processor-output': 0 (exakt nicht, ABER: "PROCESSOR OUTPUT" als header im body)
+  phrase 'processor-output': 0 (not exact, BUT: "PROCESSOR OUTPUT" as header in body)
   phrase 'depth': 2 occurrences
   phrase '_read_topic': 1 occurrences
   phrase 'MAS_MQ_ROOT': 1 occurrences
   phrase 'subprocess.run': 1 occurrences
 
 builder:
-  phrase 'payload-shape': 0 (exakt nicht, ABER: "ESCALATION PAYLOAD SHAPE" als header)
-  phrase 'try/except': 0 (exakt nicht, ABER: "WRAP ENQUEUE IN TRY/EXCEPT" als header)
-  phrase 'msg-id': 0 (exakt nicht, ABER: "ESCALATION_MSG_ID" und "escalation_msg_id" im body)
-  phrase 'dispatch branch': 0 (exakt nicht, ABER: "DISPATCH BRANCH IN RECOVERY CONSUMER" als header)
+  phrase 'payload-shape': 0 (not exact, BUT: "ESCALATION PAYLOAD SHAPE" as header)
+  phrase 'try/except': 0 (not exact, BUT: "WRAP ENQUEUE IN TRY/EXCEPT" as header)
+  phrase 'msg-id': 0 (not exact, BUT: "ESCALATION_MSG_ID" and "escalation_msg_id" in body)
+  phrase 'dispatch branch': 0 (not exact, BUT: "DISPATCH BRANCH IN RECOVERY CONSUMER" as header)
 
---- CASE-INSENSITIVE / FUZZY MATCH (das was R110-126 body MEINTE) ---
+--- CASE-INSENSITIVE / FUZZY MATCH (what R110-126 body MEANT) ---
 
-tester (6/6 vorhanden, form-abweichungen):
+tester (6/6 present, form-variations):
   'envelope' | 'ENVELOPE' | 'Processor output' | 'depth' | '_read_topic' | 'MAS_MQ_ROOT' | 'subprocess.run'
-  Alle 6 themen vollstaendig im section-body.
+  All 6 themes fully in the section-body.
 
-builder (4/4 vorhanden, form-abweichungen):
+builder (4/4 present, form-variations):
   'PAYLOAD SHAPE' | 'TRY/EXCEPT' | 'MSG_ID' | 'DISPATCH BRANCH'
-  Alle 4 themen vollstaendig im section-body.
+  All 4 themes fully in the section-body.
 
---- KORREKTUR ZUM R110-126 BODY ---
+--- CORRECTION TO THE R110-126 BODY ---
 
-R110-126 body sollte gesagt haben: "10/10 themes in den section-bodies
-verankert (6 tester + 4 builder), via case-insensitive grep alle
-bestätigt. Sections ## MQ-CONSUMER TEST PATTERN und
-## CROSS-TOPIC AUTO-ESCALATION existieren wie spezifiziert."
+R110-126 body should have said: "10/10 themes anchored in the section-bodies
+(6 tester + 4 builder), via case-insensitive grep all
+confirmed. Sections ## MQ-CONSUMER TEST PATTERN and
+## CROSS-TOPIC AUTO-ESCALATION exist as specified."
 
-Stattdessen sagte body: "10/10 key phrases grep-treffer" was bei
-strict-grep nicht stimmt. Body-claim-drift, nicht spec-drift.
+Instead body said: "10/10 key phrases grep-treffer" which for
+strict-grep is not true. Body-claim-drift, not spec-drift.
 
-VERIFIKATION HEUTE (R110-172):
+VERIFICATION TODAY (R110-172):
   - section headers exist: 2/2 (tester + builder)
-  - alle 10 themes exist in section body (case-insensitive): 10/10
+  - all 10 themes exist in section body (case-insensitive): 10/10
   - 11/11 regression tests pass: 11/11
   - full suite: 1528 passed, 16 skipped, 0 failed
 
-Conclusion: R110-126 directive war erfolgreich (alle 10 themen +
-sections verankert), aber R110-126 body war ungenau im
-"key phrases grep" claim. Diese Diskrepanz ist in R110-172 body
-explizit als lesson dokumentiert.
+Conclusion: R110-126 directive was successful (all 10 themes +
+sections anchored), but R110-126 body was inaccurate in the
+"key phrases grep" claim. This discrepancy is documented explicitly
+in the R110-172 body as a lesson.

@@ -32,7 +32,7 @@ Quick reference: which evidence file proves which commit-body claim.
 | Body claim | Evidence file |
 |---|---|
 | "12 evidence files in tests/results/" | `find tests/results -type f` (run during commit, see git ls-files) |
-| "pytest -n 4 unveraendert" | `tests/results/r110-171-flake-fix/04-full-suite-pytest-n4.txt` (was generated 2026-08-17, same hash, code unchanged) |
+| "pytest -n 4 unchanged" | `tests/results/r110-171-flake-fix/04-full-suite-pytest-n4.txt` (was generated 2026-08-17, same hash, code unchanged) |
 | "no secrets in new files" | `tests/results/r110-171-flake-fix/06-official-secret-scan.txt` scan 4 (target: `tests/results/r110-171-flake-fix/`) |
 | "tests/results/ not gitignored" | `git ls-files tests/results/` (run during commit) |
 
