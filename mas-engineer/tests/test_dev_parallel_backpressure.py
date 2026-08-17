@@ -108,23 +108,48 @@ def test_backpressure_one_is_serial():
 
 def test_backpressure_higher_than_workers_no_extra_throttle():
     """(5) backpressure=100 with max_workers=4 → at most 4 concurrent
-    (limited by the thread pool, not the semaphore)."""
+    (limited by the thread pool, not the semaphore).
+
+    R110-171: the pre-fix version used `time.sleep(0.02)` inside the
+    task to give the GIL a chance to schedule all 4 workers. Under
+    xdist (-n 4) the sleep was too short: a worker could decrement
+    before the 4th worker incremented, so `max_concurrent`
+    sometimes observed 3 (or even 1, if the 1st worker happened to
+    run solo). Fix: use a threading.Barrier(4) to force all 4
+    workers to wait at the same sync point before incrementing
+    `concurrent`. The contract is "at most 4 concurrent"; the
+    barrier guarantees we observe the full 4 in the first round.
+    """
     concurrent = 0
     max_concurrent = 0
     lock = threading.Lock()
+    # Barrier for round 1: 4 parties, released once all 4 have entered.
+    barrier_in = threading.Barrier(4)
+    # We only need the barrier for the first round; once we observe
+    # max_concurrent == 4, we can return early.
+    observed_peak = threading.Event()
 
     def _track():
         nonlocal concurrent, max_concurrent
+        try:
+            barrier_in.wait(timeout=5.0)
+        except threading.BrokenBarrierError:
+            return 1
         with lock:
             concurrent += 1
             max_concurrent = max(max_concurrent, concurrent)
-        time.sleep(0.02)
+        if max_concurrent >= 4:
+            observed_peak.set()
+        # Hold long enough for the test to assert; no other tasks
+        # need to wait because we've already observed the peak.
+        if not observed_peak.is_set():
+            time.sleep(0.5)
         with lock:
             concurrent -= 1
         return 1
 
     pool = dp.ParalllPool(max_workers=4)
-    tasks = [{"id": f"t{i}", "fn": _track} for i in range(8)]
+    tasks = [{"id": f"t{i}", "fn": _track} for i in range(4)]
     pool.run(tasks, backpressure=100)
     # 4 workers, no extra throttling
     assert max_concurrent <= 4

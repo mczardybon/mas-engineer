@@ -12,6 +12,7 @@ Run with:
   python3 -m pytest tests/test_dev_phase1_publishers.py -v
 """
 import json
+import os
 import subprocess
 import sys
 import time
@@ -22,6 +23,11 @@ import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 TOOLS_DIR = REPO_ROOT / "tools"
+# R110-171 — default to real MQ root (matches pre-fix behavior) so the
+# `IM_NDJSON`/`MON_NDJSON` constants are import-time valid. The
+# `mq_root_isolation` autouse fixture below redirects both the file
+# paths AND the subprocess env (MAS_MQ_ROOT) to a per-test tmp dir,
+# so xdist workers cannot pollute each other's ndjson counts.
 IM_NDJSON = REPO_ROOT / ".mase" / "mq" / "im_finding_created.ndjson"
 MON_NDJSON = REPO_ROOT / ".mase" / "mq" / "monitor_health_degraded.ndjson"
 
@@ -33,6 +39,26 @@ def _unique_id(prefix: str) -> str:
 
 
 # ---------- fixtures ----------
+
+# R110-171 — xdist-safe MQ isolation. Without this, parallel workers
+# (-n 4) all append to the same .mase/mq/<topic>.ndjson, so
+# `im_depth_before` snapshots race with other workers' subprocess
+# writes, and `depth_after` is off by N. Fix: every test gets its
+# own tmp MQ root; subprocess env is overridden; the per-test
+# `IM_NDJSON`/`MON_NDJSON` module globals are rebound so the
+# fixtures read the isolated file.
+@pytest.fixture(autouse=True)
+def mq_root_isolation(tmp_path, monkeypatch):
+    """Isolate this test's MQ root from .mase/mq/ and from sibling workers."""
+    mq_root = tmp_path / "mq"
+    mq_root.mkdir()
+    monkeypatch.setenv("MAS_MQ_ROOT", str(mq_root))
+    # Rebind module globals so fixtures/tests read/write the isolated file
+    global IM_NDJSON, MON_NDJSON
+    IM_NDJSON = mq_root / "im_finding_created.ndjson"
+    MON_NDJSON = mq_root / "monitor_health_degraded.ndjson"
+    yield mq_root
+
 
 @pytest.fixture
 def im_depth_before():
