@@ -212,6 +212,111 @@ skills verifizieren oder updaten (PHASE nicht spezifiziert
 in DIREKTIVE 1+2+3 — bewusst out-of-scope, um
 layer-bleed zu vermeiden).
 
+### R110-171-pre-push-check17-flake-remediation (neu 2026-08-17, APPLIED)
+- **Datei**: (kein separates .md file — direkter hotfix-tier code-fix,
+  siehe memory rule "AUSNAHME: pre-push BLOCKER + 24h cooldown
+  → hotfix"; push war bereits 42cda98 gelaufen aber die 2
+  xdist-flakes wuerden in zukuenftigen runs wieder auffallen)
+- **Ziel**: pre-push-validator Check 17 xdist (-n 4) flakes
+  deterministisch gruen machen
+- **Refs**: R110-126 (vorheriger commit, 42cda98), R110-129
+  (conftest chdir R-FIX), R110-71 (sub-agent count 96→110 rename,
+  9c73100), R110-78 (spec-drift lesson)
+- **Hotfix-trigger**: validator-re-run um 08:00 reportete
+  2 fails unter `-n 4` (test_dev_phase1_publishers
+  test_im_finder_publish_enqueues_message + test_dev_parallel_backpressure
+  test_backpressure_higher_than_workers_no_extra_throttle). Investigate
+  ergab: 2 verschiedene race conditions, NICHT spec-drift (die
+  '96 sub-agents' und 'recipe_count_matches' namen aus dem ersten
+  validator-output waren halluzinationen — diese test-namen
+  existieren nur in den validator-recipe docs als BEISPIELE
+  fuer R110-78's spec-drift pattern, nicht als echte tests).
+
+| PHASE | DIREKTIVE | Status | Started | Completed | Commit | Effekt |
+|---|---|---|---|---|---|---|
+| 1 | xdist-safe MQ-isolation in test_dev_phase1_publishers.py | DONE | 2026-08-17 | 2026-08-17 | (uncommitted) | autouse `mq_root_isolation` fixture setzt `MAS_MQ_ROOT` auf per-test `tmp_path/mq` + rebindet `IM_NDJSON`/`MON_NDJSON` module-globals — xdist worker koennen sich nicht mehr gegenseitig die ndjson-lines ueberschreiben |
+| 2 | GIL-race fix in test_backpressure_higher_than_workers_no_extra_throttle | DONE | 2026-08-17 | 2026-08-17 | (uncommitted) | `time.sleep(0.02)` → `threading.Barrier(4)` damit alle 4 worker GLEICHZEITIG incrementieren bevor der erste decrementiert; 8 tasks → 4 tasks (eine runde, ein barrier) |
+| 3 | Regression verification: 3x flake-suite + 1x full suite | DONE | 2026-08-17 | 2026-08-17 | (uncommitted) | `pytest -n 4 tests/test_dev_phase1_publishers.py tests/test_dev_parallel_backpressure.py` = 14/14 passed (3 consecutive runs); `pytest -n 4 tests/` = 1528 passed / 16 skipped / 0 failed in 224.9s |
+| 4 | STATUS.md update mit R110-171 eintrag | DONE | 2026-08-17 | 2026-08-17 | (uncommitted) | dieser eintrag selbst |
+
+**Overall**: 4/4 PHASEN done. Status: **APPLIED** (2026-08-17,
+hermes-initiated hotfix, +54/-3 lines, 2 files:
+tests/test_dev_phase1_publishers.py + tests/test_dev_parallel_backpressure.py).
+
+**Lehre (R110-78-spec-drift, halluzinations-edition)**: der
+pre-push-validator liest seine eigene recipe-instructions-datei
+(`recipe/instructions/sub_mas-pre-push-validator.md` L843-844)
+als 'last 10 lines of pytest output' input und halluziniert
+die dort als BEISPIELE genannten test-namen (`test_bootstrap_distributes_96_subagents`,
+`test_recipe_count_matches_subagents`) zurueck als 'failures'.
+Diese test-namen existieren in der suite nicht (R110-71 hat
+sie 2026-08-02 auf 110 umbenannt). Naechster schritt
+(R110-172, mas-side): validator-instruction explizit so
+formulieren dass 'last 10 lines' output ein ECHTER pytest
+run sein muss, nicht die recipe-eigene dokumentation.
+Hermes-side: skill `mas-engineer-pre-push-check17-flake-handling`
+dokumentiert das 'git log origin/mas-mq zuerst checken' pattern
+damit zukuenftige runs nicht in die gleiche falle tappen.
+
+### R110-172-body-claim-evidence-files-standard (neu 2026-08-17, APPLIED)
+- **Datei**: `R110-172-evidence-files-standard.md` (155 lines, 2026-08-17)
+- **Ziel**: jeder commit der quantitative claims (pytest counts,
+  grep results, secret-scan) im body macht, MUSS die beweise als
+  reproduzierbare files in `tests/results/<R-NR>-<topic>/`
+  mit-commiten. Standard-Direktive definiert in DIREKTIVE 1+2+3+4.
+- **Trigger**: R110-126 body's "10/10 key phrases" war strict-grep
+  ungenau (nur 5/10 exact), und R110-171 body's pytest-zahlen
+  lebten nur im terminal-scrollback. Beides ist body-claim-drift
+  den die mas-engineer-verification-theater-guard skill als
+  vermeidbar einstuft. R110-172 fixt das rueckwirkend +
+  praeventiv.
+- **R110-172 selbst**: docs-only commit, KEINE code-changes.
+  Enthaelt 13 files in tests/results/ (1 README + 1 EVENTS.md +
+  11 evidence files fuer R110-126 + R110-171). `git show` diff:
+  nur additions (kein modify, kein delete), 100% transparent.
+
+| PHASE | DIREKTIVE | Status | Started | Completed | Commit | Effekt |
+|---|---|---|---|---|---|---|
+| 1 | tests/results/ LAYOUT-STANDARD (DIREKTIVE 1) | DONE | 2026-08-17 | 2026-08-17 | (R110-172) | standard definiert: tests/results/R<NR>-<short-topic>/NN-<claim>.txt mit header+command+output+conclusion |
+| 2 | tests/results/ nicht gitignored (DIREKTIVE 2) | DONE | 2026-08-17 | 2026-08-17 | (R110-172) | ist implementierungs-entscheidung (per .gitignore-check: tests/results/ ist NICHT in .gitignore); .mase/runtime/ bleibt gitignored (per design, lebender state) |
+| 3 | BODY EVIDENCE-block (DIREKTIVE 3) | DONE | 2026-08-17 | 2026-08-17 | (R110-172) | R110-172 body selbst verwendet den neuen EVIDENCE-block standard; zukuenftige commits koennen ihn nutzen |
+| 4 | Backward-compat fuer R110-126 + R110-171 (DIREKTIVE 4) | DONE | 2026-08-17 | 2026-08-17 | (R110-172) | evidence files NACHTRAGLICH in tests/results/r110-126-mq-pattern/ und tests/results/r110-171-flake-fix/; bodies werden NICHT amended (git history bleibt linear + ehrlich: "war zu dem zeitpunkt so wie der body sagt, evidence wurde nachgereicht") |
+
+**Evidence files (13 total, alle reproduzierbar):**
+- `tests/results/README.md` (standard-dokumentation)
+- `tests/results/EVENTS.md` (commit-body-claim → evidence-file mapping)
+- `tests/results/r110-171-flake-fix/01-phantom-test-names-grep.txt` (beweis: phantom tests existieren nicht)
+- `tests/results/r110-171-flake-fix/02-pytest-collect-only.txt` (1544 collected)
+- `tests/results/r110-171-flake-fix/03-flake-suite-run-{1,2,3}.txt` (3x 14/14)
+- `tests/results/r110-171-flake-fix/04-full-suite-pytest-n4.txt` (1528/16/0)
+- `tests/results/r110-171-flake-fix/05-secret-scan.txt` (manual grep)
+- `tests/results/r110-171-flake-fix/06-official-secret-scan.txt` (offizieller scanner, 4x clean)
+- `tests/results/r110-171-flake-fix/07-pytest-collect-only-3x.txt` (3x 1544 deterministisch)
+- `tests/results/r110-126-mq-pattern/01-phase3-phase4-regression-11-11.txt` (11/11)
+- `tests/results/r110-126-mq-pattern/02-key-phrases-grep-10-10.txt` (10/10 case-insensitive, 5/10 case-sensitive, body-claim-drift dokumentiert)
+
+**Verifikation:**
+- `git ls-files tests/results/` listet alle 13 files (nicht gitignored)
+- `python3 tools/dev_security_scan.py SCAN secrets tests/results/` = issues_found: false
+- `pytest tests/ -q -n 4` unveraendert 1528/16/0 (kein code-change)
+- `git show R110-172 --stat` zeigt nur additions in tests/results/ (kein modify/delete)
+
+**Lessons captured:**
+1. R110-78 (spec-drift) hat eine zweite auspraegung: **body-claim-drift**,
+   bei der der body einen groesseren claim macht als die implementation
+   exakt beweist (R110-126 "10/10 key phrases" mit nur 5/10 strict-match).
+   Loesung: theme-formulierung statt grep-formulierung verwenden wenn die
+   section-headers das eigentliche akzeptanz-kriterium sind.
+2. **Reproduzierbare beweise** > im-terminal-output. Wer den clone
+   bekommt soll ohne 4-min pytest-run verifizieren koennen.
+3. **Rueckwirkende evidence-nachreichung** ist OK wenn man es
+   transparent dokumentiert (dieser STATUS.md eintrag), statt die
+   bodies leise zu amendieren.
+
+**Overall**: 4/4 PHASEN done. Status: **APPLIED** (2026-08-17,
+hermes-initiated docs-only commit, +13 files, 0 code-changes,
+0 recipe-changes).
+
 ## PHASE-Status-Legende
 
 - `OPEN` -- spec existiert, implementation ausstehend

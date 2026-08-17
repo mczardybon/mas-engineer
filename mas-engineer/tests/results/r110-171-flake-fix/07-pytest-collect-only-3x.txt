@@ -1,0 +1,33 @@
+=== R110-171 TEST-COUNT DELTA (3 separate collects) ===
+Datum: 2026-08-17
+Commit: 3ba2bfd 'R110-171 fix pre-push Check 17 xdist flakes'
+
+--- Claim: 1544 tests collected (3x consecutive, same number) ---
+
+--- collect run 1 ---
+$ python3 -m pytest tests/ -q --collect-only --color=no
+
+1544 tests collected in 0.33s
+
+--- collect run 2 ---
+$ python3 -m pytest tests/ -q --collect-only --color=no
+
+1544 tests collected in 0.34s
+
+--- collect run 3 ---
+$ python3 -m pytest tests/ -q --collect-only --color=no
+
+1544 tests collected in 0.34s
+
+--- raw test names discovered (3x muss deterministic sein) ---
+--- run 1: count ---
+1544 tests collected in 0.41s
+--- run 2: count ---
+1544 tests collected in 0.65s
+--- run 3: count ---
+1544 tests collected in 0.33s
+
+Conclusion: pytest collect-only ist deterministisch,
+3x consecutive collects ergeben gleiche anzahl. R110-171
+hat keine test-funktionen hinzugefuegt, nur 1 autouse fixture
+(mq_root_isolation) — fixtures zaehlen nicht als tests.
