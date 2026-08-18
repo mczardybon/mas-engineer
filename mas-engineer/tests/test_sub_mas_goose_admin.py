@@ -82,14 +82,14 @@ def test_goose_admin_no_sub_recipes():
 
 
 def test_goose_admin_settings():
-    """Spec: sub-agent settings (timeout=600, max_steps=100, deepseek)."""
+    """Spec: sub-agent settings (timeout=600, max_turns=100, deepseek)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 600, \
         "goose-admin must have timeout=600"
-    assert settings.get("max_steps") == 100, \
-        "goose-admin must have max_steps=100"
+    assert settings.get("max_turns") == 100, \
+        "goose-admin must have max_turns=100"
     assert "deepseek" in settings.get("goose_model", "").lower(), \
         "goose-admin must use deepseek model"
 

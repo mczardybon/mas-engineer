@@ -87,14 +87,14 @@ def test_phoenix_recovery_references_all_5_sub_agents():
 
 
 def test_phoenix_recovery_has_reasonable_settings():
-    """Spec: timeout >= 300 (5 levels, each up to 60s), max_steps >= 50."""
+    """Spec: timeout >= 300 (5 levels, each up to 60s), max_turns >= 50."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout", 0) >= 300, \
         f"phoenix-recovery timeout must be >= 300 (5 levels), got {settings.get('timeout')}"
-    assert settings.get("max_steps", 0) >= 50, \
-        f"phoenix-recovery max_steps must be >= 50, got {settings.get('max_steps')}"
+    assert settings.get("max_turns", 0) >= 50, \
+        f"phoenix-recovery max_turns must be >= 50, got {settings.get('max_turns')}"
 
 
 def test_phoenix_recovery_has_required_extensions():

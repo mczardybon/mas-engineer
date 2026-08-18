@@ -91,10 +91,10 @@ def test_test_scanner_no_sub_recipes_block():
 
 
 def test_test_scanner_settings():
-    """Spec: has settings (timeout, max_steps, goose_provider)."""
+    """Spec: has settings (timeout, max_turns, goose_provider)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert "timeout" in settings, "test-scanner must have timeout setting"
-    assert "max_steps" in settings, \
-        "test-scanner must have max_steps setting"
+    assert "max_turns" in settings, \
+        "test-scanner must have max_turns setting"

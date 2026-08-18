@@ -64,14 +64,14 @@ def test_framework_knowledge_yaml_editor_sub_recipe():
 
 
 def test_framework_knowledge_settings():
-    """Spec: standard settings (timeout=600, max_steps=100, deepseek-v4-flash)."""
+    """Spec: standard settings (timeout=600, max_turns=100, deepseek-v4-flash)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 600, \
         "framework-knowledge must have timeout=600"
-    assert settings.get("max_steps") == 100, \
-        "framework-knowledge must have max_steps=100"
+    assert settings.get("max_turns") == 100, \
+        "framework-knowledge must have max_turns=100"
     assert "deepseek" in settings.get("goose_model", "").lower(), \
         "framework-knowledge must use deepseek model"
 

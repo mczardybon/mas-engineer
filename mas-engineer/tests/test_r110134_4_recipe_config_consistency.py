@@ -10,7 +10,7 @@ Why this matters:
 - Temperature outliers (0.7 in a YAML-edit recipe that needs determinism)
   cause flaky test results.
 - Timeout outliers (60s for a 100-step recipe) cause premature kill.
-- max_steps outliers (200 for a 15-step recipe) waste resources.
+- max_turns outliers (200 for a 15-step recipe) waste resources.
 
 Run with:
     cd mas-engineer && pytest tests/test_r110134_4_recipe_config_consistency.py -v
@@ -135,16 +135,16 @@ def test_timeout_within_bounds():
     )
 
 
-def test_max_steps_within_bounds():
-    """Every recipe's max_steps must be ≤ MAX_STEPS_MAX."""
+def test_max_turns_within_bounds():
+    """Every recipe's max_turns must be ≤ MAX_STEPS_MAX."""
     recipes = load_all_recipes()
     bad = []
     for base, info in recipes.items():
-        m = info["data"].get("settings", {}).get("max_steps", 0)
+        m = info["data"].get("settings", {}).get("max_turns", 0)
         if m > MAX_STEPS_MAX:
             bad.append((base, m))
     assert not bad, (
-        f"{len(bad)} recipes have max_steps > {MAX_STEPS_MAX}:\n"
+        f"{len(bad)} recipes have max_turns > {MAX_STEPS_MAX}:\n"
         + "\n".join(f"  - {b}: {m}" for b, m in bad[:10])
     )
 

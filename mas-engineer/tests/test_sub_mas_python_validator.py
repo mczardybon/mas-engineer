@@ -74,14 +74,14 @@ def test_python_validator_no_sub_recipes():
 
 
 def test_python_validator_settings():
-    """Spec: sub-agent settings (timeout=300, max_steps=30, deepseek)."""
+    """Spec: sub-agent settings (timeout=300, max_turns=30, deepseek)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 300, \
         "python-validator must have timeout=300"
-    assert settings.get("max_steps") == 30, \
-        "python-validator must have max_steps=30"
+    assert settings.get("max_turns") == 30, \
+        "python-validator must have max_turns=30"
     assert "deepseek" in settings.get("goose_model", "").lower(), \
         "python-validator must use deepseek model"
 

@@ -84,14 +84,14 @@ def test_director_5_sub_recipes():
 
 
 def test_director_settings():
-    """Spec: orchestrator settings (timeout=600, max_steps=100, temperature=0.3)."""
+    """Spec: orchestrator settings (timeout=600, max_turns=100, temperature=0.3)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 600, \
         "director must have timeout=600 (orchestrator)"
-    assert settings.get("max_steps") == 100, \
-        "director must have max_steps=100 (orchestrator)"
+    assert settings.get("max_turns") == 100, \
+        "director must have max_turns=100 (orchestrator)"
     assert settings.get("temperature") == 0.3, \
         "director must have temperature=0.3"
 

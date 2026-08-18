@@ -92,14 +92,14 @@ def test_verification_runner_no_sub_recipes():
 
 
 def test_verification_runner_settings():
-    """Spec: sub-agent settings (timeout=600, max_steps=50, deepseek)."""
+    """Spec: sub-agent settings (timeout=600, max_turns=50, deepseek)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 600, \
         "verification-runner must have timeout=600"
-    assert settings.get("max_steps") == 50, \
-        "verification-runner must have max_steps=50"
+    assert settings.get("max_turns") == 50, \
+        "verification-runner must have max_turns=50"
     assert "deepseek" in settings.get("goose_model", "").lower(), \
         "verification-runner must use deepseek model"
 

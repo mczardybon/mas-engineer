@@ -64,14 +64,14 @@ def test_pre_push_validator_no_sub_recipes():
 
 
 def test_pre_push_validator_settings():
-    """Spec: gatekeeper settings (timeout=600, max_steps=60, deepseek)."""
+    """Spec: gatekeeper settings (timeout=600, max_turns=60, deepseek)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 600, \
         "pre-push-validator must have timeout=600"
-    assert settings.get("max_steps") == 60, \
-        "pre-push-validator must have max_steps=60 (gatekeeper)"
+    assert settings.get("max_turns") == 60, \
+        "pre-push-validator must have max_turns=60 (gatekeeper)"
     assert "deepseek" in settings.get("goose_model", "").lower(), \
         "pre-push-validator must use deepseek model"
 

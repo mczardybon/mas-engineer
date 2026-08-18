@@ -76,7 +76,7 @@ def test_git_operator_no_sub_recipes():
 
 
 def test_git_operator_settings():
-    """Spec: git-operator settings (timeout=180, max_steps=30, deepseek,
+    """Spec: git-operator settings (timeout=180, max_turns=30, deepseek,
     temperature=0.2).
     """
     with open(RECIPE) as f:
@@ -84,8 +84,8 @@ def test_git_operator_settings():
     settings = data.get("settings", {})
     assert settings.get("timeout") == 180, \
         "git-operator must have timeout=180"
-    assert settings.get("max_steps") == 30, \
-        "git-operator must have max_steps=30"
+    assert settings.get("max_turns") == 30, \
+        "git-operator must have max_turns=30"
     assert "deepseek" in settings.get("goose_model", "").lower(), \
         "git-operator must use deepseek model"
     assert settings.get("temperature") == 0.2, \

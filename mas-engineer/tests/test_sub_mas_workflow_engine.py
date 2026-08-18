@@ -82,14 +82,14 @@ def test_workflow_engine_no_sub_recipes():
 
 
 def test_workflow_engine_settings():
-    """Spec: workflow executor settings (timeout=600, max_steps=200, deepseek)."""
+    """Spec: workflow executor settings (timeout=600, max_turns=200, deepseek)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 600, \
         "workflow-engine must have timeout=600"
-    assert settings.get("max_steps") == 200, \
-        "workflow-engine must have max_steps=200 (workflow executor)"
+    assert settings.get("max_turns") == 100, \
+        "workflow-engine must have max_turns=200 (workflow executor)"
     assert "deepseek" in settings.get("goose_model", "").lower(), \
         "workflow-engine must use deepseek model"
 

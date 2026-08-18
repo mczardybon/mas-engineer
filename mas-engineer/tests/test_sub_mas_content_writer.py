@@ -71,14 +71,14 @@ def test_content_writer_no_sub_recipes():
 
 
 def test_content_writer_settings():
-    """Spec: sub-agent settings (timeout=600, max_steps=100, temperature=0.3)."""
+    """Spec: sub-agent settings (timeout=600, max_turns=100, temperature=0.3)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 600, \
         "content-writer must have timeout=600"
-    assert settings.get("max_steps") == 100, \
-        "content-writer must have max_steps=100"
+    assert settings.get("max_turns") == 100, \
+        "content-writer must have max_turns=100"
     assert settings.get("temperature") == 0.3, \
         "content-writer must have temperature=0.3"
 

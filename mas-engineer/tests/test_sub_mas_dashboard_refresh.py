@@ -98,14 +98,14 @@ def test_refresh_2_sub_recipes():
 
 
 def test_refresh_settings():
-    """Spec: orchestrator settings (timeout=600, max_steps=100, deepseek)."""
+    """Spec: orchestrator settings (timeout=600, max_turns=100, deepseek)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 600, \
         "refresh must have timeout=600 (orchestrator)"
-    assert settings.get("max_steps") == 100, \
-        "refresh must have max_steps=100 (orchestrator)"
+    assert settings.get("max_turns") == 100, \
+        "refresh must have max_turns=100 (orchestrator)"
     assert "deepseek" in settings.get("goose_model", "").lower(), \
         "refresh must use deepseek model"
 

@@ -72,14 +72,14 @@ def test_secrets_no_sub_recipes():
 
 
 def test_secrets_settings():
-    """Spec: code-review settings (timeout=120, max_steps=15, deepseek-v4-flash)."""
+    """Spec: code-review settings (timeout=120, max_turns=15, deepseek-v4-flash)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 120, \
         "secrets-scanner must have timeout=120"
-    assert settings.get("max_steps") == 15, \
-        "secrets-scanner must have max_steps=15"
+    assert settings.get("max_turns") == 30, \
+        "secrets-scanner must have max_turns=15"
     assert "deepseek" in settings.get("goose_model", "").lower(), \
         "secrets-scanner must use deepseek model"
 

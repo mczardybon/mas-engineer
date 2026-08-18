@@ -87,14 +87,14 @@ def test_system_knowledge_no_sub_recipes():
 
 
 def test_system_knowledge_settings():
-    """Spec: sub-agent settings (timeout=120, max_steps=30, deepseek)."""
+    """Spec: sub-agent settings (timeout=120, max_turns=30, deepseek)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 120, \
         "system-knowledge must have timeout=120"
-    assert settings.get("max_steps") == 30, \
-        "system-knowledge must have max_steps=30"
+    assert settings.get("max_turns") == 30, \
+        "system-knowledge must have max_turns=30"
     assert "deepseek" in settings.get("goose_model", "").lower(), \
         "system-knowledge must use deepseek model"
 

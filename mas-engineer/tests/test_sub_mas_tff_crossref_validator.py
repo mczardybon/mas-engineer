@@ -93,14 +93,14 @@ def test_crossref_no_sub_recipes():
 
 
 def test_crossref_settings():
-    """Spec: code-review settings (timeout=120, max_steps=15, deepseek)."""
+    """Spec: code-review settings (timeout=120, max_turns=15, deepseek)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 120, \
         "tff-crossref-validator must have timeout=120 (script-wrapper)"
-    assert settings.get("max_steps") == 15, \
-        "tff-crossref-validator must have max_steps=15 (script-wrapper)"
+    assert settings.get("max_turns") == 30, \
+        "tff-crossref-validator must have max_turns=15 (script-wrapper)"
     assert "deepseek" in settings.get("goose_model", "").lower(), \
         "tff-crossref-validator must use deepseek model"
 

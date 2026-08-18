@@ -69,14 +69,14 @@ def test_applier_no_sub_recipes():
 
 
 def test_applier_settings():
-    """Spec: sub-agent settings (timeout=300, max_steps=50, temperature=0.3)."""
+    """Spec: sub-agent settings (timeout=300, max_turns=50, temperature=0.3)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 300, \
         "applier must have timeout=300 (sub-agent)"
-    assert settings.get("max_steps") == 50, \
-        "applier must have max_steps=50 (sub-agent)"
+    assert settings.get("max_turns") == 50, \
+        "applier must have max_turns=50 (sub-agent)"
     assert settings.get("temperature") == 0.3, \
         "applier must have temperature=0.3"
 

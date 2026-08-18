@@ -84,12 +84,12 @@ def test_test_validator_no_sub_recipes():
 
 
 def test_test_validator_settings():
-    """Spec: has settings (timeout, max_steps, goose_provider, model)."""
+    """Spec: has settings (timeout, max_turns, goose_provider, model)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert "timeout" in settings, "test-validator must have timeout setting"
-    assert "max_steps" in settings, \
-        "test-validator must have max_steps setting"
+    assert "max_turns" in settings, \
+        "test-validator must have max_turns setting"
     assert "goose_model" in settings, \
         "test-validator must declare goose_model"

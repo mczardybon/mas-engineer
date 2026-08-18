@@ -89,14 +89,14 @@ def test_web_researcher_no_sub_recipes():
 
 
 def test_web_researcher_settings():
-    """Spec: sub-agent settings (timeout=120, max_steps=30, deepseek)."""
+    """Spec: sub-agent settings (timeout=120, max_turns=30, deepseek)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 120, \
         "web-researcher must have timeout=120"
-    assert settings.get("max_steps") == 30, \
-        "web-researcher must have max_steps=30"
+    assert settings.get("max_turns") == 30, \
+        "web-researcher must have max_turns=30"
     assert "deepseek" in settings.get("goose_model", "").lower(), \
         "web-researcher must use deepseek model"
 

@@ -627,52 +627,52 @@ class TestDevFastScan:
     def test_scan_settings_low_timeout_finding(self, tmp_path):
         """Settings with timeout<300 → B1 finding.
 
-        Note: scan_settings has a quirk — when max_steps is in [50,300] it
+        Note: scan_settings has a quirk — when max_turns is in [50,300] it
         counts as 'ok' (ok += 1) regardless of timeout. So with t=100,m=50
         the score is 1/1*10 = 10, not 0. This test asserts the B1 finding is
         raised (the actual user-visible behavior).
         """
-        (tmp_path / "a.yaml").write_text("settings:\n  timeout: 100\n  max_steps: 10\n")
+        (tmp_path / "a.yaml").write_text("settings:\n  timeout: 100\n  max_turns: 10\n")
         findings, score, total = dev_fast_scan.scan_settings(str(tmp_path))
         assert any(f["type"] == "B1" for f in findings)
-        assert any(f["type"] == "B3" for f in findings)  # max_steps=10 < 30
+        assert any(f["type"] == "B3" for f in findings)  # max_turns=10 < 30
         assert total == 1
-        # ok = 0 (both timeout and max_steps out of range), so score = 0/1*10 = 0
+        # ok = 0 (both timeout and max_turns out of range), so score = 0/1*10 = 0
         assert score == 0
 
     def test_scan_settings_high_timeout_low_severity(self, tmp_path):
         """Settings with timeout>900 → B2 low-severity finding."""
-        (tmp_path / "a.yaml").write_text("settings:\n  timeout: 1000\n  max_steps: 100\n")
+        (tmp_path / "a.yaml").write_text("settings:\n  timeout: 1000\n  max_turns: 100\n")
         findings, score, total = dev_fast_scan.scan_settings(str(tmp_path))
         assert any(f["type"] == "B2" for f in findings)
-        # max_steps=100 → ok += 1 (between 50 and 300)
+        # max_turns=100 → ok += 1 (between 50 and 300)
         assert score == 10  # ok/total*10 = 1/1*10
 
-    def test_scan_settings_low_max_steps_finding(self, tmp_path):
-        """Settings with max_steps<30 → B3 finding."""
-        (tmp_path / "a.yaml").write_text("settings:\n  timeout: 500\n  max_steps: 10\n")
+    def test_scan_settings_low_max_turns_finding(self, tmp_path):
+        """Settings with max_turns<30 → B3 finding."""
+        (tmp_path / "a.yaml").write_text("settings:\n  timeout: 500\n  max_turns: 10\n")
         findings, _, _ = dev_fast_scan.scan_settings(str(tmp_path))
         assert any(f["type"] == "B3" for f in findings)
 
-    def test_scan_settings_high_max_steps_finding(self, tmp_path):
-        """Settings with max_steps>300 → B4 finding."""
-        (tmp_path / "a.yaml").write_text("settings:\n  timeout: 500\n  max_steps: 500\n")
+    def test_scan_settings_high_max_turns_finding(self, tmp_path):
+        """Settings with max_turns>300 → B4 finding."""
+        (tmp_path / "a.yaml").write_text("settings:\n  timeout: 500\n  max_turns: 500\n")
         findings, _, _ = dev_fast_scan.scan_settings(str(tmp_path))
         assert any(f["type"] == "B4" for f in findings)
 
     def test_scan_settings_optimal_scores_full(self, tmp_path):
-        """Settings with timeout 300-900 and max_steps 50-300 → no findings.
+        """Settings with timeout 300-900 and max_turns 50-300 → no findings.
 
         Note: scan_settings increments 'ok' twice per file (once for timeout,
-        once for max_steps in the [50,300] range), so with one optimal file
+        once for max_turns in the [50,300] range), so with one optimal file
         the score is 2/1*10 = 20 (the score is not bounded to 10). This is a
         known quirk in the code. Test asserts the no-finding case.
         """
-        (tmp_path / "a.yaml").write_text("settings:\n  timeout: 500\n  max_steps: 100\n")
+        (tmp_path / "a.yaml").write_text("settings:\n  timeout: 500\n  max_turns: 100\n")
         findings, score, total = dev_fast_scan.scan_settings(str(tmp_path))
         assert findings == []
         assert total == 1
-        # ok = 2 (timeout ok + max_steps ok), score = 2/1*10 = 20
+        # ok = 2 (timeout ok + max_turns ok), score = 2/1*10 = 20
         assert score == 20
 
     def test_scan_structure_empty_dir(self, tmp_path):

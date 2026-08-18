@@ -88,14 +88,14 @@ def test_validator_director_3_sub_recipes():
 
 
 def test_validator_director_settings():
-    """Spec: sub-agent settings (timeout=300, max_steps=50, temperature=0.3)."""
+    """Spec: sub-agent settings (timeout=300, max_turns=50, temperature=0.3)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 300, \
         "validator-director must have timeout=300"
-    assert settings.get("max_steps") == 50, \
-        "validator-director must have max_steps=50"
+    assert settings.get("max_turns") == 50, \
+        "validator-director must have max_turns=50"
     assert settings.get("temperature") == 0.3, \
         "validator-director must have temperature=0.3"
 

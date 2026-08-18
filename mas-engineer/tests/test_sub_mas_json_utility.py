@@ -73,14 +73,14 @@ def test_json_utility_no_sub_recipes():
 
 
 def test_json_utility_settings():
-    """Spec: script-wrapper settings (timeout=60, max_steps=15, deepseek)."""
+    """Spec: script-wrapper settings (timeout=60, max_turns=15, deepseek)."""
     with open(RECIPE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert settings.get("timeout") == 60, \
         "json-utility must have timeout=60 (script-wrapper)"
-    assert settings.get("max_steps") == 15, \
-        "json-utility must have max_steps=15 (script-wrapper)"
+    assert settings.get("max_turns") == 30, \
+        "json-utility must have max_turns=15 (script-wrapper)"
     assert "deepseek" in settings.get("goose_model", "").lower(), \
         "json-utility must use deepseek model"
 

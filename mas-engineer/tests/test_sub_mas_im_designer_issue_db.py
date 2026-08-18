@@ -56,14 +56,14 @@ def test_designer_updates_patch_at_step_1_5(tmp_path):
         if entry.get("design_run_id") == "run-1":
             entry["patch"] = {
                 "file": "recipe/sub/sub_mas-foo.yaml",
-                "field": "settings.max_steps",
+                "field": "settings.max_turns",
                 "from": "5",
                 "to": "20",
             }
             break
     db.save()
     issue2 = IssueDB(str(tmp_path / "issue_db.json")).get(h)
-    assert issue2["past_designs"][0]["patch"]["field"] == "settings.max_steps"
+    assert issue2["past_designs"][0]["patch"]["field"] == "settings.max_turns"
     assert issue2["past_designs"][0]["patch"]["to"] == "20"
 
 

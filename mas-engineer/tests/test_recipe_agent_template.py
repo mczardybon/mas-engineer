@@ -63,12 +63,12 @@ def test_template_has_placeholders():
 
 
 def test_template_settings():
-    """Template should have standard settings (timeout, max_steps, etc)."""
+    """Template should have standard settings (timeout, max_turns, etc)."""
     with open(TEMPLATE) as f:
         data = yaml.safe_load(f)
     settings = data.get("settings", {})
     assert "timeout" in settings, "Template settings must have timeout"
-    assert "max_steps" in settings, "Template settings must have max_steps"
+    assert "max_turns" in settings, "Template settings must have max_turns"
 
 
 def test_template_role():
