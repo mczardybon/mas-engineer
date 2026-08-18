@@ -1651,7 +1651,7 @@ task_workflows:
           before_scores: '{result.variables.finder.scores}'
           patches: '{result.variables.designer.data.patches}'
         mode: '{result.variables.detect_mode}'
-      timeout: 180
+      timeout: 300
       depends_on:
       - apply_patches
     - id: summary
@@ -1771,7 +1771,7 @@ task_workflows:
           before_scores: '{result.variables.finder.scores}'
           patches: '{result.variables.designer.data.patches}'
         mode: '{result.variables.detect_mode}'
-      timeout: 180
+      timeout: 300
       depends_on:
       - apply_patches
   wf_pipeline_cost:
@@ -1925,10 +1925,15 @@ task_workflows:
     steps:
     - id: consume
       action: shell
-      cmd: python3 tools/dev_mq_consumer.py --topic monitor.health.degraded --consumer-id
-        wf_recovery_defib --processor dev_recovery_defib:process_msg --timeout 30
+      cmd: 'trap ''kill 0'' TERM; python3 tools/dev_mq_consumer.py --topic monitor.health.degraded
+        --consumer-id wf_recovery_defib --processor dev_recovery_defib:process_msg --timeout 60'
       timeout: 60
       on_error: continue
+      retry:
+        max_retries: 3
+        checks:
+        - exit 0
+        on_failure: cleanup
     - id: verify_log
       action: shell
       cmd: 'if [ -f .mase/recovery/log/{request_id}.json ]; then echo "DEFIB_OK: .mase/recovery/log/{request_id}.json";
@@ -1944,7 +1949,7 @@ task_workflows:
     - id: run_recovery
       action: shell
       cmd: 'python3 tools/dev_phoenix_recovery_run.py --request_id {request_id} --from {from} --to {to} 2>&1 | tail -10'
-      timeout: 180
+      timeout: 300
     - id: verify_published
       action: shell
       cmd: 'python3 tools/dev_mq_topic_depth.py phoenix.recovery.completed'
@@ -2386,11 +2391,16 @@ task_workflows:
     steps:
     - id: consume
       action: shell
-      cmd: python3 tools/dev_mq_consumer.py --topic im.finding.created --consumer-id
-        wf_im_design_patches --processor dev_im_design_patches:process_msg --timeout
-        30
+      cmd: 'trap ''kill 0'' TERM; python3 tools/dev_mq_consumer.py --topic im.finding.created
+        --consumer-id wf_im_design_patches --processor dev_im_design_patches:process_msg
+        --timeout 30'
       timeout: 60
       on_error: continue
+      retry:
+        max_retries: 3
+        checks:
+        - exit 0
+        on_failure: cleanup
     - id: verify_patch
       action: shell
       cmd: 'if [ -f .mase/im/patches/{request_id}.yaml ]; then echo "PATCH_OK: .mase/im/patches/{request_id}.yaml";

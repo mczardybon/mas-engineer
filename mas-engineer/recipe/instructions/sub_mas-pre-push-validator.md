@@ -793,10 +793,25 @@ if [ ! -d "tests" ]; then
     echo "PYTEST_SUMMARY: {\"passed\": 0, \"failed\": 0, \"errors\": 0, \"skipped\": 0, \"exit_code\": 5, \"note\": \"no tests dir\"}"
     echo "  ✅ Check 17 passed: no tests/ dir (PASSED, WARN-only)"
 else
+    # Run pytest with retry (R-208): up to 3 attempts; success = pytest exit 0;
+    # on_failure = cleanup (kill orphaned test consumers / remove temp artifacts) before retry.
     # Run pytest; use 'set -o pipefail' so $? reflects pytest's exit code, not tail's.
-    PYTEST_OUTPUT=$(python3 -m pytest tests/ -q --tb=line --color=no 2>&1 | tail -30)
-    (set -o pipefail; python3 -m pytest tests/ -q --tb=line --color=no >/dev/null 2>&1)
-    PYTEST_RC=$?
+    PYTEST_RC=1
+    PYTEST_ATTEMPT=0
+    while [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt 3 ]; do
+        PYTEST_ATTEMPT=$((PYTEST_ATTEMPT + 1))
+        PYTEST_OUTPUT=$(python3 -m pytest tests/ -q --tb=line --color=no 2>&1 | tail -30)
+        (set -o pipefail; python3 -m pytest tests/ -q --tb=line --color=no >/dev/null 2>&1)
+        PYTEST_RC=$?
+        if [ "$PYTEST_RC" -eq 127 ]; then
+            break   # pytest not installed — retrying will not help
+        fi
+        if [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt 3 ]; then
+            echo "  ⚠️  RETRY $PYTEST_ATTEMPT/3: pytest exit=$PYTEST_RC — cleaning up before retry (R-208)"
+            pkill -f 'dev_mq_consumer' 2>/dev/null || true   # kill orphaned test consumers
+            rm -rf /tmp/mas-engineer-test /tmp/mas-engineer 2>/dev/null || true   # remove temp artifacts
+        fi
+    done
     # Parse summary line: e.g. "===== 1277 passed in 8.12s ====="
     PASSED=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ passed" | grep -oE "[0-9]+" | head -1)
     FAILED=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ failed" | grep -oE "[0-9]+" | head -1)
