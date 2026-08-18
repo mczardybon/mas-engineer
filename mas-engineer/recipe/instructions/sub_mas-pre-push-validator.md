@@ -1033,6 +1033,176 @@ echo "  ✅ Check 20 passed: 15/15 MQ hardening P2 markers present"
 
 **Reference:** R110-189 (MQ Hardening Phase 2 directive).
 
+### Check 21: MQ topic caller-chain audit (NEW v2.7.0, R110-198)
+
+**Goal:** Every MQ topic that is PRODUCED (mq.enqueue() call in
+tools/ or recipe/) must have at least one CONSUMER (workflow
+recipe, sub_recipe with --processor, or test that verifies the
+consumer-side contract). Prevents the R110-194-B bug pattern
+from recurring: a topic is defined, a producer publishes to it,
+but nothing consumes it — so messages sit in pending.ndjson
+forever and the producer is a dead end.
+
+The original incident: dev_im_finder_scan --publish (R110-154)
+enqueued to `im.finding.created` but no consumer existed for
+~3 rounds. R110-195 (this batch) wired wf_im_consume_findings
++ sub_mas-design-patches to drain that topic. Check 21 makes
+sure the next such dead-end topic is caught BEFORE a push.
+
+**Idempotency:** If `check_21_mq_caller_chain` already appears
+in this file, skip the insert and keep the existing block.
+Detection via `grep -q "check_21_mq_caller_chain"`.
+
+```bash
+# Check 21: MQ topic caller-chain audit (R110-198)
+echo "🔍 Check 21: MQ topic caller-chain audit (R110-198)"
+
+# Step 1: Discover all producer topics by scanning tools/
+# and recipe/ for mq.enqueue() calls.  We use grep with
+# explicit call-site anchors (mq.enqueue, _mq.enqueue,
+# dev_message_queue.enqueue) so we don't catch the
+# literal word "topic" from docstrings/descriptions.
+# The previous regex `enqueue\(['\"](...)` was too loose
+# — it caught the FIRST quoted string after "enqueue(",
+# which in narrative text could be "topic" itself
+# (e.g. "...enqueue to a topic..."), not the actual
+# Python/Shell call site's first arg.
+PRODUCER_TOPICS=()
+# Scan tools/*.py for both mq.enqueue and _mq.enqueue and
+# dev_message_queue.enqueue call sites.  We use a 2-LINE
+# window (grep -A1) because in mas-engineer the call-site
+# pattern is:
+#     mq.enqueue(
+#         "topic", payload, ...
+# so the topic name is on the NEXT line.  We then filter
+# to ONLY string-literal first args (not variables like
+# MQ_TOPIC / topic) — variables mean the producer is a
+# dispatcher (e.g. dev_workflow_runner), not a direct
+# producer.  Direct producers (dev_dispatch_tracker,
+# dev_phoenix_log_persister) use string literals OR a
+# *_TOPIC constant that we'll catch in the next loop.
+while IFS= read -r line; do
+    # line looks like:    file:N:        mq.enqueue(
+    # OR                  file-N-topicname: payload...
+    # We use python to extract the topic.
+    topic=$(echo "$line" | python3 -c "
+import sys, re
+for ln in sys.stdin:
+    # match either the enqueue( line or the next-line
+    # continuation (file:line-continuation:payload)
+    m = re.search(r'[\"\']([a-z][a-z0-9_]*(?:[._][a-z0-9_]+)+)[\"\'].*', ln)
+    if m:
+        print(m.group(1))
+        break
+")
+    if [ -n "$topic" ] && [ "$topic" != "topic" ]; then
+        PRODUCER_TOPICS+=("$topic")
+    fi
+done < <(grep -rEnA1 '\.enqueue\(' tools/*.py 2>/dev/null \
+         | grep -v "\.pyc" | grep -v "^Binary" \
+         | grep -v "\.enqueue(")
+# Also catch MQ_TOPIC = "..." style module-level constants
+# used by tools that pass a variable to mq.enqueue (e.g.
+# dev_dispatch_tracker.MQ_TOPIC = "dispatches" then
+# mq.enqueue(MQ_TOPIC, ...)).  Anchor: line ends with
+# `TOPIC = "<word>"` and the word is lowercase.
+while IFS= read -r line; do
+    if echo "$line" | grep -qE 'TOPIC = ' ; then
+        # Use python to extract the quoted value — sed quote
+        # escaping inside a "..." heredoc is fragile.
+        topic=$(echo "$line" | python3 -c "
+import sys, re
+for ln in sys.stdin:
+    m = re.search(r'=\s*[\"\\']+([a-z0-9_]+)[\"\\']+\s*\$', ln)
+    if m:
+        print(m.group(1))
+        break
+")
+        if [ -n "$topic" ] && [ "$topic" != "topic" ]; then
+            PRODUCER_TOPICS+=("$topic")
+        fi
+    fi
+done < <(grep -rEn 'TOPIC\s*=\s*['"'"'"][a-z0-9_]+['"'"'"]\s*$' tools/*.py 2>/dev/null \
+         | grep -v "\.pyc")
+# Also scan recipe/*.yaml and recipe/sub/*.yaml for
+# explicit mq.enqueue() invocations (recipe side may
+# enqueue via shell: `python3 -c "...mq.enqueue('topic'..."`).
+# For YAML we anchor on the same `\.enqueue\(` pattern.
+while IFS= read -r line; do
+    topic=$(echo "$line" | sed -nE "s/.*enqueue\(['\"]([a-zA-Z0-9._-]+)['\"].*/\1/p")
+    if [ -n "$topic" ] && [ "$topic" != "topic" ]; then
+        PRODUCER_TOPICS+=("$topic")
+    fi
+done < <(grep -rEn '\.enqueue\(' recipe/ 2>/dev/null | grep -v "\.pyc")
+# De-dup
+PRODUCER_TOPICS=($(printf "%s\n" "${PRODUCER_TOPICS[@]}" | sort -u))
+
+# Step 2: For each producer topic, verify a caller chain
+# exists.  A "caller" is ANY of:
+#   (a) a workflow recipe (recipe/wf_*.yaml) that references
+#       the topic in --topic= or in a hardcoded `mq.consume(...)`
+#   (b) a sub_recipe (recipe/sub/sub_mas-*.yaml) that mentions
+#       the topic in its description or sub_recipe chain
+#   (c) a test file (tests/test_*.py) that calls
+#       mq.consume(<topic>) or mq.enqueue(<topic>, ...) and
+#       verifies the consumer-side flow
+#   (d) a tools/dev_mq_consumer*.py call site that hardcodes
+#       the topic (consumer driver integration)
+MQ21_FAIL=0
+MQ21_UNCOVERED=()
+for topic in "${PRODUCER_TOPICS[@]}"; do
+    # Caller-chain evidence: search recipes + tests + tools for
+    # the topic name.  Use the sanitized form (dots → underscores)
+    # as fallback because the MQ normalizes on write.
+    _sanitized=$(echo "$topic" | tr '.' '_')
+    HITS=0
+    # (a) workflow recipes
+    HITS=$((HITS + $(grep -l "$topic" recipe/wf_*.yaml 2>/dev/null | wc -l)))
+    HITS=$((HITS + $(grep -l "$_sanitized" recipe/wf_*.yaml 2>/dev/null | wc -l)))
+    # (b) sub_recipes
+    HITS=$((HITS + $(grep -lE "$topic|$_sanitized" recipe/sub/sub_mas-*.yaml 2>/dev/null | wc -l)))
+    # (c) test files
+    HITS=$((HITS + $(grep -lE "mq\.(enqueue|consume)\(['\"]?$topic|['\"]?$_sanitized" tests/test_*.py 2>/dev/null | wc -l)))
+    HITS=$((HITS + $(grep -lE "mq\.(enqueue|consume)\(['\"]?$topic|['\"]?$_sanitized" tests/test_dev_*.py 2>/dev/null | wc -l)))
+    # (d) dev_mq_consumer call sites
+    HITS=$((HITS + $(grep -lE "$topic|$_sanitized" tools/dev_mq_consumer*.py 2>/dev/null | wc -l)))
+    if [ "$HITS" -eq 0 ]; then
+        echo "  ❌ BLOCK: Check 21 — topic '$topic' has a producer but NO consumer-side caller chain"
+        MQ21_FAIL=1
+        MQ21_UNCOVERED+=("$topic")
+    else
+        echo "  ✅ Check 21: topic '$topic' has $HITS caller-chain reference(s)"
+    fi
+done
+
+if [ "$MQ21_FAIL" -ne 0 ]; then
+    echo "     Uncovered topics: ${MQ21_UNCOVERED[*]}"
+    echo "     Fix: add a consumer (workflow recipe wf_<topic>.yaml, or sub_recipe in recipe/sub/, or test that mq.consume()s the topic).  Pattern: see R110-195 (wf_im_consume_findings + sub_mas-design-patches)."
+    exit 1
+fi
+echo "  ✅ Check 21 passed: all ${#PRODUCER_TOPICS[@]} producer topic(s) have caller chains"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 21: MQ topic caller-chain audit (R110-198)
+  ✅ Check 21: topic 'im.finding.created' has 4 caller-chain reference(s)
+  ✅ Check 21: topic 'dispatches' has 2 caller-chain reference(s)
+  ✅ Check 21 passed: all 2 producer topic(s) have caller chains
+```
+
+**Output block on BLOCK (R110-194-B bug pattern, hypothetical):**
+```
+🔍 Check 21: MQ topic caller-chain audit (R110-198)
+  ❌ BLOCK: Check 21 — topic 'dispatches' has a producer but NO consumer-side caller chain
+     Uncovered topics: dispatches
+     Fix: add a consumer (workflow recipe wf_<topic>.yaml, or sub_recipe in recipe/sub/, or test that mq.consume()s the topic).  Pattern: see R110-195 (wf_im_consume_findings + sub_mas-design-patches).
+```
+
+**Reference:** R110-198 (caller-chain audit directive), R110-194-B
+(MQ Full Adoption incident), R110-195 (the first fix that closed
+the original `im.finding.created` dead-end).
+
 ## Boundaries
 
 - ⛔ NEVER modify any source file — this agent is read-only
