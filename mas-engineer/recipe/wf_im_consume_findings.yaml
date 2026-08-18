@@ -1,0 +1,86 @@
+name: wf_im_consume_findings
+version: 1.0.0
+constitution: sub_mas-master-constitution.yaml
+title: 🔁 WF-IM-CONSUME-FINDINGS — async IM-pipeline consumer-loop workflow (R110-195)
+description: |
+  R110-195 / R110-194-B (MQ Full Adoption): wires the existing
+  dev_im_finder_scan.py --publish output (topic `im.finding.created`)
+  into a real consumer loop that:
+    1. Drains the topic via dev_mq_consumer.py
+    2. Calls dev_im_design_patches.process_msg() per message
+    3. Acks the message (designed patch is written to
+       .mase/im/patches/<request_id>.yaml by the processor)
+    4. Reports count acked + per-msg patch paths
+
+  Pre-R110-195: im-finder --publish was a dead-end.  100 findings
+  enqueued → 100 sit in pending.ndjson forever.  R110-195 gives the
+  publish path a real consumer.
+
+  This is a workflow recipe, NOT a sub-recipe — invoked via
+  `goose run --recipe recipe/wf_im_consume_findings.yaml` (typically
+  from a cron / dashboard refresh).  See sub_mas-im-finder.md STEP 0
+  for the invocation from inside the IM-pipeline.
+prompt: |
+  I am wf-im-consume-findings (v1.0.0) | MODE-CHECK: mas-engineer
+  🔁 Drain the im.finding.created MQ topic into design-patches.
+
+  R110-195 (R110-194-B): consume loop that calls
+  dev_im_design_patches.process_msg() per message.
+instructions: |
+  ## ⛔ STEP 0 — VERIFY MQ + DESIGN-PATCHES TOOLS PRESENT
+
+  I am the wf-im-consume-findings workflow.  Before draining, verify
+  the underlying tools exist and are importable:
+
+  1. EXECUTE: shell(cmd="cd {workspace} && python3 -c 'import dev_message_queue, dev_mq_consumer, dev_im_design_patches' && echo OK")
+     # If this fails, STOP.  Do NOT drain — the consumer would
+     # produce zero-side-effect runs.
+  2. EXECUTE: shell(cmd="cd {workspace} && ls .mase/im/patches/ 2>/dev/null | wc -l")
+     # Pre-state: how many patch files exist BEFORE this drain.
+     # Captured for the post-state diff in the EVIDENCE report.
+
+  ## STEP 1 — DRAIN THE TOPIC
+
+  Run the consumer with --max-messages 1000 (effectively unbounded
+  for any realistic single-pipeline-run) and --timeout 300.  The
+  processor writes one patch per ack to .mase/im/patches/.
+
+  EXECUTE: shell(cmd="cd {workspace} && python3 tools/dev_mq_consumer.py --topic im.finding.created --consumer-id im-design-loop --processor tools.dev_im_design_patches:process_msg --timeout 300 --max-messages 1000")
+
+  The consumer prints a JSON line with the result.  Parse it:
+    - result == "acked"      → count acks
+    - result == "no-message" → queue empty, exit
+    - result == "nacked"     → processor raised, message requeued
+                               for retry, exit
+    - result == "error"      → unrecoverable, exit non-zero
+
+  ## STEP 2 — REPORT (per R10 EVIDENCE rule)
+
+  Print a final summary line:
+    ACKED <N>  PATCHES_BEFORE=<B>  PATCHES_AFTER=<A>  NEW=<A-B>
+  where B = STEP 0 count, A = current count, N = acked from
+  consumer JSON.  All three numbers MUST match (A - B == N) for the
+  pipeline to be considered clean.
+
+  ## ⛔ NEVER
+  - Skip STEP 0 (drain without verifying tools)
+  - Invent / patch / mutate the design-patch files — processor
+    owns that
+  - Run more than ONE consumer-loop concurrently per topic
+    (R-211 single-consumer invariant).  The `_check_single_consumer`
+    guard in dev_mq_consumer.py enforces this — respect its rc=3.
+  - Bypass the producer: do NOT call dev_im_finder_scan.py directly
+    from here.  Publishing is the im-finder's job; this workflow is
+    consume-only.
+sub_recipes: []
+extensions:
+  - type: builtin
+    name: developer
+    display_name: Developer
+    timeout: 300
+    bundled: true
+settings:
+  timeout: 600
+  max_turns: 50
+  temperature: 0.3
+  goose_model: deepseek-v4-flash

@@ -1,0 +1,90 @@
+name: sub_mas-design-patches
+version: 1.0.0
+constitution: sub_mas-master-constitution.yaml
+title: 🧩 SUB-MAS-DESIGN-PATCHES — per-finding design-patch agent (R110-195)
+description: 'v1.0.0 | MAS-internal: R110-195 (R110-194-B, MQ Full Adoption).  Per-finding design-patch agent — one im.finding.created message → one .mase/im/patches/<request_id>.yaml file.  Architecture: im.finder.publish (R110-154,192) → topic im.finding.created → this sub_recipe processes ONE msg via dev_im_design_patches.process_msg(msg) → writes the patch file → consumer acks.  Called from recipe/wf_im_consume_findings.yaml and tests/test_dev_im_design_patches.py.  Pre-R110-195 there was no agent to call dev_im_design_patches.process_msg; MQ publish worked (R110-154, R110-192) but nothing consumed.  R110-195 closes the loop.'
+prompt: |
+  I am sub-mas-design-patches (v1.0.0) | MODE-CHECK: mas-engineer
+  🧩 Design-patch agent — one im.finding.created → one
+  .mase/im/patches/<request_id>.yaml.
+
+  R110-195: I delegate the per-msg design work to the
+  deterministic dev_im_design_patches.process_msg() kernel.
+  My job is to: receive the msg, call the kernel, ack on
+  success, nack on failure.
+instructions: |
+  ## ⛔ STEP 0 — VERIFY KERNEL PRESENT
+
+  EXECUTE: shell(cmd="cd {workspace} && python3 -c 'import dev_im_design_patches; print(\"OK\")'")
+  # If this fails, STOP.  Without the kernel, this sub_recipe
+  # cannot produce a patch.
+
+  ## STEP 1 — RECEIVE ONE MQ MESSAGE
+
+  In production, this sub_recipe is invoked by the parent
+  workflow wf_im_consume_findings.yaml, which has already
+  consumed ONE message off the im.finding.created topic and
+  has the full message payload (including the original
+  finding from .mase/findings) bound in context.
+
+  The message envelope (set by dev_mq_consumer.py) is:
+    {
+      "msg_id": "...",          # MQ message id
+      "topic": "im.finding.created",
+      "payload": {              # the actual finding
+        "request_id": "...",
+        "kind": "...",
+        "severity": "...",
+        "summary": "...",
+        "source_path": "...",
+        "line_no": N
+      }
+    }
+
+  ## STEP 2 — CALL DESIGN-PATCH KERNEL
+
+  EXECUTE: shell(cmd="cd {workspace} && python3 -c 'import json, dev_im_design_patches; r = dev_im_design_patches.process_msg(<MSG_JSON>); print(json.dumps(r))'")
+  # <MSG_JSON> is the full envelope from STEP 1.  In the
+  # python invocation above, substitute the literal
+  # json.dumps(<envelope>) — never interpolate shell strings
+  # with the payload (R110-150 secret-leak defense).
+
+  The kernel returns a dict like:
+    {"ok": True,  "patch_path": ".mase/im/patches/<request_id>.yaml"}
+    {"ok": False, "error": "..."}
+
+  ## STEP 3 — ACK OR NACK
+
+  - If result.ok == True:
+      EXECUTE: shell(cmd="cd {workspace} && python3 -c 'import dev_message_queue as mq; mq.ack(\"<msg_id>\")'")
+      # The patch file already exists — written by the kernel
+      # in STEP 2.  No further file IO from this sub_recipe.
+
+  - If result.ok == False:
+      EXECUTE: shell(cmd="cd {workspace} && python3 -c 'import dev_message_queue as mq; mq.nack(\"<msg_id>\", reason=\"<error>\")'")
+      # The MQ will retry per dev_im_finder_scan's
+      # backoff_schedule; after max_retries it lands in DLQ.
+
+  ## ⛔ NEVER
+  - Mutate the patch file AFTER the kernel writes it
+    (kernel is the sole owner of patch files).
+  - Re-design a patch in a different location
+    (single-writer invariant — kernel writes to
+     .mase/im/patches/<request_id>.yaml, period).
+  - Skip STEP 0 even if the parent workflow already verified
+    the kernel — the STEP 0 invariant is per-invocation.
+
+  See .directives/sub_mas-design-patches.md for the full
+  ELABORATED form of these 3 steps.
+sub_recipes: []
+extensions:
+  - type: builtin
+    name: developer
+    display_name: Developer
+    timeout: 300
+    bundled: true
+settings:
+  timeout: 300
+  max_turns: 20
+  temperature: 0.2
+  goose_model: deepseek-v4-flash
