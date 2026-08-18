@@ -153,12 +153,17 @@ def _dispatch(problem_class: str, request_id: str, summary: dict) -> dict:
     if problem_class == "dlq_has_messages":
         try:
             import dev_message_queue as mq
-            n = mq._dlq_count()
-            return {"action": "replay_dlq_dry_run", "dlq_count": n,
-                    "problem_class": problem_class,
-                    "note": "manual review required before replay"}
+            if summary.get("dlq_dry_run", False):
+                # F-MQ-189-5: dry-run reports the DLQ state without replaying.
+                n = mq._dlq_count()
+                return {"action": "replay_dlq_dry_run", "dlq_count": n,
+                        "problem_class": problem_class,
+                        "note": "manual review required before replay"}
+            n = mq.replay_dlq()
+            return {"action": "replay_dlq", "replayed": n,
+                    "problem_class": problem_class}
         except Exception as e:
-            return {"action": "replay_dlq_dry_run", "error": repr(e),
+            return {"action": "replay_dlq", "error": repr(e),
                     "problem_class": problem_class}
     if problem_class == "daemon_down":
         return {"action": "rebuild_daemon", "problem_class": problem_class,
