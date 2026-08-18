@@ -123,10 +123,20 @@ def test_recovery_workflows():
         try:
             r = subprocess.run(
                 ["python3", "tools/dev_workflow_runner.py", wf],
-                capture_output=True, text=True, timeout=60, cwd=ROOT,
+                capture_output=True, text=True, timeout=90, cwd=ROOT,
                 env={**os.environ, "MAS_ENGINEER_ROOT": ROOT},
             )
             status = "ok" if "status: ok" in r.stdout else "fail"
+            # R-209-e2e: consumer idle window is now 60s (R-209), so the
+            # subprocess timeout was raised 60 -> 90. For wf_recovery_defib,
+            # consumer exit code 1 ("no-message" -> DEFIB_NO_LOG path) is a
+            # legitimate NON-failure; only exit code 3 (processor/consume
+            # error) blocks the workflow.
+            if wf == "wf_recovery_defib":
+                if r.returncode == 1:
+                    status = "ok"
+                elif r.returncode == 3:
+                    status = "fail"
             # Check log for auto_repair output
             logs = sorted(glob.glob(f".mase/workflow_runs/{wf}_*.json"), key=os.path.getmtime, reverse=True)
             auto_repair_status = "n/a"

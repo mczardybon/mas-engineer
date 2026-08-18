@@ -34,16 +34,59 @@ OUTPUT (JSON to stdout)
 import argparse
 import importlib
 import json
+import signal
 import sys
 import time
 import traceback
 from pathlib import Path
+from typing import Optional
 
 TOOLS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(TOOLS_DIR.parent))  # so `import dev_message_queue` works
 sys.path.insert(0, str(TOOLS_DIR))         # so processor module imports work
 
 import dev_message_queue as mq
+
+# R-211: TTL for in_flight leases — single source of truth for the
+# periodic stale-lease GC (matches mq.gc_stale_in_flight's default).
+IN_FLIGHT_LEASE_TTL_SEC = 300
+
+# R-211: tracks the msg_id currently held in_flight so the SIGTERM
+# handler can release the lease before exiting cleanly.
+_in_flight_lease = {"msg_id": None}
+
+
+def _handle_sigterm(signum, frame):
+    """Release any held in_flight lease, then exit cleanly (R-211)."""
+    msg_id = _in_flight_lease["msg_id"]
+    if msg_id:
+        try:
+            mq.nack(msg_id, reason="consumer terminated (SIGTERM): in_flight lease released")
+        except Exception:
+            pass
+    sys.exit(0)
+
+
+def _check_single_consumer(topic: str, consumer_id: str) -> Optional[str]:
+    """Return another consumer-id holding an in_flight lease on `topic`.
+
+    R-211: reuses the message-queue's per-message `consumer_id` lease
+    field (set by mq.consume when a msg goes in_flight) as the
+    single-consumer-per-topic uniqueness mechanism: if any msg on the
+    topic is in_flight under a different consumer-id, that consumer is
+    still actively processing — starting another would cause duplicate
+    dispatch.  Returns None when we are the only active consumer.
+    """
+    try:
+        msgs = mq._read_topic(topic)
+    except Exception:
+        return None
+    for m in msgs:
+        if m.get("status") == "in_flight":
+            holder = m.get("consumer_id")
+            if holder and holder != consumer_id:
+                return holder
+    return None
 
 
 def _load_processor(spec: str):
@@ -85,11 +128,30 @@ def main():
     ap.add_argument("--consumer-id", required=True)
     ap.add_argument("--processor", required=True,
                     help="'module.path:func_name' — called with msg dict, returns None or dict to merge back")
-    ap.add_argument("--timeout", type=float, default=30.0,
-                    help="consume timeout in seconds (default 30)")
+    ap.add_argument("--timeout", type=float, default=60.0,
+                    help="consume timeout in seconds (default 60)")
     ap.add_argument("--max-messages", type=int, default=1,
                     help="how many msgs to process before exiting (default 1)")
     args = ap.parse_args()
+
+    # R-211: release in_flight lease (if held) on SIGTERM, then exit cleanly.
+    signal.signal(signal.SIGTERM, _handle_sigterm)
+
+    # R-211: enforce single-consumer-per-topic — if another consumer-id
+    # already holds an in_flight lease on this topic, refuse to start.
+    other_consumer = _check_single_consumer(args.topic, args.consumer_id)
+    if other_consumer:
+        print(json.dumps({
+            "result": "error",
+            "msg_id": None,
+            "topic": args.topic,
+            "consumer_id": args.consumer_id,
+            "elapsed_ms": 0,
+            "processor": args.processor,
+            "reason": (f"single-consumer violation: consumer {other_consumer!r} already "
+                       f"holds an in_flight lease on topic {args.topic!r}"),
+        }, indent=2))
+        return 3
 
     try:
         processor = _load_processor(args.processor)
@@ -108,9 +170,10 @@ def main():
     overall_start = time.monotonic()
     processed = 0
     while processed < args.max_messages:
-        # gc stale in_flight msgs (best-effort, cheap)
+        # gc stale in_flight msgs (best-effort, cheap) — R-211: TTL is a
+        # module constant so it stays in sync everywhere.
         try:
-            mq.gc_stale_in_flight(max_age_sec=300.0)
+            mq.gc_stale_in_flight(max_age_sec=IN_FLIGHT_LEASE_TTL_SEC)
         except Exception:
             pass
 
@@ -147,10 +210,14 @@ def main():
                 break
 
         msg_id = msg.get("msg_id", "?")
+        # R-211: we now hold the in_flight lease — record it so SIGTERM
+        # can release it before exit.
+        _in_flight_lease["msg_id"] = msg_id
         # fetch the in_flight copy (more reliable than the snapshot from consume)
         full_msg = _find_msg_full(msg_id)
         if full_msg is None:
             # race: msg got ack'd between consume and _find_msg — skip
+            _in_flight_lease["msg_id"] = None
             processed += 1
             continue
 
@@ -164,6 +231,8 @@ def main():
                 mq.nack(msg_id, reason=reason)
             except Exception as ne:
                 reason = f"{reason}; ALSO nack-failed: {ne!r}"
+            # R-211: nack released the lease (or we're exiting regardless)
+            _in_flight_lease["msg_id"] = None
             print(json.dumps({
                 "result": "nacked",
                 "msg_id": msg_id,
@@ -206,6 +275,8 @@ def main():
             return 3
 
         processed += 1
+        # R-211: ack removed the msg from the topic — lease released.
+        _in_flight_lease["msg_id"] = None
         # Single-message mode: stop after first.
         if args.max_messages == 1:
             break
