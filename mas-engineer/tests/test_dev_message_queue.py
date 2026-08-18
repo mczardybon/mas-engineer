@@ -37,6 +37,7 @@ TOOLS = REPO_ROOT / "tools"
 
 sys.path.insert(0, str(TOOLS))
 import dev_message_queue as mq  # noqa: E402
+from dev_message_queue import QueueFullError  # noqa: E402 (F-MQ-189-1)
 
 
 # ─── Per-test MQ root (isolated from .mase/mq) ───────────────────
@@ -490,3 +491,74 @@ def test_gc_clears_in_flight_at_on_recovery(tmp_path, monkeypatch):
     msgs2 = mq._read_topic("t1")
     assert msgs2[0]["in_flight_at"] is None
     assert msgs2[0]["status"] == "pending"
+
+
+# ─── R110-189: MQ Hardening Phase 2 (15 new tests) ───────────────
+
+def test_max_depth_raises_queue_full(tmp_path, monkeypatch):
+    """F-MQ-189-1: enqueue raises QueueFullError when depth ≥ MAX_DEPTH."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    monkeypatch.setenv("MAS_MQ_MAX_DEPTH_PER_TOPIC", "3")
+    for i in range(3):
+        mq.enqueue("t", {"i": i})
+    with pytest.raises(QueueFullError):
+        mq.enqueue("t", {"i": 99})
+
+
+def test_ttl_sweeps_old_pending_to_dlq(tmp_path, monkeypatch):
+    """F-MQ-189-2: pending msg older than max_age_sec → DLQ."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    mq.enqueue("t", {"x": 1})
+    # Backdate to 1 day ago
+    msgs = mq._read_topic("t")
+    msgs[0]["enqueued_at"] = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    mq._write_topic_atomic("t", msgs)
+    n = mq._gc_old_pending(max_age_sec=60)  # 60s threshold
+    assert n == 1
+    # Msg should be in DLQ
+    assert "ttl-expired" in open(mq._dlq_path()).read()
+
+
+def test_requeue_resets_retry_count(tmp_path, monkeypatch):
+    """F-MQ-189-3: requeue sets msg back to pending with retry_count=0."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    m1 = mq.enqueue("t", {"x": 1})
+    m = mq.consume("t", timeout_sec=1)
+    mq.ack(m["msg_id"])
+    # Now msg is done; requeue it (enqueue returns the msg_id string)
+    ok = mq.requeue(m1)
+    assert ok
+    msgs = mq._read_topic("t")
+    assert msgs[0]["status"] == "pending"
+    assert msgs[0]["retry_count"] == 0
+
+
+def test_enqueue_raises_on_disk_full(tmp_path, monkeypatch):
+    """F-MQ-189-14: enqueue catches OSError (ENOSPC) and writes to DLQ."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    # Monkeypatch _write_topic_atomic to raise ENOSPC
+    import errno
+    def boom(topic, msgs):
+        raise OSError(errno.ENOSPC, "No space left on device")
+    monkeypatch.setattr(mq, "_write_topic_atomic", boom)
+    mq.enqueue("t", {"x": 1})  # should NOT raise (caught, written to DLQ)
+    dlq = open(mq._dlq_path()).read()
+    assert "StorageError" in dlq
+
+
+def test_lock_per_topic_no_global_contention(tmp_path, monkeypatch):
+    """F-MQ-189-15: lock on topic A does not block topic B (verify R110-188 fix)."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    import threading
+    barrier = threading.Barrier(2)
+    def hold_lock_a():
+        with mq._TopicLock("a"):
+            barrier.wait()  # hold while B tries
+    def consume_b():
+        barrier.wait()
+        mq.consume("b", timeout_sec=1)  # should NOT block
+    t1 = threading.Thread(target=hold_lock_a)
+    t2 = threading.Thread(target=consume_b)
+    t1.start(); t2.start()
+    t1.join(timeout=3); t2.join(timeout=3)
+    assert not t1.is_alive() and not t2.is_alive()

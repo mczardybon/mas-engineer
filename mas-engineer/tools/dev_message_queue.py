@@ -270,6 +270,12 @@ def _write_topic_atomic(topic: str, msgs: list) -> None:
 
 # ─── Public API: enqueue ─────────────────────────────────────────
 
+class QueueFullError(Exception):
+    """Raised when enqueue() would exceed MAS_MQ_MAX_DEPTH_PER_TOPIC
+    (F-MQ-189-1: bounded queue / backpressure)."""
+    pass
+
+
 def enqueue(topic: str, payload: dict, *,
             retry_policy: Optional[dict] = None,
             idempotency_key: Optional[str] = None,
@@ -291,9 +297,27 @@ def enqueue(topic: str, payload: dict, *,
                         retry_policy=retry_policy,
                         idempotency_key=idempotency_key,
                         request_id=request_id)
+        # F-MQ-189-1: bounded queue (backpressure).  Raise QueueFullError
+        # when the topic would exceed MAS_MQ_MAX_DEPTH_PER_TOPIC.
+        max_depth = int(os.environ.get("MAS_MQ_MAX_DEPTH_PER_TOPIC", "100000"))
+        existing = _read_topic(topic, include_in_flight=False)
+        if len(existing) >= max_depth:
+            raise QueueFullError(
+                f"topic {topic!r} depth {len(existing)} >= MAX_DEPTH {max_depth}")
         msgs = _read_topic(topic)
         msgs.append(msg)
-        _write_topic_atomic(topic, msgs)
+        # F-MQ-189-14: disk-full / read-only / IO-error handling.  On
+        # OSError (ENOSPC, EROFS, EIO) the message is preserved in the
+        # DLQ with last_error_class="StorageError" instead of being lost.
+        try:
+            _write_topic_atomic(topic, msgs)
+        except OSError as e:
+            msg["status"] = "failed"
+            msg["last_error"] = f"storage: {e}"
+            msg["last_error_class"] = "StorageError"
+            with open(_dlq_path(), "a") as f:
+                fcntl.flock(f, fcntl.LOCK_EX)
+                f.write(json.dumps(msg, ensure_ascii=False) + "\n")
     return msg["msg_id"]
 
 
@@ -425,6 +449,121 @@ def nack(msg_id: str, reason: str) -> bool:
             m["consumer_id"] = None
         _write_topic_atomic(topic, msgs)
     return True
+
+
+# ─── Public API: requeue (F-MQ-189-3) ────────────────────────────
+
+def _read_completed(topic: str) -> list:
+    """Read all archived (done) messages for a topic."""
+    path = _topic_path(topic, completed=True)
+    if not path.exists():
+        return []
+    msgs = []
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                msgs.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return msgs
+
+
+def _write_completed_atomic(topic: str, msgs: list) -> None:
+    """Atomic write of the completed archive for a topic."""
+    path = _topic_path(topic, completed=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp, "w") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        for m in msgs:
+            f.write(json.dumps(m, ensure_ascii=False) + "\n")
+    os.replace(tmp, path)
+
+
+def _read_dlq_entries() -> list:
+    """Read all DLQ entries (list of dicts)."""
+    p = _dlq_path()
+    if not p.exists():
+        return []
+    entries = []
+    with open(p) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return entries
+
+
+def _rewrite_dlq(entries: list) -> None:
+    """Atomically rewrite the DLQ file with the given entries."""
+    p = _dlq_path()
+    tmp = p.with_suffix(p.suffix + ".tmp")
+    with open(tmp, "w") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        for e in entries:
+            f.write(json.dumps(e, ensure_ascii=False) + "\n")
+    os.replace(tmp, p)
+
+
+def requeue(msg_id: str, delay_sec: float = 0.0) -> bool:
+    """Re-queue a done or dlq message: set back to pending, reset
+    retry_count, optionally delay via next_retry_at.
+
+    F-MQ-189-3: done messages are moved back from the completed
+    archive into the live topic; dlq messages are re-enqueued from
+    the DLQ.  Returns True on success, False if not found."""
+    # 1. Search completed archives (done messages)
+    root = _mq_root()
+    if root.exists():
+        for ndjson in root.glob("*.completed.ndjson"):
+            topic = ndjson.name[: -len(".completed.ndjson")]
+            with _TopicLock(topic):
+                msgs = _read_completed(topic)
+                for i, m in enumerate(msgs):
+                    if m.get("msg_id") != msg_id:
+                        continue
+                    if m.get("status") not in ("done", "dlq"):
+                        continue
+                    m["status"] = "pending"
+                    m["retry_count"] = 0
+                    m["consumer_id"] = None
+                    m["in_flight_at"] = None
+                    m["acked_at"] = None
+                    m["dlq_at"] = None
+                    m["last_error"] = None
+                    if delay_sec > 0:
+                        m["next_retry_at"] = datetime.fromtimestamp(
+                            datetime.now(timezone.utc).timestamp() + delay_sec,
+                            tz=timezone.utc).isoformat()
+                    else:
+                        m["next_retry_at"] = None
+                    msgs.pop(i)
+                    _write_completed_atomic(topic, msgs)
+                    live = _read_topic(topic)
+                    live.append(m)
+                    _write_topic_atomic(topic, live)
+                    return True
+    # 2. Search DLQ (dlq messages)
+    entries = _read_dlq_entries()
+    for i, e in enumerate(entries):
+        if e.get("msg_id") != msg_id:
+            continue
+        t = e.get("original_topic") or e.get("topic")
+        if not t:
+            continue
+        enqueue(t, e.get("payload", {}), retry_policy={
+            "max": e.get("max_retries", 3),
+            "backoff": e.get("backoff_schedule", [1, 2, 4, 8])})
+        entries.pop(i)
+        _rewrite_dlq(entries)
+        return True
+    return False
 
 
 # ─── Public API: depth / stats / replay ──────────────────────────
@@ -583,6 +722,44 @@ def gc_stale_in_flight(max_age_sec: float = 300.0) -> int:
             if changed:
                 _write_topic_atomic(topic, msgs)
     return recovered
+
+
+def _gc_old_pending(max_age_sec: float = 86400.0) -> int:
+    """Move pending msgs older than max_age_sec to DLQ.  Returns count
+    moved.  Default 24h TTL (F-MQ-189-2).  Sweeps every topic."""
+    moved = 0
+    if not _mq_root().exists():
+        return 0
+    now = datetime.now(timezone.utc)
+    for ndjson in _mq_root().glob("*.ndjson"):
+        if ndjson.name.startswith("_") or ndjson.name == "signals_dlq.ndjson":
+            continue
+        if ndjson.name.endswith(".completed.ndjson"):
+            continue
+        topic = ndjson.name[: -len(".ndjson")]
+        with _TopicLock(topic):
+            msgs = _read_topic(topic, include_in_flight=False)
+            keep = []
+            for m in msgs:
+                enq = _parse_iso(m.get("enqueued_at", ""))
+                if (m.get("status") == "pending" and enq
+                        and (now - enq).total_seconds() > max_age_sec):
+                    # TTL expired → DLQ
+                    m["status"] = "dlq"
+                    m["dlq_at"] = _now_iso()
+                    m["last_error"] = (
+                        f"ttl-expired: age={(now - enq).total_seconds():.0f}s")
+                    m["last_error_class"] = "TTLExpired"
+                    m["original_topic"] = m.get("topic") or topic
+                    with open(_dlq_path(), "a") as f:
+                        fcntl.flock(f, fcntl.LOCK_EX)
+                        f.write(json.dumps(m, ensure_ascii=False) + "\n")
+                    moved += 1
+                else:
+                    keep.append(m)
+            if len(keep) != len(msgs):
+                _write_topic_atomic(topic, keep)
+    return moved
 
 
 # ─── CLI ─────────────────────────────────────────────────────────
