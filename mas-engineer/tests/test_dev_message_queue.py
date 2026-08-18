@@ -615,3 +615,67 @@ def test_compact_completed_archives_full_file(tmp_path, monkeypatch):
     assert ok
     archives = list(tmp_path.glob("t.*.completed.ndjson"))
     assert len(archives) == 1
+
+
+def test_schema_version_set_on_new_msgs(tmp_path, monkeypatch):
+    """F-MQ-189-6: every new msg has schema_version=1."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    mq.enqueue("t", {"x": 1})
+    msgs = mq._read_topic("t")
+    assert msgs[0]["schema_version"] == 1
+
+
+def test_idempotency_index_bounded(tmp_path, monkeypatch):
+    """F-MQ-189-7: _IdempotencyIndex evicts oldest when full."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    idx = mq._IdempotencyIndex(max_size=3)
+    for i in range(5):
+        idx.add(f"k{i}", f"m{i}")
+    assert idx.get("k0") is None  # evicted
+    assert idx.get("k4") == "m4"
+
+
+def test_metrics_prometheus_format(tmp_path, monkeypatch):
+    """F-MQ-189-8: metrics_prometheus returns valid textfile format."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    mq.enqueue("t", {"x": 1})
+    out = mq.metrics_prometheus()
+    assert "mq_depth" in out
+    assert 'topic="t"' in out
+    assert "mq_dlq_total" in out
+
+
+def test_backoff_jitter_adds_randomness(tmp_path, monkeypatch):
+    """F-MQ-189-9: _next_retry_delay returns values in [0, expo]."""
+    base = 10.0
+    delays = [mq._next_retry_delay(base, 3) for _ in range(20)]
+    assert all(0 <= d <= base * 2**3 for d in delays)
+    # Should have variance (not all the same)
+    assert len(set(delays)) > 1
+
+
+def test_dlq_error_classification(tmp_path, monkeypatch):
+    """F-MQ-189-12: last_error_class set in DLQ entry."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    mq.enqueue("t", {"x": 1})
+    m = mq.consume("t", timeout_sec=1)
+    mq.nack(m["msg_id"], reason=ValueError("bad payload"))
+    dlq_content = open(mq._dlq_path()).read()
+    assert "last_error_class" in dlq_content
+    assert "Value" in dlq_content  # "ValueError" → "Value"
+
+
+def test_retry_count_capped_at_int32_max(tmp_path, monkeypatch):
+    """F-MQ-189-13: retry_count never exceeds 2^31 - 1."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    m = mq.enqueue("t", {"x": 1})
+    msgs = mq._read_topic("t")
+    msgs[0]["retry_count"] = 2**31 - 2
+    mq._write_topic_atomic("t", msgs)
+    m2 = mq.consume("t", timeout_sec=1)
+    # Simulate many nacks
+    for _ in range(3):
+        mq.nack(m2["msg_id"], reason="x")
+    msgs2 = mq._read_topic("t")
+    # Should be capped
+    assert all(mm.get("retry_count", 0) <= 2**31 - 1 for mm in msgs2)

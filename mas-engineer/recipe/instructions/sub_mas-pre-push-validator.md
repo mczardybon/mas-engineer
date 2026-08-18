@@ -23,7 +23,7 @@ everything is healthy.
 
 ## Procedure VALIDATE
 
-Run the following 18 checks IN ORDER. Stop at the first failure if a hard
+Run the following 21 checks IN ORDER. Stop at the first failure if a hard
 block is detected, but always collect all warnings.
 
 ### Check 0: Commit-body disclosure audit (NEW v2.1.0, R110-56)
@@ -626,7 +626,7 @@ data:
     ok: <bool>
     blocked_reasons: [<string>, ...]
     warnings: [<string>, ...]
-  checks_run: 13
+  checks_run: 21
   checks_passed: <int>
   checks_failed: <int>
   timestamp: <ISO-8601>
@@ -973,11 +973,71 @@ echo "  ✅ Check 19 passed: MQ semantic hardening markers present (in_flight_at
 
 **Reference:** R110-188 (MQ Semantic Hardening directive).
 
+### Check 20: MQ hardening P2 markers (NEW v2.6.0, R110-189)
+
+**Goal:** tools/dev_message_queue.py must contain the 15 R110-189 MQ
+hardening markers (F-MQ-189-1..15). Prevents the 15 hardening P2/P3
+defects from regressing after they are fixed.
+
+**Idempotency:** If `check_20_mq_hardening` already appears in this
+file, skip the insert and keep the existing block. Detection via
+`grep -q "check_20_mq_hardening"`.
+
+```bash
+# Check 20: MQ hardening P2 markers (R110-189)
+echo "🔍 Check 20: MQ hardening P2 markers (R110-189)"
+MQ189_FAIL=0
+MQ189_MARKERS=(
+  "class QueueFullError"          # F-MQ-189-1
+  "_gc_old_pending"               # F-MQ-189-2
+  "def requeue("                  # F-MQ-189-3
+  "_lag_distribution"             # F-MQ-189-4
+  "def replay_dlq("               # F-MQ-189-5
+  "_SCHEMA_VERSION"               # F-MQ-189-6
+  "_IdempotencyIndex"             # F-MQ-189-7
+  "metrics_prometheus"            # F-MQ-189-8
+  "_next_retry_delay"             # F-MQ-189-9
+  "def list_topics("              # F-MQ-189-10
+  "def compact_completed("        # F-MQ-189-11
+  "_classify_error"               # F-MQ-189-12
+  "StorageError"                  # F-MQ-189-14
+  "MAS_MQ_MAX_DEPTH_PER_TOPIC"    # F-MQ-189-1
+  'min(int(m.get("retry_count"'   # F-MQ-189-13
+)
+for marker in "${MQ189_MARKERS[@]}"; do
+    HITS=$(grep -c "$marker" tools/dev_message_queue.py || true)
+    if [ "$HITS" -lt 1 ]; then
+        echo "  ❌ BLOCK: Check 20 — marker '$marker' expected ≥1 hit, got 0 (R110-189)"
+        MQ189_FAIL=1
+    fi
+done
+if [ "$MQ189_FAIL" -ne 0 ]; then
+    echo "     Fix: re-apply R110-189 directive (F-MQ-189-1..15) to tools/dev_message_queue.py"
+    exit 1
+fi
+echo "  ✅ Check 20 passed: 15/15 MQ hardening P2 markers present"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 20: MQ hardening P2 markers (R110-189)
+  ✅ Check 20 passed: 15/15 MQ hardening P2 markers present
+```
+
+**Output block on BLOCK:**
+```
+🔍 Check 20: MQ hardening P2 markers (R110-189)
+  ❌ BLOCK: Check 20 — marker 'class QueueFullError' expected ≥1 hit, got 0 (R110-189)
+     Fix: re-apply R110-189 directive (F-MQ-189-1..15) to tools/dev_message_queue.py
+```
+
+**Reference:** R110-189 (MQ Hardening Phase 2 directive).
+
 ## Boundaries
 
 - ⛔ NEVER modify any source file — this agent is read-only
 - ⛔ NEVER run `git push` itself — only validate
-- ⛔ NEVER skip a check — all 19 must run (Check 0 + Checks 1-15 + Check 16+ + Check 17 + Check 18 + Check 19)
+- ⛔ NEVER skip a check — all 21 must run (Check 0 + Checks 1-15 + Check 16+ + Check 17 + Check 18 + Check 19 + Check 20)
 - ⛔ Max 300s timeout total (5 minutes)
 
 **R01 NON-INTERACTIVE BYPASS (current implementation):** R01

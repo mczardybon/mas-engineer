@@ -1274,8 +1274,11 @@ if any(a == '--publish' or a.startswith('--publish=') for a in sys.argv):
         'findings_by_severity': dict(by_sev),
         'findings_by_type': dict(by_type),
         # only ship the high+medium findings inline; low-severity are counted but not listed
+        # (R110-191 fix: real finding keys are 'file'/'issue', not 'location'/'description' —
+        #  ship both so consumers using either spec work; pre-existing since R110-165 266ceb7)
         'findings_top': [
-            {k: f[k] for k in ('type', 'severity', 'location', 'description')}
+            {k: f[k] for k in ('type', 'severity', 'file', 'issue')
+             if k in f} | {'location': f['file'], 'description': f['issue']}
             for f in findings
             if f.get('severity') in ('high', 'blocker')
         ][:20],

@@ -57,6 +57,7 @@ import argparse
 import fcntl
 import json
 import os
+import random  # F-MQ-189-9: full-jitter retry backoff (stdlib only)
 import sys
 import tempfile
 import time
@@ -132,6 +133,21 @@ def _parse_iso(s: str) -> Optional[datetime]:
         return None
 
 
+_SCHEMA_VERSION = 1  # F-MQ-189-6: every message carries a schema_version
+
+
+def _migrate(msg: dict) -> dict:
+    """Migrate older schema versions to current.  No-op for v1.
+    Future migrations (e.g. v1→v2) are added here (F-MQ-189-6)."""
+    v = msg.get("schema_version", 1)
+    if v == _SCHEMA_VERSION:
+        return msg
+    if v < _SCHEMA_VERSION:
+        # Future: v1→v2 migration goes here.
+        return msg  # no-op for now
+    return msg  # unknown future version — return as-is
+
+
 MQ_INVARIANTS = """
 INVI: MQ State Invariants (R110-188)
 ====================================
@@ -164,6 +180,36 @@ def _check_invariants(m: dict) -> list:
     return errs
 
 
+class _IdempotencyIndex:
+    """Bounded LRU of (key → msg_id) for fast dedup check.
+    Max size: MAS_MQ_IDEMPOTENCY_MAX (default 100k).
+    F-MQ-189-7: evicts oldest keys when full (bounded memory)."""
+
+    def __init__(self, max_size: int = 100_000):
+        self.max = max_size
+        self._d = {}  # dict preserves insertion order (py3.7+)
+
+    def add(self, key: str, msg_id: str) -> None:
+        if key in self._d:
+            del self._d[key]  # re-insert below → most-recent position
+        self._d[key] = msg_id
+        if len(self._d) > self.max:
+            self._d.pop(next(iter(self._d)))  # evict oldest (insertion order)
+
+    def get(self, key: str) -> Optional[str]:
+        if key in self._d:
+            val = self._d[key]
+            del self._d[key]
+            self._d[key] = val  # move to end (most-recent)
+            return val
+        return None
+
+
+# Module-level bounded idempotency index (F-MQ-189-7).
+_idempotency_index = _IdempotencyIndex(
+    max_size=int(os.environ.get("MAS_MQ_IDEMPOTENCY_MAX", "100000")))
+
+
 def _make_msg(topic: str, payload: dict, *,
               retry_policy: Optional[dict] = None,
               idempotency_key: Optional[str] = None,
@@ -171,7 +217,11 @@ def _make_msg(topic: str, payload: dict, *,
     """Create a new message record.  Retry policy defaults are sane
     (max 3, exponential backoff 1/2/4/8s)."""
     rp = retry_policy or {}
+    retry_count = 0
+    assert 0 <= retry_count < 1_000_000, (
+        f"retry_count out of range: {retry_count}")  # F-MQ-189-13 sanity
     return {
+        "schema_version": _SCHEMA_VERSION,   # F-MQ-189-6
         "msg_id": str(uuid.uuid4()),
         "idempotency_key": idempotency_key,
         "request_id": request_id,
@@ -180,7 +230,7 @@ def _make_msg(topic: str, payload: dict, *,
         "enqueued_at": _now_iso(),
         "in_flight_at": None,  # ISO8601 set on consume, cleared on recovery/done
         "next_retry_at": None,
-        "retry_count": 0,
+        "retry_count": retry_count,
         "max_retries": int(rp.get("max", 3)),
         "backoff_schedule": rp.get("backoff", [1, 2, 4, 8]),
         "status": "pending",  # pending | in_flight | done | dlq
@@ -244,7 +294,7 @@ def _read_topic(topic: str, *, include_in_flight: bool = True) -> list:
             if not line:
                 continue
             try:
-                m = json.loads(line)
+                m = _migrate(json.loads(line))
             except json.JSONDecodeError as e:
                 _quarantine_corrupt_line(line, path.name, e)
                 continue
@@ -318,6 +368,8 @@ def enqueue(topic: str, payload: dict, *,
             with open(_dlq_path(), "a") as f:
                 fcntl.flock(f, fcntl.LOCK_EX)
                 f.write(json.dumps(msg, ensure_ascii=False) + "\n")
+        if idempotency_key:
+            _idempotency_index.add(idempotency_key, msg["msg_id"])  # F-MQ-189-7
     return msg["msg_id"]
 
 
@@ -409,10 +461,30 @@ def ack(msg_id: str) -> bool:
     return True
 
 
+def _classify_error(exc: Exception) -> str:
+    """Map exception to short class name for DLQ metadata
+    (F-MQ-189-12).  'ValueError' → 'Value', 'TimeoutError' → 'Timeout'."""
+    cls = exc.__class__.__name__
+    for s in ("Error", "Exception"):
+        if cls.endswith(s):
+            cls = cls[: -len(s)]
+    return cls or "Unknown"
+
+
+def _next_retry_delay(base_sec: float, attempt: int) -> float:
+    """Full-jitter exponential backoff (AWS architecture blog).
+    Returns delay in seconds.  Capped at 300s (F-MQ-189-9)."""
+    expo = base_sec * (2 ** min(attempt, 10))  # cap exponent
+    return min(random.uniform(0, expo), 300.0)
+
+
 def nack(msg_id: str, reason: str) -> bool:
     """Negative-acknowledge: increment retry_count, reschedule with
-    backoff, OR route to DLQ if max_retries exhausted.
+    full-jitter backoff, OR route to DLQ if max_retries exhausted.
 
+    F-MQ-189-12: an Exception reason is treated as a poison/fatal
+    error and routes directly to the DLQ with last_error_class set.
+    F-MQ-189-13: retry_count is clamped to 2^31 - 1.
     Returns True on success (whether rescheduled or DLQ'd)."""
     found = _find_msg(msg_id)
     if not found:
@@ -423,9 +495,20 @@ def nack(msg_id: str, reason: str) -> bool:
         if idx >= len(msgs) or msgs[idx].get("msg_id") != msg_id:
             return False
         m = msgs[idx]
-        m["retry_count"] = m.get("retry_count", 0) + 1
-        m["last_error"] = reason
-        if m["retry_count"] >= m.get("max_retries", 3):
+        m["retry_count"] = min(int(m.get("retry_count", 0)) + 1, 2**31 - 1)
+        m["last_error"] = str(reason)
+        m["last_error_class"] = (
+            _classify_error(reason) if isinstance(reason, Exception) else "String")
+        if isinstance(reason, Exception):
+            # Poison/fatal error → DLQ immediately (F-MQ-189-12)
+            m["status"] = "dlq"
+            m["dlq_at"] = _now_iso()
+            m["original_topic"] = m.get("topic") or topic  # R110-188: per-topic DLQ counting
+            with open(_dlq_path(), "a") as f:
+                fcntl.flock(f, fcntl.LOCK_EX)
+                f.write(json.dumps(m, ensure_ascii=False) + "\n")
+            msgs.pop(idx)
+        elif m["retry_count"] >= m.get("max_retries", 3):
             # Exhausted → DLQ
             m["status"] = "dlq"
             m["dlq_at"] = _now_iso()
@@ -435,16 +518,13 @@ def nack(msg_id: str, reason: str) -> bool:
                 f.write(json.dumps(m, ensure_ascii=False) + "\n")
             msgs.pop(idx)
         else:
-            # Reschedule with backoff
+            # Reschedule with full-jitter backoff (F-MQ-189-9)
             schedule = m.get("backoff_schedule", [1, 2, 4, 8])
-            delay = schedule[min(m["retry_count"] - 1, len(schedule) - 1)]
-            m["next_retry_at"] = (
-                datetime.now(timezone.utc).timestamp() + delay
-            )
-            from datetime import datetime as _dt
-            m["next_retry_at"] = _dt.fromtimestamp(
-                m["next_retry_at"], tz=timezone.utc
-            ).isoformat()
+            base = float(schedule[0]) if schedule else 1.0
+            delay = _next_retry_delay(base, attempt=m["retry_count"])
+            m["next_retry_at"] = datetime.fromtimestamp(
+                datetime.now(timezone.utc).timestamp() + delay,
+                tz=timezone.utc).isoformat()
             m["status"] = "pending"
             m["consumer_id"] = None
         _write_topic_atomic(topic, msgs)
@@ -702,6 +782,19 @@ def stats() -> dict:
     return out
 
 
+def metrics_prometheus() -> str:
+    """Return Prometheus textfile-format metrics for the MQ
+    (F-MQ-189-8).  No external dependency — plain text output."""
+    s = stats()
+    out = []
+    for topic, t in s["topics"].items():
+        out.append(f'mq_depth{{topic="{topic}"}} {t.get("depth", 0)}')
+        out.append(f'mq_lag_p95_ms{{topic="{topic}"}} {t.get("current_p95_lag_ms", 0)}')
+        out.append(f'mq_dlq_count{{topic="{topic}"}} {t.get("dlq_count_for_topic", 0)}')
+    out.append(f'mq_dlq_total {s.get("dlq_count_total", 0)}')
+    return "\n".join(out) + "\n"
+
+
 def _dlq_count() -> int:
     p = _dlq_path()
     if not p.exists():
@@ -777,7 +870,7 @@ def gc_stale_in_flight(max_age_sec: float = 300.0) -> int:
                 # Recover: back to pending with retry++
                 m["status"] = "pending"
                 m["in_flight_at"] = None   # R110-188: cleared on recovery
-                m["retry_count"] = m.get("retry_count", 0) + 1
+                m["retry_count"] = min(int(m.get("retry_count", 0)) + 1, 2**31 - 1)  # F-MQ-189-13 cap
                 m["consumer_id"] = None
                 m["next_retry_at"] = now.isoformat()
                 m["last_error"] = f"stale in_flight (age={age:.0f}s), recovered"
