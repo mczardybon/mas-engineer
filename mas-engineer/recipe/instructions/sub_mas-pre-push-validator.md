@@ -23,7 +23,7 @@ everything is healthy.
 
 ## Procedure VALIDATE
 
-Run the following 21 checks IN ORDER. Stop at the first failure if a hard
+Run the following 22 checks IN ORDER. Stop at the first failure if a hard
 block is detected, but always collect all warnings.
 
 ### Check 0: Commit-body disclosure audit (NEW v2.1.0, R110-56)
