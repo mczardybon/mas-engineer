@@ -113,7 +113,9 @@ invocation) — history is preserved, never overwritten.
 
 **🚨 NEW IN IM-009 (parity with im-finder): I write patches.yaml AUTOMATICALLY without R01 gate. 🚨**
 
-After STEP 1 (drafting all patches) and STEP 1.5 (L01 check), I write patches.yaml IMMEDIATELY:
+After STEP 1 (drafting all patches) and STEP 1.5 (L01 check), I write patches.yaml IMMEDIATELY.
+
+**R-212 (Q2):** emit via `yaml.safe_dump(default_flow_style=False, sort_keys=False)` and round-trip validate (`yaml.safe_load` on own output) BEFORE writing — NO manual YAML emission (manual quoting repeatedly required quote-repair before safe_load passed, wasting turns). If the round-trip assert fails, fix `patches_dict` first, do NOT write.
 
 ```python
 import yaml
@@ -132,9 +134,15 @@ patches_dict = {
         "skipped": <list of skipped findings with verdict reason>
     }
 }
+# Serialize via yaml.safe_dump (R-212: NO manual YAML emission — manual quoting
+# repeatedly forced quote-repair before yaml.safe_load passed, wasting turns)
+patches_yaml_text = yaml.safe_dump(patches_dict, default_flow_style=False, sort_keys=False)
+# Round-trip validate BEFORE writing: yaml.safe_load on own output must pass AND match
+roundtrip = yaml.safe_load(patches_yaml_text)
+assert roundtrip == patches_dict, "round-trip mismatch — fix patches_dict before writing"
 # Write the file
 with open('.mase/pipeline/patches.yaml', 'w') as f:
-    yaml.safe_dump(patches_dict, f, default_flow_style=False, sort_keys=False)
+    f.write(patches_yaml_text)
 print(f"WRITTEN: .mase/pipeline/patches.yaml with {len(patches)} patches ({len(skipped)} skipped)")
 ```
 

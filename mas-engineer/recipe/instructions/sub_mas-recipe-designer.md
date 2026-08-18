@@ -64,10 +64,10 @@ agent_intake:
      * Tasks (1 block per task)
      * Output schema (yaml)
      * Edge cases (5+ typical errors)
-   - prompt: "{emoji} {NAME_UPPER} (v1.0.0)\n {TASKS_LIST}\n settings: timeout={N}, max_steps={M}"
+   - prompt: "{emoji} {NAME_UPPER} (v1.0.0)\n {TASKS_LIST}\n settings: timeout={N}, max_turns={M}"
    - settings:
      * timeout: 60-300
-     * max_steps: 15-30
+     * max_turns: 30-50
      * goose_provider: deepseek
      * goose_model: deepseek-v4-flash
 3. write(recipe/sub/sub_{project}-{name}.yaml, yaml_content)
