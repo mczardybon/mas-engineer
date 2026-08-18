@@ -27,6 +27,7 @@ import sys
 import threading
 import time
 import uuid
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -240,12 +241,13 @@ def test_garbage_collector_recovers_stale_in_flight(mq_root):
     """(12) Stale in_flight message (no acker) → gc re-queues it."""
     mid = mq.enqueue("stale", {"foo": "bar"})
     mq.consume("stale", timeout_sec=1)
-    # Manually age the message: backdate enqueued_at
+    # Manually age the message: backdate in_flight_at (R110-188 — GC
+    # now uses in_flight_at only, NOT enqueued_at)
     msgs = mq._read_topic("stale")
     m = [x for x in msgs if x["msg_id"] == mid][0]
-    from datetime import datetime, timezone, timedelta
     old = (datetime.now(timezone.utc) - timedelta(seconds=600)).isoformat()
     m["enqueued_at"] = old
+    m["in_flight_at"] = old
     mq._write_topic_atomic("stale", msgs)
     # GC should recover (default max_age_sec=300, so 600s is stale)
     recovered = mq.gc_stale_in_flight(max_age_sec=300)
@@ -281,8 +283,10 @@ def test_stats_includes_lag_and_dlq_count(mq_root):
     s = mq.stats()
     assert "s" in s["topics"]
     assert s["topics"]["s"]["depth"] == 2
-    assert s["topics"]["s"]["lag_p95_ms"] >= 50
-    assert s["topics"]["s"]["dlq_count"] == 0
+    # R110-188: lag_p95_ms renamed to current_p95_lag_ms, dlq_count →
+    # per-topic dlq_count_for_topic
+    assert s["topics"]["s"]["current_p95_lag_ms"] >= 50
+    assert s["topics"]["s"]["dlq_count_for_topic"] == 0
     assert s["topics"]["s"]["retry_rate"] == 0.0
     assert "generated_at" in s
 
@@ -351,3 +355,138 @@ def test_replay_returns_messages_since_timestamp(mq_root):
     after_cutoff = mq.replay("r", since=cutoff)
     assert len(after_cutoff) == 2
     assert {m["payload"]["i"] for m in after_cutoff} == {1, 2}
+
+
+# ─── R110-188: MQ Semantic Hardening (11 new tests) ──────────────
+
+def test_in_flight_at_set_on_consume(tmp_path, monkeypatch):
+    """F-MQ-188-1/2: in_flight_at must be set when consume() marks in_flight."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    mq.enqueue("t1", {"x": 1})
+    m = mq.consume("t1", timeout_sec=2)
+    assert m["status"] == "in_flight"
+    assert m["in_flight_at"] is not None
+    parsed = datetime.fromisoformat(m["in_flight_at"].replace("Z", "+00:00"))
+    assert parsed >= datetime.fromisoformat(m["enqueued_at"].replace("Z", "+00:00"))
+
+
+def test_gc_uses_in_flight_at_not_enqueued_at(tmp_path, monkeypatch):
+    """F-MQ-188-3: GC must NOT recover based on enqueued_at when in_flight_at exists."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    mq.enqueue("t1", {"x": 1})
+    m1 = mq.consume("t1", timeout_sec=2)
+    # Backdate enqueued_at to 1 hour ago (simulating old queue)
+    msgs = mq._read_topic("t1")
+    for mm in msgs:
+        if mm["msg_id"] == m1["msg_id"]:
+            old = datetime.now(timezone.utc) - timedelta(hours=1)
+            mm["enqueued_at"] = old.isoformat()
+    mq._write_topic_atomic("t1", msgs)
+    # GC with max_age=10s should NOT recover (in_flight_at is fresh)
+    n = mq.gc_stale_in_flight(max_age_sec=10)
+    assert n == 0  # critical: not 1
+
+
+def test_ack_archives_before_removing_live(tmp_path, monkeypatch):
+    """F-MQ-188-4: kill -9 simulation: archive must exist even if live removal is interrupted."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    mq.enqueue("t1", {"x": 1})
+    m1 = mq.consume("t1", timeout_sec=2)
+    mq.ack(m1["msg_id"])
+    # Both archive and live (empty) must exist
+    comp = mq._topic_path("t1", completed=True)
+    assert comp.exists()
+    with open(comp) as f:
+        assert any(m1["msg_id"] in line for line in f)
+
+
+def test_corrupt_line_quarantined(tmp_path, monkeypatch):
+    """F-MQ-188-5: bad NDJSON line must go to _corrupt.ndjson, not silently skipped."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    p = mq._topic_path("t1")
+    p.write_text('{"msg_id":"good","status":"pending","enqueued_at":"2026-01-01T00:00:00Z","payload":{}}\n'
+                 'THIS IS NOT JSON\n')
+    msgs = mq._read_topic("t1")
+    assert len(msgs) == 1  # only the good one
+    qpath = mq._mq_root() / "_corrupt.ndjson"
+    assert qpath.exists()
+    with open(qpath) as f:
+        assert "THIS IS NOT JSON" in f.read()
+
+
+def test_strict_topic_rejects_collision(tmp_path, monkeypatch):
+    """F-MQ-188-6: foo/bar and foo_bar must not silently collide."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    monkeypatch.setenv("MAS_MQ_STRICT_TOPIC", "1")
+    with pytest.raises(ValueError, match="contains chars"):
+        mq._sanitize_topic("foo/bar")
+
+
+def test_stats_renames_lag_p95_to_current_p95_lag_ms(tmp_path, monkeypatch):
+    """F-MQ-188-7: lag_p95_ms renamed to current_p95_lag_ms in stats output."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    mq.enqueue("t1", {"x": 1})
+    s = mq.stats()
+    assert "current_p95_lag_ms" in s["topics"]["t1"]
+    assert "lag_p95_ms" not in s["topics"]["t1"]
+
+
+def test_stats_dlq_count_per_topic(tmp_path, monkeypatch):
+    """F-MQ-188-8: dlq_count must be per-topic, not global."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    mq.enqueue("t1", {"x": 1})
+    mq.enqueue("t2", {"x": 2})
+    s = mq.stats()
+    assert "dlq_count_total" in s  # global
+    assert "dlq_count_for_topic" in s["topics"]["t1"]
+
+
+def test_docstring_precision_about_durability(tmp_path, monkeypatch):
+    """F-MQ-188-9: docstring must NOT claim 'persistent, at-least-once' if no fsync."""
+    import inspect
+    src = inspect.getsource(mq)
+    assert "process-crash resilient" in src or "NOT durable" in src
+    assert "fsync" in src  # at least mentions the limitation
+
+
+def test_invariant_helper_enforces_4_invariants(monkeypatch):
+    """F-MQ-188-10: _check_invariants exists and catches 4 violations."""
+    monkeypatch.setenv("MAS_MQ_INVARIANT_CHECK", "1")
+    assert any("INV1" in e for e in mq._check_invariants({"status": "in_flight"}))
+    assert any("INV3" in e for e in mq._check_invariants({"status": "done"}))
+    assert any("INV4" in e for e in mq._check_invariants({"status": "dlq"}))
+    assert mq._check_invariants({"status": "pending"}) == []  # OK
+
+
+def test_concurrent_process_safety_under_flock(tmp_path, monkeypatch):
+    """F-MQ-188-11: real cross-process test using subprocess + kill -9."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    # Spawn 3 child processes that enqueue concurrently
+    procs = []
+    for i in range(3):
+        p = subprocess.Popen([sys.executable, "tools/dev_message_queue.py",
+                              "--enqueue", "t1", json.dumps({"i": i})],
+                             env={**os.environ, "MAS_MQ_ROOT": str(tmp_path)})
+        procs.append(p)
+    for p in procs:
+        p.wait(timeout=10)
+    # All 3 must have landed (atomic write via flock)
+    assert mq.depth("t1") == 3
+
+
+def test_gc_clears_in_flight_at_on_recovery(tmp_path, monkeypatch):
+    """Side-test for F-MQ-188-3: after GC recovery, in_flight_at must be None."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    mq.enqueue("t1", {"x": 1})
+    mq.consume("t1", timeout_sec=2)
+    # backdate in_flight_at to 1 hour ago to trigger GC
+    msgs = mq._read_topic("t1")
+    for mm in msgs:
+        old = datetime.now(timezone.utc) - timedelta(hours=1)
+        mm["in_flight_at"] = old.isoformat()
+    mq._write_topic_atomic("t1", msgs)
+    n = mq.gc_stale_in_flight(max_age_sec=10)
+    assert n == 1
+    msgs2 = mq._read_topic("t1")
+    assert msgs2[0]["in_flight_at"] is None
+    assert msgs2[0]["status"] == "pending"

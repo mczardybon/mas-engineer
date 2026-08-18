@@ -91,8 +91,8 @@ def _phase1_topics_summary(topics: dict) -> dict:
         entry = {
             "depth": int(info.get("depth", 0)),
             "completed_total": int(info.get("completed_total", 0)),
-            "lag_p95_ms": int(info.get("lag_p95_ms", 0)),
-            "dlq_count": int(info.get("dlq_count", 0)),
+            "lag_p95_ms": int(info.get("current_p95_lag_ms", 0)),
+            "dlq_count": int(info.get("dlq_count_for_topic", 0)),
             "last_msg": None,
         }
         # Try to surface the most recent message on the topic. We look
@@ -373,10 +373,17 @@ def generate_data(ws):
             mq_block['completed_total'] = sum(
                 t.get('completed_total', 0) for t in topics.values())
             mq_block['dlq_count'] = sum(
-                t.get('dlq_count', 0) for t in topics.values())
+                t.get('dlq_count_for_topic', 0) for t in topics.values())
+            # R110-188: mq.stats() renamed lag_p95_ms→current_p95_lag_ms
+            # and dlq_count→dlq_count_for_topic.  The dashboard keeps its
+            # own output contract (lag_p95_ms/dlq_count keys); mirror the
+            # new keys back so by_topic consumers keep working.
+            for _t in topics.values():
+                _t.setdefault("lag_p95_ms", _t.get("current_p95_lag_ms", 0))
+                _t.setdefault("dlq_count", _t.get("dlq_count_for_topic", 0))
             # Worst-case lag across topics
-            lags = [t.get('lag_p95_ms', 0) for t in topics.values()
-                    if t.get('lag_p95_ms', 0) > 0]
+            lags = [t.get('current_p95_lag_ms', 0) for t in topics.values()
+                    if t.get('current_p95_lag_ms', 0) > 0]
             mq_block['lag_p95_ms'] = max(lags) if lags else 0
             # Average retry rate across topics
             rates = [t.get('retry_rate', 0.0) for t in topics.values()]

@@ -2,12 +2,13 @@
 """dev_message_queue.py — File-Based Message Queue v1.0.0
 =========================================================
 
-A persistent, at-least-once, topic-based message queue for mas-engineer
-sub-recipes and workflows. Solves the "direct delegation becomes a
-bottleneck" problem (R110-153 design): parallel agents can enqueue
-signals / dispatches / results without blocking, and consumers
-(dashboard, signal-handler, recovery-loop) can pick them up
-asynchronously with retry, backoff, and DLQ semantics.
+A process-crash resilient file-backed message queue for mas-engineer
+sub-recipes and workflows.  NOTE: NOT durable across OS/hardware crash
+— no fsync is performed; data may be lost on power failure.  Solves the
+"direct delegation becomes a bottleneck" problem (R110-153 design):
+parallel agents can enqueue signals / dispatches / results without
+blocking, and consumers (dashboard, signal-handler, recovery-loop)
+can pick them up asynchronously with retry, backoff, and DLQ semantics.
 
 Design (R110-153):
   - File-based, no external broker (Redis/RabbitMQ not required)
@@ -17,7 +18,8 @@ Design (R110-153):
   - Dead-letter-queue (DLQ) for messages exceeding max_retries
   - Idempotency: enqueue with idempotency_key dedupes duplicates
   - File-locking (fcntl.flock) for concurrent-process safety
-  - Atomic writes (write to .tmp, then os.rename)
+  - Atomic writes (write to .tmp, then os.replace — rename is atomic,
+    but NO fsync: durability gap documented above)
 
 Public API:
   enqueue(topic, payload, *, retry_policy=None,
@@ -82,16 +84,28 @@ def _mq_root() -> Path:
     return p
 
 
+def _sanitize_topic(topic: str) -> str:
+    """Sanitize topic name.  If MAS_MQ_STRICT_TOPIC=1, raise on
+    collision-prone inputs (chars that would be replaced)."""
+    raw = topic
+    safe = "".join(c if c.isalnum() or c in "_-" else "_" for c in topic)
+    if os.environ.get("MAS_MQ_STRICT_TOPIC") == "1" and safe != raw:
+        raise ValueError(
+            f"topic {raw!r} contains chars that would be sanitized to "
+            f"{safe!r}. Use only [a-zA-Z0-9_-] or set MAS_MQ_STRICT_TOPIC=0.")
+    return safe
+
+
 def _topic_path(topic: str, *, completed: bool = False) -> Path:
     """NDJSON file for a topic.  `completed=True` → archive file."""
     suffix = ".completed.ndjson" if completed else ".ndjson"
     # Sanitize topic name: only [a-zA-Z0-9_-]
-    safe = "".join(c if c.isalnum() or c in "_-" else "_" for c in topic)
+    safe = _sanitize_topic(topic)
     return _mq_root() / f"{safe}{suffix}"
 
 
 def _lock_path(topic: str) -> Path:
-    safe = "".join(c if c.isalnum() or c in "_-" else "_" for c in topic)
+    safe = _sanitize_topic(topic)
     return _mq_root() / "_locks" / f"{safe}.lock"
 
 
@@ -118,6 +132,38 @@ def _parse_iso(s: str) -> Optional[datetime]:
         return None
 
 
+MQ_INVARIANTS = """
+INVI: MQ State Invariants (R110-188)
+====================================
+1. msg.status == "in_flight"  →  msg.in_flight_at is not None
+2. msg.in_flight_at          →  msg.in_flight_at >= msg.enqueued_at
+3. msg.status == "done"      →  msg.acked_at is not None
+4. msg.status == "dlq"       →  msg.last_error is not None
+
+Violation of any invariant = bug.  Enforced by _check_invariants()
+called from _read_topic() in DEBUG mode (set MAS_MQ_INVARIANT_CHECK=1).
+"""
+
+
+def _check_invariants(m: dict) -> list:
+    """Return list of invariant violation strings (empty = OK)."""
+    if os.environ.get("MAS_MQ_INVARIANT_CHECK") != "1":
+        return []
+    errs = []
+    status = m.get("status")
+    if status == "in_flight" and not m.get("in_flight_at"):
+        errs.append(f"INV1: in_flight without in_flight_at: {m.get('msg_id')}")
+    ifa = _parse_iso(m.get("in_flight_at") or "")
+    enq = _parse_iso(m.get("enqueued_at") or "")
+    if ifa and enq and ifa < enq:
+        errs.append(f"INV2: in_flight_at < enqueued_at: {m.get('msg_id')}")
+    if status == "done" and not m.get("acked_at"):
+        errs.append(f"INV3: done without acked_at: {m.get('msg_id')}")
+    if status == "dlq" and not m.get("last_error"):
+        errs.append(f"INV4: dlq without last_error: {m.get('msg_id')}")
+    return errs
+
+
 def _make_msg(topic: str, payload: dict, *,
               retry_policy: Optional[dict] = None,
               idempotency_key: Optional[str] = None,
@@ -132,6 +178,7 @@ def _make_msg(topic: str, payload: dict, *,
         "topic": topic,
         "payload": payload,
         "enqueued_at": _now_iso(),
+        "in_flight_at": None,  # ISO8601 set on consume, cleared on recovery/done
         "next_retry_at": None,
         "retry_count": 0,
         "max_retries": int(rp.get("max", 3)),
@@ -168,6 +215,21 @@ class _TopicLock:
 
 # ─── NDJSON I/O (with atomic-write) ──────────────────────────────
 
+def _quarantine_corrupt_line(raw_line: str, source_file: str, err: Exception) -> None:
+    """Move unparseable NDJSON line to .mase/mq/_corrupt.ndjson for
+    later audit.  Each entry: {ts, source, error, raw_line}."""
+    qpath = _mq_root() / "_corrupt.ndjson"
+    entry = {
+        "ts": _now_iso(),
+        "source": source_file,
+        "error": str(err),
+        "raw_line": raw_line[:500],  # truncate huge lines
+    }
+    with open(qpath, "a") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
 def _read_topic(topic: str, *, include_in_flight: bool = True) -> list:
     """Read all messages for a topic.  Atomic with respect to writers
     because the underlying NDJSON file is replaced (not appended-during-
@@ -183,8 +245,11 @@ def _read_topic(topic: str, *, include_in_flight: bool = True) -> list:
                 continue
             try:
                 m = json.loads(line)
-            except json.JSONDecodeError:
+            except json.JSONDecodeError as e:
+                _quarantine_corrupt_line(line, path.name, e)
                 continue
+            for _err in _check_invariants(m):
+                print(f"MQ-INVARIANT: {_err}", file=sys.stderr)
             if not include_in_flight and m.get("status") == "in_flight":
                 continue
             msgs.append(m)
@@ -259,6 +324,7 @@ def consume(topic: str, timeout_sec: float = 5.0, *,
                 # Mark in_flight
                 m["status"] = "in_flight"
                 m["consumer_id"] = consumer_id or f"anon-{os.getpid()}"
+                m["in_flight_at"] = _now_iso()   # R110-188: GC uses this, not enqueued_at
                 _write_topic_atomic(topic, msgs)
                 return m
         # No message available, sleep briefly before next attempt
@@ -290,8 +356,12 @@ def _find_msg(msg_id: str) -> Optional[tuple]:
 
 
 def ack(msg_id: str) -> bool:
-    """Acknowledge a message: remove from topic file, append to
-    `<topic>.completed.ndjson`.  Returns True on success."""
+    """Acknowledge a message: archive to `<topic>.completed.ndjson`
+    FIRST (crash-atomic), then remove from the live topic file.
+
+    R110-188 (F-MQ-188-4): the archive write happens before the live
+    removal, so a crash between the two steps cannot lose the message
+    — the completed file is the source of truth for "done"."""
     found = _find_msg(msg_id)
     if not found:
         return False
@@ -301,15 +371,17 @@ def ack(msg_id: str) -> bool:
         msgs = _read_topic(topic)
         if idx >= len(msgs) or msgs[idx].get("msg_id") != msg_id:
             return False
-        msgs.pop(idx)
-        _write_topic_atomic(topic, msgs)
-        # Archive
-        msg["status"] = "done"
-        msg["acked_at"] = _now_iso()
+        # STEP 1: archive (durable written first)
+        done_msg = dict(msgs[idx])
+        done_msg["status"] = "done"
+        done_msg["acked_at"] = _now_iso()
         comp_path = _topic_path(topic, completed=True)
         with open(comp_path, "a") as f:
             fcntl.flock(f, fcntl.LOCK_EX)
-            f.write(json.dumps(msg, ensure_ascii=False) + "\n")
+            f.write(json.dumps(done_msg, ensure_ascii=False) + "\n")
+        # STEP 2: remove from live (only after archive succeeded)
+        msgs.pop(idx)
+        _write_topic_atomic(topic, msgs)
     return True
 
 
@@ -333,6 +405,7 @@ def nack(msg_id: str, reason: str) -> bool:
             # Exhausted → DLQ
             m["status"] = "dlq"
             m["dlq_at"] = _now_iso()
+            m["original_topic"] = m.get("topic") or topic  # R110-188: per-topic DLQ counting
             with open(_dlq_path(), "a") as f:
                 fcntl.flock(f, fcntl.LOCK_EX)
                 f.write(json.dumps(m, ensure_ascii=False) + "\n")
@@ -373,9 +446,10 @@ def _lag_ms(msg: dict) -> Optional[int]:
 
 def stats() -> dict:
     """Aggregate stats across all topics.  Shape:
-        {"topics": {<topic>: {"depth": N, "lag_p95_ms": N, "dlq_count": N,
+        {"topics": {<topic>: {"depth": N, "current_p95_lag_ms": N,
+                               "dlq_count_for_topic": N,
                                "retry_rate": 0.0, "completed_total": N}},
-         "generated_at": ISO8601}
+         "dlq_count_total": N, "generated_at": ISO8601}
     """
     out = {"topics": {}, "generated_at": _now_iso()}
     if not _mq_root().exists():
@@ -414,11 +488,14 @@ def stats() -> dict:
         out["topics"][topic] = {
             "depth": sum(1 for m in live
                          if m.get("status") in ("pending", "in_flight")),
-            "lag_p95_ms": lag_p95,
-            "dlq_count": _dlq_count(),
+            "current_p95_lag_ms": lag_p95,   # R110-188: renamed (was lag_p95_ms)
+            "dlq_count_for_topic": _dlq_count_for_topic(topic),  # R110-188: per-topic
             "retry_rate": (retried / len(live)) if live else 0.0,
             "completed_total": completed_counts.get(topic, 0),
         }
+    # R110-188: global DLQ count moved to top-level
+    out["dlq_count_total"] = sum(
+        t.get("dlq_count_for_topic", 0) for t in out["topics"].values())
     return out
 
 
@@ -427,6 +504,24 @@ def _dlq_count() -> int:
     if not p.exists():
         return 0
     return sum(1 for _ in open(p))
+
+
+def _dlq_count_for_topic(topic: str) -> int:
+    """Count DLQ entries that originated from `topic`.
+    DLQ format: each line is {msg_id, original_topic, last_error, ...}."""
+    p = _dlq_path()
+    if not p.exists():
+        return 0
+    n = 0
+    with open(p) as f:
+        for line in f:
+            try:
+                d = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if d.get("original_topic", d.get("topic")) == topic:
+                n += 1
+    return n
 
 
 def replay(topic: str, since: Optional[str] = None) -> list:
@@ -467,15 +562,18 @@ def gc_stale_in_flight(max_age_sec: float = 300.0) -> int:
             for m in msgs:
                 if m.get("status") != "in_flight":
                     continue
-                # Heuristic: if no `in_flight_at` field, use enqueued_at
-                ref = _parse_iso(m.get("in_flight_at") or m.get("enqueued_at") or "")
+                # R110-188 (F-MQ-188-3): use ONLY in_flight_at — the
+                # enqueued_at fallback caused false-stale for messages
+                # a consumer had just picked up.
+                ref = _parse_iso(m.get("in_flight_at") or "")
                 if not ref:
-                    continue
+                    continue   # skip — invariant: in_flight must have in_flight_at
                 age = (now - ref).total_seconds()
                 if age < max_age_sec:
                     continue
                 # Recover: back to pending with retry++
                 m["status"] = "pending"
+                m["in_flight_at"] = None   # R110-188: cleared on recovery
                 m["retry_count"] = m.get("retry_count", 0) + 1
                 m["consumer_id"] = None
                 m["next_retry_at"] = now.isoformat()

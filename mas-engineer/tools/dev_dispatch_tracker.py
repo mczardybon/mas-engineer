@@ -229,7 +229,9 @@ def mq_stats():
     """MQ-side aggregate for the `dispatches` topic.  Returns:
         {"depth": N, "lag_p95_ms": N, "dlq_count": N, "retry_rate": 0.0,
          "completed_total": N}
-    Returns None if MQ is unavailable."""
+    R110-188: sources from the renamed MQ stats keys
+    (current_p95_lag_ms / dlq_count_for_topic); output keys kept for
+    backward compatibility.  Returns None if MQ is unavailable."""
     mq = _mq()
     if mq is None:
         return None
@@ -238,8 +240,8 @@ def mq_stats():
         topic_stats = all_stats.get("topics", {}).get(MQ_TOPIC, {})
         return {
             "depth": topic_stats.get("depth", 0),
-            "lag_p95_ms": topic_stats.get("lag_p95_ms", 0),
-            "dlq_count": topic_stats.get("dlq_count", 0),
+            "lag_p95_ms": topic_stats.get("current_p95_lag_ms", 0),
+            "dlq_count": topic_stats.get("dlq_count_for_topic", 0),
             "retry_rate": topic_stats.get("retry_rate", 0.0),
             "completed_total": topic_stats.get("completed_total", 0),
         }

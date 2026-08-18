@@ -912,11 +912,72 @@ echo "  ✅ Check 18 passed: test count-assertions match recipe count-declaratio
 
 **Reference:** R110-118 (DIREKTIVE 3), R110-109 (spec), R110-78 (PHASE 3 closure).
 
+### Check 19: MQ semantic hardening (NEW v2.5.0, R110-188)
+
+**Goal:** tools/dev_message_queue.py must contain the R110-188 semantic
+hardening markers (F-MQ-188-1..10). Prevents the 11 user-flagged MQ
+defects from regressing after they are fixed.
+
+**Idempotency:** If `check_19_mq_semantic` already appears in this
+file, skip the insert and keep the existing block. Detection via
+`grep -q "check_19_mq_semantic"`.
+
+```bash
+# Check 19: MQ semantic hardening (R110-188)
+echo "🔍 Check 19: MQ semantic hardening (R110-188)"
+MQ188_FAIL=0
+INFLIGHT_HITS=$(grep -c '"in_flight_at"' tools/dev_message_queue.py || true)
+QUAR_HITS=$(grep -c '_quarantine_corrupt_line' tools/dev_message_queue.py || true)
+P95_HITS=$(grep -c 'current_p95_lag_ms' tools/dev_message_queue.py || true)
+INV_HITS=$(grep -c 'MQ_INVARIANTS' tools/dev_message_queue.py || true)
+STRICT_HITS=$(grep -c 'MAS_MQ_STRICT_TOPIC' tools/dev_message_queue.py || true)
+if [ "$INFLIGHT_HITS" -lt 3 ]; then
+    echo "  ❌ BLOCK: Check 19 — 'in_flight_at' expected ≥3 hits, got $INFLIGHT_HITS (F-MQ-188-1/2/3)"
+    MQ188_FAIL=1
+fi
+if [ "$QUAR_HITS" -lt 2 ]; then
+    echo "  ❌ BLOCK: Check 19 — '_quarantine_corrupt_line' expected ≥2 hits, got $QUAR_HITS (F-MQ-188-5)"
+    MQ188_FAIL=1
+fi
+if [ "$P95_HITS" -lt 1 ]; then
+    echo "  ❌ BLOCK: Check 19 — 'current_p95_lag_ms' expected ≥1 hit, got $P95_HITS (F-MQ-188-7)"
+    MQ188_FAIL=1
+fi
+if [ "$INV_HITS" -lt 1 ]; then
+    echo "  ❌ BLOCK: Check 19 — 'MQ_INVARIANTS' expected ≥1 hit, got $INV_HITS (F-MQ-188-10)"
+    MQ188_FAIL=1
+fi
+if [ "$STRICT_HITS" -lt 1 ]; then
+    echo "  ❌ BLOCK: Check 19 — 'MAS_MQ_STRICT_TOPIC' expected ≥1 hit, got $STRICT_HITS (F-MQ-188-6)"
+    MQ188_FAIL=1
+fi
+if [ "$MQ188_FAIL" -ne 0 ]; then
+    echo "     Fix: re-apply R110-188 directive (F-MQ-188-1..10) to tools/dev_message_queue.py"
+    exit 1
+fi
+echo "  ✅ Check 19 passed: MQ semantic hardening markers present (in_flight_at=$INFLIGHT_HITS, quarantine=$QUAR_HITS, p95=$P95_HITS, invariants=$INV_HITS, strict=$STRICT_HITS)"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 19: MQ semantic hardening (R110-188)
+  ✅ Check 19 passed: MQ semantic hardening markers present
+```
+
+**Output block on BLOCK:**
+```
+🔍 Check 19: MQ semantic hardening (R110-188)
+  ❌ BLOCK: Check 19 — 'in_flight_at' expected ≥3 hits, got 1 (F-MQ-188-1/2/3)
+     Fix: re-apply R110-188 directive (F-MQ-188-1..10) to tools/dev_message_queue.py
+```
+
+**Reference:** R110-188 (MQ Semantic Hardening directive).
+
 ## Boundaries
 
 - ⛔ NEVER modify any source file — this agent is read-only
 - ⛔ NEVER run `git push` itself — only validate
-- ⛔ NEVER skip a check — all 18 must run (Check 0 + Checks 1-15 + Check 16+ + Check 17 + Check 18)
+- ⛔ NEVER skip a check — all 19 must run (Check 0 + Checks 1-15 + Check 16+ + Check 17 + Check 18 + Check 19)
 - ⛔ Max 300s timeout total (5 minutes)
 
 **R01 NON-INTERACTIVE BYPASS (current implementation):** R01
