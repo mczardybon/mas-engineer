@@ -562,3 +562,56 @@ def test_lock_per_topic_no_global_contention(tmp_path, monkeypatch):
     t1.start(); t2.start()
     t1.join(timeout=3); t2.join(timeout=3)
     assert not t1.is_alive() and not t2.is_alive()
+
+
+def test_stats_includes_lag_distribution(tmp_path, monkeypatch):
+    """F-MQ-189-4: stats() includes p50/p95/p99/max lag distribution."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    for i in range(20):
+        mq.enqueue("t", {"i": i})
+    s = mq.stats()
+    dist = s["topics"]["t"].get("lag_distribution_ms", {})
+    assert {"p50", "p95", "p99", "max"} <= dist.keys()
+    assert dist["max"] >= dist["p99"] >= dist["p95"] >= dist["p50"]
+
+
+def test_dlq_replay_and_purge(tmp_path, monkeypatch):
+    """F-MQ-189-5: replay_dlq + purge_dlq work as specified."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    # Force 3 msgs to DLQ
+    for i in range(3):
+        mq.enqueue("t", {"i": i})
+    mq._gc_old_pending(max_age_sec=0)  # immediately expire
+    n = mq.replay_dlq(topic="t", limit=2)
+    assert n == 2
+    assert mq.depth("t") == 2
+    purged = mq.purge_dlq(topic="t")
+    assert purged == 1
+
+
+def test_list_topics_returns_only_live_topics(tmp_path, monkeypatch):
+    """F-MQ-189-10: list_topics excludes .completed.ndjson and _corrupt.ndjson."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    mq.enqueue("a", {})
+    mq.enqueue("b", {})
+    topics = mq.list_topics()
+    assert "a" in topics and "b" in topics
+    assert not any(".completed" in t for t in topics)
+    assert not any(t == "_corrupt" for t in topics)
+
+
+def test_compact_completed_archives_full_file(tmp_path, monkeypatch):
+    """F-MQ-189-11: compact_completed creates <topic>.<date>.completed.ndjson."""
+    monkeypatch.setenv("MAS_MQ_ROOT", str(tmp_path))
+    mq.enqueue("t", {"x": 1})
+    m = mq.consume("t", timeout_sec=1)
+    mq.ack(m["msg_id"])
+    # Write 10 more done lines to push past max_lines
+    for i in range(10):
+        mq.enqueue("t", {"i": i})
+        m2 = mq.consume("t", timeout_sec=1)
+        mq.ack(m2["msg_id"])
+    ok = mq.compact_completed("t", max_lines=5, keep_recent=2)
+    assert ok
+    archives = list(tmp_path.glob("t.*.completed.ndjson"))
+    assert len(archives) == 1

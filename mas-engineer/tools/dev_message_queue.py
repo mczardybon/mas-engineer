@@ -566,6 +566,53 @@ def requeue(msg_id: str, delay_sec: float = 0.0) -> bool:
     return False
 
 
+def replay_dlq(topic: Optional[str] = None, limit: int = 100) -> int:
+    """Re-enqueue up to `limit` oldest DLQ messages matching `topic`
+    back to live (or all topics if topic is None).  Returns count.
+    Replayed entries are removed from the DLQ (F-MQ-189-5)."""
+    entries = _read_dlq_entries()
+    selected = [i for i, e in enumerate(entries)
+                if topic is None
+                or e.get("original_topic", e.get("topic")) == topic]
+    n = 0
+    for i in selected[:limit]:
+        e = entries[i]
+        t = e.get("original_topic") or e.get("topic")
+        if not t:
+            continue
+        enqueue(t, e.get("payload", {}), retry_policy={
+            "max": e.get("max_retries", 3),
+            "backoff": e.get("backoff_schedule", [1, 2, 4, 8])})
+        n += 1
+    if n:
+        keep = [e for j, e in enumerate(entries) if j not in selected[:limit]]
+        _rewrite_dlq(keep)
+    return n
+
+
+def purge_dlq(topic: Optional[str] = None,
+              older_than: Optional[str] = None) -> int:
+    """Permanently delete DLQ entries matching the filter.  Returns
+    count purged (F-MQ-189-5)."""
+    entries = _read_dlq_entries()
+    cutoff = _parse_iso(older_than) if older_than else None
+    keep = []
+    purged = 0
+    for e in entries:
+        if topic is not None and e.get("original_topic", e.get("topic")) != topic:
+            keep.append(e)
+            continue
+        if cutoff:
+            dlq_at = _parse_iso(e.get("dlq_at") or "")
+            if not dlq_at or dlq_at >= cutoff:
+                keep.append(e)
+                continue
+        purged += 1
+    if purged:
+        _rewrite_dlq(keep)
+    return purged
+
+
 # ─── Public API: depth / stats / replay ──────────────────────────
 
 def depth(topic: str) -> int:
@@ -583,9 +630,25 @@ def _lag_ms(msg: dict) -> Optional[int]:
     return int((datetime.now(timezone.utc) - enq).total_seconds() * 1000)
 
 
+def _lag_distribution(lag_values: list) -> dict:
+    """Compute p50, p95, p99, max from list of lag values (ms).
+    F-MQ-189-4: stats() exposes the full lag distribution, not just
+    p95.  Empty input → all zeros."""
+    if not lag_values:
+        return {"p50": 0, "p95": 0, "p99": 0, "max": 0}
+    s = sorted(lag_values)
+
+    def pct(p):
+        idx = min(int(p * len(s) / 100), len(s) - 1)
+        return s[idx]
+
+    return {"p50": pct(50), "p95": pct(95), "p99": pct(99), "max": s[-1]}
+
+
 def stats() -> dict:
     """Aggregate stats across all topics.  Shape:
         {"topics": {<topic>: {"depth": N, "current_p95_lag_ms": N,
+                               "lag_distribution_ms": {p50,p95,p99,max},
                                "dlq_count_for_topic": N,
                                "retry_rate": 0.0, "completed_total": N}},
          "dlq_count_total": N, "generated_at": ISO8601}
@@ -628,6 +691,7 @@ def stats() -> dict:
             "depth": sum(1 for m in live
                          if m.get("status") in ("pending", "in_flight")),
             "current_p95_lag_ms": lag_p95,   # R110-188: renamed (was lag_p95_ms)
+            "lag_distribution_ms": _lag_distribution(lats),  # F-MQ-189-4: p50/p95/p99/max
             "dlq_count_for_topic": _dlq_count_for_topic(topic),  # R110-188: per-topic
             "retry_rate": (retried / len(live)) if live else 0.0,
             "completed_total": completed_counts.get(topic, 0),
@@ -728,15 +792,8 @@ def _gc_old_pending(max_age_sec: float = 86400.0) -> int:
     """Move pending msgs older than max_age_sec to DLQ.  Returns count
     moved.  Default 24h TTL (F-MQ-189-2).  Sweeps every topic."""
     moved = 0
-    if not _mq_root().exists():
-        return 0
     now = datetime.now(timezone.utc)
-    for ndjson in _mq_root().glob("*.ndjson"):
-        if ndjson.name.startswith("_") or ndjson.name == "signals_dlq.ndjson":
-            continue
-        if ndjson.name.endswith(".completed.ndjson"):
-            continue
-        topic = ndjson.name[: -len(".ndjson")]
+    for topic in list_topics():
         with _TopicLock(topic):
             msgs = _read_topic(topic, include_in_flight=False)
             keep = []
@@ -760,6 +817,48 @@ def _gc_old_pending(max_age_sec: float = 86400.0) -> int:
             if len(keep) != len(msgs):
                 _write_topic_atomic(topic, keep)
     return moved
+
+
+def list_topics() -> list[str]:
+    """Discover all live topics by globbing <root>/*.ndjson.
+    Excludes .completed.ndjson archives and _corrupt.ndjson
+    (F-MQ-189-10)."""
+    root = _mq_root()
+    if not root.exists():
+        return []
+    out = []
+    for p in root.glob("*.ndjson"):
+        name = p.name
+        if name.endswith(".completed.ndjson"):
+            continue
+        if name == "_corrupt.ndjson":
+            continue
+        out.append(name[: -len(".ndjson")])
+    return sorted(out)
+
+
+def compact_completed(topic: str, *, max_lines: int = 10000,
+                      keep_recent: int = 1000) -> bool:
+    """If <topic>.completed.ndjson has > max_lines, archive the full
+    file to <topic>.<YYYYMMDD>.completed.ndjson, then rewrite the live
+    completed file with only the most recent `keep_recent` lines.
+    Returns True if compaction happened (F-MQ-189-11)."""
+    p = _topic_path(topic, completed=True)
+    if not p.exists():
+        return False
+    lines = p.read_text().splitlines()
+    if len(lines) <= max_lines:
+        return False
+    today = datetime.now().strftime("%Y%m%d")
+    archive = _mq_root() / f"{topic}.{today}.completed.ndjson"
+    with open(archive, "w") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        f.write("\n".join(lines) + "\n")
+    recent = lines[-keep_recent:]
+    with open(p, "w") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        f.write("\n".join(recent) + "\n")
+    return True
 
 
 # ─── CLI ─────────────────────────────────────────────────────────
