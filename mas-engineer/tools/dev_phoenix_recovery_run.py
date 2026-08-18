@@ -51,7 +51,7 @@ RUNNER = TOOLS_DIR / "dev_workflow_runner.py"
 LEVELS = ["immune", "checkpoint", "safezone", "timeline", "defib"]
 
 
-def _run_level(level: str, request_id: str) -> dict:
+def _run_level(level: str, request_id: str, level_timeout: int = 120) -> dict:
     """Run a single recovery-level task_workflow. Return {ok, exit, log, cmd}."""
     log_dir = REPO_ROOT / ".mase" / "phoenix_logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -66,14 +66,14 @@ def _run_level(level: str, request_id: str) -> dict:
     try:
         proc = subprocess.run(
             cmd, cwd=REPO_ROOT,
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, timeout=level_timeout,
         )
         log = (proc.stdout or "") + (("\n[stderr]\n" + proc.stderr) if proc.stderr else "")
         log_path.write_text(log)
         ok = proc.returncode == 0
         return {"ok": ok, "exit": proc.returncode, "log": str(log_path), "cmd": " ".join(cmd)}
     except subprocess.TimeoutExpired as e:
-        log_path.write_text(f"[TIMEOUT after 120s] {e}")
+        log_path.write_text(f"[TIMEOUT after {level_timeout}s] {e}")
         return {"ok": False, "exit": -1, "log": str(log_path), "cmd": " ".join(cmd),
                 "error": "timeout"}
     except Exception as e:  # pragma: no cover
@@ -124,7 +124,7 @@ def main():
     t0 = time.time()
     level_results = {}
     for level in levels:
-        level_results[level] = _run_level(level, request_id)
+        level_results[level] = _run_level(level, request_id, args.level_timeout)
     duration_ms = int((time.time() - t0) * 1000)
     levels_passed = sum(1 for r in level_results.values() if r.get("ok"))
     final_status = "ok" if levels_passed == len(level_results) else "degraded"
