@@ -340,14 +340,24 @@ for yp in sorted(ALL_YAMLS):
 
     # --- A: Timeout/Steps Optimization ---
     timeout = settings.get('timeout', 0) if settings else 0
+    # R-102: max_steps migrated to max_turns (Goose GOOSE_SUBAGENT_MAX_TURNS=25)
+    max_turns = settings.get('max_turns', 0) if settings else 0
     max_steps = settings.get('max_steps', 0) if settings else 0
 
     if timeout and timeout < 60:
         add_finding('A1', 'medium', yp, f'timeout={timeout}s too low (< 60s)',
                     'Agent may timeout before completing tasks',
                     f'set timeout={min(timeout*2, 3600)}')
+    if max_turns and max_turns < 25:
+        add_finding('A2', 'medium', yp, f'max_turns={max_turns} too low (< 25)',
+                    'Agent may run out of turns (Goose default GOOSE_SUBAGENT_MAX_TURNS=25)',
+                    f'set max_turns={max_turns+10}')
+    if max_turns and max_turns > 200:
+        add_finding('A2-EXT', 'low', yp, f'max_turns={max_turns} too high (> 200)',
+                    'Over-specified turn budget inflates cost/latency',
+                    'set max_turns=200 (or lower)')
     if max_steps and max_steps < 10:
-        add_finding('A2', 'medium', yp, f'max_steps={max_steps} too low (< 10)',
+        add_finding('Q3', 'low', yp, f'max_steps={max_steps} too low (< 10)',
                     'Agent may run out of steps', f'set max_steps={max_steps+10}')
     if timeout == 0:
         add_finding('A5', 'medium', yp, 'timeout=0 (unlimited)',
