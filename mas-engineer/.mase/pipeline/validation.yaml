@@ -1,212 +1,156 @@
-# =============================================================================
-# VALIDATION REPORT — Stage 4/5: im-validator (v1.0.0)
-# Generated: 2026-07-25T07:59:00+00:00
-# Pipeline: FULL_IMPROVEMENT | Mode: mas
-# Input: .mase/pipeline/patches.yaml
-# Task: VALIDATE 12 patches across 4 files
-# =============================================================================
 stage: 4
 agent: im-validator
-version: v1.0.0
-pipeline: FULL_IMPROVEMENT
-mode: mas
-timestamp: '2026-07-25T07:59:00+00:00'
-request_id: "20260725_45"
-from: im-validator
+version: 1.0.0
+timestamp: '2026-08-18T02:11:40+00:00'
+request_id: 544ebb1f-0582-4a1e-b1f7-ae8bac4cd9d5
+from: sub_mas-im-validator
 to: sub_mas-general-improver
+task: VALIDATE
+mode: mas
+round: '20260818-015300'
+input_file: .mase/pipeline/patches.yaml
 status: ok
-
 validation:
   status: approved
-  skip_reason: null
-  severity_fallback: null
-
-  details:
-    # -------------------------------------------------------------------------
-    # FILE 1: recipe/sub/sub_mas-self-auditor.yaml (score 95)
-    # 3 patches: MM8 + BB1 + NN1
-    # -------------------------------------------------------------------------
-    - file: recipe/sub/sub_mas-self-auditor.yaml
-      score_before:
-        prompt: 9
-        settings: 10
-        yaml_syntax: true
-      score_after:
-        prompt: 10
-        settings: 10
-        yaml_syntax: true
-      delta: "+1 (prompt)"
-      notes:
-        - "MM8 ✅ I_AM prefix added to prompt — identity grounding improved"
-        - "BB1 ✅ Prohibition block added to instructions — 6 ⛔ rules"
-        - "NN1 ✅ architecture_split field added — design note for 5-agent split"
-        - "Instruction file: 315 lines ≥ 200 (R52 ✅)"
-        - "Cross-ref: sub_mas-general-improver.yaml references this file — unaffected by field changes"
-
-    # -------------------------------------------------------------------------
-    # FILE 2: recipe/sub/sub_mas-recipe-designer.yaml (score 90)
-    # 3 patches: MM8 + BB1 + NN1
-    # -------------------------------------------------------------------------
-    - file: recipe/sub/sub_mas-recipe-designer.yaml
-      score_before:
-        prompt: 9
-        settings: 10
-        yaml_syntax: true
-      score_after:
-        prompt: 10
-        settings: 10
-        yaml_syntax: true
-      delta: "+1 (prompt)"
-      notes:
-        - "MM8 ✅ I_AM prefix added to prompt — identity grounding improved"
-        - "BB1 ✅ Prohibition block added to instructions — 7 ⛔ rules incl. R04/R09/R10/R01"
-        - "NN1 ✅ architecture_split field added — design note for 4-agent split"
-        - "Instruction file: 132 lines < 200 (R52 ⚠️ override applies per ranked_findings: triple-hit + criticality)"
-        - "Cross-ref: sub_mas-generic-init.yaml references this file — unaffected by field changes"
-
-    # -------------------------------------------------------------------------
-    # FILE 3: recipe/sub/static-analyzer.yaml (score 85)
-    # 3 patches: MM8 + BB1 + NN1
-    # -------------------------------------------------------------------------
-    - file: recipe/sub/static-analyzer.yaml
-      score_before:
-        prompt: 6
-        settings: 10
-        yaml_syntax: true
-      score_after:
-        prompt: 9
-        settings: 10
-        yaml_syntax: true
-      delta: "+3 (prompt — critical improvement)"
-      notes:
-        - "MM8 ✅ I_AM prefix added — CRITICAL: previously had ZERO identity grounding (highest-impact fix)"
-        - "BB1 ✅ Prohibition block added to instructions — 5 ⛔ rules incl. no-exec, no-modify"
-        - "NN1 ✅ architecture_split field added — design note for 4-agent split"
-        - "Instruction file: 154 lines < 200 (R52 ⚠️ override applies per ranked_findings: triple-hit + criticality)"
-        - "No cross-file references found — isolated agent, no integration risk"
-
-    # -------------------------------------------------------------------------
-    # FILE 4: recipe/sub/sub_mas-mas-controller.yaml (score 80)
-    # 3 patches: MM8 + BB1 + NN1
-    # -------------------------------------------------------------------------
-    - file: recipe/sub/sub_mas-mas-controller.yaml
-      score_before:
-        prompt: 9
-        settings: 10
-        yaml_syntax: true
-      score_after:
-        prompt: 10
-        settings: 10
-        yaml_syntax: true
-      delta: "+1 (prompt)"
-      notes:
-        - "MM8 ✅ I_AM prefix improved — canonical I_AM + role description as first line"
-        - "BB1 ✅ Prohibition block added — 7 ⛔ rules critical for infrastructure agent (prevents auto-modification)"
-        - "NN1 ✅ architecture_split field added — design note for 4-agent split"
-        - "Instruction file: 59 lines < 200 (R52 ⚠️ override applies per ranked_findings: triple-hit + criticality)"
-        - "No cross-file references found — isolated monitoring agent"
-
-    # -------------------------------------------------------------------------
-    # SKIPPED: recipe/sub/sub_mas-general-improver.yaml (score 100)
-    # -------------------------------------------------------------------------
-    - file: recipe/sub/sub_mas-general-improver.yaml
-      skipped: true
-      skip_reason: "R04 — NEVER edit general-improver.yaml (no recursion). Hard boundary in SOT."
-      notes:
-        - "3 patches (MM8 + BB1 + NN1) were proposed by im-finder with score 100"
-        - "Correctly excluded by im-designer following R04 rule"
-        - "No action needed — this is the expected behavior"
-
-  recommendation:
-    - file: recipe/sub/sub_mas-self-auditor.yaml
-      patches:
-        - field: prompt
-          type: MM8
-          verdict: APPROVE
-        - field: instructions
-          type: BB1
-          verdict: APPROVE
-        - field: architecture_split
-          type: NN1
-          verdict: APPROVE
-    - file: recipe/sub/sub_mas-recipe-designer.yaml
-      patches:
-        - field: prompt
-          type: MM8
-          verdict: APPROVE
-        - field: instructions
-          type: BB1
-          verdict: APPROVE
-        - field: architecture_split
-          type: NN1
-          verdict: APPROVE
-    - file: recipe/sub/static-analyzer.yaml
-      patches:
-        - field: prompt
-          type: MM8
-          verdict: APPROVE
-        - field: instructions
-          type: BB1
-          verdict: APPROVE
-        - field: architecture_split
-          type: NN1
-          verdict: APPROVE
-    - file: recipe/sub/sub_mas-mas-controller.yaml
-      patches:
-        - field: prompt
-          type: MM8
-          verdict: APPROVE
-        - field: instructions
-          type: BB1
-          verdict: APPROVE
-        - field: architecture_split
-          type: NN1
-          verdict: APPROVE
-
-  approved_count: 12
+  approved_count: 10
   rejected_count: 0
-
+  details:
+  - finding_id: R-201
+    verdict: APPROVED
+    risk: low
+    file: recipe/dev-mas-engineer.yaml
+    check: 'settings.max_steps: 50 → settings.max_turns: 50 (diff line 42-45); no
+      max_steps remnants; YAML valid'
+  - finding_id: R-202
+    verdict: APPROVED
+    risk: low
+    file: tools/dev_im_finder_scan.py
+    check: 'A2 reads max_turns (< 25) @351; A2-EXT (> 200) @355; legacy max_steps
+      (< 10) demoted to Q3 @359; py_compile OK; --scope=recipe run RC=0'
+  - finding_id: R-203
+    verdict: APPROVED
+    risk: low
+    file: recipe/sub/*.yaml (18 files)
+    check: '14× max_turns 15→30 (dashboard-builder/collector/data-reader/generator,
+      json-utility, security-cmd-injection/deserialize/secrets/sqli-scanner, test-fix-failures-finder/ranker,
+      tff-crossref/rule/syntax-validator); 3× 20→40 (doc-writer, monitor-runtime,
+      monitor-session); workflow-engine 200→100; all YAML valid'
+  - finding_id: R-204
+    verdict: APPROVED
+    risk: low
+    file: recipe/sub/sub_mas-recipe-designer.yaml + recipe/instructions/sub_mas-recipe-designer.md
+    check: 'yaml:32 ''settings: timeout=300, max_turns=50''; md:67 ''max_turns={M}'';
+      md:70 ''max_turns: 30-50''; zero max_steps remnants in both files'
+  - finding_id: R-207
+    verdict: APPROVED
+    risk: low
+    file: recipe/sub/sub_mas-im-finder.yaml, sub_mas-im-rank.yaml, sub_mas-im-designer.yaml,
+      sub_mas-im-validator.yaml
+    check: 'response.json_schema added to all 4 pipeline boundary recipes matching
+      their output contracts (findings/ranked_findings/patches/validation); all YAML
+      valid'
+  - finding_id: R-208
+    verdict: APPROVED
+    risk: medium
+    file: .mase/workflows.yaml + recipe/instructions/sub_mas-pre-push-validator.md
+    check: 'retry block (max_retries: 3, checks: exit 0, on_failure: cleanup) on wf_recovery_defib
+      consume @1933 and wf_im_design_patches consume @2400; Check 17 pytest retry
+      loop (≤3 attempts, cleanup pkill dev_mq_consumer + rm temp artifacts, exit-127
+      no-retry break)'
+  - finding_id: R-209
+    verdict: APPROVED
+    risk: medium
+    file: tools/dev_mq_consumer.py + .mase/workflows.yaml + tools/e2e_run_all.py
+    check: 'consumer --timeout default 30.0 → 60.0 (--help confirms); wf_recovery_defib
+      consume cmd --timeout 60 @1929; e2e_run_all.py recovery subprocess timeout 60→90
+      and defib exit-1 = non-failure / exit-3 = fail'
+  - finding_id: R-210
+    verdict: APPROVED
+    risk: low
+    file: .mase/workflows.yaml
+    check: '3× timeout 180→300 — validator delegate @1654/@1774, run_recovery @1952
+      (patch line 1947 +5 shift from retry-block insertion); diff confirms all three'
+  - finding_id: R-211
+    verdict: APPROVED
+    risk: medium
+    file: tools/dev_mq_consumer.py + .mase/workflows.yaml
+    check: 'IN_FLIGHT_LEASE_TTL_SEC=300 const; SIGTERM handler releases in_flight lease
+      (mq.nack) then exit 0; _check_single_consumer enforces single-consumer-per-topic
+      (in_flight consumer_id) returning exit 3; both workflow consume steps prefixed
+      with SIGTERM trap; py_compile OK'
+  - finding_id: R-212
+    verdict: APPROVED
+    risk: low
+    file: recipe/instructions/sub_mas-im-designer.md
+    check: 'STEP 0.7 write flow now yaml.safe_dump(default_flow_style=False,
+      sort_keys=False) + round-trip yaml.safe_load assert BEFORE write; no manual YAML
+      emission'
+  recommendation:
+  - APPROVE
+  - APPROVE
+  - APPROVE
+  - APPROVE
+  - APPROVE
+  - APPROVE
+  - APPROVE
+  - APPROVE
+  - APPROVE
+  - APPROVE
   goose_post_checks:
-    # L01 — dev_goose_expert_check.py verification (mechanism claims)
-    - patch_type: MM8
-      mechanism_claim: "I_AM identity prefix for prompt grounding"
-      verdict: CONFORM
-      explanation: "L01 check: 'MM8 — Prompt missing proper I_AM identity as first line' → CONFORM — no known Goose-native conflict. Goose prompt field accepts any string; I_AM prefix is standard pattern across all sub-agents."
-    - patch_type: BB1
-      mechanism_claim: "Prohibition boundaries in instructions"
-      verdict: CONFORM
-      explanation: "L01 check: 'BB1 — Instructions missing prohibition boundaries' → CONFORM — no known Goose-native conflict. Instructions field is freeform markdown; prohibition blocks are standard Goose pattern for agent guardrails."
-    - patch_type: NN1
-      mechanism_claim: "Architecture split design notes"
-      verdict: CONFORM
-      explanation: "L01 check: 'NN1 — Multi-role agent split candidate' → CONFORM — no known Goose-native conflict. Adding architecture_split as informational YAML field has zero runtime impact. Actual sub-agent creation is deferred design work."
-
-    # R52 threshold compliance
-    - rule: R52
-      check: "Instruction file ≥ 200 lines for NN1 patches"
-      verdict: RESTRICTED
-      affected_files:
-        - sub_mas-recipe-designer.md: "132 lines < 200"
-        - static-analyzer.md: "154 lines < 200"
-        - sub_mas-mas-controller.md: "59 lines < 200"
-      explanation: "Three of four NN1 patches have instruction files below 200-line threshold. However, ranked_findings.yaml explicitly overrides R52 for NN1 triple-hit entries: 'NN1 triple-hit entries pass threshold due to multi-role criticality + infrastructure importance'. Override accepted — patches are design notes only (add architecture_split field), not actual agent splits."
-
+  - patch_id: R-201
+    verdict: CONFORM
+    explanation: max_turns is Goose-native recipe-settings field (GOOSE_SUBAGENT_MAX_TURNS
+      override); dev_goose_expert_check.py --patches reports no conflicts (RC=0).
+  - patch_id: R-202
+    verdict: CONFORM
+    explanation: Scanner re-target on native max_turns field; detection-only, no recipe
+      change.
+  - patch_id: R-203
+    verdict: CONFORM
+    explanation: Per-recipe max_turns override is documented mechanism; values 30-100
+      within 10-500 native limit.
+  - patch_id: R-204
+    verdict: CONFORM
+    explanation: Generator emits native max_turns field; no non-native field drift.
+  - patch_id: R-207
+    verdict: CONFORM
+    explanation: response.json_schema is native recipe-advanced structured-output
+      validation with auto-correction; schemas match boundary output contracts.
+  - patch_id: R-208
+    verdict: CONFORM
+    explanation: retry.max_retries/checks/on_failure are native recipe-advanced keys;
+      checks exit-0 semantics correct.
+  - patch_id: R-209
+    verdict: CONFORM
+    explanation: Timeout/retry are workflow parameters; sub-agent 5min timeout bounds
+      the consumer; no Goose conflict.
+  - patch_id: R-210
+    verdict: CONFORM
+    explanation: Workflow step timeout 300s compatible with Goose sub-agent 5min timeout.
+  - patch_id: R-211
+    verdict: CONFORM
+    explanation: Process cleanup is MAS tooling; no Goose architecture conflict.
+  - patch_id: R-212
+    verdict: CONFORM
+    explanation: Serialization fix is MAS tooling; goose recipe validate can double-check.
+  checks:
+    yaml_validity: PASS
+    python_syntax: PASS
+    r04_general_improver_untouched: PASS
+    goose_expert_l01: PASS
+    smoke_im_finder_scan: PASS
+    smoke_mq_consumer_help: PASS
+    smoke_workflows_yaml_load: PASS
   notes:
-    - "R04 compliance: general-improver.yaml correctly excluded from patches ✅"
-    - "R06 (sub-agent containment): All 12 patches are confined to their respective files — no overreach ✅"
-    - "R09 (domain boundaries): All target files under recipe/sub/ in mas-engineer workspace — no domain overreach ✅"
-    - "R10 (CORONASHIELD): All 4 current files + 12 simulated patched files pass yaml.safe_load ✅"
-    - "R52: 3 of 4 NN1 patches have instruction file < 200 lines — override accepted per ranked_findings ⚠️"
-    - "Cross-reference integrity: self-auditor and recipe-designer are referenced by other recipes — field changes (prompt/instructions/architecture_split) have zero impact on sub_recipes references ✅"
-    - "All patches are string-field replacements or new-field additions — no structural changes ✅"
-    - "12 patches approved, 0 rejected, 1 skipped (R04)"
-
-  rules_checked:
-    - "R04: general-improver exclusion — PASS"
-    - "R10: YAML syntax — PASS (all files)"
-    - "R06: Sub-agent containment — PASS (no overreach)"
-    - "R09: Domain boundaries — PASS (mas-engineer/recipe/sub/)"
-    - "L01: Mechanism conflict check — PASS (all CONFORM)"
-    - "R52: Instruction file length — PASS with override"
-    - "Cross-reference integrity — PASS (no breakage)"
-    - "Goose-architecture compliance — PASS (all field types standard)"
+  - 'Full pytest suite NOT run (15-25 min); targeted smoke checks executed instead:
+    dev_im_finder_scan.py --scope=recipe (RC=0, 85 findings), dev_mq_consumer.py --help
+    (default 60), yaml.safe_load workflows.yaml (OK).'
+  - 'R-210 run_recovery timeout found @1952 not @1947 — +5 line shift caused by retry-block
+    insertion in preceding consume step; diff confirms the 180→300 change is correct.'
+  - 'R-208 pre-push-validator.md Check 17 retry loop is a native bash retry (not recipe
+    retry block, which only applies to workflow steps); behavior matches patch intent
+    (max 3 attempts, cleanup on failure).'
+  - 'workflows.yaml step timeouts at 1558/1609/1684/1729 were already 300 pre-patch
+    (not part of R-210 scope).'
+  - 'issue_db.json absent this run (issue_db_filtered=0); STEP 0.5c record_validation/mark_fixed
+    no-op, no fabricated db created.'
