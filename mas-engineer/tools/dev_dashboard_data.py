@@ -361,6 +361,27 @@ def generate_data(ws):
         # surfaces what the publishers in phase 1 actually emitted and
         # what the consumers in phase 2.1/2.2 actually processed.
         "phase1_topics": {},
+        # R110-197: dashboard exposes the MQ's own observability
+        # surface so an operator can see at a glance what topics
+        # exist, which completed-files are getting big (and need
+        # compacting), and a short Prometheus excerpt for scraping
+        # without spinning up dev_mq_consumer as a sidecar.
+        # (1) topics_list — sorted list of live topic names
+        #     (mq.list_topics() excludes .completed.ndjson archives
+        #      and _corrupt.ndjson, so this is the in-flight set)
+        # (2) compactable_topics — list of {topic, lines, threshold}
+        #     for completed-files > default compact threshold
+        #     (10_000 lines — see mq.compact_completed default).
+        #     Operator can run `python3 -m dev_message_queue --compact
+        #     <topic>` per item.
+        # (3) prometheus_excerpt — first 20 lines of mq.metrics_prometheus()
+        #     so the dashboard text-view can show
+        #     `mq_depth{topic="im.finding.created"} 0` etc.
+        #     The full output is in the same shape a Prometheus
+        #     scraper would expect, ready for HTTP exposure.
+        "topics_list": [],
+        "compactable_topics": [],
+        "prometheus_excerpt": [],
     }
     if _MQ_AVAILABLE:
         try:
@@ -391,6 +412,38 @@ def generate_data(ws):
                 round(sum(rates) / len(rates), 4) if rates else 0.0)
             # Phase-1 topics summary (R110-166 phase 2.3)
             mq_block['phase1_topics'] = _phase1_topics_summary(topics)
+
+            # R110-197: dashboard observability surface
+            try:
+                # (1) topics_list
+                mq_block['topics_list'] = mq.list_topics()
+                # (2) compactable_topics — completed-files with
+                #     > 10_000 lines (mq.compact_completed default).
+                #     Walk the live topics and check the
+                #     <topic>.completed.ndjson size.  The MQ root
+                #     can be overridden via MAS_MQ_ROOT, so use
+                #     the same lookup mq uses internally.
+                _COMPACT_THRESHOLD = 10000
+                _mq_root = mq._mq_root() if hasattr(mq, "_mq_root") else (
+                    REPO_ROOT / '.mase' / 'mq')
+                for _tn in mq_block['topics_list']:
+                    _cp = _mq_root / f"{_tn}.completed.ndjson"
+                    if _cp.exists():
+                        _lines = sum(1 for _ in open(_cp))
+                        if _lines > _COMPACT_THRESHOLD:
+                            mq_block['compactable_topics'].append({
+                                'topic': _tn,
+                                'lines': _lines,
+                                'threshold': _COMPACT_THRESHOLD,
+                            })
+                # (3) prometheus_excerpt — first 20 lines of the
+                #     full Prometheus textfile output
+                _prom = mq.metrics_prometheus().splitlines()
+                mq_block['prometheus_excerpt'] = _prom[:20]
+            except Exception:
+                # Observability is best-effort (R110-197); never
+                # let a single broken mq.* call break the dashboard.
+                pass
         except Exception:
             # MQ is best-effort; never let a broken queue break the
             # dashboard refresh.
