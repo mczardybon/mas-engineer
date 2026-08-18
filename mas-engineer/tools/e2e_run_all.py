@@ -133,6 +133,27 @@ def test_recovery_workflows():
             # legitimate NON-failure; only exit code 3 (processor/consume
             # error) blocks the workflow.
             if wf == "wf_recovery_defib":
+                # R110-185: defib's consumer-idle path is a legitimate ok state
+                # (verify_log emits "DEFIB_NO_LOG (consumer idle — no degraded
+                # health message in queue)" when no message arrives in --timeout).
+                # The workflow runner writes `status: failed` when the consume
+                # step's subprocess returns rc=1, even though that is the
+                # intended no-op behavior. We treat that path as ok by checking
+                # the latest workflow_runs/*.json for the verify_log output.
+                if status == "fail":
+                    wf_log_pattern = os.path.join(ROOT, ".mase", "workflow_runs", f"{wf}_*.json")
+                    wf_logs = sorted(glob.glob(wf_log_pattern), key=os.path.getmtime, reverse=True)
+                    if wf_logs:
+                        try:
+                            with open(wf_logs[0]) as _lf:
+                                _log_data = json.load(_lf)
+                            verify_log_out = (_log_data.get("results", {})
+                                              .get("verify_log", {})
+                                              .get("output", ""))
+                            if "DEFIB_NO_LOG" in verify_log_out:
+                                status = "ok"
+                        except (OSError, json.JSONDecodeError):
+                            pass
                 if r.returncode == 1:
                     status = "ok"
                 elif r.returncode == 3:
