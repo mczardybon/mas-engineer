@@ -31,12 +31,12 @@ def scan_settings(path):
         s = d.get('settings',{})
         if not s: continue
         total += 1
-        t = s.get('timeout',0); m = s.get('max_steps',0)
+        t = s.get('timeout',0); m = s.get('max_turns', s.get('max_steps',0))
         if t < 300: findings.append({'type':'B1', 'severity':'mittel','detail':f'timeout={t} < 300'})
         elif t > 900: findings.append({'type':'B2','severity':'niedrig','detail':f'timeout={t} > 900'})
         else: ok += 1
-        if m < 30: findings.append({'type':'B3','severity':'niedrig','detail':f'max_steps={m} < 30'})
-        elif m > 300: findings.append({'type':'B4','severity':'niedrig','detail':f'max_steps={m} > 300'})
+        if m < 30: findings.append({'type':'B3','severity':'niedrig','detail':f'max_turns={m} < 30'})
+        elif m > 300: findings.append({'type':'B4','severity':'niedrig','detail':f'max_turns={m} > 300'})
         elif m >= 50: ok += 1
     return findings, round(ok/total*10,1) if total else 10, total
 
