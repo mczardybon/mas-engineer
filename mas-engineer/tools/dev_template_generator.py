@@ -45,7 +45,7 @@ SOT_RESTRICTION_KEYS = [
     "verbote", "verstoesse"
 ]
 DEFAULT_TIMEOUT = 600    # BP-S-001: Sweet-Spot
-DEFAULT_MAX_STEPS = 100  # BP-S-002: 20-80% Auslastung
+DEFAULT_MAX_TURNS = 100  # BP-S-002: 20-80% Auslastung
 DEFAULT_PROVIDER = "openai"
 DEFAULT_MODEL = "filtered/deepseek/deepseek-v4-flash"
 
@@ -269,7 +269,7 @@ def build_rule_package(sources: Dict) -> Dict:
     # ── Default Settings ──
     standard_settings = {
         "timeout": DEFAULT_TIMEOUT,
-        "max_steps": DEFAULT_MAX_STEPS,
+        "max_turns": DEFAULT_MAX_TURNS,
         "goose_provider": DEFAULT_PROVIDER,
         "goose_model": DEFAULT_MODEL
     }
@@ -319,7 +319,7 @@ prompt: '{EMOJI} {NAME} (v1.0.0)
 {SOT_RESTRICTIONS}'
 settings:
   timeout: 600
-  max_steps: 100
+  max_turns: 100
   goose_provider: openai
   goose_model: filtered/deepseek/deepseek-v4-flash"""
 
@@ -401,7 +401,7 @@ def build_yaml(filled: str, rules: Dict, name: str, emoji: str, task: str) -> Di
     
     settings = dict(rules.get("standard_settings", {}))
     settings.setdefault("timeout", DEFAULT_TIMEOUT)
-    settings.setdefault("max_steps", DEFAULT_MAX_STEPS)
+    settings.setdefault("max_turns", DEFAULT_MAX_TURNS)
     settings.setdefault("goose_provider", DEFAULT_PROVIDER)
     settings.setdefault("goose_model", DEFAULT_MODEL)
     
@@ -637,7 +637,7 @@ def refresh_agent(agent_name: str, dry_run: bool, workspace: str, sources: Optio
     chk = _check_field(agent_data, "settings.timeout", DEFAULT_TIMEOUT, "timeout")
     if chk: issues.append(chk)
     
-    chk = _check_field(agent_data, "settings.max_steps", DEFAULT_MAX_STEPS, "max_steps")
+    chk = _check_field(agent_data, "settings.max_turns", DEFAULT_MAX_TURNS, "max_turns")
     if chk: issues.append(chk)
     
     # ── Content-Checks ──
@@ -696,8 +696,8 @@ def refresh_agent(agent_name: str, dry_run: bool, workspace: str, sources: Optio
                 agent_data["settings"] = {}
             if agent_data["settings"].get("timeout") != DEFAULT_TIMEOUT:
                 agent_data["settings"]["timeout"] = DEFAULT_TIMEOUT
-            if agent_data["settings"].get("max_steps") != DEFAULT_MAX_STEPS:
-                agent_data["settings"]["max_steps"] = DEFAULT_MAX_STEPS
+            if agent_data["settings"].get("max_turns") != DEFAULT_MAX_TURNS:
+                agent_data["settings"]["max_turns"] = DEFAULT_MAX_TURNS
         
         # Backup + Write
         backup_path = os.path.join(base, ".mase/backups", f"pre_refresh_{agent_name}.yaml")
@@ -711,7 +711,7 @@ def refresh_agent(agent_name: str, dry_run: bool, workspace: str, sources: Optio
         with open(agent_path, "w", encoding="utf-8") as f:
             yaml.dump(agent_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
         
-        _update_changes_json(base, "REFRESH", f"Settings corrected in {agent_name}: timeout/max_steps to default")
+        _update_changes_json(base, "REFRESH", f"Settings corrected in {agent_name}: timeout/max_turns to default")
         print(f"  ✅ {agent_name} gefixed")
     
     return {

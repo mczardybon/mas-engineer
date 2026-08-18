@@ -8,7 +8,7 @@ from pathlib import Path
 
 DEFAULT_SETTINGS = {
     'timeout': 600,
-    'max_steps': 100,
+    'max_turns': 100,
     'goose_provider': 'openai',
     'goose_model': 'filtered/deepseek/deepseek-v4-flash'
 }
