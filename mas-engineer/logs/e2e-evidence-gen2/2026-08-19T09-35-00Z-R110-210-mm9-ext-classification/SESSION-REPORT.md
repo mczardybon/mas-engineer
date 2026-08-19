@@ -128,6 +128,35 @@ intentionally to keep audit O(N) without filesystem recursion.)
 
 Total numstat: 2 files changed, 95 insertions(+), 6 deletions(-)
 
+## R110-211 Errata (post-push body-claim-drift correction)
+
+After R110-210 was pushed (c37ac38), R110-211 (commit 9339154) added the
+evidence-archive. R110-211's commit body claimed:
+
+> numstat: 4 files changed, 8688 insertions(+)
+
+This is **WRONG** — the 8688 was file-size in bytes
+(7397 SESSION-REPORT + 187 audit + 205 pytest + 899 scanner), but git
+numstat reports LINE insertions, not bytes. The actual numstat is:
+
+> 4 files changed, 206 insertions(+)
+> (170 SESSION-REPORT.md + 8 post-flight-audit.json + 3 pytest-final.log
+>  + 25 scanner-final.log)
+
+R110-212 is the transparent fix-commit (no amend+force-push, per
+R110-174 re-translation-pattern) that corrects the R110-211 body claim
+in this SESSION-REPORT.md (and adds a CHANGELOG entry).
+
+**Lesson:** file-size in bytes is NOT numstat insertions. Always
+verify `git diff --cached --stat` before claiming numstat in a
+commit body. The SESSION-REPORT.md was the right idea (full
+transparency archive), the body-claim was the wrong number.
+
+**Honest limitation:** the R110-211 commit message on github
+(commit 9339154) still says "+8688" — that is now an immutable
+historical record, not amended. The correction lives here in
+R110-212, transparent and traceable.
+
 ## Push Evidence
 
 ```
