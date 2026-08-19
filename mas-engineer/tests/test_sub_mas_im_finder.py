@@ -120,15 +120,36 @@ def test_step_0_6_self_audit_attaches_mm9_ext():
 
 
 # --- R110-124: scanner Pattern A + B (MM9-EXT support) --------------------
-def test_scanner_detects_hardcode_stale():
-    """R110-124: scanner emits HARDCODE-STALE-* findings (Pattern A)."""
+def test_scanner_detects_hardcode_stale(tmp_path):
+    """R110-124: scanner emits HARDCODE-STALE-* findings (Pattern A).
+
+    R110-209-ADAPTATION (honest, R110-78 lesson): the real repo currently
+    has 0 hardcode-stale findings (R110-209 fixed F-082 + added
+    HTML-comment/historical-marker detection in
+    tools/dev_im_finder_scan.py:1137-1176, commit 766b501). The
+    directive's e2e assertion (>=1 HARDCODE-STALE-* on the real repo)
+    is therefore not satisfiable post-fix. Instead we prove the wiring
+    on a synthetic repo: an instruction file with an uncontextualized
+    "N sub-agents" / "N tools" / "N checks" literal (no historical
+    marker, no env-var, no HTML-comment) must still be emitted as
+    HARDCODE-STALE-*.
+    """
     import subprocess
     import json
+    # Synthetic repo: one instruction file with a hardcoded count that
+    # has NO historical marker, NO env-var context, NO HTML-comment.
+    # The scanner's HTML-comment/historical-context filters in
+    # dev_im_finder_scan.py:1137-1176 must NOT suppress this.
+    instr = tmp_path / "recipe" / "instructions"
+    instr.mkdir(parents=True)
+    (instr / "sub_mas-synthetic.md").write_text(
+        "This is a synthetic instruction with 99 sub-agents and 42 tools "
+        "that have no context whatsoever.\n"
+    )
     result = subprocess.run(
-        ['python3', 'tools/dev_im_finder_scan.py',
-         '--scope=recipe/instructions/'],
-        capture_output=True, text=True, cwd='.')
-    # Parse JSON output (after ---JSON_START---)
+        ['python3', str(REPO_ROOT / 'tools' / 'dev_im_finder_scan.py'),
+         f'--scope={tmp_path}/recipe/instructions/'],
+        capture_output=True, text=True, cwd=str(tmp_path))
     out = result.stdout
     assert '---JSON_START---' in out
     j = out.split('---JSON_START---')[1]
