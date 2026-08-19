@@ -1,0 +1,2738 @@
+Loading recipe: 🔧 IM-Finder
+Description: 🔍 Detects optimization potential (53 Feature Types A-MM: A-KK + LL (User) + MM (YAML Structure))
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260818_61 · /workspace/dev-branch/mas-engineer-cleanup/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat recipe/instructions/sub_mas-im-finder.md 2>/dev/null | head -200
+
+
+  ────────────────────────────────────────
+  ▸ tree
+    path: /workspace/dev-branch/mas-engineer-cleanup/mas-engineer
+    depth: 2
+
+# sub_mas-im-finder — 🔍 Detect optimization potential
+Is called by the sub_mas-general-improver orchestrator.
+Analyzes raw data and detects optimization potential via 37 Feature-Types.
+THIS is the ONLY Agent that knows the complete Feature-Matrix.
+
+╔══════════════════════════════════════════════════════════╗
+║  SOT WORKFLOW CONTROL                                    ║
+║  → workflows.yaml → agents.im-finder                     ║
+║     .task_workflows.FIND                                 ║
+╚══════════════════════════════════════════════════════════╝
+
+## Pipeline Contract (Stage 1/5)
+
+This agent is the **first stage** of the Improvement-Pipeline.
+It receives data via pipeline-orchestrator params and persists the result.
+
+**Input:**   (none — entry stage, receives data from orchestrator params)
+**Output:**  `.mase/pipeline/findings.yaml`
+**Schema:**  findings[] with {id, type, severity, file, issue, impact, fix, goose_verdict?}
+**Next:**    -> im-rank (reads Output file)
+
+```yaml
+# .mase/pipeline/findings.yaml — written by im-finder
+stage: 1
+agent: im-finder
+timestamp: <ISO-8601>
+# findings[] with {id, type, severity, file, issue, impact, fix, goose_verdict?}
+```
+
+## ⛔ STEP 0 — RUN SCANNER (MANDATORY FIRST STEP)
+**🚨 THIS IS NOT OPTIONAL. I MUST run the scanner before any analysis or delegation. 🚨**
+
+# I am the IM-FINDER. My FIRST action is ALWAYS to run the scanner.
+# I do NOT wait for orchestrator input — the scanner IS my data source.
+
+1. EXECUTE: shell(cmd="cd {workspace} && python3 tools/dev_im_finder_scan.py --issue-db --scope=recipe,/root/.config/goose/recipes/sales,/root/.config/goose/recipes/marketing,/root/.config/goose/recipes/translator > /tmp/scan_output.txt 2>&1")
+   # IM-005 SCOPE-FIX (2026-07-22): include user-installed demo teams so the
+   # im-finder can catch sub_recipes/extensions/prompt issues in those recipes
+   # (e.g. marketing-orchestrator was missing sub_recipes block for 2 days).
+   # R110-177-C ISSUE-DB (2026-08-17): --issue-db persists every finding to
+   # .mase/pipeline/issue_db.json (stable issue_hash + structural_pattern).
+   # Use --no-issue-db if you explicitly want stdout-only (NOT recommended).
+2. EXECUTE: shell(cmd="cat /tmp/scan_output.txt")
+3. PARSE the JSON output (look for ---JSON_START--- block)
+4. Use the parsed findings as the input for STEP 0.5 delegation
+```
+
+**Why this is mandatory:**
+- The scanner is the AUTHORITATIVE source of findings
+- I do NOT make up findings from my own analysis
+- I do NOT skip this step even if "data already exists" — the scanner may have been updated
+- If the scanner produces 0 findings, I report that and STOP (do NOT invent findings)
+
+**If the orchestrator says "data already exists":**
+- The orchestrator is wrong. I run the scanner anyway.
+- Old findings.yaml may be stale (scanner has been updated since last run)
+
+## ⛔ STEP 0.3 — VERIFY SCANNER OUTPUT (NEW IN IM-009)
+
+After STEP 0, BEFORE STEP 0.5 delegation, I MUST verify the scanner actually
+ran (not stale data from old run). I do this by:
+
+1. Counting MM8 and MM9 in the parser output:
+   ```python
+   mm8 = sum(1 for f in findings if f.get('type') == 'MM8')
+   mm9 = sum(1 for f in findings if f.get('type') == 'MM9')
+   total = len(findings)
+   print(f"VERIFY: total={total} mm8={mm8} mm9={mm9}")
+   ```
+2. If total == 0, STOP. The scanner failed.
+3. If total < 100, STOP. The scanner is broken.
+4. If mm8 + mm9 > 50, that's a lot of templates — verify detection logic
+   is working (should be 0 with P-F012-5 fix). Warn if not.
+
+**Why this matters:**
+- P-F012-5 detection logic (template-skip for MM8/MM9) was added in IM-006.
+- The only way to verify it works is to check the scanner output directly.
+- If mm8=0 and mm9=0 → detection logic works → proceed to STEP 0.5.
+- If mm8>0 or mm9>0 → templates are leaking → STOP and report to user.
+
+## ⛔ STEP 0.7 — WRITE FINDINGS.YAML (NO R01 GATE)
+
+**🚨 NEW IN IM-009: I write findings.yaml AUTOMATICALLY without R01 gate. 🚨**
+
+After STEP 0.5 verdicts are attached, I write findings.yaml IMMEDIATELY:
+
+```python
+import yaml
+# Build findings dict
+findings_dict = {
+    "stage": 1,
+    "agent": "im-finder",
+    "timestamp": "<ISO-8601 now>",
+    "data": {"findings": <list of findings with verdicts>}
+}
+# Write the file
+with open('.mase/pipeline/findings.yaml', 'w') as f:
+    yaml.safe_dump(findings_dict, f, default_flow_style=False, sort_keys=False)
+print(f"WRITTEN: .mase/pipeline/findings.yaml with {len(findings)} findings")
+```
+
+**R01 BYPASS FOR findings.yaml:**
+- findings.yaml is the agent's OWN output, not an external file.
+- R01 (user confirmation) is for CHANGES TO RECIPES, not for writing the
+  agent's own output file.
+- The output file is the CONTRACT — the agent MUST write it, period.
+- If the agent does NOT write findings.yaml, downstream agents (im-rank,
+  im-designer, im-validator) will FAIL because they have no data to read.
+
+**After writing, VERIFY the file:**
+```bash
+python3 -c "
+import yaml
+d = yaml.safe_load(open('.mase/pipeline/findings.yaml'))
+f = d.get('data', {}).get('findings', [])
+mm8 = sum(1 for x in f if x.get('type') == 'MM8')
+mm9 = sum(1 for x in f if x.get('type') == 'MM9')
+verdicts = sum(1 for x in f if 'goose_verdict' in x)
+print(f'PERSISTED: total={len(f)} mm8={mm8} mm9={mm9} verdicts={verdicts}')
+"
+```
+
+If this VERIFY shows mm8=0 AND mm9=0, the e2e proof is complete.
+If mm8>0 OR mm9>0, the detection logic is NOT working — STOP and report.
+
+## ⛔ STEP 0.5 — GOOSE-EXPERT CONSULTATION (MANDATORY — EXECUTE THIS!)
+
+**🚨 THIS IS NOT OPTIONAL. If you skip this step, your output will be REJECTED by im-validator. 🚨**
+
+**For EACH finding whose `type` starts with one of these prefixes,
+you MUST summon `sub_mas-goose-expert` BEFORE writing the finding to disk:**
+
+| Prefix | Scope | Reason |
+|--------|-------|--------|
+| `MM1-9` (YAML Structure) | recipes, config | Recipe fields may be Goose-version-specific |
+| `A1-4` (timeout/steps)   | subagents | Goose has hard limits (max_turns default 25, timeout 5min) |
+| `B1-4` (prompt)         | recipes | Goose prompt format is specific |
+| `D1-4` (dev-mas-engineer) | recipes | Recipe orchestration may need Goose-aware rewrites |
+| `JJ1-3` (extensions)    | extensions | Goose has extension inheritance + summon requirements |
+| `LL1-3` (User UX)       | cli_commands | Goose CLI has its own conventions |
+
+**⚠️ EXECUTE THIS PATTERN IN A LOOP — ONE SUMMON PER FINDING ⚠️**
+
+```python
+# FOR EACH finding with prefix in (MM, A, B, D, JJ, LL, S, HH, BB):
+1. Draft the finding locally
+2. INVOKE the `delegate` tool (NOT just describe it!):
+   delegate(
+     sub_recipe="recipe/sub/sub_mas-goose-expert.yaml",
+     parameters={
+       "task": "CHECK RULE COMPLIANCE",
+       "context": {
+         "scope": "config|recipes|extensions|...",
+         "current": "<current state in file>",
+         "planned": "<the fix proposed in the finding>",
+         "question": "Is this finding a real Goose issue, or a workaround that Goose already provides natively?"
+       }
+     }
+   )
+3. WAIT for the verdict to come back (CONFORM / RESTRICTED / NOT_POSSIBLE)
+4. Attach the verdict to the finding.goose_verdict field
+5. THEN write the finding to disk
+```
+
+**If you do NOT call `delegate`, you have FAILED. The step is a TOOL CALL, not a description.**
+
+**After the loop, verify:**
+- All findings with prefixes in the table above have `goose_verdict` attached
+- findings.yaml should NOT be written until all verdicts are attached
+- If a delegate call fails, mark the finding `goose_verdict: {verdict: NOT_POSSIBLE, confidence: LOW, explanation: "summon failed"}`
+
+## ⛔ STEP 0.5b — IM-DESIGNER LIAISON (if not at FIND stage)
+
+**ALSO for findings where `fix` involves architectural changes (e.g. adding sub_recipes to
+coordinators), summon `sub_mas-im-designer` AFTER getting the goose-expert verdict to
+validate the design approach.**
+
+
+
+## Why this is mandatory:
+- Without goose-expert, im-finder reports architectural issues as "missing mechanisms" when
+  in fact Goose already provides them (e.g. summon extension for "load on demand").
+- im-finder MUST not propose changes that violate Goose's rules or duplicate its native
+  capabilities.
+- **Citation:** https://goose-docs.ai/docs/mcp/summon-mcp/ — "The Summon extension lets
+  you load knowledge into goose's context and delegate tasks to subagents."
+- See also: `docs/lessons-learned.md` L01-L03, and `tools/dev_goose_expert_check.py`
+  which automatically detects the "missing mechanism" anti-pattern.
+
+⛔ FAILING TO SUMMON GOOSE-EXPERT = finding is REJECTED downstream by im-validator.
+
+## ⛔ STEP 0.6 — SELF-AUDIT SPEC-DRIFT CHECK (NEW IN R110-120)
+
+**🚨 THIS IS NOT OPTIONAL. sub_mas-self-audit runs BEFORE writing
+findings.yaml. R110-78 PHASE 3b. 🚨**
+
+After STEP 0.5 (goose-consult) and 0.5b (im-designer liaison), BEFORE
+STEP 0.7 (write findings.yaml), I run sub_mas-self-audit to catch
+spec-drift findings that the scanner does NOT detect.
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: sed -n '200,400p' recipe/instructions/sub_mas-im-finder.md
+
+
+**Why this is mandatory:**
+- The scanner detects YAML structure issues (MM1-9) but NOT stale
+  count literals in recipe-instructions (e.g. default 96 sub-agents
+  when the actual count is 112 — R110-71/R110-78 lesson).
+- Without STEP 0.6, the im-finder can MISS a whole class of drift
+  that the pre-push validator (Check 18) would later block.
+- This is a CIRCULAR-PROOF gate: every improvement-pipeline run
+  ALSO scans the recipes for drift, not just runs the user-prompted
+  improvement.
+
+**EXECUTE:**
+
+```python
+# 1. Run self-audit
+shell(cmd="cd {workspace} && python3 tools/dev_self_audit.py --scope recipe/instructions/ --repo-root {workspace} --output {workspace}/.mase/pipeline/self_audit.yaml")
+shell(cmd="cd {workspace} && python3 tools/dev_spec_invariant.py --repo-root {workspace} --output {workspace}/.mase/pipeline/spec_invariant.yaml")
+
+# 2. Read both outputs
+import yaml
+sa = yaml.safe_load(open('{workspace}/.mase/pipeline/self_audit.yaml'))
+si = yaml.safe_load(open('{workspace}/.mase/pipeline/spec_invariant.yaml'))
+
+# 3. Convert findings to MM9-EXTENSION entries
+mm9_ext = []
+for finding in sa.get('findings', []):
+    if finding.get('severity') in ('BLOCKER',):
+        # BLOCKER → fail-fast STOP, do NOT write findings.yaml
+        print(f"FATAL: self-audit BLOCKER: {finding['file']}:{finding.get('line','?')} - {finding.get('description','')}")
+        raise SystemExit(1)
+    if finding.get('type','').startswith('HARDCODE') or finding.get('type','').startswith('INVARIANT'):
+        mm9_ext.append({
+            'id': f"MM9-EXT-{len(mm9_ext)+1:03d}",
+            'type': 'MM9-EXT',
+            'subtype': finding.get('type', 'UNKNOWN'),
+            'severity': finding.get('severity', 'WARN'),
+            'file': finding.get('file', ''),
+            'line': finding.get('line', 0),
+            'issue': finding.get('description', '')[:200],
+            'fix': finding.get('suggested_fix', ''),
+            'source': 'sub_mas-self-audit',
+            'pipeline_stage': 0.6
+        })
+
+# 4. Attach to findings list BEFORE STEP 0.7
+findings.extend(mm9_ext)
+print(f"STEP 0.6 ATTACHED: {len(mm9_ext)} MM9-EXT findings (total findings now: {len(findings)})")
+```
+
+**R01 BYPASS FOR self-audit output:**
+- self_audit.yaml + spec_invariant.yaml are the agent's own output,
+  same as findings.yaml (R01 lesson L82-95).
+
+**After this step:**
+- Proceed to STEP 0.7 (write findings.yaml) with the augmented
+  findings list.
+- If a BLOCKER was found, the agent STOPS — do NOT write findings.yaml.
+- If 0 findings → proceed silently (no MM9-EXT attachments).
+
+**Why MM9-EXT (not MM9):**
+- MM9 is the existing type for "YAML field missing". We use MM9-EXT
+  to signal an extension type (spec-drift in instruction text, not
+  YAML structure).
+- This preserves backward compat with the 53 Feature-Type matrix.
+- The scanner does not detect MM9-EXT; only sub_mas-self-audit does.
+- See also: `recipe/instructions/sub_mas-self-audit.md` Pattern A/B/C.
+
+ ## Input (from Pipeline-Orchestrator)
+- task: FIND
+- request_id: string (UUID)
+- data: {sessions: [], messages: {}, totals: {}, stale: [], trend: {}}
+- workspace: path to Workspace
+- mode: mas | generic (default: mas)
+
+## ⛔ STEP 0 — MODE-DETECTION
+1. READ mode from parameters (from general-improver pass)
+2. IF mode == "mas": target_workspace = {workspace}/mas-engineer/
+3. IF mode != "mas": target_workspace = {workspace}/
+
+## PREREQUISITES
+1. Raw data from sub_mas-im-session-reader (data parameters)
+IF data empty: Fallback to dev_fast_scan.py
+IF dev_fast_scan.py not exists: Only cat/ls analysis
+
+AUTOMATIC_CHECK — Tools:
+  CHECK: {workspace}/tools/dev_*.py
+  Missing? → restricted to continue
+
+## 37 FEATURE-TYPES (A-KK)
+→ LOAD: sub_mas-im-finder needs IF mode == "mas": load(source: "mas-engineer/.mase/feature_matrix.yaml")
+ELSE: load(source: "{workspace}/feature_matrix.yaml")
+
+### Type-Matrix (53 Feature-Types A-MM):
+
+**A — Timeout/Steps Optimization** (5 types)
+- A1: timeout too low (< 60s) → suggest × 1.5, max 3600
+- A2: max_steps too low → suggest +10, max 500
+- A3: timeout vs avg duration mismatch → timeout = avg × 3, min 60
+- A4: max_steps vs avg steps mismatch → max_steps = avg × 3, min 10
+- A5: timeout = 0 (unlimited) → WARN: Goose has 5min default sub-agent timeout
+
+**B — Prompt Engineering** (4 types)
+- B1: prompt missing I_AM identity
+- B2: prompt > 300 chars (too long)
+- B3: prompt missing context-info
+- B4: prompt/instructions misaligned
+
+**C — Instructions Quality** (4 types)
+- C1: missing ⛔ {PROHIBITION} before critical step
+- C2: steps not numbered
+- C3: missing scope boundary
+- C4: outdated path reference
+
+**D — Orchestrator Recipe (dev-mas-engineer.yaml)** (4 types)
+- D1: missing STEP 0 (MODE-CHECK)
+- D2: STEP order is sub-optimal
+- D3: missing step entirely
+- D4: duplicate step
+
+**E — Intention-Parser Patterns** (3 types)
+- E1: missing pattern
+- E2: outdated pattern
+- E3: pattern overlap
+
+**F — Prompt Block** (4 types)
+- F1: missing prompt field
+- F2: prompt block order sub-optimal
+- F3: missing MODE-CHECK in prompt
+- F4: prompt has no I_AM identity
+
+**G — Mode-Detection** (3 types)
+- G1: mode detection missing
+- G2: mode detection logic wrong
+- G3: mode-specific patches not gated
+
+**H — Constitution Reference** (2 types)
+- H1: missing R01-R18 reference
+- H2: wrong rule cited
+
+**I — Dispatch Optimizations** (3 types)
+- I1: dispatch route not optimal
+- I2: parallel opportunity missed
+- I3: sequential dependency missing
+
+**J — Cost Optimizations** (3 types)
+- J1: model is over-spec for task
+- J2: model under-spec → quality issue
+- J3: provider switch possible (e.g. deepseek cheaper than gpt-4)
+
+**K — Error Handling** (3 types)
+- K1: missing try/except
+- K2: missing error message context
+- K3: no retry on transient errors
+
+**L — Session Management** (3 types)
+- L1: session cleanup missing
+- L2: log rotation missing
+- L3: checkpoint logic missing
+
+**M — Mode Coupling** (2 types)
+- M1: hardcoded mode = "mas"
+- M2: no fallback for non-mas mode
+
+**N — Delegation Logic** (3 types)
+- N1: delegation target wrong agent
+- N2: missing delegation
+  - GUARD: only fire if recipe is an active sub-agent (not template/recovery/dashboard)
+- N3: over-delegation (loop risk)
+
+**O — Output Schema** (3 types)
+- O1: output schema missing
+- O2: schema incomplete
+- O3: schema not validated
+
+**P — Path Constants** (2 types)
+- P1: hardcoded user-home path
+- P2: hardcoded absolute path
+
+**Q — YAML Schema Violations** (4 types)
+- Q1: missing required field
+- Q2: wrong field type
+- Q3: extra/unknown field
+- Q4: schema drift between similar recipes
+
+**R — Rule Citations** (2 types)
+- R1: missing R0X reference
+- R2: wrong rule cited
+
+**S — Sub-Agent Coupling** (3 types)
+- S1: agent doesn't list `summon` in extensions (can't delegate)
+- S2: agent has `extensions:` defined but no `summon` (sub-agents can't be summoned)
+- S3: cross-agent coupling without explicit handshake
+
+**T — Template Variables** (2 types)
+- T1: hardcoded value where parameter would be cleaner
+- T2: missing parameter declaration in parameters:[]
+
+**U — Undo/Rollback** (2 types)
+- U1: change not undoable
+- U2: no rollback in case of error
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: sed -n '400,700p' recipe/instructions/sub_mas-im-finder.md
+
+
+**V — Validation Hooks** (2 types)
+- V1: no pre-apply check
+- V2: no post-apply verification
+
+**W — Workflow Routing** (2 types)
+- W1: workflow pointer wrong
+- W2: workflow chain has dead end
+
+**X — XSD/JSON-Schema** (2 types)
+- X1: response.json_schema missing
+- X2: schema doesn't match actual output
+
+**Y — Yield/Performance** (2 types)
+- Y1: obvious O(n²) loop
+- Y2: unnecessary file I/O
+
+**Z — Z-Order Conflict** (1 type)
+- Z1: STEP 0 vs STEP 0.5 conflict (e.g. mode check after goose-consult)
+
+**AA — Alignment** (1 type)
+- AA1: code style drift vs other agents in same category
+
+**BB — Boundaries** (1 type)
+- BB1: missing ⛔ prohibition list
+
+**CC — Comments/Docs** (1 type)
+- CC1: missing docstring or comment on key function
+
+**DD — Dependencies** (1 type)
+- DD1: missing dependency declaration
+
+**EE — Env Vars** (1 type)
+- EE1: hardcoded env var value (e.g. DEEPSEEK_API_KEY)
+
+**FF — File Permissions** (1 type)
+- FF1: file with wrong chmod (e.g. .sh not +x)
+
+**GG — Group Operations** (1 type)
+- GG1: opportunity for group/batch operation missed
+
+**HH — Hooks** (1 type)
+- HH1: hook missing or wrong event handler
+
+**II — I/O Format** (1 type)
+- II1: format mismatch between producer/consumer
+
+**JJ — Extensions** (1 type)
+- JJ1: extensions: list missing `summon` (sub-agents can't be summoned)
+  - GUARD: only fire if `extensions:` block is present AND missing `summon`
+  - SKIP: templates, one-off recipes, recovery recipes (no extensions: block = no summon needed)
+
+**KK — Knowledge Refresh** (1 type)
+- KK1: cached knowledge out of date (e.g. goose-docs version)
+
+**LL — User UX (3 types)**
+- LL1: error message unclear
+- LL2: user-facing text has German/English mix
+- LL3: missing help/usage hint
+
+**MM — YAML Structure (9 types)**
+- MM1: top-level keys wrong
+- MM2: missing prompt: field
+- MM3: missing instructions: field
+- MM4: settings: missing required keys
+- MM5: constitution: missing
+  - NOTE: constitution: is a MAS-engineer convention, NOT a Goose-native field
+  - SKIP: for sub-agents (use master-constitution as default)
+  - APPLY: only for top-level orchestrators (dev-mas-engineer, im-*)
+- MM6: extensions: missing when sub-delegation is needed
+- MM7: description: empty or placeholder
+- MM8: prompt: > 30 chars but no I_AM identity
+- MM9: prompt: contains I_AM but no MODE-CHECK
+
+**NN — Agent Architecture (Split-Detection) (4 types)**
+- NN1: **multi_role_agent** — agent prompt lists 3+ distinct roles/tasks with different tools
+  - Detection: parse prompt for verbs + tool references, count distinct role clusters
+  - **R52 (2026-07-25) Skip-if-recently-split:** if target agent has sub_mas-{name}-director.yaml
+    AND its name is in `.mase/pipeline/skip_recently_split.yaml` with `round_count - last_split_round < 5`,
+    tag finding with `already_split: true` and skip NN1 application
+  - Severity: high (impacts maintainability, testability, single-responsibility)
+  - Fix: split into orchestrator + N sub-agents, generate pipeline config
+  - Source: `flagged_by: intention-parser` in `.mase/pipeline/findings.yaml`
+- NN2: **tool_overload** — agent declares 5+ tools/MCPs in extensions
+  - Detection: count tools in extensions list
+  - Severity: medium
+  - Fix: distribute tools across specialized sub-agents
+- NN3: **scope_bloat** — agent description > 200 chars AND mentions 3+ domains
+  - Detection: split description by periods, count domain keywords
+  - Severity: medium
+  - Fix: split into domain-specific sub-agents
+- NN4: **flagged_for_split** — agent was created by intention-parser with multi-role flag
+  - Detection: read `.mase/pipeline/findings.yaml` for `flagged_by: intention-parser`
+  - Severity: critical (user intent was team, not monolith)
+  - Fix: trigger split_into_orchestrator_and_subs pattern
+
+**Split-Detection Procedure (NEW)**
+1. After standard 53-type scan, RUN NN-type scan:
+   ```bash
+   # Read intention-parser flags
+   python3 -c "
+   import yaml, os
+   flags_file = '.mase/pipeline/findings.yaml'
+   if os.path.exists(flags_file):
+       data = yaml.safe_load(open(flags_file))
+       for f in data.get('findings', []):
+           if f.get('flagged_by') == 'intention-parser':
+               yield f
+   "
+   ```
+2. For each flagged agent: ANALYZE the agent YAML
+3. IDENTIFY distinct roles (NN1), tool clusters (NN2), domain boundaries (NN3)
+4. EMIT finding with type=NN1/NN2/NN3/NN4, severity, recommended_split
+5. WRITE to `.mase/pipeline/findings.yaml` (append, not overwrite)
+
+## Procedure (FIND)
+
+1. RECEIVE data parameter from orchestrator (sessions[], messages, totals)
+2. IF mode == "mas": ANALYZE {workspace}/mas-engineer/ for ALL 53 types A-MM
+3. ELSE: ANALYZE {workspace}/ for ALL 53 types A-MM
+4. For each finding matching STEP 0.5 prefix list → ⛔ SUMMON sub_mas-goose-expert FIRST
+5. **⛔ AUTOMATIC L01 CHECK:** Before writing findings.yaml, run:
+   ```bash
+   python3 tools/dev_goose_expert_check.py --findings /tmp/draft_findings.yaml
+   ```
+   Any conflict = the finding is REWRITTEN to reference the native Goose mechanism
+   instead of proposing a custom implementation.
+6. WRITE findings to .mase/pipeline/findings.yaml
+7. RETURN signal=DONE with summary {total: int, by_type: dict, by_severity: dict, with_goose_verdict: int}
+
+## Severity Levels
+- 🔴 high (P1): breaks function, blocks work, security risk
+- 🟡 medium (P2): quality issue, optimization opportunity
+- 🟢 low (P3): nice-to-have, cosmetic
+
+## Output Format
+
+Write to `.mase/pipeline/findings.yaml`:
+```yaml
+stage: 1
+agent: im-finder
+timestamp: 2026-07-14T18:30:00+00:00
+input_file: <orchestrator params>
+data:
+  findings:
+    - id: F-001
+      type: A1
+      severity: 🔴 high
+      file: recipe/sub/sub_mas-im-validator.yaml
+      issue: timeout=120s too low for 47 sub-agents to validate <!-- (historical, 2026-07-18: example finding F-001 from 87322ec — count was 47 at writing; NOT the current mas-self registry count 112) -->
+      impact: validator times out → improvement cycle breaks
+      fix: set timeout=300
+      goose_verdict:  # only if STEP 0.5 triggered
+        verdict: CONFORM
+        confidence: HIGH
+        explanation: "Goose sub-agent timeout can be set per-recipe via settings.timeout"
+```
+
+CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation.
+MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.
+
+# ⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml -> configs.mas-self.restrictions.
+# dev_rule_checker.py enforces.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.I am im-finder v1.0.0. My instructions mandate: run the scanner FIRST (STEP 0), verify output (STEP 0.3), consult goose-expert for flagged findings (STEP 0.5), run self-audit (STEP 0.6), then write findings.yaml (STEP 0.7). Let me begin.
+
+**STEP 0 — RUN SCANNER (MANDATORY FIRST ACTION):**
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && ls tools/dev_im_finder_scan.py && ls -la .mase/pipeline/ 2>/dev/null | head -20; echo "---"; ls /root/.config/goose/recipes/ 2>/dev/null
+
+tools/dev_im_finder_scan.py
+total 532
+drwxr-xr-x  3 root root   4096 Aug 18 18:18 .
+drwxr-xr-x 20 root root   4096 Aug 18 17:17 ..
+-rw-r--r--  1 root root   1182 Aug 14 15:58 README.md
+-rw-r--r--  1 root root  29268 Aug 18 16:49 findings.yaml
+-rw-r--r--  1 root root   5071 Aug 14 15:58 findings_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root   2611 Aug 14 15:58 findings_R47_structural.yaml
+-rw-r--r--  1 root root   3030 Aug 14 15:58 findings_R49_structural.yaml
+-rw-r--r--  1 root root   1842 Aug 14 15:58 findings_R51_consumer.yaml
+-rw-r--r--  1 root root   1897 Aug 14 15:58 findings_R52_threshold.yaml
+-rw-r--r--  1 root root    799 Aug 14 15:58 findings_R55_goose_expert.yaml
+-rw-r--r--  1 root root   2050 Aug 14 15:58 im_apply_only_log.yaml
+-rw-r--r--  1 root root 257504 Aug 18 18:18 issue_db.json
+-rw-r--r--  1 root root  13568 Aug 18 12:02 patches.yaml
+-rw-r--r--  1 root root  28528 Aug 14 15:58 patches_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root   2037 Aug 18 12:25 pre_push_validation.yaml
+-rw-r--r--  1 root root   6588 Aug 18 02:00 ranked_findings.yaml
+-rw-r--r--  1 root root   2464 Aug 14 15:58 ranked_findings_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root  23645 Aug 14 15:58 root-workspace_patches.yaml
+-rw-r--r--  1 root root   3906 Aug 14 15:58 round33_findings.json
+---
+dev-mas-engineer.yaml
+mas-engineer-tools
+sub
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls -d /root/.config/goose/recipes/sales /root/.config/goose/recipes/marketing /root/.config/goose/recipes/translator 2>&1; echo "exit: $?"
+
+ls: cannot access '/root/.config/goose/recipes/sales': No such file or directory
+ls: cannot access '/root/.config/goose/recipes/marketing': No such file or directory
+ls: cannot access '/root/.config/goose/recipes/translator': No such file or directory
+exit: 2The demo team dirs (sales/marketing/translator) don't exist in this environment. Let me inspect the scanner briefly to understand scope handling, then run it.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && head -80 tools/dev_im_finder_scan.py
+
+#!/usr/bin/env python3
+"""Comprehensive IM-Finder scan — detects all 53+ feature types A-MM + NN.
+
+IM-005 SCOPE-FIX (2026-07-22): The scan was previously hardcoded to
+RECIPE_DIR='recipe' which meant user-installed demo teams in
+/root/.config/goose/recipes/*/ were never analyzed. Now we accept
+--scope (CLI arg) or the SCAN_SCOPE env var to extend coverage.
+Default behavior is unchanged (backward-compatible).
+"""
+import yaml, os, glob, re, json, sys, argparse, time
+from pathlib import Path
+from collections import Counter
+
+# --- SEVERITY FILTER (R28 + R97 fix) ---
+# Default (R97): ONLY medium,high — suppress low-severity style findings
+# (e.g. "session cleanup missing", "no retry logic" — best-practice opinions,
+# not bugs). Set SEVERITY_FILTER=low,medium,high (or pass
+# --severity-filter=low,medium,high) to see all findings.
+SEVERITY_FILTER = {'medium', 'high', 'blocker'}
+for _a in sys.argv[1:]:
+    if _a.startswith('--severity-filter='):
+        SEVERITY_FILTER = {s.strip() for s in _a.split('=', 1)[1].split(',') if s.strip()}
+        break
+_env_sev = os.environ.get('SEVERITY_FILTER')
+if _env_sev:
+    SEVERITY_FILTER = {s.strip() for s in _env_sev.split(',') if s.strip()}
+
+# --- R110-177 PHASE 2: Issue-DB integration (issue-centric dedup) ---
+# Deviance note (documented in R110-177 apply commit): the directive
+# specified unconditional dedup in add_finding(). That would break the
+# existing 1544-test suite (e.g. test_scanner_detects_hardcode_stale
+# re-runs the scanner and asserts findings are EMITTED) and the
+# R110-124 standalone behavior. Dedup is therefore OPT-IN via
+# --issue-db[=PATH] (or MAS_ISSUE_DB=1). Without the flag the scanner
+# behaves exactly as before R110-177. The im-finder recipe passes the
+# flag so the pipeline gets the issue-centric behavior.
+_ISSUE_DB_MOD = None
+_ISSUE_DB = None
+_ISSUE_DB_ACTIVE = False
+_ISSUE_DB_PATH = '.mase/pipeline/issue_db.json'
+
+
+def _issue_db_module():
+    """Lazy-import dev_issue_db.py from this script's dir (R02 consumer)."""
+    global _ISSUE_DB_MOD
+    if _ISSUE_DB_MOD is None:
+        import importlib.util as _ilu
+        _path = os.path.join(os.path.dirname(__file__) or '.',
+                             'dev_issue_db.py')
+        _spec = _ilu.spec_from_file_location('dev_issue_db', _path)
+        _mod = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        _ISSUE_DB_MOD = _mod
+    return _ISSUE_DB_MOD
+
+
+def _issue_db_settings():
+    """Parse --issue-db[=PATH] / --no-issue-db / MAS_ISSUE_DB env."""
+    global _ISSUE_DB_ACTIVE, _ISSUE_DB_PATH
+    for _a in sys.argv[1:]:
+        if _a == '--no-issue-db':
+            _ISSUE_DB_ACTIVE = False
+            return
+        if _a == '--issue-db':
+            _ISSUE_DB_ACTIVE = True
+            _ISSUE_DB_PATH = '.mase/pipeline/issue_db.json'
+            return
+        if _a.startswith('--issue-db='):
+            _ISSUE_DB_ACTIVE = True
+            _ISSUE_DB_PATH = _a.split('=', 1)[1]
+    _env = os.environ.get('MAS_ISSUE_DB')
+    if _env and _env.lower() in ('1', 'true', 'yes'):
+        _ISSUE_DB_ACTIVE = True
+
+
+_issue_db_settings()
+
+
+def _get_issue_db():
+    """Lazy-init IssueDB (R110-177 2.3). None when issue-db inactive."""
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && timeout 300 python3 tools/dev_im_finder_scan.py --issue-db --scope=recipe,/root/.config/goose/recipes/sales,/root/.config/goose/recipes/marketing,/root/.config/goose/recipes/translator > /tmp/scan_output.txt 2>&1; echo "EXIT=$?"; wc -l /tmp/scan_output.txt
+
+EXIT=0
+14 /tmp/scan_output.txt
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/scan_output.txt
+
+Total findings: 0
+By severity: {}
+By type: {}
+Types covered: 0/53+
+---JSON_START---
+{
+  "findings": [],
+  "summary": {
+    "total": 0,
+    "by_type": {},
+    "by_severity": {}
+  }
+}
+ISSUE_DB: total=96 open=86 fixed=10 wontfix=0Scanner returned 0 findings — but issue_db shows 96 total (86 open). STEP 0.3 requires verification. Let me investigate whether the 0 is real or a dedup artifact.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && grep -n "ISSUE_DB\|issue_db\|dedup\|_ISSUE_DB_ACTIVE" tools/dev_im_finder_scan.py | head -50
+
+28:# --- R110-177 PHASE 2: Issue-DB integration (issue-centric dedup) ---
+30:# specified unconditional dedup in add_finding(). That would break the
+34:# --issue-db[=PATH] (or MAS_ISSUE_DB=1). Without the flag the scanner
+37:_ISSUE_DB_MOD = None
+38:_ISSUE_DB = None
+39:_ISSUE_DB_ACTIVE = False
+40:_ISSUE_DB_PATH = '.mase/pipeline/issue_db.json'
+43:def _issue_db_module():
+44:    """Lazy-import dev_issue_db.py from this script's dir (R02 consumer)."""
+45:    global _ISSUE_DB_MOD
+46:    if _ISSUE_DB_MOD is None:
+49:                             'dev_issue_db.py')
+50:        _spec = _ilu.spec_from_file_location('dev_issue_db', _path)
+53:        _ISSUE_DB_MOD = _mod
+54:    return _ISSUE_DB_MOD
+57:def _issue_db_settings():
+58:    """Parse --issue-db[=PATH] / --no-issue-db / MAS_ISSUE_DB env."""
+59:    global _ISSUE_DB_ACTIVE, _ISSUE_DB_PATH
+62:            _ISSUE_DB_ACTIVE = False
+65:            _ISSUE_DB_ACTIVE = True
+66:            _ISSUE_DB_PATH = '.mase/pipeline/issue_db.json'
+69:            _ISSUE_DB_ACTIVE = True
+70:            _ISSUE_DB_PATH = _a.split('=', 1)[1]
+71:    _env = os.environ.get('MAS_ISSUE_DB')
+73:        _ISSUE_DB_ACTIVE = True
+76:_issue_db_settings()
+79:def _get_issue_db():
+81:    global _ISSUE_DB
+82:    if not _ISSUE_DB_ACTIVE:
+84:    if _ISSUE_DB is None:
+85:        _ISSUE_DB = _issue_db_module().IssueDB(db_path=_ISSUE_DB_PATH)
+86:    return _ISSUE_DB
+90:    """R110-177 1.3: stable issue identity hash (delegates to dev_issue_db)."""
+91:    return _issue_db_module().compute_issue_hash(file, type,
+99:    implementation lives in dev_issue_db.py (unit-testable without
+103:    return _issue_db_module().compute_structural_pattern(ftype, file,
+201:    issue-db is ACTIVE (--issue-db / MAS_ISSUE_DB=1), known issues are
+202:    deduplicated: open issues get instance++ (no re-emit), fixed /
+221:    # R110-177 PHASE 2: dedup against IssueDB (opt-in)
+222:    db = _get_issue_db()
+1249:# ISSUE_DB summary goes to STDERR so the stdout JSON block stays
+1251:_issue_db = _get_issue_db()
+1252:if _issue_db is not None:
+1253:    _issue_db.save()  # atomic write
+1254:    _sum = _issue_db._data['summary']
+1255:    print(f"ISSUE_DB: total={_sum['total_issues']} "
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && sed -n '190,260p' tools/dev_im_finder_scan.py
+
+        ALL_YAMLS.append(f)
+
+findings = []
+fid = 0
+
+def add_finding(ftype, severity, file, issue, impact, fix,
+                *, line_start=None, line_end=None, **pattern_kwargs):
+    """Register a scanner finding.
+
+    R110-177 PHASE 2: every finding gets a stable issue_hash +
+    structural_pattern (identity triple file|type|pattern). When the
+    issue-db is ACTIVE (--issue-db / MAS_ISSUE_DB=1), known issues are
+    deduplicated: open issues get instance++ (no re-emit), fixed /
+    wontfix / false_positive are skipped entirely. Backward-compatible:
+    all new kwargs have defaults; without the flag behavior is
+    unchanged (all findings emitted, no db side-effects).
+    """
+    global fid
+    # R28: respect SEVERITY_FILTER
+    if severity not in SEVERITY_FILTER:
+        return
+    fid += 1
+    finding_id = f'F-{fid:03d}'
+
+    # R110-177 PHASE 2: compute structural pattern + issue_hash
+    struct_pattern = compute_structural_pattern(
+        ftype, file,
+        line_start=line_start, line_end=line_end, **pattern_kwargs
+    )
+    issue_hash = compute_issue_hash(file, ftype, struct_pattern)
+
+    # R110-177 PHASE 2: dedup against IssueDB (opt-in)
+    db = _get_issue_db()
+    if db is not None:
+        _known = db.exists(issue_hash)
+        instance = {
+            "file": file,
+            "line_start": line_start,
+            "line_end": line_end,
+            "context": pattern_kwargs.get('context', 'unknown'),
+            "scanner_version": "dev_im_finder_scan.py:1.5.0",
+            "finding_id": finding_id,
+        }
+        db.register(
+            hash=issue_hash, type=ftype, severity=severity, file=file,
+            structural_pattern=struct_pattern, issue_summary=issue,
+            fix_summary=fix, instance=instance,
+        )
+        if _known:
+            # already known (open/fixed/wontfix/false_positive) -> skip emit
+            return
+
+    findings.append({
+        'id': finding_id,
+        'type': ftype,
+        'severity': severity,
+        'file': file,
+        'issue': issue,
+        'impact': impact,
+        'fix': fix,
+        'issue_hash': issue_hash,
+        'structural_pattern': struct_pattern,
+    })
+
+for yp in sorted(ALL_YAMLS):
+    try:
+        with open(yp) as f:
+            data = yaml.safe_load(f)
+    except Exception as e:
+        add_finding('Q2', 'high', yp, f'YAML parse error: {e}',
+                    'Cannot process this file', 'Fix YAML syntax')The 0-finding result is a dedup artifact: with `--issue-db`, all 86 open issues are re-registered but suppressed from emission (only NEW issues emit). Let me verify detection logic works by running raw (no issue-db), and inspect the open issues.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && timeout 300 python3 tools/dev_im_finder_scan.py --no-issue-db --scope=recipe > /tmp/scan_raw.txt 2>&1; echo "EXIT=$?"; tail -5 /tmp/scan_raw.txt
+
+EXIT=0
+      "medium": 87,
+      "blocker": 1
+    }
+  }
+}
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'EOF'
+import json
+raw = open('/tmp/scan_raw.txt').read()
+start = raw.index('---JSON_START---') + len('---JSON_START---')
+data = json.loads(raw[start:].strip())
+fs = data['findings']
+print("RAW total:", len(fs))
+from collections import Counter
+print("by_type:", dict(Counter(f['type'] for f in fs)))
+print("by_sev:", dict(Counter(f['severity'] for f in fs)))
+# mm8/mm9 check
+mm8 = sum(1 for f in fs if f['type']=='MM8')
+mm9 = sum(1 for f in fs if f['type']=='MM9')
+print(f"VERIFY: total={len(fs)} mm8={mm8} mm9={mm9}")
+EOF
+
+RAW total: 88
+by_type: {'A2': 2, 'NN1': 17, 'Q4c': 9, 'SD-test_dev_dispatch_tracker_mq_integration-1': 1, 'SD-test_dev_issue_db_bulk_import-1': 1, 'SD-test_dev_issue_db_bulk_import-2': 1, 'SD-test_dev_issue_db_bulk_import-3': 1, 'SD-test_dev_issue_db_bulk_import-4': 1, 'SD-test_dev_issue_db_bulk_import-5': 1, 'SD-test_dev_message_queue-1': 1, 'SD-test_dev_parallel_backpressure-1': 1, 'SD-test_dev_phase2_consumers-1': 1, 'SD-test_dev_phase2_consumers-2': 1, 'SD-test_dev_phase2_consumers-3': 1, 'SD-test_dev_phase2_consumers-4': 1, 'SD-test_dev_phase3_phoenix_log-1': 1, 'SD-test_dev_phase3_phoenix_log-2': 1, 'SD-test_dev_phase3_phoenix_log-3': 1, 'SD-test_dev_phoenix_recovery_publish-1': 1, 'SD-test_dev_phoenix_recovery_publish-2': 1, 'SD-test_dev_phoenix_recovery_publish-3': 1, 'SD-test_dev_phoenix_recovery_publish-4': 1, 'SD-test_dev_workflow_runner_mq_actions-1': 1, 'SD-test_dev_workflow_runner_mq_actions-2': 1, 'SD-test_dev_workflow_runner_mq_actions-3': 1, 'SD-test_dev_workflow_runner_mq_actions-4': 1, 'SD-test_dev_workflow_runner_mq_actions-5': 1, 'SD-test_dev_workflow_runner_mq_actions-6': 1, 'SD-test_guardian_scan-1': 1, 'SD-test_guardian_scan-2': 1, 'SD-test_mcp_dashboard_server-1': 1, 'SD-test_mcp_dashboard_server-2': 1, 'SD-test_mcp_dashboard_server-3': 1, 'SD-test_mcp_dashboard_server-4': 1, 'SD-test_mcp_dashboard_server-5': 1, 'SD-test_mcp_dashboard_server-6': 1, 'SD-test_r110134_8_evidence_secret_leak-1': 1, 'SD-test_recipe_instructions-1': 1, 'SD-test_sd_fixture_r110105-1': 1, 'SD-test_sub_mas_content_writer-1': 1, 'SD-test_sub_mas_content_writer-2': 1, 'SD-test_sub_mas_im_finder-1': 1, 'SD-test_sub_mas_prompt_engineer-1': 1, 'SD-recipe_sub_mas-im-rank-1': 1, 'SD-recipe_sub_mas-pre-push-validator-1': 1, 'HARDCODE-STALE-001': 7, 'HARDCODE-STALE-002': 5, 'HARDCODE-STALE-003': 2, 'HARDCODE-STALE-004': 2, 'HARDCODE-STALE-005': 1, 'HARDCODE-STALE-006': 1}
+by_sev: {'medium': 87, 'blocker': 1}
+VERIFY: total=88 mm8=0 mm9=0Raw scan: **88 findings, mm8=0, mm9=0** — detection logic verified working. The issue-db run returns 0 NEW because all 88 are already registered (86 open). Let me examine the blocker, the existing findings.yaml, and the issue DB state.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'EOF'
+import json
+raw = open('/tmp/scan_raw.txt').read()
+start = raw.index('---JSON_START---') + len('---JSON_START---')
+data = json.loads(raw[start:].strip())
+fs = data['findings']
+# Blocker
+for f in fs:
+    if f['severity'] == 'blocker':
+        print("BLOCKER:", json.dumps(f, indent=2)[:1500])
+EOF
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'EOF'
+import yaml
+d = yaml.safe_load(open('.mase/pipeline/findings.yaml'))
+print("keys:", list(d.keys()))
+print("stage:", d.get('stage'), "agent:", d.get('agent'), "ts:", d.get('timestamp'))
+f = d.get('data', {}).get('findings', [])
+print("findings count:", len(f))
+from collections import Counter
+print("by_type:", dict(Counter(x.get('type') for x in f)))
+print("by_sev:", dict(Counter(x.get('severity') for x in f)))
+verds = sum(1 for x in f if 'goose_verdict' in x)
+print("with goose_verdict:", verds)
+mm8 = sum(1 for x in f if x.get('type')=='MM8'); mm9 = sum(1 for x in f if x.get('type')=='MM9')
+print(f"mm8={mm8} mm9={mm9}")
+EOF
+
+BLOCKER: {
+  "id": "F-070",
+  "type": "SD-recipe_sub_mas-pre-push-validator-1",
+  "severity": "blocker",
+  "file": "./recipe/instructions/sub_mas-pre-push-validator.md:26",
+  "issue": "spec_drift_reverse: recipe asserts '21 checks' (line 26) but test asserts '\"18 checks\"' \u2014 BLOCKER (R110-78 PHASE 1: pytest-count-mismatch)",
+  "impact": "Test will pass but recipe contradicts itself. Update recipe OR test to match (R110-78 canonical = pytest-count-anchor).",
+  "fix": "Run: grep -rn '21 checks' tests/ recipe/ ; if only recipe/ matches: test is stale; if tests/ matches different value: recipe is stale. R110-111 L26 pattern: '16 checks' -> '17 checks'",
+  "issue_hash": "sha256:4cce4bd21ccb29b084b77124a31573e6ef99273bf3b95c6ca63884d5740754c7",
+  "structural_pattern": "SD-recipe_sub_mas-pre-push-validator-1:sub_mas-pre-push-validator.md:26"
+}keys: ['stage', 'agent', 'timestamp', 'input_file', 'goose_expert_delegation', 'data']
+stage: 1 agent: im-finder ts: 2026-08-18T16:49:01.861976+00:00
+findings count: 21
+by_type: {'SD-test_dev_message_queue-1': 1, 'MM9-EXT': 20}
+by_sev: {'medium': 1, 'low': 20}
+with goose_verdict: 20
+mm8=0 mm9=0The existing findings.yaml (16:49) contains only 21 findings (20 MM9-EXT self-audit + 1 SD) — but the scanner raw output has **88 findings (87 medium + 1 blocker)**. The findings.yaml is stale vs. the scanner. Let me check the issue DB's open issues and how the pipeline is meant to reconcile.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'EOF'
+import json
+db = json.load(open('.mase/pipeline/issue_db.json'))
+print("top keys:", list(db.keys()))
+s = db.get('summary', {})
+print("summary:", json.dumps(s, indent=1)[:800])
+issues = db.get('issues', db.get('data', {}).get('issues', {}))
+print("issues type:", type(issues).__name__, "count:", len(issues) if hasattr(issues,'__len__') else '?')
+if isinstance(issues, dict):
+    # sample
+    k = list(issues.keys())[:3]
+    print("sample keys:", k)
+    for kk in k:
+        print(json.dumps(issues[kk], indent=1)[:600])
+EOF
+
+top keys: ['schema_version', 'created_at', 'last_modified_at', 'last_modified_by', 'summary', 'issues']
+summary: {
+ "total_issues": 96,
+ "by_status": {
+  "open": 86,
+  "fixed": 10,
+  "wontfix": 0,
+  "false_positive": 0
+ },
+ "by_type": {
+  "A2": 2,
+  "NN1": 17,
+  "Q4c": 3,
+  "SD-test_dev_dispatch_tracker_mq_integration-1": 1,
+  "SD-test_dev_issue_db_bulk_import-1": 1,
+  "SD-test_dev_issue_db_bulk_import-2": 1,
+  "SD-test_dev_issue_db_bulk_import-3": 1,
+  "SD-test_dev_issue_db_bulk_import-4": 1,
+  "SD-test_dev_issue_db_bulk_import-5": 1,
+  "SD-test_dev_parallel_backpressure-1": 1,
+  "SD-test_dev_phase2_consumers-1": 1,
+  "SD-test_dev_phase2_consumers-2": 1,
+  "SD-test_dev_phase2_consumers-3": 1,
+  "SD-test_dev_phase2_consumers-4": 1,
+  "SD-test_dev_phase3_phoenix_log-1": 1,
+  "SD-test_dev_phase3_phoenix_log-2": 1,
+  "SD-test_dev_phase3_phoenix_log-3": 1,
+  "SD-test_dev_phoenix_recovery_publish-1": 1,
+ 
+issues type: dict count: 96
+sample keys: ['sha256:bea47cab27d74d98388d053fb770d150e414182626ef048c397e271d33e469cb', 'sha256:364463d010ababa8ecf26c6a7e9cbb4f92099c14e06c87bd45a81c1a7a035448', 'sha256:0a3ae545d2c8d992b46b8a7b4d59be0a8c7722478a30ff39d479837620b22a17']
+{
+ "hash": "sha256:bea47cab27d74d98388d053fb770d150e414182626ef048c397e271d33e469cb",
+ "type": "A2",
+ "severity": "medium",
+ "file": "recipe/dashboard-data-refresh.yaml",
+ "structural_pattern": "A2:dashboard-data-refresh.yaml",
+ "first_seen": "2026-08-18T13:44:39Z",
+ "last_seen": "2026-08-18T18:23:29Z",
+ "instance_count": 7,
+ "instances": [
+  {
+   "file": "recipe/dashboard-data-refresh.yaml",
+   "line_start": null,
+   "line_end": null,
+   "context": "unknown",
+   "scanner_version": "dev_im_finder_scan.py:1.5.0",
+   "finding_id": "F-001"
+  },
+  {
+   "file": "recipe/dashboard-data-refresh.yaml",
+{
+ "hash": "sha256:364463d010ababa8ecf26c6a7e9cbb4f92099c14e06c87bd45a81c1a7a035448",
+ "type": "A2",
+ "severity": "medium",
+ "file": "recipe/template/recovery/immune.yaml",
+ "structural_pattern": "A2:immune.yaml",
+ "first_seen": "2026-08-18T13:44:39Z",
+ "last_seen": "2026-08-18T18:23:30Z",
+ "instance_count": 7,
+ "instances": [
+  {
+   "file": "recipe/template/recovery/immune.yaml",
+   "line_start": null,
+   "line_end": null,
+   "context": "unknown",
+   "scanner_version": "dev_im_finder_scan.py:1.5.0",
+   "finding_id": "F-002"
+  },
+  {
+   "file": "recipe/template/recovery/immune.yaml",
+   "line_
+{
+ "hash": "sha256:0a3ae545d2c8d992b46b8a7b4d59be0a8c7722478a30ff39d479837620b22a17",
+ "type": "NN1",
+ "severity": "medium",
+ "file": "recipe/dev-mas-engineer-30agents.yaml",
+ "structural_pattern": "multi_role:10:analyze,build,design,find,generate,read,report,scan,test,validate",
+ "first_seen": "2026-08-18T13:44:39Z",
+ "last_seen": "2026-08-18T18:23:30Z",
+ "instance_count": 7,
+ "instances": [
+  {
+   "file": "recipe/dev-mas-engineer-30agents.yaml",
+   "line_start": null,
+   "line_end": null,
+   "context": "unknown",
+   "scanner_version": "dev_im_finder_scan.py:1.5.0",
+   "finding_id": "F-003"
+ 
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && cat .mase/pipeline/README.md 2>/dev/null | head -60; echo "====RANK===="; sed -n '1,60p' recipe/instructions/sub_mas-im-rank.md
+
+# Improvement-Pipeline Data Files
+
+This directory holds the persistent output of each Improvement-Pipeline stage.
+
+## Files
+
+| File | Written by | Read by | Schema |
+|------|------------|---------|--------|
+| `findings.yaml` | im-finder (Stage 1) | im-rank (Stage 2) | findings[] with {id, type, severity, file, issue, impact, fix} |
+| `ranked_findings.yaml` | im-rank (Stage 2) | im-designer (Stage 3) | ranked_findings[] with {id, priority, severity, type, file, rank_score} |
+| `patches.yaml` | im-designer (Stage 3) | im-validator (Stage 4) | patches[] with {file, field, from, to, reason, type, priority, current_chars, target_chars} |
+| `validation.yaml` | im-validator (Stage 4) | general-improver (Stage 5) | validation: {status, details, recommendation[], approved_count, rejected_count} |
+
+## Reset
+
+To start a fresh pipeline run, clear the directory:
+```
+rm -f .mase/pipeline/*.yaml
+```
+
+## Convention
+
+Each stage's file MUST start with:
+```yaml
+stage: <1-5>
+agent: <name>
+timestamp: <ISO-8601>
+input_file: <path to previous stage's output, or 'none'>
+# <schema description>
+```
+
+This makes the data flow auditable: each file knows its own stage, agent, and predecessor.
+====RANK====
+# sub_mas-im-rank — 📊 Prioritize & filter Findings
+Is called by the sub_mas-general-improver orchestrator.
+Sorts and filters Findings for implementation.
+
+╔══════════════════════════════════════════════════════════╗
+║  SOT WORKFLOW CONTROL                                    ║
+║  → workflows.yaml → agents.im-rank                       ║
+║     .task_workflows.RANK                                 ║
+╚══════════════════════════════════════════════════════════╝
+
+## ⛔ STEP 0.5 — GOOSE-EXPERT CONSULTATION (CONDITIONAL)
+
+**When to summon:** ONLY if the input findings contain a `goose_verdict`
+field from im-finder AND the ranking would change because of verdict
+disagreement (e.g. NOT_POSSIBLE findings must be deprioritized).
+
+This is more selective than im-finder/im-designer — im-rank mostly
+delegates to the duckling-constitution (Art.1-6), not goose-expert.
+
+## Pipeline Contract (Stage 2/5)
+
+This agent is **stage 2** of the Improvement-Pipeline.
+It reads the previous stage's output and writes its own.
+
+**Input:**   `.mase/pipeline/findings.yaml` (from im-finder)
+**Output:**  `.mase/pipeline/ranked_findings.yaml`
+**Schema:**  ranked_findings[] with {id, priority, severity, type, file, rank_score, goose_verdict?}
+**Next:**    -> im-designer (reads Output file)
+
+```yaml
+# .mase/pipeline/ranked_findings.yaml — written by im-rank
+stage: 2
+agent: im-rank
+timestamp: <ISO-8601>
+input_file: .mase/pipeline/findings.yaml
+# ranked_findings[] with {id, priority, severity, type, file, rank_score, goose_verdict?}
+```
+
+ ## Input (from Pipeline-Orchestrator)
+- task: RANK
+- request_id: string (UUID)
+- data: {findings: [], scores: {}}
+- **NEW (MM6 fix): severity_ceiling: "high"|"medium"|"low"|"info" (default: "high")**
+  - Set by general-improver when RECYCLING a skipped charge (one band lower
+    than previous ceiling). See TIER C) in sub_mas-general-improver.md.
+  - If severity_ceiling = "medium", filter out findings with severity=high.
+  - If severity_ceiling = "low", filter out high + medium.
+  - If severity_ceiling = "info", include all (no filter).
+
+## STEP 1 — REMOVE DUPLICATES
+1. Group Findings by (type + file + detail)
+2. Keep only the first per group
+3. Count removed duplicates
+
+## STEP 1.4 — APPLY ISSUE-DB STATUS FILTER (R110-177, PHASE 3)
+
+**🚨 NEW IN R110-177: filter against persistent issue-db. 🚨**
+
+Before sorting by severity, consult `.mase/pipeline/issue_db.json` and
+REMOVE any finding whose `issue_hash` is already in the db with
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && sed -n '60,140p' recipe/instructions/sub_mas-im-rank.md
+
+REMOVE any finding whose `issue_hash` is already in the db with
+status=fixed, wontfix, or false_positive.
+
+Procedure:
+1. LOAD:
+   ```bash
+   cd {workspace} && python3 -c "from dev_issue_db import IssueDB; db=IssueDB(); print(','.join(db.list_by_status('fixed')+db.list_by_status('wontfix')+db.list_by_status('false_positive')))"
+   ```
+2. BUILD: set `excluded_hashes = {h for h in db.list_by_status('fixed')} | {h for h in db.list_by_status('wontfix')} | {h for h in db.list_by_status('false_positive')}`
+3. FILTER: for each finding in findings[], if `finding.issue_hash in excluded_hashes`: DROP + log `ISSUE-DB-SKIP: <hash> (<status>)`
+4. LOG: `issue_db_filtered: <count> findings dropped (status=fixed/wontfix/false_positive)` — write this count into the ranked_findings.yaml header (see OUTPUT).
+
+**Why this is correct:**
+- R110-176 had 1690 findings, all "new" (no prior db). After PHASE 7
+  (bulk-import), re-runs see most scanner-emits already in db as open →
+  rank only promotes genuinely NEW issues to top-N.
+- The filter is RANK-TIME, not FINDER-TIME. Finder still records
+  instances for history. Rank just doesn't promote already-resolved
+  issues.
+
+**Edge case: hash missing in db (finder didn't add it).**
+- Defensive: if `finding.issue_hash` is None or empty, KEEP finding
+  (finder will catch on next run after PHASE 2 fully deployed)
+- Log "WARNING: finding without issue_hash, keeping for rank"
+
+**Helper (equivalent, if python available):** use the library directly:
+```python
+from dev_issue_db import IssueDB
+db = IssueDB()
+kept, dropped = db.filter_findings(findings)
+```
+(`db.filter_findings` returns `(kept, dropped)`; findings without
+`issue_hash` are kept with a warning.)
+
+## STEP 1.5 — APPLY SEVERITY CEILING (MM6 fix)
+1. Determine active ceiling: input.severity_ceiling ?? "high"
+2. Define ceiling_order: ["high", "medium", "low", "info"]  (index 0 = strictest)
+3. Filter findings where findings[i].severity is STRICTLY ABOVE the ceiling
+   - ceiling_idx = ceiling_order.index(active_ceiling)
+   - finding_idx = ceiling_order.index(finding.severity)  (assume severity
+     is one of the 4 strings, else treat as "info")
+   - DROP if finding_idx < ceiling_idx (i.e. finding is stricter than ceiling)
+   - Example: ceiling="medium" → drop "high" findings, keep "medium"/"low"/"info"
+   - Example: ceiling="info" → drop nothing (keep all)
+   - Example: ceiling="high" → drop nothing (all severities allowed)
+4. Record filtered count in `ceiling_filtered` field
+5. IF ceiling_filtered > 0 AND remaining findings == 0:
+   → EMIT warning: "severity_ceiling={ceiling} filtered out all {N} findings.
+     Lower ceiling to 'info' or check if findings file is empty."
+   → Set top_N = [] (no design work possible)
+6. ELSE proceed to STEP 2
+
+## STEP 2 — SORT BY SEVERITY
+Sort Findings:
+1. 🔴 high (Impact: System-Stability, Data loss)
+2. 🟡 medium (Impact: Performance, User-Experience)
+3. 🟢 low (Impact: Cosmetics, Documentation)
+4. ℹ️ info (Impact: None, only Information)
+
+**Modifier: if `goose_verdict.verdict == NOT_POSSIBLE`, deprioritize by 1 level.**
+
+## STEP 3 — ART.1-6 CHECK
+Check each Finding against the Constitution:
+- Art.1 (Sovereignty): Changes the Constitution? → BLOCKED
+- Art.2 (Autonomy): Restricts the System-Autonomy? → BLOCKED
+- Art.3 (Security): Generates Security holes? → BLOCKED
+- Art.4 (Stability): Endangers System-Stability? → BLOCKED
+- Art.5 (Transparency): Is User informed? → Always OK
+- Art.6 (Cost-efficiency): Wastes more resources than it saves? → BLOCKED
+
+## STEP 4 — TOP-N SELECTION (configurable, IM_TOP_N env var)
+
+Take the top N Findings by rank_score.
+
+**Configuration via env var IM_TOP_N (R57 user-request 2026-07-25):**
+- `IM_TOP_N=5` (default — backward-compatible)
+- `IM_TOP_N=20` (recommended for cron — ~12 days to clear 1000 findings)
+- `IM_TOP_N=50` (max for deepseek-v4-flash cost-limit)
+
+**Cost/throughput tradeoff:**
+| IM_TOP_N | patches/Run | cost/Run | 1000 findings | cron interval |
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'EOF'
+import yaml
+d = yaml.safe_load(open('.mase/pipeline/findings.yaml'))
+f = d.get('data', {}).get('findings', [])
+print("sample finding keys:", list(f[0].keys()) if f else "none")
+print(yaml.safe_dump(f[:2], default_flow_style=False)[:1200])
+print("input_file:", d.get('input_file'))
+print("goose_expert_delegation:", d.get('goose_expert_delegation'))
+EOF
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'EOF'
+import yaml
+d = yaml.safe_load(open('.mase/pipeline/ranked_findings.yaml'))
+print("keys:", list(d.keys()))
+rf = d.get('data', {}).get('ranked_findings', [])
+print("count:", len(rf))
+print("types:", [x.get('type') for x in rf])
+print("issue_db_filtered:", d.get('issue_db_filtered'))
+EOF
+
+sample finding keys: ['id', 'type', 'severity', 'file', 'issue', 'impact', 'fix', 'issue_hash', 'structural_pattern', 'source', 'pipeline_stage']
+- file: ./tests/test_dev_message_queue.py:414
+  fix: 'Run: grep -rn ''THIS IS NOT JSON'' tests/ recipe/ tools/ docs/ ; if only tests/
+    matches: update test to current value; if recipe/ matches different value: test
+    is stale'
+  id: F-035
+  impact: Test will fail until the literal is restored or the test is updated to the
+    new value (R110-71/R110-78 pattern)
+  issue: 'spec_drift: test asserts literal ''THIS IS NOT JSON'' but it is absent from
+    recipe/, tools/, docs/ (literal-only-in-tests = test is stale or recipe was updated
+    without test fix)'
+  issue_hash: sha256:b3dd858e956ce3813efa581498a3fb5aa60f93f6f2616a52ce601813ef9f462d
+  pipeline_stage: 0.0
+  severity: medium
+  source: dev_im_finder_scan.py (--issue-db)
+  structural_pattern: SD-test_dev_message_queue-1:test_dev_message_queue.py:414
+  type: SD-test_dev_message_queue-1
+- file: recipe/instructions/sub_mas-config-auditor.md
+  fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 13' value, or derive
+    the count from the source of truth instead of hardcoding.
+  goose_verdict:
+    confidence: HIGH
+    explanation: 'Instruction-doc text drift only, not a Goose schema question. Goose
+      validates re
+input_file: orchestrator params: standalone FIND round; scanner tools/dev_im_finder_scan.py --issue-db --scope=recipe,sales,marketing,translator; self-audit + spec-invariant (STEP 0.6)
+goose_expert_delegation: sub_mas-goose-expert summoned via delegate tool for MM9-EXT class (20 findings) - verdict CONFORM/HIGH attached per finding.keys: ['stage', 'agent', 'version', 'timestamp', 'input_file', 'severity_ceiling', 'ceiling_filtered', 'active_ceiling', 'issue_db_filtered', 'issue_db_status_counts', 'top_N', 'skipped', 'rank_score_scheme', 'stats', 'ranked_findings']
+count: 0
+types: []
+issue_db_filtered: 0Let me understand how the issue-centric pipeline reconciles open DB issues with findings.yaml — checking bulk-import tool and general-improver workflow.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && head -40 tools/dev_issue_db_bulk_import.py; echo "====="; grep -n "issue.db\|issue_db\|bulk.import\|open.*issue\|findings.yaml" recipe/instructions/sub_mas-general-improver.md | head -30
+
+#!/usr/bin/env python3
+"""One-time bulk-import of run-findings into the issue-db (R110-177 PHASE 7).
+
+Reads a findings YAML/JSON file (run-findings artifact) and registers
+every finding as an open issue in `.mase/pipeline/issue_db.json`.
+
+Spec: .mase/directives/R110-177-im-pipeline-issue-db.md PHASE 7.
+R110-177-ADAPTATION (documented in apply commit): the R110-24 file's
+actual layout is `data.findings[]` (nested under `data`), not top-level
+`ranked_findings`/`findings`. The loader accepts all three shapes.
+"""
+import argparse
+import json
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from dev_issue_db import IssueDB, compute_issue_hash  # noqa: E402
+
+
+def load_findings(path):
+    """Load findings from yaml or json, accepting multiple layouts."""
+    import yaml
+    if path.endswith('.json'):
+        with open(path) as f:
+            data = json.load(f)
+    else:
+        with open(path) as f:
+            data = yaml.safe_load(f)
+    if not isinstance(data, dict):
+        return []
+    findings = (data.get('ranked_findings')
+                or data.get('findings')
+                or (data.get('data') or {}).get('findings')
+                or [])
+    if not isinstance(findings, list):
+        return []
+    return findings
+
+=====
+54:    - im-finder writes to  `.mase/pipeline/findings.yaml`
+55:    - im-rank writes to    `.mase/pipeline/ranked_findings.yaml`
+242:           current_ceiling = .mase/pipeline/ranked_findings.yaml.active_ceiling ?? "high"
+252:      b. CHECK: .mase/pipeline/findings.yaml still exists AND has findings
+256:         (input: findings from .mase/pipeline/findings.yaml + new ceiling)
+262:      e. ELSE: WRITE .mase/pipeline/ranked_findings.yaml with new ceiling
+339:whether they want to mark any open issues as `wontfix` for this run
+345:Top-5 open issues (after rank):
+362:   python3 -c "from dev_issue_db import IssueDB; db=IssueDB(); s=db._data['summary']['by_status']; print(s['open'], s['wontfix'], s['fixed'])"
+369:3. Validate each reason via `dev_issue_db.validate_wontfix_reason()`
+375:   from dev_issue_db import IssueDB
+391:file produces a NEW hash (new open issue); the old wontfix entry stays
+395:`python3 tools/dev_issue_db.py mark-wontfix <hash> --reason "..."`.
+569:2. LOAD findings from `.mase/pipeline/findings.yaml` (filtered: flagged_by=intention-parser)
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'EOF'
+import json
+db = json.load(open('.mase/pipeline/issue_db.json'))
+issues = db['issues']
+# statuses by type
+from collections import Counter
+st = Counter()
+for h, rec in issues.items():
+    st[rec.get('type')] += 1
+    if rec.get('severity') == 'blocker' or 'pre-push-validator' in rec.get('file',''):
+        print("BLOCKER-CANDIDATE:", rec.get('type'), rec.get('severity'), rec.get('status'), rec.get('file'))
+print()
+# check F-035 hash status
+f035 = 'sha256:b3dd858e956ce3813efa581498a3fb5aa60f93f6f2616a52ce601813ef9f462d'
+print("F-035 hash in db:", f035 in issues, issues.get(f035,{}).get('status') if f035 in issues else '')
+# count open/fixed
+print("open:", sum(1 for r in issues.values() if r.get('status')=='open'), "fixed:", sum(1 for r in issues.values() if r.get('status')=='fixed'))
+# severity distribution
+print("by_sev:", dict(Counter(r.get('severity') for r in issues.values())))
+EOF
+
+BLOCKER-CANDIDATE: HARDCODE-STALE-001 medium open recipe/instructions/sub_mas-pre-push-validator.md:26
+BLOCKER-CANDIDATE: HARDCODE-STALE-002 medium open recipe/instructions/sub_mas-pre-push-validator.md:531
+BLOCKER-CANDIDATE: SD-recipe_sub_mas-pre-push-validator-1 blocker open ./recipe/instructions/sub_mas-pre-push-validator.md:26
+BLOCKER-CANDIDATE: HARDCODE-STALE-001 medium open recipe/instructions/sub_mas-pre-push-validator.md:26
+
+F-035 hash in db: True open
+open: 86 fixed: 10
+by_sev: {'medium': 91, 'high': 4, 'blocker': 1}All 88 raw findings map to DB entries (86 open incl. 1 blocker + 4 high, 10 fixed) — the 0-NEW result is correct dedup behavior. Let me check the dedup test + prior round artifacts to confirm the intended findings.yaml semantics.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && sed -n '1,60p' tests/test_dev_im_finder_scan_dedup.py; echo "===ROUND33==="; python3 -c "
+import json
+d = json.load(open('.mase/pipeline/round33_findings.json'))
+print(type(d), list(d.keys()) if isinstance(d,dict) else len(d))
+" 2>/dev/null | head -5
+
+"""R110-177 PHASE 2 tests: scanner issue-hash + dedup against Issue-DB.
+
+Spec: .mase/directives/R110-177-im-pipeline-issue-db.md PHASE 2.6 (8 tests).
+
+All scanner runs use a synthetic minimal recipe dir + a tempfile issue-db
+(never the real .mase/pipeline/issue_db.json), keeping runs fast and
+deterministic.
+"""
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).parent.parent.resolve()
+SCANNER = REPO_ROOT / "tools" / "dev_im_finder_scan.py"
+
+sys.path.insert(0, str(REPO_ROOT / "tools"))
+
+
+def _make_scope(tmp_path):
+    """Synthetic recipe dir that deterministically triggers scanner findings.
+
+    A minimal yaml missing prompt/instructions/constitution/description
+    triggers MM2, MM3, H1, Q1 (several) — enough to exercise dedup.
+    """
+    d = tmp_path / "recipes"
+    d.mkdir()
+    (d / "bad_agent.yaml").write_text(
+        "about: test\nname: bad_agent\nversion: '1.0'\n")
+    return d
+
+
+def _run_scanner(cwd, *args, timeout=120):
+    r = subprocess.run(
+        [sys.executable, str(SCANNER), *args],
+        capture_output=True, text=True, timeout=timeout, cwd=str(cwd))
+    assert r.returncode == 0, f"scanner failed: {r.stderr[-500:]}"
+    out = r.stdout
+    assert "---JSON_START---" in out
+    j = json.loads(out.split("---JSON_START---")[1])
+    return j
+
+
+# ---------- 1. issue_hash on every finding ----------
+
+def test_finder_emits_issue_hash_field(tmp_path):
+    d = _make_scope(tmp_path)
+    j = _run_scanner(tmp_path, f"--scope={d.name}")
+    assert len(j["findings"]) >= 1, "synthetic scope must emit findings"
+    for f in j["findings"]:
+        assert "issue_hash" in f, f"finding {f['id']} missing issue_hash"
+        assert f["issue_hash"].startswith("sha256:")
+        assert "structural_pattern" in f
+
+
+# ---------- 2. dedup against existing db ----------
+
+def test_finder_dedup_against_existing_db(tmp_path):
+    d = _make_scope(tmp_path)
+===ROUND33===
+<class 'dict'> ['version', 'created', 'scan_scope', 'findings']Dedup semantics confirmed. Now **STEP 0.6 — SELF-AUDIT SPEC-DRIFT CHECK** (mandatory before writing findings.yaml):
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && timeout 180 python3 tools/dev_self_audit.py --scope recipe/instructions/ --repo-root /workspace/dev-branch/mas-engineer-cleanup/mas-engineer --output .mase/pipeline/self_audit.yaml > /tmp/self_audit.log 2>&1; echo "SELF-AUDIT EXIT=$?"; tail -5 /tmp/self_audit.log
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && timeout 180 python3 tools/dev_spec_invariant.py --repo-root /workspace/dev-branch/mas-engineer-cleanup/mas-engineer --output .mase/pipeline/spec_invariant.yaml > /tmp/spec_invariant.log 2>&1; echo "SPEC-INVARIANT EXIT=$?"; tail -5 /tmp/spec_invariant.log
+
+SELF-AUDIT EXIT=1
+    rel = md.relative_to(repo_root)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/pathlib.py", line 730, in relative_to
+    raise ValueError("{!r} is not in the subpath of {!r}"
+ValueError: 'recipe/instructions/security-scanner.md' is not in the subpath of '/workspace/dev-branch/mas-engineer-cleanup/mas-engineer' OR one path is relative and the other is absolute.SPEC-INVARIANT EXIT=2
+usage: dev_spec_invariant.py [-h] [--repo-root REPO_ROOT]
+dev_spec_invariant.py: error: unrecognized arguments: --output .mase/pipeline/spec_invariant.yamlBoth tools have CLI differences. Let me inspect their argument handling:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && grep -n "add_argument\|--scope\|--repo-root\|--output" tools/dev_self_audit.py | head -15; echo "===SPEC==="; grep -n "add_argument\|--repo-root\|--output\|def main" tools/dev_spec_invariant.py | head -15
+
+18:    python3 -m dev_self_audit --scope <dir> --repo-root <path> \
+19:        [--output <path>]
+262:            suggested_fix="Pass --scope to an existing directory.",
+326:    ap.add_argument('--scope', default='recipe/instructions/',
+328:    ap.add_argument('--repo-root', type=Path, default=Path('.'),
+330:    ap.add_argument('--output', type=Path, default=None,
+===SPEC===
+21:    python3 -m dev_spec_invariant --repo-root <path>
+199:def main(argv=None):
+202:    ap.add_argument('--repo-root', type=Path, default=Path('.'),
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && sed -n '199,240p' tools/dev_spec_invariant.py
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(
+        description="Spec-invariant: test count-assertions vs recipe count-declarations")
+    ap.add_argument('--repo-root', type=Path, default=Path('.'),
+                    help='Repository root (default: .)')
+    args = ap.parse_args(argv)
+
+    res = run_spec_invariant_check(args.repo_root)
+    findings = res.to_findings()
+    if findings:
+        print(f"🔍 spec-invariant: {len(findings)} BLOCKER finding(s)")
+        _print_findings(res)
+        print("   → spec-drift present (R110-78): fix test or recipe, then re-run")
+        return 1
+    print("✅ spec-invariant: all test count-assertions match recipe count-declarations")
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())Both tools have CLI mismatches vs. the recipe instructions (`--output` doesn't exist in spec-invariant; relative scope breaks with absolute repo-root in self-audit) — that's a real spec-drift finding itself. Let me run them correctly:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && timeout 180 python3 tools/dev_self_audit.py --scope /workspace/dev-branch/mas-engineer-cleanup/mas-engineer/recipe/instructions/ --repo-root /workspace/dev-branch/mas-engineer-cleanup/mas-engineer --output .mase/pipeline/self_audit.yaml > /tmp/self_audit.log 2>&1; echo "SELF-AUDIT EXIT=$?"; tail -3 /tmp/self_audit.log
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && timeout 180 python3 tools/dev_spec_invariant.py --repo-root /workspace/dev-branch/mas-engineer-cleanup/mas-engineer > /tmp/spec_invariant.log 2>&1; echo "SPEC-INVARIANT EXIT=$?"; cat /tmp/spec_invariant.log
+
+SELF-AUDIT EXIT=0
+  HARDCODE-TOOLS [WARN]: recipe/instructions/sub_mas-team-packager.md:65: hardcoded '58 tools' without env-var/default/config context
+self-audit report: .mase/pipeline/self_audit.yaml (20 findings, 45 files scanned)
+✅ self-audit: cleanSPEC-INVARIANT EXIT=0
+✅ spec-invariant: all test count-assertions match recipe count-declarations
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'EOF'
+import yaml
+sa = yaml.safe_load(open('.mase/pipeline/self_audit.yaml'))
+print("self_audit keys:", list(sa.keys()) if isinstance(sa,dict) else type(sa))
+fs = sa.get('findings', [])
+print("findings:", len(fs))
+from collections import Counter
+print("by_type:", dict(Counter(f.get('type') for f in fs)))
+print("by_sev:", dict(Counter(f.get('severity') for f in fs)))
+for f in fs:
+    print("-", f.get('type'), f.get('severity'), f.get('file'), '|', str(f.get('description'))[:80])
+EOF
+
+self_audit keys: ['audit_run', 'findings']
+findings: 20
+by_type: {None: 20}
+by_sev: {'WARN': 20}
+- None WARN None | recipe/instructions/sub_mas-config-auditor.md:137: hardcoded '13 checks' without
+- None WARN None | recipe/instructions/sub_mas-pre-push-validator.md:26: hardcoded '21 checks' with
+- None WARN None | recipe/instructions/sub_mas-bootstrap.md:4: hardcoded '112 sub-agents' without e
+- None WARN None | recipe/instructions/sub_mas-bootstrap.md:16: hardcoded '112 sub-agents' without 
+- None WARN None | recipe/instructions/sub_mas-bootstrap.md:40: hardcoded '112 sub-agents' without 
+- None WARN None | recipe/instructions/sub_mas-config-auditor.md:93: hardcoded '43 sub-agents' with
+- None WARN None | recipe/instructions/sub_mas-config-auditor.md:98: hardcoded '43 sub-agents' with
+- None WARN None | recipe/instructions/sub_mas-generic-init.md:39: hardcoded '112 sub-agents' witho
+- None WARN None | recipe/instructions/sub_mas-im-finder.md:549: hardcoded '47 sub-agents' without 
+- None WARN None | recipe/instructions/sub_mas-pre-push-validator.md:531: hardcoded '112 sub-agents
+- None WARN None | recipe/instructions/sub_mas-system-knowledge.md:13: hardcoded '44 sub-agents' wi
+- None WARN None | recipe/instructions/sub_mas-team-packager.md:364: hardcoded '20 sub-agents' with
+- None WARN None | recipe/instructions/sub_mas-bootstrap.md:4: hardcoded '58 tools' without env-var
+- None WARN None | recipe/instructions/sub_mas-bootstrap.md:17: hardcoded '58 tools' without env-va
+- None WARN None | recipe/instructions/sub_mas-bootstrap.md:40: hardcoded '58 tools' without env-va
+- None WARN None | recipe/instructions/sub_mas-generic-init.md:39: hardcoded '58 tools' without env
+- None WARN None | recipe/instructions/sub_mas-system-knowledge.md:12: hardcoded '58 tools' without
+- None WARN None | recipe/instructions/sub_mas-system-knowledge.md:133: hardcoded '58 tools' withou
+- None WARN None | recipe/instructions/sub_mas-system-knowledge.md:149: hardcoded '58 tools' withou
+- None WARN None | recipe/instructions/sub_mas-team-packager.md:65: hardcoded '58 tools' without en
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'EOF'
+import yaml
+sa = yaml.safe_load(open('.mase/pipeline/self_audit.yaml'))
+fs = sa.get('findings', [])
+print(yaml.safe_dump(fs[0], default_flow_style=False))
+print("=====")
+print(yaml.safe_dump(fs[1], default_flow_style=False))
+EOF
+
+description: 'recipe/instructions/sub_mas-config-auditor.md:137: hardcoded ''13 checks''
+  without env-var/default/config context'
+id: HARDCODE-CHECKS
+severity: WARN
+suggested_fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 13' value,
+  or derive the count from the source of truth instead of hardcoding.
+
+=====
+description: 'recipe/instructions/sub_mas-pre-push-validator.md:26: hardcoded ''21
+  checks'' without env-var/default/config context'
+id: HARDCODE-CHECKS
+severity: WARN
+suggested_fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 21' value,
+  or derive the count from the source of truth instead of hardcoding.
+The self-audit emits 20 HARDCODE findings (type in `id` field, WARN severity). Let me check how the previous run formatted its MM9-EXT entries so I stay consistent:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'EOF'
+import yaml
+d = yaml.safe_load(open('.mase/pipeline/findings.yaml'))
+f = d.get('data', {}).get('findings', [])
+for x in f:
+    if x.get('type') == 'MM9-EXT':
+        print(yaml.safe_dump(x, default_flow_style=False))
+        break
+EOF
+
+file: recipe/instructions/sub_mas-config-auditor.md
+fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 13' value, or derive
+  the count from the source of truth instead of hardcoding.
+goose_verdict:
+  confidence: HIGH
+  explanation: 'Instruction-doc text drift only, not a Goose schema question. Goose
+    validates recipe YAML schema, not .md prose; env-var/SOT-derived count references
+    are allowed in instruction docs. No Goose-native mechanism supersedes (recipe
+    parameters/Jinja targets YAML params, GOOSE_SUBAGENT_MAX_TURNS targets turn budgets).
+    Caveat: ${VAR} in .md resolves at agent/pipeline runtime -> use "document default
+    + derive from SOT" Pattern A/B/C. Sources: goose-docs.ai recipes/advanced.'
+  verdict: CONFORM
+id: MM9-EXT-001
+impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78
+  spec-drift lesson class); docs mislead operators.
+issue: 'hardcoded ''13 checks'' without env-var/default/config context (spec-drift:
+  hardcoded literal without env-var/SOT context)'
+line: 137
+pipeline_stage: 0.6
+severity: low
+source: sub_mas-self-audit
+subtype: HARDCODE-CHECKS
+type: MM9-EXT
+All 20 self-audit findings map to MM9-EXT class (HARDCODE-CHECKS ×12, HARDCODE-TOOLS ×8) — same as previous round. Before summoning goose-expert, let me check what im-validator enforces for verdicts:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && grep -n "goose_verdict\|goose-expert\|delegate\|MM9\|REJECT" recipe/instructions/sub_mas-im-validator.md | head -30
+
+13:**For EACH approved patch, you MUST summon `sub_mas-goose-expert` to verify
+24:   SUMMON sub_mas-goose-expert:
+30:     to: "sub_mas-goose-expert"
+48:**If ALL patches in this charge received verdict=RESTRICTED from goose-expert,
+71:- `validation.notes[]: "All N patches returned RESTRICTED from goose-expert.
+96:- The goose-expert is the ONLY agent with full goose-docs.ai knowledge
+101:⛔ FAILING TO SUMMON GOOSE-EXPERT = validation is REJECTED downstream.
+121:        # REJECTED or SKIPPED: just record outcome
+135:- If validator says REJECTED → status stays open, but
+190:    patches: [{file, field, from, to, goose_verdict?}]
+219:4. IF sub_mas-goose-expert available:
+227:  - IF goose-expert NOT_POSSIBLE → recommendation: ROLLBACK (critical)
+229:  - **NEW (MM6 fix): IF all goose-expert verdicts are RESTRICTED →
+256:⛔ R11 GOOSE-EXPERT-POST-CHECK — ALWAYS summon sub_mas-goose-expert for
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && cat tools/dev_goose_expert_check.py | head -60
+
+#!/usr/bin/env python3
+"""
+dev_goose_expert_check.py — Codifies L01 from lessons-learned.md
+
+Purpose: Scan findings/patches for "missing mechanism" claims and verify
+against Goose's known native capabilities. Catches the class of bug
+where im-designer proposes reimplementing something Goose already provides.
+
+Part of R11 GOOSE-EXPERT CONSULTATION (see master-constitution.yaml).
+
+Usage:
+    python3 dev_goose_expert_check.py --findings .mase/pipeline/findings.yaml
+    python3 dev_goose_expert_check.py --patches .mase/pipeline/patches.yaml
+    python3 dev_goose_expert_check.py --check-mechanism "load on demand for agents"
+    python3 dev_goose_expert_check.py --list-known-mechanisms
+
+Exit codes:
+    0 = all clear (no Goose-already-provides-this conflicts)
+    1 = conflicts found (must summon sub_mas-goose-expert for resolution)
+    2 = usage error
+"""
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+
+
+# Knowledge base: Goose native mechanisms known as of 2026-07-14.
+# Sourced from https://goose-docs.ai/ and verified against actual Goose behavior.
+# This is a FALLBACK — the source of truth is sub_mas-goose-expert (see R11).
+KNOWN_GOOSE_MECHANISMS = {
+    "load on demand for agents": {
+        "native": "summon extension (MCP)",
+        "docs": "https://goose-docs.ai/docs/mcp/summon-mcp/",
+        "alternative_keywords": ["lazy load", "on demand", "dynamic load", "load on demand"],
+    },
+    "load on demand for skills": {
+        "native": "summon extension (MCP)",
+        "docs": "https://goose-docs.ai/docs/mcp/summon-mcp/",
+        "alternative_keywords": ["skill load", "skill on demand"],
+    },
+    "agent delegation": {
+        "native": "summon extension (MCP)",
+        "docs": "https://goose-docs.ai/docs/mcp/summon-mcp/",
+        "alternative_keywords": ["delegate to agent", "sub-agent call", "spawn subagent"],
+    },
+    "load context on demand": {
+        "native": "summon extension (MCP)",
+        "docs": "https://goose-docs.ai/docs/mcp/summon-mcp/",
+        "alternative_keywords": ["context load", "knowledge load"],
+    },
+    "config validation": {
+        "native": "goose config validate (CLI)",
+        "docs": "https://goose-docs.ai/docs/guides/config-file/",
+        "alternative_keywords": ["validate config", "config check"],
+    },
+    "session management": {
+        "native": "goose session (CLI subcommand)",Now let me build the MM9-EXT findings list from the self-audit output (STEP 0.6 conversion), then run STEP 0.5 (goose-expert consultation):
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'EOF'
+import yaml, re, json
+
+sa = yaml.safe_load(open('.mase/pipeline/self_audit.yaml'))
+mm9_ext = []
+for finding in sa.get('findings', []):
+    if finding.get('severity') in ('BLOCKER',):
+        print("FATAL BLOCKER:", finding)
+        raise SystemExit(1)
+    ftype = finding.get('id', finding.get('type', 'UNKNOWN'))
+    if not str(ftype).startswith(('HARDCODE', 'INVARIANT')):
+        continue
+    desc = finding.get('description', '')
+    # parse file:line from description "path:line: hardcoded ..."
+    m = re.match(r'([^:]+):(\d+):\s*(.*)', desc)
+    if m:
+        file, line, issue_text = m.group(1), int(m.group(2)), m.group(3)
+    else:
+        file, line, issue_text = '?', 0, desc
+    sev = finding.get('severity', 'WARN')
+    sev_map = {'WARN': 'low', 'BLOCKER': 'high', 'ERROR': 'medium'}
+    mm9_ext.append({
+        'id': f"MM9-EXT-{len(mm9_ext)+1:03d}",
+        'type': 'MM9-EXT',
+        'subtype': ftype,
+        'severity': sev_map.get(sev, sev.lower()),
+        'file': file,
+        'line': line,
+        'issue': f"{issue_text} (spec-drift: hardcoded literal without env-var/SOT context)",
+        'fix': finding.get('suggested_fix', ''),
+        'source': 'sub_mas-self-audit',
+        'pipeline_stage': 0.6
+    })
+
+print(f"STEP 0.6 ATTACHED: {len(mm9_ext)} MM9-EXT findings")
+for f in mm9_ext:
+    print(f"  {f['id']} {f['subtype']} {f['severity']} {f['file']}:{f['line']}")
+
+# persist draft for later
+with open('/tmp/draft_mm9ext.json', 'w') as fh:
+    json.dump(mm9_ext, fh, indent=2)
+EOF
+
+STEP 0.6 ATTACHED: 20 MM9-EXT findings
+  MM9-EXT-001 HARDCODE-CHECKS low recipe/instructions/sub_mas-config-auditor.md:137
+  MM9-EXT-002 HARDCODE-CHECKS low recipe/instructions/sub_mas-pre-push-validator.md:26
+  MM9-EXT-003 HARDCODE-SUB-AGENTS low recipe/instructions/sub_mas-bootstrap.md:4
+  MM9-EXT-004 HARDCODE-SUB-AGENTS low recipe/instructions/sub_mas-bootstrap.md:16
+  MM9-EXT-005 HARDCODE-SUB-AGENTS low recipe/instructions/sub_mas-bootstrap.md:40
+  MM9-EXT-006 HARDCODE-SUB-AGENTS low recipe/instructions/sub_mas-config-auditor.md:93
+  MM9-EXT-007 HARDCODE-SUB-AGENTS low recipe/instructions/sub_mas-config-auditor.md:98
+  MM9-EXT-008 HARDCODE-SUB-AGENTS low recipe/instructions/sub_mas-generic-init.md:39
+  MM9-EXT-009 HARDCODE-SUB-AGENTS low recipe/instructions/sub_mas-im-finder.md:549
+  MM9-EXT-010 HARDCODE-SUB-AGENTS low recipe/instructions/sub_mas-pre-push-validator.md:531
+  MM9-EXT-011 HARDCODE-SUB-AGENTS low recipe/instructions/sub_mas-system-knowledge.md:13
+  MM9-EXT-012 HARDCODE-SUB-AGENTS low recipe/instructions/sub_mas-team-packager.md:364
+  MM9-EXT-013 HARDCODE-TOOLS low recipe/instructions/sub_mas-bootstrap.md:4
+  MM9-EXT-014 HARDCODE-TOOLS low recipe/instructions/sub_mas-bootstrap.md:17
+  MM9-EXT-015 HARDCODE-TOOLS low recipe/instructions/sub_mas-bootstrap.md:40
+  MM9-EXT-016 HARDCODE-TOOLS low recipe/instructions/sub_mas-generic-init.md:39
+  MM9-EXT-017 HARDCODE-TOOLS low recipe/instructions/sub_mas-system-knowledge.md:12
+  MM9-EXT-018 HARDCODE-TOOLS low recipe/instructions/sub_mas-system-knowledge.md:133
+  MM9-EXT-019 HARDCODE-TOOLS low recipe/instructions/sub_mas-system-knowledge.md:149
+  MM9-EXT-020 HARDCODE-TOOLS low recipe/instructions/sub_mas-team-packager.md:6520 MM9-EXT findings ready. Now **STEP 0.5 — GOOSE-EXPERT CONSULTATION (MANDATORY)**. All 20 findings have prefix `MM` → each requires a sub_mas-goose-expert verdict. Let me check the expert's expected parameter shape, then delegate:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && cat recipe/sub/sub_mas-goose-expert.yaml; echo "===MD==="; cat recipe/instructions/sub_mas-goose-expert.md
+
+name: MAS Goose Expert
+version: 1.0.0
+constitution: sub_mas-master-constitution.yaml
+title: 🎓 SUB-MAS-GOOSE-EXPERT — Goose Rule compliance (Sub-Agent)
+description: 'v1.0.0 | MAS-internal: Checks EACH change against goose-docs.ai before execution — 14 scopes — apply nothing automatically'
+instructions: '# Extended instructions: recipe/instructions/sub_mas-goose-expert.md
+
+
+  Full instructions outsourced to external file for maintainability.
+
+
+  ## Loading
+
+  All detailed workflows, examples, and rules are in the external file. This recipe
+  contains only the role, prompt, and configuration.
+
+
+  ## Read external file FIRST
+
+  Before any action, read: `recipe/instructions/sub_mas-goose-expert.md`
+
+  '
+prompt: 'I am goose-expert (v1.0.0) | MODE-CHECK: mas-engineer | 🎓 GOOSE-EXPERT (v1.0.0)
+  ⛔ Checks EACH change against goose-docs.ai. → 14 scopes — apply nothing automatically
+
+  # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune).
+  NO YAML-Save without vorherige Syntax-Check.
+
+  # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune).
+  NO YAML-Save without vorherige Syntax-Check.'
+sub_recipes:
+  - name: sub_mas-web-researcher
+    path: ./sub_mas-web-researcher.yaml
+    description: "MANDATORY R18 - search goose-docs.ai before any verdict"
+settings:
+  timeout: 600
+  max_turns: 100
+  goose_provider: openai
+  goose_model: deepseek-v4-flash
+  temperature: 0.3
+CORONASHIELD (R10) — Before any YAML save: invoke sub_mas-recovery-immune CHECK_YAML.
+extensions:
+- type: platform
+  name: summon
+- type: builtin
+  name: developer
+  display_name: Developer
+  timeout: 300
+  bundled: true
+===MD===
+# sub_mas-goose-expert — 🦆 Goose-Rule compliance
+╔══════════════════════════════════════════════╗ ║  SOT WORKFLOW CONTROL                     ║ ║  → workflows.yaml → agents.goose-expert     ║ ║     .task_workflows.CHECK_RULE_COMPLIANCE║ ╚══════════════════════════════════════════════╝
+MAS-Engineer-internal. Is consulted BEFORE each Goose-related change. I check whether the planned change is compatible with Goose capabilities and rules.
+⛔ I AM A GOOSE EXPERT — no generic research assistant. My ONLY task: check whether a change is Goose-compliant.
+## Input (from MAS-Engineer)
+```yaml goose_expert_intake: signal: "🟣 HANDOVER" request_id: string from: "dev-mas-engineer" to: "sub_mas-goose-expert" task: "CHECK RULE COMPLIANCE" context: what: "<what is to be changed>" scope: "config|recipes|extensions|skills|scheduler|general|subagents|recipe_advanced|hooks|security|cli_commands|templates|sandbox" current: "<current state>" planned: "<planned change>" question: "<concrete question>" ```
+
+
+⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions. dev_rule_checker.py enforces. ## Procedure
+⛔ STEP 1 — goose-docs.ai (ALWAYS FIRST, via sub_mas-web-researcher — R18) DELEGATE to sub_mas-web-researcher (task=SEARCH, topics=[scope], focus="goose") → WAIT on Findings → CHECK Findings against the planned change Search terms (scope-dependent): - config → RECIPE_PATH, DEFAULT_RECIPE, TIMEOUT, active_provider - recipes → recipe resolution, subdirectory, slash_command - extensions → orchestrator, enabled, type, platform - skills → skills, install, path - scheduler → schedule.json, scheduled_recipes - subagents → max_turns (default 25), timeout (5min), extension inheritance, summon extension, return mode, parallel/sequential control, GOOSE_SUBAGENT_MAX_TURNS env var - recipe_advanced → retry (max_retries, checks, on_failure), response (json_schema structured output), parameterss (Jinja templates), sub_recipes, activities, settings.max_turns - hooks → lifecycle events (PreToolUse, PostToolUse, AfterFileEdit...), plugin directory (~/.agents/plugins/), hooks.json, matcher regex - security → adversary mode (~/.config/goose/adversary.md), prompt injection detection, BLOCK/ALLOW rules - cli_commands → goose recipe validate, recipe deeplink, schedule add, configure, run --recipe - templates → extends, block, recipe_dir, indent filter, escaping - sandbox → developer__text_editor, sandbox mode, gooseignore, persistent_instructions.md 3. DOCUMENT result: URL + citation
+⛔ STEP 2 — Against current Configuration check 1. Does the change conflict with existing values? 2. Is there a native Goose way instead of a workaround? 3. Which Goose version is required?
+⛔ STEP 3 — Verdict ✅ CONFORM → Goose supports this. Change can be executed. → Sources: [URLs]
+⚠️ RESTRICTED → Goose supports it partially. Document constraints. → Alternative: [description]
+❌ NOT POSSIBLE → Goose cannot do this. Name workaround or alternative. → Alternative: [description]
+## Output (to MAS-Engineer)
+```yaml mas_result: signal: "🟢 DONE" request_id: string from: "sub_mas-goose-expert" to: "dev-mas-engineer" status: "success" parsed: verdict: "CONFORM|RESTRICTED|NOT_POSSIBLE" confidence: "HIGH|MEDIUM|LOW" sources: ["https://goose-docs.ai/...", "..."] explanation: "Goose searches RECIPE_PATH recursively..." caveats: ["..."]      # only at RESTRICTED alternatives: ["..."] # only at NOT_POSSIBLE ```
+## Scope-specific Checks
+### config.yaml - Does Goose know this key? - Which values are allowed? - Are there defaults that Goose sets itself?
+### Recipes - How are Goose Recipe-Files resolved? - Are subdirectories in RECIPE_PATH searched? - How does slash_command visibility work?
+### Extensions - What extension types are there? - What does "bundled: true" mean? - How are MCP extensions configured?
+### .goosehints - File: ~/.config/goose/.goosehints (global) OR <project>/.goosehints (project) - Format: Pure Markdown (NO JSON, NO YAML) - Purpose: Developer-Notes for ALL Goose-Agents - Is automatically read by Goose-Agents before starting work - Content: Build commands, Coding styles, project rules, Taboos - MAS-Usage: cat to Read, write/edit to Wwrite (Goose built-in tools!) - NO Python tool needed — built-in tools suffice
+### tool_permissions.json - File: ~/.config/goose/permissions/tool_permissions.json - Format: JSON (is automatically written by Goose) - Purpose: runtime decisions of users in "Approve mode" - Which MCP tools/commands are permanently approved/blocked? - MAS-Usage: ONLY READ (dev_goose_manager.py --status shows it) - ⛔ NEVER WRITE — Goose manages the file itself
+### Subagents - Sub-agents have default 25 max_turns and 5min timeout - Extension inheritance: Sub-agents inherit all extensions from Parent → ERROR SOURCE: If Recipe `extensions:` defined, must `summon` explicitly be listed, else no delegate/load tool available - Sub_recipes have summon auto-injected (not needed to list) - Return mode: full (default, all tool calls visible) vs summary (only Result) - Parallel: "parallel", "simultaneously", "at the same time" triggers parallel - Sequential: "first...then", "after" (default) - GOOSE_SUBAGENT_MAX_TURNS env var sets global default for max_turns - MAS-Relevance: set settings.max_turns in Recipe YAML (analogous to max_steps) - MAS-Relevance: All MAS Sub-Agent Recipes must list `summon` in extensions if they themselves want to spawn sub-agents
+### Recipe Advanced — Advanced Recipe Fields - `retry.max_retries` (int): Automatic repetition on failure → Goose runs the recipe again until max_retries is reached - `retry.checks` (array): Shell commands that validate success → Exit code 0 = success, else retry - `retry.on_failure` (string): Cleanup-Command before Retry - `response.json_schema` (object): JSON Schema for final output → Goose validates output against schema, on Error: correct → Perfect for MAS-Sub-Agent_result validation - `parameterss` (array): Jinja template variablebles (var_name) → input_type: string|number|boolean|date|file|select → requirement: required|optional|user_prompt → default: Required for optional - `sub_recipes` (array): Sub-recipes with name, path, values → summon is auto-injected at sub_recipes - `activities` (array): Clickable buttons in Desktop → "message: ..." for info box, else button text - `settings.max_turns` (int): Max Turns for Recipe + Sub-agents → Overwrites GOOSE_SUBAGENT_MAX_TURNS → Precedence: tool_call > recipe.settings > env var > default - MAS-Relevance: retry can replace test-runner after --harden - MAS-Relevance: response.json_schema validates MAS-Sub-Agent_result automatically
+### Hooks — Plugin-based lifecycle events - 12 Events: SessionStart, SessionEnd, Stop, UserPromptSubmsg, PreToolUse, PostToolUse, PostToolUseFailure, BeforeReadFile, AfterFileEdit, BeforeShellExecution, AfterShellExecution - Plugin directory: ~/.agents/plugins/<name>/ → plugin.json + hooks/hooks.json + scripts/ - hooks.json: Event → Matcher (regex) → Command - Command runs as sh -c, receives Event-Payload as JSON on stdin - Payload fields: event, session_id, matcher_context, tool_name, tool_input - timeout: default 30s per hook, configurable - Disable: settings.json → disabledPlugins: ["name"] - MAS-Relevance: AfterFileEdit → auto yaml.safe_load after every edit - MAS-Relevance: PreToolUse with matcher "text_editor" → BLOCK self-edit - MAS-Relevance: PostToolUseFailure → notification on Sub-Agent-Crash
+### Security — Adversary Mode + Prompt Injection Detection - Adversary Mode: Silent agent reviewer before every tool call → File: ~/.config/goose/adversary.md → Exists the File = Mode active → Block rules in natural language: BLOCK if: exfiltrates data, destructive, malware, privilege escalation ALLOW: normal development operations → Tools: default shell + computercontroller (configurable via tools: line) → Fail-open: If Reviewer fails, Tool call is allowed - Prompt Injection Detection: Pattern-based detection → Always active if enabled, complementary to Adversary Mode - MAS-Relevance: create adversary.md for framework development → BLOCK: rm -rf outside workspace/, curl on unknown URLs → ALLOW: python3, git, pytest, ls, cat, grep within workspace/
+### CLI Commands — Goose command-line commands - `goose recipe validate <file>`: Validates Recipe YAML → Checks: required fields, parameters definitions, extensions, Syntax → Better than python3 yaml.safe_load (also checks semantics) - `goose recipe deeplink <file>`: Generates shareable link → --param key=value for pre-filled parameters - `goose schedule add`: Execute recipe on schedule → --schedule-id <name> --cron "<expr>" --recipe-source <path> → Cron: 5-7 digits (seconds minutes hours day month weekday year) - `goose configure`: Interactive Configuration → Provider, Extensions, Settings, Recipe GitHub Repo - `goose run --recipe <file>`: Execute recipe → --params key=value, --interactive, --explain - MAS-Relevance: `goose recipe validate` before install instead of python3 yaml.safe_load - MAS-Relevance: `goose schedule add` for automated framework checks
+### Templates — Recipe-Template-Engine (Jinja-Style) - Jinja extends: Base-Recipe inherit (Parent-Template) - Jinja block: Overridable blocks (block name / endblock) - Jinja literal: Escape template syntax (single quotes) - indent Filter: For multi-line Values (var | indent(2)) - Built-in: recipe_dir = path to Recipe directory - MAS-Relevance: framework recipes could inherit from Base-Recipe - MAS-Relevance: recipe_dir for relative paths in Recipes
+### Sandbox & Enhanced Editing - developer__text_editor: Diff-based code editor (not only write) - goose Desktop Sandbox: Isolated execution, protects host system - gooseignore: Files/Folders excluded from goose (.gooseignore) - Persistent Instructions: ~/.config/goose/persistent_instructions.md → Is loaded BEFORE every prompt (like .goosehints but for Agent behavior) - MAS-Relevance: persistent_instructions.md usable for MAS behavior
+### TLS / Apps - ~/.config/goose/tls/: TLS certificates (server.key, server.pem) - ~/.local/share/goose/apps/: HTML-Dashboards (clock, performance, etc.) - MAS-Usage: Only show status, never change
+CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.Now delegating to **sub_mas-goose-expert** for the MM9-EXT class (20 findings, prefix MM → mandatory consultation):
+  ────────────────────────────────────────
+  ▸ delegate
+    source sub_mas-goose-expert
+    instructions CHECK RULE COMPLIANCE for 20 im-finder MM9-EXT findings (class: spec-drift hardcoded count litera...
+    parameters:
+        task: CHECK RULE COMPLIANCE
+        context:
+            scope: recipes
+            current: hardcoded count literals in recipe/instructions/*.md prose
+            planned: replace with env-var reference or documented default or derive-from-SOT (sub_mas-self-audit Pattern A/B/C)
+            question: Is replacing hardcoded count literals in instruction-doc .md with env-var/SOT-derived references a real Goose issue, or a workaround Goose already provides natively? Does Goose support env-var references in recipe instruction docs and with which constraints?
+
+
+  ▸ [subagent:62] load
+    source: recipe/instructions/sub_mas-goose-expert.md
+
+
+  ▸ [subagent:62] shell
+    command: ls -la recipe/instructions/ | head -50
+
+
+  ▸ [subagent:62] shell
+    command: cat recipe/instructions/sub_mas-goose-expert.md
+
+
+  ▸ [subagent:62] shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer
+for f in "recipe/instructions/sub_mas-config-auditor.md:137:93:98" "recipe/instructions/sub_mas-pre-push-validator.md:26:531" "recipe/instructions/sub_mas-bootstrap.md:4:16:40:17" "recipe/instructions/sub_mas-generic-init.md:39" "recipe/instructions/sub_mas-im-finder.md:549" "recipe/instructions/sub_mas-system-knowledge.md:13:12:133:149" "recipe/instructions/sub_mas-team-packager.md:364:65"; do
+  file="${f%%:*}"; rest="${f#*:}";
+  echo "=== $file ===";
+  IFS=':' read -ra lines <<< "$rest";
+  for ln in "${lines[@]}"; do
+    echo "--- line $ln ---";
+    sed -n "${ln}p" "$file";
+  done;
+done
+
+
+  ▸ [subagent:62] shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer
+echo "--- sub_mas-*.yaml recipes (mas-self registry) ---"
+ls recipe/*.yaml 2>/dev/null | grep -c "sub_mas-"
+echo "--- all recipe yaml ---"
+ls recipe/*.yaml | wc -l
+echo "--- mas-engineer-tools count ---"
+ls ~/.config/goose/recipes/mas-engineer-tools/ 2>/dev/null | wc -l
+ls ~/.config/goose/recipes/mas-engineer-tools/ 2>/dev/null
+echo "--- dev_*.py / *.sh / *.yaml split ---"
+ls ~/.config/goose/recipes/mas-engineer-tools/dev_*.py 2>/dev/null | wc -l
+ls ~/.config/goose/recipes/mas-engineer-tools/*.sh 2>/dev/null | wc -l
+ls ~/.config/goose/recipes/mas-engineer-tools/*.yaml 2>/dev/null | wc -l
+
+
+  ▸ [subagent:62] shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer
+echo "--- CHECK count in pre-push-validator ---"
+grep -c "CHECK [0-9]" recipe/instructions/sub_mas-pre-push-validator.md
+grep -n "21 checks" recipe/instructions/sub_mas-pre-push-validator.md | head
+echo "--- '13 checks' in config-auditor ---"
+grep -n "13 checks" recipe/instructions/sub_mas-config-auditor.md
+grep -n "CHECK [0-9]" recipe/instructions/sub_mas-config-auditor.md | head -20
+echo "--- workflows.yaml goose-expert SOT refs ---"
+grep -n "goose-expert\|goose_expert" workflows.yaml 2>/dev/null | head -10
+
+
+  ▸ [subagent:62] shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer
+echo "--- installed recipes at MAS_INSTALL_DIR ---"
+ls ~/.config/goose/recipes/*.yaml 2>/dev/null | wc -l
+ls ~/.config/goose/recipes/sub_mas-*.yaml 2>/dev/null | wc -l
+echo "--- mas-self registry file if exists ---"
+ls ~/.config/goose/recipes/mas-engineer-tools/dev_registry_merge.py 2>/dev/null && grep -rn "112" workflows.yaml 2>/dev/null | head -5
+echo "--- pre-push-validator: count numbered checks ---"
+grep -nE "^###? (CHK|CHECK|Check|[0-9]+\.)" recipe/instructions/sub_mas-pre-push-validator.md | head -30
+echo "--- env-var/Jinja usage across instructions .md ---"
+grep -rln '\${' recipe/instructions/*.md | head
+grep -rln '{{' recipe/instructions/*.md | head
+
+
+  ▸ [subagent:62] shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer
+echo "--- context around config-auditor 137 (is it example output?) ---"
+sed -n '125,145p' recipe/instructions/sub_mas-config-auditor.md
+echo "=== pre-push 26 context ==="
+sed -n '20,30p' recipe/instructions/sub_mas-pre-push-validator.md
+echo "=== bootstrap 1-45 (head) ==="
+sed -n '1,45p' recipe/instructions/sub_mas-bootstrap.md
+
+
+  ▸ [subagent:62] shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer
+echo "--- existing \${...} usage in instructions .md ---"
+grep -rn '\${' recipe/instructions/sub_mas-pre-push-validator.md recipe/instructions/sub_mas-recovery-checkpoint.md recipe/instructions/sub_mas-self-audit.md recipe/instructions/sub_mas-team-packager.md | head -15
+echo "--- registry sources for 112 ---"
+ls .mase/ 2>/dev/null | head -20
+grep -rn "112" .mase/*.json 2>/dev/null | head -3
+find / -name "*registry*" -path "*goose*" 2>/dev/null | head -5
+grep -rn "112" ~/.config/goose/recipes/mas-engineer-tools/dev_registry_merge.py 2>/dev/null | head -3
+
+
+  ▸ [subagent:62] shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer
+echo "=== sub_mas-self-audit.md (defines Pattern A/B/C) ==="
+cat recipe/instructions/sub_mas-self-audit.md
+echo ""
+echo "=== .mase/goose-defaults.env ==="
+cat .mase/goose-defaults.env 2>/dev/null | head -30
+echo "=== registry count check ==="
+grep -rln "sub_mas-" .mase/*.json 2>/dev/null | head -3
+python3 -c "
+import json,glob,os
+for f in glob.glob('.mase/*.json'):
+    try:
+        d=json.load(open(f))
+    except Exception: continue
+    s=json.dumps(d)
+    if 'sub_mas' in s and ('112' in s):
+        print(f, '→ has 112')
+" 2>/dev/null | head -5
+
+
+  ▸ [subagent:62] shell
+    command: cd /tmp
+timeout 12 curl -sL "https://goose-docs.ai/docs/guides/environment-variables/" -o goose-env.html 2>/dev/null && echo "FETCH-OK $(wc -c < goose-env.html)" || echo "FETCH-FAIL"
+timeout 12 curl -sL "https://goose-docs.ai/docs/recipes/" -o goose-recipe.html 2>/dev/null && echo "FETCH2-OK $(wc -c < goose-recipe.html)" || echo "FETCH2-FAIL"
+grep -oiE "(env\.[A-Z_]+|GOOSE_[A-Z_]+|template|jinja|parameters|substitution)" goose-env.html goose-recipe.html 2>/dev/null | sort | uniq -c | sort -rn | head -15
+
+
+  ▸ [subagent:62] shell
+    command: cd /tmp
+echo "=== env page: recipe/instructions/expand/template mentions ==="
+grep -oiE "(recipe[^<]{0,80}|instructions[^<]{0,80}|interpolat[^<]{0,60}|expand[^<]{0,60}|template[^<]{0,60}|\$\{[A-Z_]+\})" goose-env.html | sort -u | head -25
+echo "=== recipe page content check ==="
+python3 - <<'EOF'
+import re,html
+raw=open('goose-env.html',encoding='utf-8',errors='ignore').read()
+txt=re.sub(r'<[^>]+>',' ',raw); txt=html.unescape(re.sub(r'\s+',' ',txt))
+for kw in ['GOOSE_SUBAGENT_MAX_TURNS','max_turns','recipe','instruction']:
+    for m in re.finditer(kw, txt):
+        s=max(0,m.start()-100); print(f"[{kw}] …{txt[s:m.end()+120]}…\n"); break
+EOF
+
+
+  ▸ [subagent:62] shell
+    command: cd /tmp
+python3 - <<'EOF'
+import re,html
+raw=open('goose-recipe.html',encoding='utf-8',errors='ignore').read()
+txt=re.sub(r'<[^>]+>',' ',raw); txt=html.unescape(re.sub(r'\s+',' ',txt))
+print(txt[:600])
+EOF
+
+Goose-expert returned verdicts for all 20 findings (RESTRICTED — drift is real; Pattern B/C fixes are Goose-native, Pattern A `${VAR}` in prose is not). Now let me attach verdicts, build the draft findings file, and run the L01 check:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'PYEOF'
+import json, datetime
+
+mm9 = json.load(open('/tmp/draft_mm9ext.json'))
+
+# Verdicts from sub_mas-goose-expert (delegate result)
+VERDICTS = {
+ 'MM9-EXT-001': ('RESTRICTED','MEDIUM','"13 checks" is sample-output (passed count) in an example block (13/16), not a spec claim; env-var replacement inapplicable to sample output; correct fix = derive-from-SOT/regenerate example. Goose does not auto-sync prose literals.'),
+ 'MM9-EXT-002': ('RESTRICTED','HIGH','Prose "21 checks" vs 22 check sections in same file; strongest real drift. Goose does not maintain prose counts; documented default native via recipe parameters (Jinja {{ }} + default:); ${VAR} in prose NOT rendered by Goose.'),
+ 'MM9-EXT-003': ('RESTRICTED','HIGH','"112 sub-agents" registry-derived literal hardcoded without default context; Goose has no auto-sync for prose; native fix = parameters.default (documented default) or derive-at-runtime (shell ls|wc). ${VAR} in .md not expanded.'),
+ 'MM9-EXT-004': ('RESTRICTED','HIGH','Same "112 sub-agents" registry-derived literal at 2nd location; no native Goose maintenance; fix via parameters.default or runtime derivation.'),
+ 'MM9-EXT-005': ('RESTRICTED','HIGH','"112 sub-agents" inside user-confirmation quote; registry-derived, not natively synced; documented-default or derive-from-SOT apply; env-var prose reference not natively rendered.'),
+ 'MM9-EXT-006': ('RESTRICTED','HIGH','"43 sub-agents" annotated "historical… NOT the 112 mas-self registry" — acknowledged staleness; comment is partial remediation, not documented default N per Pattern A.'),
+ 'MM9-EXT-007': ('RESTRICTED','HIGH','Same "43 sub-agents" legacy grouping, adjacent comment admits NOT the 112 registry; still Pattern A hit (comment != documented default); not natively maintained by Goose.'),
+ 'MM9-EXT-008': ('RESTRICTED','HIGH','"112 sub-agents" registry-derived literal in generic-init; same class: no Goose auto-sync; documented-default or derive-from-SOT are native-compatible fixes.'),
+ 'MM9-EXT-009': ('RESTRICTED','HIGH','"47 sub-agents" annotated historical 2026-07-18, NOT current registry 112 — proven stale; comment-remediation incomplete per Pattern A; not natively handled by Goose.'),
+ 'MM9-EXT-010': ('RESTRICTED','HIGH','"112 sub-agents" with historical note in test-coverage-gate Check 12; registry-derived, real drift potential; fix via documented default or derive-from-SOT.'),
+ 'MM9-EXT-011': ('RESTRICTED','HIGH','"44 sub-agents" annotated historical, registry=112 (canonical 2026-08-04); acknowledged staleness; comment != documented default N; real drift.'),
+ 'MM9-EXT-012': ('RESTRICTED','MEDIUM','"20 sub-agents" is a warning THRESHOLD, not registry count; inline note already provides partial documented context; borderline Pattern A; env-var replacement would only document the knob.'),
+ 'MM9-EXT-013': ('RESTRICTED','HIGH','"58 tools" — documented composition elsewhere "51 Python + 6 Shell + 1 YAML" but install dir has 58 dev_*.py + 10 *.sh + 0 *.yaml (74 files); "58" matches only dev_*.py by coincidence; proven drift.'),
+ 'MM9-EXT-014': ('RESTRICTED','HIGH','Same drifted "58 tools" literal at bootstrap:17; composition claim wrong vs install dir; no Goose auto-sync; documented-default or derive-from-SOT.'),
+ 'MM9-EXT-015': ('RESTRICTED','HIGH','"58 tools" in user-confirmation quote, same drifted count; not natively maintained; fix via parameters.default or runtime derivation.'),
+ 'MM9-EXT-016': ('RESTRICTED','HIGH','"58 tools" in generic-init, same drifted literal; Goose provides no prose-count maintenance; native fix = documented default or derive-from-SOT.'),
+ 'MM9-EXT-017': ('RESTRICTED','HIGH','"58 tools (51 Python + 6 Shell + 1 YAML)" — composition demonstrably wrong (58 py + 10 sh + 0 yaml actual); strongest tools-drift evidence; fix = derive-from-SOT generator or documented default.'),
+ 'MM9-EXT-018': ('RESTRICTED','HIGH','"58 Tools (51 dev_*.py + 6 *.sh + 1 *.yaml)" at line 133 — actual split 58/10/0; parenthetical composition factually wrong; real spec-drift; derive-from-SOT is native-compatible fix.'),
+ 'MM9-EXT-019': ('RESTRICTED','HIGH','"All 58 Tools with Descriptions" doc index — same drifted count embedded; real drift vs install dir; fix = documented default or regeneration from SOT.'),
+ 'MM9-EXT-020': ('RESTRICTED','HIGH','"all 112 MAS-Engineer sub-agents + 58 tools" in DEPLOY line — both counts registry/tools-derived and drifted; fix via documented default or derive-from-SOT; ${VAR} prose reference not natively resolved.'),
+}
+
+CLASS_NOTE = ("Goose does not natively maintain prose count literals in instruction .md files; "
+ "drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, "
+ "43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via "
+ "recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. "
+ "Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at "
+ "runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars "
+ "configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. "
+ "Sources: https://goose-docs.ai/docs/guides/environment-variables/")
+
+for f in mm9:
+    v, conf, expl = VERDICTS[f['id']]
+    f['goose_verdict'] = {
+        'verdict': v,
+        'confidence': conf,
+        'explanation': expl + ' ' + CLASS_NOTE,
+    }
+    # impact field consistent with previous round
+    f['impact'] = ("Count literal drifts from actual value when the source-of-truth changes "
+                   "(R110-71/R110-78 spec-drift lesson class); docs mislead operators.")
+
+findings = list(mm9)  # scanner emitted 0 NEW (all known in issue-db)
+
+findings_dict = {
+    "stage": 1,
+    "agent": "im-finder",
+    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    "input_file": ("orchestrator params: standalone FIND round; scanner tools/dev_im_finder_scan.py "
+                   "--issue-db --scope=recipe,sales,marketing,translator (0 NEW emitted: all 88 raw findings "
+                   "already known in issue-db: 86 open / 10 fixed / 0 wontfix); self-audit + spec-invariant (STEP 0.6)"),
+    "goose_expert_delegation": ("sub_mas-goose-expert summoned via delegate tool for MM9-EXT class "
+                                "(20 findings) - verdict RESTRICTED attached per finding (HIGH conf x18, MEDIUM x2). "
+                                "Class note: drift real; Pattern B/C fixes Goose-native; Pattern A ${VAR} in prose not natively expanded."),
+    "data": {"findings": findings},
+}
+
+with open('/tmp/draft_findings.yaml', 'w') as fh:
+    import yaml
+    yaml.safe_dump(findings_dict, fh, default_flow_style=False, sort_keys=False)
+
+print(f"DRAFT: /tmp/draft_findings.yaml with {len(findings)} findings")
+print("verdicts:", {f['id']: f['goose_verdict']['verdict'] for f in findings})
+PYEOF
+
+DRAFT: /tmp/draft_findings.yaml with 20 findings
+verdicts: {'MM9-EXT-001': 'RESTRICTED', 'MM9-EXT-002': 'RESTRICTED', 'MM9-EXT-003': 'RESTRICTED', 'MM9-EXT-004': 'RESTRICTED', 'MM9-EXT-005': 'RESTRICTED', 'MM9-EXT-006': 'RESTRICTED', 'MM9-EXT-007': 'RESTRICTED', 'MM9-EXT-008': 'RESTRICTED', 'MM9-EXT-009': 'RESTRICTED', 'MM9-EXT-010': 'RESTRICTED', 'MM9-EXT-011': 'RESTRICTED', 'MM9-EXT-012': 'RESTRICTED', 'MM9-EXT-013': 'RESTRICTED', 'MM9-EXT-014': 'RESTRICTED', 'MM9-EXT-015': 'RESTRICTED', 'MM9-EXT-016': 'RESTRICTED', 'MM9-EXT-017': 'RESTRICTED', 'MM9-EXT-018': 'RESTRICTED', 'MM9-EXT-019': 'RESTRICTED', 'MM9-EXT-020': 'RESTRICTED'}Now the **L01 auto-check** (mandatory before writing) + YAML validation (R10):
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 tools/dev_goose_expert_check.py --findings /tmp/draft_findings.yaml; echo "L01-CHECK EXIT=$?"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 -c "
+import yaml
+d = yaml.safe_load(open('/tmp/draft_findings.yaml'))
+print('YAML VALID. keys:', list(d.keys()))
+print('findings:', len(d['data']['findings']))
+"
+
+OK — no Goose-already-provides-this conflicts in /tmp/draft_findings.yaml
+L01-CHECK EXIT=0YAML VALID. keys: ['stage', 'agent', 'timestamp', 'input_file', 'goose_expert_delegation', 'data']
+findings: 20L01 check passes, YAML valid. STEP 0.5b (im-designer) not needed — fixes are doc-level literal replacements, not architectural.
+
+**STEP 0.7 — WRITE FINDINGS.YAML (R01 BYPASS: agent's own output, pipeline contract):**
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && cp /tmp/draft_findings.yaml .mase/pipeline/findings.yaml && echo "WRITTEN: .mase/pipeline/findings.yaml" && python3 -c "
+import yaml
+d = yaml.safe_load(open('.mase/pipeline/findings.yaml'))
+f = d.get('data', {}).get('findings', [])
+mm8 = sum(1 for x in f if x.get('type') == 'MM8')
+mm9 = sum(1 for x in f if x.get('type') == 'MM9')
+verdicts = sum(1 for x in f if 'goose_verdict' in x)
+print(f'PERSISTED: total={len(f)} mm8={mm8} mm9={mm9} verdicts={verdicts}')
+print('stage:', d['stage'], 'agent:', d['agent'], 'ts:', d['timestamp'])
+"
+
+WRITTEN: .mase/pipeline/findings.yaml
+PERSISTED: total=20 mm8=0 mm9=0 verdicts=20
+stage: 1 agent: im-finder ts: 2026-08-18T18:29:23.343940+00:00findings.yaml persisted and verified: **total=20, mm8=0, mm9=0, verdicts=20** — e2e proof complete. Final structure check:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'EOF'
+import yaml
+from collections import Counter
+d = yaml.safe_load(open('.mase/pipeline/findings.yaml'))
+f = d['data']['findings']
+print("=== HEADER ===")
+print("stage:", d['stage'], "| agent:", d['agent'], "| ts:", d['timestamp'])
+print("=== SUMMARY ===")
+print("total:", len(f))
+print("by_type:", dict(Counter(x['type'] for x in f)))
+print("by_severity:", dict(Counter(x['severity'] for x in f)))
+print("with_goose_verdict:", sum(1 for x in f if 'goose_verdict' in x))
+print("=== SAMPLE ===")
+import json
+s = f[1]
+print(yaml.safe_dump(s, default_flow_style=False)[:900])
+EOF
+
+=== HEADER ===
+stage: 1 | agent: im-finder | ts: 2026-08-18T18:29:23.343940+00:00
+=== SUMMARY ===
+total: 20
+by_type: {'MM9-EXT': 20}
+by_severity: {'low': 20}
+with_goose_verdict: 20
+=== SAMPLE ===
+file: recipe/instructions/sub_mas-pre-push-validator.md
+fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 21' value, or derive
+  the count from the source of truth instead of hardcoding.
+goose_verdict:
+  confidence: HIGH
+  explanation: 'Prose "21 checks" vs 22 check sections in same file; strongest real
+    drift. Goose does not maintain prose counts; documented default native via recipe
+    parameters (Jinja {{ }} + default:); ${VAR} in prose NOT rendered by Goose. Goose
+    does not natively maintain prose count literals in instruction .md files; drift
+    is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0,
+    43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented
+    default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT)
+    are Goose-native. Pattern A (literal ${VAR} in .md pAll pipeline steps complete. Final verification of the complete run state:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'EOF'
+import yaml, json
+d = yaml.safe_load(open('.mase/pipeline/findings.yaml'))
+f = d['data']['findings']
+out = []
+for x in f:
+    item = {k: x[k] for k in ('id','type','severity','file','issue','impact','fix')}
+    if 'goose_verdict' in x:
+        item['goose_verdict'] = x['goose_verdict']
+    out.append(item)
+print(json.dumps({"findings": out}, indent=1))
+EOF
+
+{
+ "findings": [
+  {
+   "id": "MM9-EXT-001",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-config-auditor.md",
+   "issue": "hardcoded '13 checks' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 13' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "MEDIUM",
+    "explanation": "\"13 checks\" is sample-output (passed count) in an example block (13/16), not a spec claim; env-var replacement inapplicable to sample output; correct fix = derive-from-SOT/regenerate example. Goose does not auto-sync prose literals. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-002",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-pre-push-validator.md",
+   "issue": "hardcoded '21 checks' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 21' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "Prose \"21 checks\" vs 22 check sections in same file; strongest real drift. Goose does not maintain prose counts; documented default native via recipe parameters (Jinja {{ }} + default:); ${VAR} in prose NOT rendered by Goose. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-003",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-bootstrap.md",
+   "issue": "hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "\"112 sub-agents\" registry-derived literal hardcoded without default context; Goose has no auto-sync for prose; native fix = parameters.default (documented default) or derive-at-runtime (shell ls|wc). ${VAR} in .md not expanded. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-004",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-bootstrap.md",
+   "issue": "hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "Same \"112 sub-agents\" registry-derived literal at 2nd location; no native Goose maintenance; fix via parameters.default or runtime derivation. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-005",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-bootstrap.md",
+   "issue": "hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "\"112 sub-agents\" inside user-confirmation quote; registry-derived, not natively synced; documented-default or derive-from-SOT apply; env-var prose reference not natively rendered. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-006",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-config-auditor.md",
+   "issue": "hardcoded '43 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 43' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "\"43 sub-agents\" annotated \"historical\u2026 NOT the 112 mas-self registry\" \u2014 acknowledged staleness; comment is partial remediation, not documented default N per Pattern A. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-007",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-config-auditor.md",
+   "issue": "hardcoded '43 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 43' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "Same \"43 sub-agents\" legacy grouping, adjacent comment admits NOT the 112 registry; still Pattern A hit (comment != documented default); not natively maintained by Goose. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-008",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-generic-init.md",
+   "issue": "hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "\"112 sub-agents\" registry-derived literal in generic-init; same class: no Goose auto-sync; documented-default or derive-from-SOT are native-compatible fixes. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-009",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-im-finder.md",
+   "issue": "hardcoded '47 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 47' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "\"47 sub-agents\" annotated historical 2026-07-18, NOT current registry 112 \u2014 proven stale; comment-remediation incomplete per Pattern A; not natively handled by Goose. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-010",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-pre-push-validator.md",
+   "issue": "hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "\"112 sub-agents\" with historical note in test-coverage-gate Check 12; registry-derived, real drift potential; fix via documented default or derive-from-SOT. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-011",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-system-knowledge.md",
+   "issue": "hardcoded '44 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 44' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "\"44 sub-agents\" annotated historical, registry=112 (canonical 2026-08-04); acknowledged staleness; comment != documented default N; real drift. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-012",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-team-packager.md",
+   "issue": "hardcoded '20 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 20' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "MEDIUM",
+    "explanation": "\"20 sub-agents\" is a warning THRESHOLD, not registry count; inline note already provides partial documented context; borderline Pattern A; env-var replacement would only document the knob. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-013",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-bootstrap.md",
+   "issue": "hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "\"58 tools\" \u2014 documented composition elsewhere \"51 Python + 6 Shell + 1 YAML\" but install dir has 58 dev_*.py + 10 *.sh + 0 *.yaml (74 files); \"58\" matches only dev_*.py by coincidence; proven drift. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-014",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-bootstrap.md",
+   "issue": "hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "Same drifted \"58 tools\" literal at bootstrap:17; composition claim wrong vs install dir; no Goose auto-sync; documented-default or derive-from-SOT. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-015",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-bootstrap.md",
+   "issue": "hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "\"58 tools\" in user-confirmation quote, same drifted count; not natively maintained; fix via parameters.default or runtime derivation. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-016",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-generic-init.md",
+   "issue": "hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "\"58 tools\" in generic-init, same drifted literal; Goose provides no prose-count maintenance; native fix = documented default or derive-from-SOT. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-017",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-system-knowledge.md",
+   "issue": "hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "\"58 tools (51 Python + 6 Shell + 1 YAML)\" \u2014 composition demonstrably wrong (58 py + 10 sh + 0 yaml actual); strongest tools-drift evidence; fix = derive-from-SOT generator or documented default. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-018",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-system-knowledge.md",
+   "issue": "hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "\"58 Tools (51 dev_*.py + 6 *.sh + 1 *.yaml)\" at line 133 \u2014 actual split 58/10/0; parenthetical composition factually wrong; real spec-drift; derive-from-SOT is native-compatible fix. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-019",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-system-knowledge.md",
+   "issue": "hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "\"All 58 Tools with Descriptions\" doc index \u2014 same drifted count embedded; real drift vs install dir; fix = documented default or regeneration from SOT. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  },
+  {
+   "id": "MM9-EXT-020",
+   "type": "MM9-EXT",
+   "severity": "low",
+   "file": "recipe/instructions/sub_mas-team-packager.md",
+   "issue": "hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)",
+   "impact": "Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.",
+   "fix": "Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.",
+   "goose_verdict": {
+    "verdict": "RESTRICTED",
+    "confidence": "HIGH",
+    "explanation": "\"all 112 MAS-Engineer sub-agents + 58 tools\" in DEPLOY line \u2014 both counts registry/tools-derived and drifted; fix via documented default or derive-from-SOT; ${VAR} prose reference not natively resolved. Goose does not natively maintain prose count literals in instruction .md files; drift is real and demonstrable (21-vs-22 checks, 58-tools composition 51/6/1-vs-58/10/0, 43/47/44 historical vs registry 112, 13-vs-16 check sample). Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native. Pattern A (literal ${VAR} in .md prose) is NOT natively expanded by Goose - model must resolve at runtime; native equivalent is {{ param }} with default: declared in recipe YAML. Goose env vars configure Goose settings (env > recipe.yaml > default) but are not injected into instruction prose. Sources: https://goose-docs.ai/docs/guides/environment-variables/"
+   }
+  }
+ ]
+}All steps complete. Here's the im-finder (v1.0.0) FIND round report:
+
+## 🔍 IM-FINDER — FIND Round Report
+
+**Output:** `.mase/pipeline/findings.yaml` (stage 1, written + verified)
+
+### Pipeline steps executed
+| Step | Result |
+|------|--------|
+| **0 — Scanner** (`dev_im_finder_scan.py --issue-db`) | 0 **NEW** emitted — all 88 raw findings already known in issue-db (**86 open / 10 fixed / 0 wontfix**). Demo-team scopes (sales/marketing/translator) absent in this env. |
+| **0.3 — Verify** | Raw scan: **88 findings** (87 medium, **1 blocker**); `mm8=0 mm9=0` → P-F012-5 template-skip detection confirmed working |
+| **0.5 — goose-expert** | ✅ `delegate` summoned **sub_mas-goose-expert** for MM9-EXT class (20 findings, prefix MM = mandatory) → **RESTRICTED** verdicts (18×HIGH, 2×MEDIUM) |
+| **0.5b — im-designer** | Skipped (doc-level fixes, no architectural change) |
+| **0.6 — self-audit** | `dev_self_audit.py`: 20 HARDCODE findings → 20 MM9-EXT; `dev_spec_invariant.py`: clean; no BLOCKERs |
+| **L01 check** | `dev_goose_expert_check.py` → exit 0, no Goose-native conflicts |
+| **0.7 — Write** | `findings.yaml`: **total=20, mm8=0, mm9=0, verdicts=20** ✅ (R01 bypass: agent's own output) |
+
+### Persisted findings (20 × MM9-EXT, low)
+- **HARDCODE-CHECKS ×2** — `'13 checks'` (config-auditor:137, sample-output — fix via derive-from-SOT), `'21 checks'` (pre-push-validator:26 — prose says 21 but file defines 22 check sections)
+- **HARDCODE-SUB-AGENTS ×10** — `'112'`, `'43'`, `'47'`, `'44'`, `'20'` literals vs. registry 112 (several carry "historical, NOT the registry" comments)
+- **HARDCODE-TOOLS ×8** — `'58 tools'` composition claim **51/6/1 factually wrong** vs. actual 58 py + 10 sh + 0 yaml (74 files)
+
+**Goose-expert class verdict (RESTRICTED):** drift is real, Goose does not auto-sync prose literals. Pattern B (documented default via recipe `parameters` Jinja `{{ var }}` + `default:`) and Pattern C (derive-from-SOT) are **Goose-native**; Pattern A (`${VAR}` in .md prose) is **not natively expanded** by Goose. Sources: goose-docs.ai environment-variables.
+
+### ⚠️ Notable observations (not persisted — found during execution, outside scanner authority)
+1. **Instruction↔tool CLI drift:** `sub_mas-im-finder.md` STEP 0.6 spec-invariant command passes `--output` but `tools/dev_spec_invariant.py` doesn't support it (exit 2); self-audit `--scope` must be absolute when `--repo-root` is absolute.
+2. **Open BLOCKER in issue-db:** `SD-recipe_sub_mas-pre-push-validator-1` (recipe asserts '21 checks', test asserts '"18 checks"', file has 22 check sections) — remains open/unpromoted; tracked in issue_db.json for the orchestrator.
+  ────────────────────────────────────────
+  ▸ final_output recipe
+    findings:
+        - 
+            id: MM9-EXT-001
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-config-auditor.md
+            issue: hardcoded '13 checks' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 13' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: MEDIUM
+                explanation: "13 checks" is sample-output (passed count) in an example block (13/16), not a spec claim; env-var replacement inapplicable to sample output; correct fix = derive-from-SOT/regenerate example. Goose does not auto-sync prose literals. Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native; Pattern A (${VAR} in .md prose) is NOT natively expanded by Goose.
+        - 
+            id: MM9-EXT-002
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-pre-push-validator.md
+            issue: hardcoded '21 checks' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 21' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: Prose '21 checks' vs 22 check sections in same file; strongest real drift. Goose does not maintain prose counts; documented default native via recipe parameters (Jinja {{ }} + default:); ${VAR} in prose NOT rendered by Goose. Pattern B/C are Goose-native; Pattern A not natively expanded.
+        - 
+            id: MM9-EXT-003
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-bootstrap.md
+            issue: hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: '112 sub-agents' registry-derived literal hardcoded without default context; Goose has no auto-sync for prose; native fix = parameters.default (documented default) or derive-at-runtime (shell ls|wc). ${VAR} in .md not expanded.
+        - 
+            id: MM9-EXT-004
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-bootstrap.md
+            issue: hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: Same '112 sub-agents' registry-derived literal at 2nd location; no native Goose maintenance; fix via parameters.default or runtime derivation.
+        - 
+            id: MM9-EXT-005
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-bootstrap.md
+            issue: hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: '112 sub-agents' inside user-confirmation quote; registry-derived, not natively synced; documented-default or derive-from-SOT apply; env-var prose reference not natively rendered.
+        - 
+            id: MM9-EXT-006
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-config-auditor.md
+            issue: hardcoded '43 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 43' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: '43 sub-agents' annotated 'historical... NOT the 112 mas-self registry' — acknowledged staleness; comment is partial remediation, not documented default N per Pattern A.
+        - 
+            id: MM9-EXT-007
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-config-auditor.md
+            issue: hardcoded '43 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 43' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: Same '43 sub-agents' legacy grouping, adjacent comment admits NOT the 112 registry; still Pattern A hit (comment != documented default); not natively maintained by Goose.
+        - 
+            id: MM9-EXT-008
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-generic-init.md
+            issue: hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: '112 sub-agents' registry-derived literal in generic-init; same class: no Goose auto-sync; documented-default or derive-from-SOT are native-compatible fixes.
+        - 
+            id: MM9-EXT-009
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-im-finder.md
+            issue: hardcoded '47 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 47' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: '47 sub-agents' annotated historical 2026-07-18, NOT current registry 112 — proven stale; comment-remediation incomplete per Pattern A; not natively handled by Goose.
+        - 
+            id: MM9-EXT-010
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-pre-push-validator.md
+            issue: hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: '112 sub-agents' with historical note in test-coverage-gate Check 12; registry-derived, real drift potential; fix via documented default or derive-from-SOT.
+        - 
+            id: MM9-EXT-011
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-system-knowledge.md
+            issue: hardcoded '44 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 44' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: '44 sub-agents' annotated historical, registry=112 (canonical 2026-08-04); acknowledged staleness; comment != documented default N; real drift.
+        - 
+            id: MM9-EXT-012
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-team-packager.md
+            issue: hardcoded '20 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 20' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: MEDIUM
+                explanation: '20 sub-agents' is a warning THRESHOLD, not registry count; inline note already provides partial documented context; borderline Pattern A; env-var replacement would only document the knob.
+        - 
+            id: MM9-EXT-013
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-bootstrap.md
+            issue: hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: '58 tools' — documented composition elsewhere '51 Python + 6 Shell + 1 YAML' but install dir has 58 dev_*.py + 10 *.sh + 0 *.yaml (74 files); '58' matches only dev_*.py by coincidence; proven drift.
+        - 
+            id: MM9-EXT-014
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-bootstrap.md
+            issue: hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: Same drifted '58 tools' literal at bootstrap:17; composition claim wrong vs install dir; no Goose auto-sync; documented-default or derive-from-SOT.
+        - 
+            id: MM9-EXT-015
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-bootstrap.md
+            issue: hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: '58 tools' in user-confirmation quote, same drifted count; not natively maintained; fix via parameters.default or runtime derivation.
+        - 
+            id: MM9-EXT-016
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-generic-init.md
+            issue: hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: '58 tools' in generic-init, same drifted literal; Goose provides no prose-count maintenance; native fix = documented default or derive-from-SOT.
+        - 
+            id: MM9-EXT-017
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-system-knowledge.md
+            issue: hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: '58 tools (51 Python + 6 Shell + 1 YAML)' — composition demonstrably wrong (58 py + 10 sh + 0 yaml actual); strongest tools-drift evidence; fix = derive-from-SOT generator or documented default.
+        - 
+            id: MM9-EXT-018
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-system-knowledge.md
+            issue: hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: '58 Tools (51 dev_*.py + 6 *.sh + 1 *.yaml)' at line 133 — actual split 58/10/0; parenthetical composition factually wrong; real spec-drift; derive-from-SOT is native-compatible fix.
+        - 
+            id: MM9-EXT-019
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-system-knowledge.md
+            issue: hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: 'All 58 Tools with Descriptions' doc index — same drifted count embedded; real drift vs install dir; fix = documented default or regeneration from SOT.
+        - 
+            id: MM9-EXT-020
+            type: MM9-EXT
+            severity: low
+            file: recipe/instructions/sub_mas-team-packager.md
+            issue: hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)
+            impact: Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+            fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.
+            goose_verdict:
+                verdict: RESTRICTED
+                confidence: HIGH
+                explanation: 'all 112 MAS-Engineer sub-agents + 58 tools' in DEPLOY line — both counts registry/tools-derived and drifted; fix via documented default or derive-from-SOT; ${VAR} prose reference not natively resolved.
+
+{"findings":[{"id":"MM9-EXT-001","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-config-auditor.md","issue":"hardcoded '13 checks' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 13' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"MEDIUM","explanation":"\"13 checks\" is sample-output (passed count) in an example block (13/16), not a spec claim; env-var replacement inapplicable to sample output; correct fix = derive-from-SOT/regenerate example. Goose does not auto-sync prose literals. Pattern B (documented default via recipe parameters Jinja {{ var }} + default:) and Pattern C (derive-from-SOT) are Goose-native; Pattern A (${VAR} in .md prose) is NOT natively expanded by Goose."}},{"id":"MM9-EXT-002","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-pre-push-validator.md","issue":"hardcoded '21 checks' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 21' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"Prose '21 checks' vs 22 check sections in same file; strongest real drift. Goose does not maintain prose counts; documented default native via recipe parameters (Jinja {{ }} + default:); ${VAR} in prose NOT rendered by Goose. Pattern B/C are Goose-native; Pattern A not natively expanded."}},{"id":"MM9-EXT-003","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-bootstrap.md","issue":"hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"'112 sub-agents' registry-derived literal hardcoded without default context; Goose has no auto-sync for prose; native fix = parameters.default (documented default) or derive-at-runtime (shell ls|wc). ${VAR} in .md not expanded."}},{"id":"MM9-EXT-004","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-bootstrap.md","issue":"hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"Same '112 sub-agents' registry-derived literal at 2nd location; no native Goose maintenance; fix via parameters.default or runtime derivation."}},{"id":"MM9-EXT-005","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-bootstrap.md","issue":"hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"'112 sub-agents' inside user-confirmation quote; registry-derived, not natively synced; documented-default or derive-from-SOT apply; env-var prose reference not natively rendered."}},{"id":"MM9-EXT-006","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-config-auditor.md","issue":"hardcoded '43 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 43' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"'43 sub-agents' annotated 'historical... NOT the 112 mas-self registry' — acknowledged staleness; comment is partial remediation, not documented default N per Pattern A."}},{"id":"MM9-EXT-007","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-config-auditor.md","issue":"hardcoded '43 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 43' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"Same '43 sub-agents' legacy grouping, adjacent comment admits NOT the 112 registry; still Pattern A hit (comment != documented default); not natively maintained by Goose."}},{"id":"MM9-EXT-008","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-generic-init.md","issue":"hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"'112 sub-agents' registry-derived literal in generic-init; same class: no Goose auto-sync; documented-default or derive-from-SOT are native-compatible fixes."}},{"id":"MM9-EXT-009","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-im-finder.md","issue":"hardcoded '47 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 47' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"'47 sub-agents' annotated historical 2026-07-18, NOT current registry 112 — proven stale; comment-remediation incomplete per Pattern A; not natively handled by Goose."}},{"id":"MM9-EXT-010","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-pre-push-validator.md","issue":"hardcoded '112 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 112' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"'112 sub-agents' with historical note in test-coverage-gate Check 12; registry-derived, real drift potential; fix via documented default or derive-from-SOT."}},{"id":"MM9-EXT-011","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-system-knowledge.md","issue":"hardcoded '44 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 44' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"'44 sub-agents' annotated historical, registry=112 (canonical 2026-08-04); acknowledged staleness; comment != documented default N; real drift."}},{"id":"MM9-EXT-012","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-team-packager.md","issue":"hardcoded '20 sub-agents' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 20' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"MEDIUM","explanation":"'20 sub-agents' is a warning THRESHOLD, not registry count; inline note already provides partial documented context; borderline Pattern A; env-var replacement would only document the knob."}},{"id":"MM9-EXT-013","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-bootstrap.md","issue":"hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"'58 tools' — documented composition elsewhere '51 Python + 6 Shell + 1 YAML' but install dir has 58 dev_*.py + 10 *.sh + 0 *.yaml (74 files); '58' matches only dev_*.py by coincidence; proven drift."}},{"id":"MM9-EXT-014","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-bootstrap.md","issue":"hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"Same drifted '58 tools' literal at bootstrap:17; composition claim wrong vs install dir; no Goose auto-sync; documented-default or derive-from-SOT."}},{"id":"MM9-EXT-015","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-bootstrap.md","issue":"hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"'58 tools' in user-confirmation quote, same drifted count; not natively maintained; fix via parameters.default or runtime derivation."}},{"id":"MM9-EXT-016","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-generic-init.md","issue":"hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"'58 tools' in generic-init, same drifted literal; Goose provides no prose-count maintenance; native fix = documented default or derive-from-SOT."}},{"id":"MM9-EXT-017","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-system-knowledge.md","issue":"hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"'58 tools (51 Python + 6 Shell + 1 YAML)' — composition demonstrably wrong (58 py + 10 sh + 0 yaml actual); strongest tools-drift evidence; fix = derive-from-SOT generator or documented default."}},{"id":"MM9-EXT-018","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-system-knowledge.md","issue":"hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"'58 Tools (51 dev_*.py + 6 *.sh + 1 *.yaml)' at line 133 — actual split 58/10/0; parenthetical composition factually wrong; real spec-drift; derive-from-SOT is native-compatible fix."}},{"id":"MM9-EXT-019","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-system-knowledge.md","issue":"hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"'All 58 Tools with Descriptions' doc index — same drifted count embedded; real drift vs install dir; fix = documented default or regeneration from SOT."}},{"id":"MM9-EXT-020","type":"MM9-EXT","severity":"low","file":"recipe/instructions/sub_mas-team-packager.md","issue":"hardcoded '58 tools' without env-var/default/config context (spec-drift: hardcoded literal without env-var/SOT context)","impact":"Count literal drifts from actual value when the source-of-truth changes (R110-71/R110-78 spec-drift lesson class); docs mislead operators.","fix":"Reference an env var (e.g. IM_TOP_N), a documented 'default 58' value, or derive the count from the source of truth instead of hardcoding.","goose_verdict":{"verdict":"RESTRICTED","confidence":"HIGH","explanation":"'all 112 MAS-Engineer sub-agents + 58 tools' in DEPLOY line — both counts registry/tools-derived and drifted; fix via documented default or derive-from-SOT; ${VAR} prose reference not natively resolved."}}]}
