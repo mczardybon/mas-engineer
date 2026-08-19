@@ -212,7 +212,11 @@ def _all_sub_recipe_files():
     for d in search_dirs:
         if not d.exists():
             continue
-        for p in d.glob("sub_mas-*.yaml"):
+        # recipe/sub/ uses DOMAIN 1 filenames WITHOUT the sub_mas- prefix
+        # too (e.g. security-scanner.yaml, static-analyzer.yaml — R110-204
+        # orphan fix); the demo/multi-arch dirs follow sub_mas- naming.
+        pattern = "*.yaml" if d == SUB_DIR else "sub_mas-*.yaml"
+        for p in d.glob(pattern):
             try:
                 with open(p) as f:
                     data = yaml.safe_load(f)

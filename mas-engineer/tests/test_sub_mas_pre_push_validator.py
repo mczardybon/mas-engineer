@@ -1,13 +1,14 @@
 """
 test_sub_mas_pre_push_validator.py — sanity tests for pre-push-validator.
 
-pre-push-validator v2.7.0 is the gatekeeper (MAS-internal) that
-runs all 22 critical checks before git push is allowed.
+pre-push-validator v2.8.0 is the gatekeeper (MAS-internal) that
+runs all 23 critical checks before git push is allowed.
 Single-role leaf. R74: +Check 14 multi-dim coverage.
 R110-118: +Check 18 spec-invariant.
+R110-204: +Check 23 orphan-recipe registration audit.
 
 Per R101 EVIDENCE: pre-push-validator has 0 R-number rules
-(gatekeeper, just runs the 22 checks).
+(gatekeeper, just runs the 23 checks).
 
 Run with:
     python3 -m pytest tests/test_sub_mas_pre_push_validator.py -v
@@ -44,15 +45,15 @@ def test_pre_push_validator_references_master_constitution():
 
 
 def test_pre_push_validator_role():
-    """Spec: Gatekeeper before git push — runs 22 critical checks."""
+    """Spec: Gatekeeper before git push — runs 23 critical checks."""
     content = RECIPE.read_text()
     assert "Gatekeeper" in content or "gatekeeper" in content, \
         "pre-push-validator must declare gatekeeper role"
     assert "git push" in content, \
         "pre-push-validator must reference git push"
-    assert "22 critical checks" in content or "22 checks" in content \
-        or "22" in content, \
-        "pre-push-validator must reference 22 checks"
+    assert "23 critical checks" in content or "23 checks" in content \
+        or "23" in content, \
+        "pre-push-validator must reference 23 checks"
 
 
 def test_pre_push_validator_no_sub_recipes():

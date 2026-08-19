@@ -23,7 +23,7 @@ everything is healthy.
 
 ## Procedure VALIDATE
 
-Run the following 22 checks IN ORDER. Stop at the first failure if a hard
+Run the following 23 checks IN ORDER. Stop at the first failure if a hard
 block is detected, but always collect all warnings.
 
 ### Check 0: Commit-body disclosure audit (NEW v2.1.0, R110-56)
@@ -870,12 +870,21 @@ PASSED if `skipped > 0` (intentional skip is fine).
 that broke 2 tests), R110-82 (initial spec for Check 16 → renumbered
 to 17 to avoid collision with R110-94 Check 16+).
 
-### Check 18: spec-invariant (NEW v2.4.0, R110-118)
+### Check 18: spec-invariant (NEW v2.4.0, R110-118; scope-ext v2.8.0, R110-206)
 
 **Goal:** Closes R110-78 PHASE 3 (R110-109 DIREKTIVE 2+3). Test
 count-assertions (`assert "N type" in ...`) MUST match the recipe
 count-declarations. Prevents the R110-71 pattern (a count changed in
 one place while the other drifted) from ever reaching a push again.
+
+**R110-206 scope extension:** test MODULE-DOCSTRINGS AND
+`recipe/instructions/*.md` single-line prose are ALSO cross-checked
+against the recipe count-declarations for count-declaration types
+(checks/check/critical — the F-082 class). A docstring or instruction
+count that contradicts the recipe declaration is a BLOCKER naming the
+diverged files. Skips: version/identifier contexts (v1.0.0, L01),
+fenced + indented code blocks, inline shell one-liners, markdown
+tables, HTML comments, headings.
 
 **Idempotency:** If `check_18_spec_invariant` already appears in this
 file (previously inserted by an earlier validator run), skip the insert
@@ -1203,11 +1212,67 @@ echo "  ✅ Check 21 passed: all ${#PRODUCER_TOPICS[@]} producer topic(s) have c
 (MQ Full Adoption incident), R110-195 (the first fix that closed
 the original `im.finding.created` dead-end).
 
+### Check 23: orphan-recipe registration audit (NEW v2.8.0, R110-204)
+
+**Goal:** Every DOMAIN 1 (mas-self) recipe in recipe/sub/*.yaml MUST be
+registered in workflows.yaml configs.mas-self.sub_agents (R110-31 hard
+rule: "All DOMAIN 1 sub-agents MUST be registered"). Prevents the
+R110-195/R110-203 bug class from recurring: a recipe added but never
+registered is an orphan — undispatchable from any workflow and only
+caught by Check 17 AFTER it lands. Check 23 runs
+tools/dev_check_orphan_recipes.py (the SOURCE OF TRUTH for what
+"registered" means — the pytest test and this check both call it) and
+BLOCKS the push at registration time, before the orphan ever reaches
+HEAD.
+
+DETECTION→CORRECTION→PREVENTION cycle (R110-204):
+  - R110-195 (DETECTION) added sub_mas-design-patches.yaml, missed registration
+  - R110-203 (CORRECTION) fixed the registry manually (1 line in workflows.yaml)
+  - R110-204 (PREVENTION) this check — the manual fix is now structurally
+    unnecessary: any future recipe-add without a registry update is blocked
+
+**Idempotency:** If `check_23_orphan_recipes` already appears in this
+file, skip the insert and keep the existing block. Detection via
+`grep -q "check_23_orphan_recipes"`.
+
+```bash
+# Check 23: orphan-recipe registration audit (R110-204)
+echo "🔍 Check 23: orphan-recipe registration audit (R110-204)"
+python3 tools/dev_check_orphan_recipes.py --repo-root . > /tmp/orphan_check_23.txt 2>&1
+ORPHAN_RC=$?
+if [ "$ORPHAN_RC" -ne 0 ]; then
+    echo "  ❌ BLOCK: Check 23 — orphan-recipe(s) detected (DOMAIN 1 recipe/sub/*.yaml not registered in workflows.yaml configs.mas-self.sub_agents)"
+    sed 's/^/     /' /tmp/orphan_check_23.txt
+    echo "     Fix: register the recipe in configs.mas-self.sub_agents (see .mase/workflows.yaml), then re-run"
+    exit 1
+fi
+echo "  ✅ Check 23 passed: all DOMAIN 1 recipes registered"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 23: orphan-recipe registration audit (R110-204)
+  ✅ Check 23 passed: all DOMAIN 1 recipes registered
+```
+
+**Output block on BLOCK (R110-195 bug pattern):**
+```
+🔍 Check 23: orphan-recipe registration audit (R110-204)
+  ❌ BLOCK: Check 23 — orphan-recipe(s) detected (DOMAIN 1 recipe/sub/*.yaml not registered in workflows.yaml configs.mas-self.sub_agents)
+     ORPHAN: 1/110 DOMAIN 1 (mas-self) recipes NOT registered in workflows.yaml configs.mas-self.sub_agents (R110-31 violation — undispatchable from workflow):
+       ❌ sub_mas-design-patches    recipe/sub/sub_mas-design-patches.yaml
+     Fix: register the recipe in configs.mas-self.sub_agents (see .mase/workflows.yaml), then re-run
+```
+
+**Reference:** R110-204 (DETECTION→CORRECTION→PREVENTION directive),
+R110-203 (the manual fix that made this check necessary), R110-195
+(the orphan incident), R110-31 (the registration rule).
+
 ## Boundaries
 
 - ⛔ NEVER modify any source file — this agent is read-only
 - ⛔ NEVER run `git push` itself — only validate
-- ⛔ NEVER skip a check — all 21 must run (Check 0 + Checks 1-15 + Check 16+ + Check 17 + Check 18 + Check 19 + Check 20)
+- ⛔ NEVER skip a check — all 23 must run (Check 0 + Checks 1-15 + Check 16+ + Check 17 + Check 18 + Check 19 + Check 20 + Check 21 + Check 23)
 - ⛔ Max 300s timeout total (5 minutes)
 
 **R01 NON-INTERACTIVE BYPASS (current implementation):** R01
