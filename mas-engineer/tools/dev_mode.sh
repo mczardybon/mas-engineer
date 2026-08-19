@@ -22,7 +22,7 @@ register_domain() {
     echo -e "${YELLOW}📝 Registriere new Domain: $name ($path)${NC}"
     python3 -c "
 import yaml
-registry_path = 'mas-engineer/.mase/domains/registry.yaml'
+registry_path = '$script_dir/../.mase/domains/registry.yaml'
 with open(registry_path) as f:
     reg = yaml.safe_load(f) or {'version': '1.0.0', 'domains': {}}
 reg['domains']['$name'] = {'path': '$path', 'mode': 'generic', 'isolated': True}
@@ -76,7 +76,8 @@ if os.path.exists(path):
 }
 
 list_domains() {
-    local registry="mas-engineer/.mase/domains/registry.yaml"
+    local script_dir; script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local registry="$script_dir/../.mase/domains/registry.yaml"
     if [ ! -f "$registry" ]; then
         echo -e "${RED}❌ No registry.yaml${NC}"
         return

@@ -1,7 +1,7 @@
 #!/bin/bash
 # dev_rule_refresh.sh — method 5: Reaktivierungs-Anker (MAS + Generic)
 # Will all 5 Steps aufgerufen. Loads Rulen frisch aus file.
-# --mode mas     → MAS-eigene Rulen (harte_rulen.yaml → rulen_5/4/2_*.yaml)
+# --mode mas     → MAS-eigene Rulen (hard_rules.yaml → rulen_5/4/2_*.yaml)
 # --mode generic → User-Rulen (rulen.yaml)
 # Based on: "Shell commands are deterministic — LLM context is ephemeral"
 
@@ -58,58 +58,60 @@ print(f'⛔ {len(rulen)} Generic-Rulen loaded')
     fi
 else
     # ── MAS-MODE: Harte Rulen load ──
+    # R110-218: real hard_rules.yaml uses 'rules' (not 'rulen') and
+    # 'hardness' (not 'haerte') keys. R110-140 rename was incomplete.
     python3 -c "
 import yaml, os
 
-path = '$REGL_DIR/harte_rulen.yaml'
+path = '$REGL_DIR/hard_rules.yaml'
 if not os.path.exists(path):
-    print('⚠️  No harte_rulen.yaml found')
+    print('⚠️  No hard_rules.yaml found')
     exit(0)
 
 with open(path) as f:
     data = yaml.safe_load(f)
 
-rulen = data.get('rulen', [])
-leveln = data.get('haerte_leveln', {})
+# R110-218.b: top-level key is 'rules' (was 'rulen')
+rules = data.get('rules', [])
+# R110-218.d: top-level metadata key is 'hardness_levels' (was 'haerte_leveln')
+leveln = data.get('hardness_levels', {})
 
-for r in rulen:
-    h = r['haerte']
-    level = leveln.get('extrem_stark' if h >= 5 else 'stark' if h >= 4 else 'normal' if h >= 2 else 'schwach', {})
+# R110-218.c: rule inner key is 'hardness' (was 'haerte').
+# R110-218 also: hardness_levels sub-keys are extreme/strong/normal/weak
+# (not the German extrem_stark/stark/normal/schwach the old code assumed).
+for r in rules:
+    h = r['hardness']
+    level = leveln.get('extreme' if h >= 5 else 'strong' if h >= 4 else 'normal' if h >= 2 else 'weak', {})
     symbol = level.get('symbol', '')
     r['text'] = f\"{symbol} {r['prompt_text']}\"
 
-for level, label in [(5, '5_extrem'), (4, '4_stark'), (2, '2_normal')]:
-    filtered = [r for r in rulen if r['haerte'] == level]
-    outpath = f'$REGL_DIR/rulen_{label}.yaml'
+# R110-218.e: output filenames and key names match the rest of the codebase
+# (rules_5_extreme.yaml, rules_4_strong.yaml, rules_2_normal.yaml already exist
+# and are loaded by dev_rule_checker.py:20-21).
+for level, label in [(5, '5_extreme'), (4, '4_strong'), (2, '2_normal')]:
+    filtered = [r for r in rules if r['hardness'] == level]
+    outpath = f'$REGL_DIR/rules_{label}.yaml'
     with open(outpath, 'w') as f:
-        yaml.dump({'rulen': filtered, 'haerte': level}, f, default_flow_style=False)
+        yaml.dump({'rules': filtered, 'hardness': level}, f, default_flow_style=False)
 
-with open(f'$REGL_DIR/rulen_5_extrem.yaml') as f:
-    d5 = yaml.safe_load(f)
-if d5 and d5.get('rulen'):
-    print(f'Geschrieben: rulen_5_extrem.yaml ({len(d5[\"rulen\"])} EXTREM-Rulen)')
-with open(f'$REGL_DIR/rulen_4_stark.yaml') as f:
-    d4 = yaml.safe_load(f)
-if d4 and d4.get('rulen'):
-    print(f'Geschrieben: rulen_4_stark.yaml ({len(d4[\"rulen\"])} STARK-Rulen)')
-with open(f'$REGL_DIR/rulen_2_normal.yaml') as f:
-    d2 = yaml.safe_load(f)
-if d2 and d2.get('rulen'):
-    print(f'Geschrieben: rulen_2_normal.yaml ({len(d2[\"rulen\"])} NORMAL-Rulen)')
+print(f'Geschrieben: rules_5_extreme.yaml ({sum(1 for r in rules if r[\"hardness\"]==5)} EXTREM-Rulen)')
+print(f'Geschrieben: rules_4_strong.yaml ({sum(1 for r in rules if r[\"hardness\"]==4)} STARK-Rulen)')
+print(f'Geschrieben: rules_2_normal.yaml ({sum(1 for r in rules if r[\"hardness\"]==2)} NORMAL-Rulen)')
 "
 
     # Output: Show harte Rulen
     echo ""
     echo "=== ⛔⛔⛔⛔⛔ EXTREM-STARK RULES (frisch loaded $(date +%H:%M:%S)) ==="
-    python3 -c "import yaml; d=yaml.safe_load(open('$REGL_DIR/rulen_5_extrem.yaml')); [print(f'  → {r[\"text\"]}') for r in d['rulen']]" 2>/dev/null
+    # R110-218: output file is rules_5_extreme.yaml with 'rules' key and 'text' field
+    python3 -c "import yaml; d=yaml.safe_load(open('$REGL_DIR/rules_5_extreme.yaml')); [print(f'  → {r[\"text\"]}') for r in d.get('rules', [])]" 2>/dev/null
 
     echo ""
     echo "=== ⛔⛔⛔ STARK RULES ==="
-    python3 -c "import yaml; d=yaml.safe_load(open('$REGL_DIR/rulen_4_stark.yaml')); [print(f'  → {r[\"text\"]}') for r in d['rulen']]" 2>/dev/null
+    python3 -c "import yaml; d=yaml.safe_load(open('$REGL_DIR/rules_4_strong.yaml')); [print(f'  → {r[\"text\"]}') for r in d.get('rules', [])]" 2>/dev/null
 
     echo ""
     echo "=== ⛔ NORMAL RULES ==="
-    python3 -c "import yaml; d=yaml.safe_load(open('$REGL_DIR/rulen_2_normal.yaml')); [print(f'  → {r[\"text\"]}') for r in d['rulen']]" 2>/dev/null
+    python3 -c "import yaml; d=yaml.safe_load(open('$REGL_DIR/rules_2_normal.yaml')); [print(f'  → {r[\"text\"]}') for r in d.get('rules', [])]" 2>/dev/null
 fi
 
 # Write Timestamp
