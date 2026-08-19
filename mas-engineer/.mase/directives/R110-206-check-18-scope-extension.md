@@ -12,8 +12,10 @@ to detect spec-drift between:
 This is the machine-checkable core of R110-78 spec-drift resistance
 and it works — except it has a SCOPE GAP that R110-205 just hit:
 
-The pre-push-validator v2.7.0 description + prompt say "22 critical
-checks" in 3 places:
+The pre-push-validator v2.7.0 description + prompt said "22 critical
+checks" in 3 places (F-092 actually proved 23 checks exist — Check
+0, 1, 1.5, 2-14, 16+, 17-21, 23; so the F-082 root cause was BOTH
+the count-drift (21/22/18) AND the wrong-canonical-22):
   - recipe/sub/sub_mas-pre-push-validator.yaml (yaml, 22)
   - recipe/instructions/sub_mas-pre-push-validator.md (markdown, 21) ❌
   - tests/test_sub_mas_pre_push_validator.py (test docstring, 18) ❌❌
@@ -92,10 +94,15 @@ Pytest test for the new functions. 4 cases:
     `tests/fixtures/instructions_with_3_checks.md` returns
     `{"checks": {3}}` (3 single-line mentions of "N checks")
   - (b) `extract_count_from_docstrings` on a synthetic test
-    file with a module-level docstring containing "22 critical
-    checks" returns `{"checks": {22}}`
+    file with a module-level docstring containing "18 critical
+    checks" returns `{"checks": {18}}` (the original F-082 stale
+    literal — preserved as the test's reproduction case)
   - (c) `run_spec_invariant_check` on a repo where instructions
     say "21 checks" but recipes say "22 checks" emits an
+    (NOTE: the F-092 finding proved canonical is 23, not 22, so
+    this test fixture's "21 vs 22" represents the F-082 historical
+    drift; the actual current repo has 23/23/22 mismatch which the
+    apply-iteration also resolved)
     INVARIANT-checks BLOCKER (the F-082 reproduction)
   - (d) Idempotency: a second run on the same repo returns the
     same result set (no duplicate findings)
@@ -114,7 +121,9 @@ Pytest test for the new functions. 4 cases:
 - [ ] `python3 -m pytest tests/test_dev_spec_invariant.py -v`
       shows 4 passed
 - [ ] Full pytest: 1614+4 = 1618+ passed, 0 failed
-- [ ] pre-push-validator: 22/22 checks still passed
+- [ ] pre-push-validator: 23/23 checks still passed (F-092
+      canonical count; R110-205 had aligned to 22 which was
+      wrong-by-one — apply-iteration fixed this too)
 - [ ] No regression in the original 3 test cases in
       `tests/test_pre_push_check_18_spec_invariant.py`
 
