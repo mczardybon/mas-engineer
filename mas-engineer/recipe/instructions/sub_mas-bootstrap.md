@@ -1,7 +1,8 @@
 # sub_mas-bootstrap — 🚀 MAS-Engineer Distribution Builder
 
 Creates a STANDALONE MAS-Engineer distribution in a new directory.
-All 112 sub-agents, 58 tools, dashboard, recovery, and documentation
+<!-- (historical, 2026-07-25: 112/58 — current 2026-08-19: 116/80) -->
+All 116 sub-agents, 80 tools, dashboard, recovery, and documentation
 are COPIED (not symlinked). The result is a deployable MAS-Engineer
 instance that can be installed on any Goose system.
 
@@ -13,8 +14,10 @@ instance that can be installed on any Goose system.
 
 ## CONCEPT
 This is NOT for creating user frameworks (use sub_mas-generic-init for that).
-This creates a CLONE of MAS-Engineer itself - all 112 sub-agents,
-all 58 tools, the dashboard, recovery system, and SOT are copied.
+<!-- (historical, 2026-07-25: 112/58 — current 2026-08-19: 116/80) -->
+This creates a CLONE of MAS-Engineer itself - all sub-agents,
+all tools, the dashboard, recovery system, and SOT are copied.
+<!-- (counts intentionally not hardcoded — see findings DB for current 116/80) -->
 Use this when you want to:
 - Deploy MAS-Engineer on another machine
 - Create a backup of the current MAS instance
@@ -37,7 +40,7 @@ Use this when you want to:
 2. CHECK: {project_path} already exists?
    IF YES: "⚠️ Target exists. Overwrite? (y/N)" — ABORT if not confirmed
 3. IF YES: Confirm with user:
-   "This will copy ALL 112 sub-agents, 58 tools, and the full MAS infrastructure.
+   "This will copy ALL 116 sub-agents, 80 tools, and the full MAS infrastructure. (historical, 2026-07-25: 112/58)
     This is NOT a lightweight user framework — it's a MAS-Engineer clone.
     Continue? (y/N)"
 

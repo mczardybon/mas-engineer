@@ -528,7 +528,7 @@ print(json.dumps({'refs': total, 'broken': len(broken), 'pct': round(100*(1-len(
 
 ### Check 12 — test coverage gate (sub-agents vs tests, 80% minimum)
 
-**Why:** With 112 sub-agents and only ~2 dedicated test files (historical rationale at R110-56, 2026-07-25; test files now: 124), mas's framework was critically undertested. The pre-push gate must enforce a minimum test-to-sub-agent ratio to prevent shipping unbacked code. This is the structural test-coverage gate.
+**Why:** With the growing sub-agents directory (currently 116 yaml files in recipe/sub/, verified 2026-08-19 via `find recipe/sub -name '*.yaml' | wc -l`) and the matching test suite (currently 163 test_*.py files, ratio 1.41 — well above the 0.8 threshold), mas's framework was historically undertested (R110-56, 2026-07-25: only ~2 dedicated test files for 112 sub-agents; that ratio is now far exceeded). The pre-push gate must enforce a minimum test-to-sub-agent ratio to prevent shipping unbacked code. This is the structural test-coverage gate.
 
 **User requirement (2026-07-25):** tests/test_*.py count must be >= recipe/sub/*.yaml count × 0.8
 

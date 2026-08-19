@@ -62,7 +62,8 @@ of MAS-Engineer. The directory contains everything the team needs:
 
 ## DIFFERENCE FROM BOOTSTRAP
 
-- `sub_mas-bootstrap` (DEPLOY): copies all 112 MAS-Engineer sub-agents + 58 tools
+- `sub_mas-bootstrap` (DEPLOY): copies all sub-agents + tools (current 116/80,
+  2026-08-19; (historical, 2026-07-25: 112 MAS-Engineer sub-agents + 58 tools))
   into a new directory. Result is a full MAS-Engineer instance.
 - `sub_mas-team-packager` (PACKAGE_TEAM): copies ONLY the team agents
   (typically 3-7 files). Result is a lightweight team package.

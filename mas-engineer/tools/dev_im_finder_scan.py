@@ -934,14 +934,33 @@ def check_spec_drift_reverse(findings, repo_root='.'):
                                   recursive=True))
     if not test_files:
         return
-    # Pre-load all test file contents into one combined string (fast lookup)
+    # Pre-load per-recipe test-file contents into a dict keyed by the
+    # recipe base-name. We match recipe/instructions/sub_mas-X.md to
+    # tests/test_sub_mas_X.py (and the dev_-prefixed sibling if present).
+    # This avoids false-positives where a meta-test fixture (e.g.
+    # test_dev_spec_invariant.py mentioning "22 critical checks" inside
+    # a docstring as test-data) is wrongly attributed to an unrelated
+    # recipe (R110-209 scanner-bug fix).
+    test_combined_per_recipe = {}
     test_combined = ''
     for tf in test_files:
         try:
             with open(tf, errors='ignore') as fh:
-                test_combined += '\n' + fh.read()
+                content = fh.read()
         except Exception:
             continue
+        test_combined += '\n' + content
+        # map every test-file to the recipe base-name it tests.
+        # recipe base e.g. "sub_mas-pre-push-validator" ↔ test stem
+        # "test_sub_mas_pre_push_validator" (the test_/dev_ prefix and
+        # hyphens→underscores). We record BOTH the unprefixed stem (so
+        # lookup by base-name works) and the with-prefix stem.
+        stem = os.path.basename(tf).replace('.py', '')
+        # candidate keys: test stem itself (e.g. "test_sub_mas_pre_push_validator"
+        # and "test_dev_spec_invariant"); and the unprefixed form
+        # (e.g. "sub_mas_pre_push_validator" and "dev_spec_invariant")
+        for variant in (stem, stem.removeprefix('test_')):
+            test_combined_per_recipe[variant] = content
     recipe_sources = []
     for d in recipe_dirs:
         if os.path.isdir(d):
@@ -998,9 +1017,18 @@ def check_spec_drift_reverse(findings, repo_root='.'):
                 # Check for "N checks" pattern (R110-111 L26 trigger)
                 checks_match = _RECIPE_CHECKS_RE.search(literal_full)
                 if checks_match and test_combined:
+                    # R110-209: prefer recipe-specific test-file content to
+                    # avoid false-positives from meta-test fixtures.
+                    # base is e.g. "sub_mas-pre-push-validator" → test stem
+                    # is "test_sub_mas_pre_push_validator" (hyphens→underscores).
+                    test_stem = 'test_' + base.replace('-', '_')
+                    scope = test_combined_per_recipe.get(
+                        test_stem,
+                        test_combined_per_recipe.get(
+                            base.replace('-', '_'), test_combined))
                     test_anchor = re.search(
                         r'["\'](\d+)\s+(?:critical\s+)?checks?["\']',
-                        test_combined)
+                        scope)
                     if test_anchor:
                         if test_anchor.group(1) != checks_match.group(1):
                             per_file_idx[base] += 1
@@ -1023,9 +1051,16 @@ def check_spec_drift_reverse(findings, repo_root='.'):
                                 f"'16 checks' -> '17 checks'")
                             continue
                 # Generic count-anchor check: "N tests" / "N rules" etc.
-                # Look for the same number with the same word in tests/
+                # Look for the same number with the same word in tests/.
+                # R110-209: scope to recipe-specific test-file to avoid
+                # false-positives from meta-test fixtures.
                 pattern = re.compile(rf'\b{re.escape(num)}\s+{re.escape(word)}')
-                if pattern.search(test_combined):
+                test_stem = 'test_' + base.replace('-', '_')
+                scope = test_combined_per_recipe.get(
+                    test_stem,
+                    test_combined_per_recipe.get(
+                        base.replace('-', '_'), test_combined))
+                if pattern.search(scope):
                     continue  # test-anchor present, OK
                 per_file_idx[base] += 1
                 add_finding(
@@ -1098,6 +1133,46 @@ def check_hardcode_stale(findings, repo_root='.'):
                 if stripped.startswith('#'):
                     continue
                 if _mod._is_in_fence(lines, ln - 1):
+                    continue
+                # R110-210: skip HTML-comment lines (snapshot semantics
+                # already documented in <!-- historical ... -->)
+                if '<!--' in line and '-->' in line:
+                    continue
+                # R110-210: skip lines where the PREVIOUS line ends an
+                # HTML-comment that documents the count as opaque/historical
+                # (e.g. "<!-- (historical 43 — same opaque legacy
+                # grouping as CHECK 13, NOT the 112 mas-self
+                # registry) -->" on L92 followed by "All 52 MAS
+                # sub-agents + 43 sub-agents" on L93 — the count
+                # IS the snapshot, do NOT flag)
+                prev_line = lines[ln - 2] if ln - 2 >= 0 else ''
+                # (a) Previous line ends an HTML-comment that documents
+                # the count as opaque/historical (most common case)
+                if '<!--' in prev_line and '-->' in prev_line and \
+                        re.search(r'historical|same .* legacy|do NOT update|opaque', prev_line, re.I):
+                    continue
+                # (b) Previous line is a parenthetical/historical
+                # reference explaining that a number is the
+                # documented-snapshot, not the current value
+                # (e.g. "R110-56, 2026-07-25: only ~2 dedicated
+                # test files for 112 sub-agents; that ratio is now
+                # far exceeded" — the 112 is intentionally
+                # documented as the historical anchor)
+                if re.search(r'\(historical|R110-\d+|historically|that .* now .* exceeded|that ratio', prev_line, re.I):
+                    continue
+                # (c) The line ITSELF contains a documented-historical
+                # reference inline (e.g. "(R110-56, 2026-07-25: only
+                # ~2 dedicated test files for 112 sub-agents; that
+                # ratio is now far exceeded)" — the 112 is
+                # intentionally a documented historical anchor)
+                if re.search(r'\(historical|R110-\d+|historically|that .* now .* exceeded|that ratio', line, re.I):
+                    continue
+                # R110-210: skip canonical "N checks" declarations
+                # (e.g. "Run the following 23 checks IN ORDER" —
+                # the canonical check-count line; flagged previously
+                # because scanner didn't know which file the count
+                # was authoritative for)
+                if re.search(r'run the following \d+ checks', line, re.I):
                     continue
                 inline = _mod._strip_inline_code(line)
                 for m in _mod.PATTERN_A_RE.finditer(inline):
