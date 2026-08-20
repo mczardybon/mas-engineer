@@ -1,7 +1,7 @@
 #!/bin/bash
 # dev_rule_refresh.sh — method 5: Reaktivierungs-Anker (MAS + Generic)
 # Will all 5 Steps aufgerufen. Loads Rulen frisch aus file.
-# --mode mas     → MAS-eigene Rulen (hard_rules.yaml → rulen_5/4/2_*.yaml)
+# --mode mas     → MAS-eigene Rulen (hard_rules.yaml → rules_5/4/2_*.yaml)
 # --mode generic → User-Rulen (rulen.yaml)
 # Based on: "Shell commands are deterministic — LLM context is ephemeral"
 
