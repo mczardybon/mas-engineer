@@ -189,7 +189,14 @@ def run_workflow(name, params, wfs):
             elif action == "signal":
                 ok = True; out = "Signal gesendet"
             elif action == "rule_check":
-                r = subprocess.run(["python3", "tools/dev_rule_checker.py", "--all"], capture_output=True, text=True, timeout=30)
+                # R110-220: pass --action-type shell so the checker output does
+                # not default to "action: unbekannt" (the default was
+                # "unbekannt" when --action-type was omitted, confusing the
+                # build-test workflow log).
+                r = subprocess.run(
+                    ["python3", "tools/dev_rule_checker.py", "--all", "--action-type", "shell"],
+                    capture_output=True, text=True, timeout=30,
+                )
                 ok = r.returncode == 0; out = r.stdout.strip()
             elif action == "enqueue":
                 # R110-164: enqueue a message onto a dev_message_queue topic.

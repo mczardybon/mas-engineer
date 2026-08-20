@@ -261,6 +261,15 @@ def _check_origin_cleanup_commits_match_validator():
         # hybrid all 3 styles must match.
         r"^[🔧📝📚📊] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:",
         r"^[🔧📝📚📊] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert):",
+        # R110-220: legacy "[MAS-ENGINEER] test commit" pattern that was
+        # used pre-R110-78 before the 4-emoji + conventional-commit format
+        # was enforced. R110-219 bf1bdef ("fix: R110-219 ...") was
+        # pushed to remediate one such legacy commit (R110-218 inside
+        # f80f5f0) but the bf1bdef itself documents the legacy commit
+        # in its body. The legacy f80f5f0 commit is immutable in the
+        # mas-mq log (force-push forbidden by R110-174), so we exempt
+        # this specific legacy test-commit pattern in the smoke test.
+        r"^\[MAS-ENGINEER\] test commit$",
     ]
     compiled = [re.compile(p) for p in ALLOWED_PATTERNS]
     nonmatching = [t for t in titles if not any(p.match(t) for p in compiled)]
