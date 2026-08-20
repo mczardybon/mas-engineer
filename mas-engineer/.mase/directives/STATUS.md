@@ -634,3 +634,15 @@ Future drift will be caught by:
   R110-121 alle gefixt hat; Wrapper verifiziert per synthetischem
   Fixture), dev_self_audit 20 WARN (unveraendert), dev_spec_invariant
   0 BLOCKER.
+
+### R110-223-wf-yaml-clone-sideeffect
+
+- **Datei**: `R110-223-wf-yaml-clone-sideeffect.md` (15K, 9-section spec, 2026-08-20)
+- **Ziel**: prevent wf_yaml_clone side-effect — sub_mas-clone agent regenerates on every e2e run (7 CREATEs since 14.08)
+- **Created**: 2026-08-20 via R110-204 lesson ("DETECTION→CORRECTION→PREVENTION, mas-engineer fixt sich selbst")
+- **Refs**: R110-204 (orphan-recipe prevention precedent), R110-78 (spec-drift), R110-127 (re-translation pattern), R110-34 (verification-theater), R110-222 (3dddcdb, premature manual fix, must be reverted)
+- **Status**: DRAFT — pending im-pipeline run
+
+| PHASE | DIREKTIVE | Status | Started | Completed | Commit | Effekt |
+|---|---|---|---|---|---|---|
+| 1 | R110-222 revert + 5 files (tool+test+pre-push check+e2e+instruction) | DRAFT | - | - | - | - |
