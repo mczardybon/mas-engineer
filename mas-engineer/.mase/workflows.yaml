@@ -104,8 +104,8 @@ configs:
         - MAS-State liegt in ~/.config/goose/.state/mas/ (not in work/.../)
         - work/ can deleted will without MAS zu corrupt
         - BEIM START: Check ob work/ a Project ist — NICHT ob it MAS ist
-        - work/ contains NOE MAS-statesfileen (.mase/, checkpoints/, .backups/ —
-          bis auf .mas-mode)
+        - work/ contains NOE MAS-statesfileen (.mase/, checkpoints/, .backups/ — bis
+          auf .mas-mode)
         - MAS-install.sh und update.sh copy State NACH ~/.config/goose/.state/mas/
       r13_newes_projekt_ignore:
         level: extreme
@@ -978,6 +978,11 @@ agents:
     task: 'v1.0.0 | MAS-intern: Test agent for validation'
     desc: Automatic generates aus Template-Generator
     task_workflows: {}
+  clone:
+    name: sub_mas-clone
+    type: sub
+    task: 'v1.0.0 | MAS-intern: list'
+    desc: Automatic generates aus Template-Generator
 task_workflows:
   wf_fw_discover:
     desc: Dynamically discover framework structure
@@ -1344,10 +1349,14 @@ task_workflows:
         to: '{to}'
         signal_type: CP_DONE
         timestamp: '{timestamp}'
-      idempotency_key: 'cpdone-{request_id}'
+      idempotency_key: cpdone-{request_id}
       retry_policy:
         max: 3
-        backoff: [1, 2, 4, 8]
+        backoff:
+        - 1
+        - 2
+        - 4
+        - 8
       request_id: '{request_id}'
   wf_signal_error:
     desc: ERROR Signal — enqueue to message queue (R110-154)
@@ -1362,10 +1371,14 @@ task_workflows:
         signal_type: ERROR
         error: '{error}'
         timestamp: '{timestamp}'
-      idempotency_key: 'error-{request_id}'
+      idempotency_key: error-{request_id}
       retry_policy:
         max: 3
-        backoff: [1, 2, 4, 8]
+        backoff:
+        - 1
+        - 2
+        - 4
+        - 8
       request_id: '{request_id}'
   wf_signal_sessionend:
     desc: SESSION_END Signal — enqueue to message queue (R110-154)
@@ -1379,10 +1392,14 @@ task_workflows:
         to: '{to}'
         signal_type: SESSION_END
         timestamp: '{timestamp}'
-      idempotency_key: 'sessionend-{request_id}'
+      idempotency_key: sessionend-{request_id}
       retry_policy:
         max: 3
-        backoff: [1, 2, 4, 8]
+        backoff:
+        - 1
+        - 2
+        - 4
+        - 8
       request_id: '{request_id}'
   wf_mq_consumer_cpdone:
     desc: Consume + ack CP_DONE messages from queue (R110-154)
@@ -1395,7 +1412,8 @@ task_workflows:
       on_error: continue
     - id: process
       action: shell
-      cmd: 'echo "📨 consumed CP_DONE: msg_id={msg_id}, from={from}, request_id={request_id}" >> {workspace}/.mase/cpdone_consumed.log'
+      cmd: 'echo "📨 consumed CP_DONE: msg_id={msg_id}, from={from}, request_id={request_id}"
+        >> {workspace}/.mase/cpdone_consumed.log'
       on_error: continue
     - id: ack
       action: ack
@@ -1412,7 +1430,8 @@ task_workflows:
       on_error: continue
     - id: process
       action: shell
-      cmd: 'echo "🚨 consumed ERROR: msg_id={msg_id}, from={from}, request_id={request_id}, error={error}" >> {workspace}/.mase/error_consumed.log'
+      cmd: 'echo "🚨 consumed ERROR: msg_id={msg_id}, from={from}, request_id={request_id},
+        error={error}" >> {workspace}/.mase/error_consumed.log'
       on_error: continue
     - id: ack
       action: ack
@@ -1924,12 +1943,14 @@ task_workflows:
       timeout: 15
       on_error: skip
   wf_recovery_defib:
-    desc: 'Consumer: monitor.health.degraded → classify + dispatch recovery (R110-166 phase 2.2)'
+    desc: 'Consumer: monitor.health.degraded → classify + dispatch recovery (R110-166
+      phase 2.2)'
     steps:
     - id: consume
       action: shell
-      cmd: 'trap ''kill 0'' TERM; python3 tools/dev_mq_consumer.py --topic monitor.health.degraded
-        --consumer-id wf_recovery_defib --processor dev_recovery_defib:process_msg --timeout 60'
+      cmd: trap 'kill 0' TERM; python3 tools/dev_mq_consumer.py --topic monitor.health.degraded
+        --consumer-id wf_recovery_defib --processor dev_recovery_defib:process_msg
+        --timeout 60
       timeout: 60
       on_error: continue
       retry:
@@ -1944,25 +1965,24 @@ task_workflows:
         idle — no degraded health message in queue)"; fi'
       timeout: 5
       on_error: skip
-  # R110-165 phase 1.1: phoenix-recovery publisher workflow
-  # Runs all 5 recovery levels + enqueues phoenix.recovery.completed
   wf_phoenix_recovery_publish:
-    desc: 'Phoenix recovery — run 5 levels (immune,checkpoint,safezone,timeline,defib) and publish phoenix.recovery.completed'
+    desc: Phoenix recovery — run 5 levels (immune,checkpoint,safezone,timeline,defib)
+      and publish phoenix.recovery.completed
     steps:
     - id: run_recovery
       action: shell
-      cmd: 'python3 tools/dev_phoenix_recovery_run.py --request_id {request_id} --from {from} --to {to} 2>&1 | tail -10'
+      cmd: python3 tools/dev_phoenix_recovery_run.py --request_id {request_id} --from
+        {from} --to {to} 2>&1 | tail -10
       timeout: 300
     - id: verify_published
       action: shell
-      cmd: 'python3 tools/dev_mq_topic_depth.py phoenix.recovery.completed'
+      cmd: python3 tools/dev_mq_topic_depth.py phoenix.recovery.completed
       timeout: 10
       depends_on:
       - run_recovery
-  # R110-168 phase 3: phoenix.recovery.completed consumer
-  # Persists a structured per-run log to .mase/phoenix_logs/<request_id>.json
   wf_phoenix_log_persist:
-    desc: 'Consumer: phoenix.recovery.completed → per-run log + classification (R110-168 phase 3)'
+    desc: 'Consumer: phoenix.recovery.completed → per-run log + classification (R110-168
+      phase 3)'
     steps:
     - id: consume
       action: shell
@@ -1973,9 +1993,10 @@ task_workflows:
       on_error: continue
     - id: verify_log
       action: shell
-      cmd: 'if [ -f .mase/phoenix_logs/{request_id}.json ]; then echo "PHOENIX_OK: .mase/phoenix_logs/{request_id}.json";
-        cat .mase/phoenix_logs/{request_id}.json; else echo "PHOENIX_NO_LOG (consumer
-        idle — no phoenix completion in queue)"; fi'
+      cmd: 'if [ -f .mase/phoenix_logs/{request_id}.json ]; then echo "PHOENIX_OK:
+        .mase/phoenix_logs/{request_id}.json"; cat .mase/phoenix_logs/{request_id}.json;
+        else echo "PHOENIX_NO_LOG (consumer idle — no phoenix completion in queue)";
+        fi'
       timeout: 5
       on_error: skip
   wf_immune_check_yaml:
@@ -2125,10 +2146,9 @@ task_workflows:
     - id: create_snapshot
       action: shell
       cmd: 'TS=$(date -u +%Y%m%d_%H%M%S); mkdir -p {workspace}/.mase/checkpoints/$TS;
-        cp -r {workspace}/recipe {workspace}/.mase/checkpoints/$TS/ 2>/dev/null;
-        cp -r {workspace}/tools {workspace}/.mase/checkpoints/$TS/ 2>/dev/null; cp
-        {workspace}/.mase/change.json {workspace}/.mase/checkpoints/$TS/ 2>/dev/null;
-        echo "Checkpoint: $TS"'
+        cp -r {workspace}/recipe {workspace}/.mase/checkpoints/$TS/ 2>/dev/null; cp
+        -r {workspace}/tools {workspace}/.mase/checkpoints/$TS/ 2>/dev/null; cp {workspace}/.mase/change.json
+        {workspace}/.mase/checkpoints/$TS/ 2>/dev/null; echo "Checkpoint: $TS"'
       timeout: 60
   wf_checkpoint_list:
     desc: Show last 10 snapshots
@@ -2394,9 +2414,9 @@ task_workflows:
     steps:
     - id: consume
       action: shell
-      cmd: 'trap ''kill 0'' TERM; python3 tools/dev_mq_consumer.py --topic im.finding.created
+      cmd: trap 'kill 0' TERM; python3 tools/dev_mq_consumer.py --topic im.finding.created
         --consumer-id wf_im_design_patches --processor dev_im_design_patches:process_msg
-        --timeout 30'
+        --timeout 30
       timeout: 60
       on_error: continue
       retry:
