@@ -53,8 +53,14 @@ else
   # Get all changed files including untracked
   MODIFIED=$(git status --porcelain | awk '{print $2}' | grep -v '^$' || true)
   # Get untracked files that are NEW (marked with ??)
-  UNTRACKED=$(git status --porcelain | awk '$1 == "??" {print $2}' || true)
-  LAST_COMMIT=$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null || true)
+  UNTRACKED=$(git status --porcelain | awk '$1 == "??{print $2}' || true)
+  # Last commit: include only Added/Copied/Modified/Renamed/Type-changed
+  # (R110-233 fix: --diff-filter=ACMRT excludes Deleted, so that a commit
+  # which removed a file (e.g. R110-232 removed recipe/sub/sub_mas-clone.yaml)
+  # does not cause the YAML-parse + agent-smoke checks to fail on a
+  # non-existent path. Prior to this fix, every commit with a deletion
+  # in HEAD would fail check [3/10] and [7/10] with "missing: <path>".)
+  LAST_COMMIT=$(git diff-tree --no-commit-id --name-only -r --diff-filter=ACMRT HEAD 2>/dev/null || true)
   ALL_CHANGED=$(echo -e "$MODIFIED\n$UNTRACKED\n$LAST_COMMIT" | sort -u | grep -v '^$' || true)
 
   # Strip the git-root-relative prefix so paths match the local working dir.

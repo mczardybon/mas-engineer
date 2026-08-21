@@ -19,7 +19,7 @@ VERWENDUNG:
 NO framework dependency. Pure standard library.
 """
 
-import json, sys, os
+import json, sys, os, re
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -59,11 +59,63 @@ def init_state():
 
 
 def load():
-    """Load changes.json."""
+    """Load changes.json. Auto-migrates legacy list-format (2026-08-14 era)
+    to the current dict format expected by add_change/show_status/etc.
+
+    Legacy format (pre-R110-233): [{"timestamp":..., "action":...}, ...]
+    Current format (init_state()): {"metadata":..., "changes":[], "stats":...}
+
+    The legacy list contains mixed entries: sub_mas-* CREATE events
+    (e.g. sub_mas-clone) and apply_directive directive-application logs.
+    On migration we wrap them as `changes` entries with id `ch_legacy_NNN`
+    and a "via": "legacy_migration" marker so they are visible in history
+    but distinguishable from real dev_change entries.
+    """
     if not CHANGES_FILE.exists():
         return init_state()
     with open(CHANGES_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+        data = json.load(f)
+    if isinstance(data, list):
+        # Migration: legacy list-format → current dict-format
+        migrated = {
+            "metadata": {
+                "agent": "dev-mas-engineer",
+                "version": "1.0.0",
+                "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "total_changes": len(data),
+                "migrated_from_legacy_list": True,
+            },
+            "changes": [],
+            "stats": {
+                "harden": 0, "evolve": 0, "patch": 0, "other": 0,
+                "rolled_back": 0, "last_24h": 0,
+            },
+        }
+        for i, entry in enumerate(data, 1):
+            migrated["changes"].append({
+                "id": f"ch_legacy_{i:03d}",
+                "timestamp": entry.get("timestamp", ""),
+                "user": "legacy_migration",
+                "user_approved": True,
+                "user_comment": f"migrated from legacy list: {entry.get('action', '?')} - {entry.get('description', '?')[:80]}",
+                "file": entry.get("directive", "n/a"),
+                "type": "legacy",
+                "von": "",
+                "nach": "",
+                "grund": f"legacy event: {entry.get('action', '?')}",
+                "art": "other",
+                "risk": "niedrig",
+                "validated_before": True,
+                "validated_after": True,
+                "tests_passed": None,
+                "backup": "",
+                "rolled_back": False,
+                "rolled_back_at": None,
+                "rolled_back_reason": None,
+                "legacy_data": entry,
+            })
+        return migrated
+    return data
 
 
 def save(data):
@@ -84,8 +136,16 @@ def add_change(change_data):
     else:
         meta = data
     
-    # ID generate
-    next_id = max((c.get("id", 0) for c in meta["changes"]), default=0) + 1
+    # ID generate — extract trailing integer from id (handles "ch_001" and
+    # "ch_legacy_001" formats; legacy entries from R110-233 migration have
+    # the "ch_legacy_NNN" form, real entries use "ch_NNN"). Falls back to 0
+    # if no integer can be parsed.
+    def _id_num(cid):
+        if not isinstance(cid, str):
+            return 0
+        m = re.search(r"(\d+)$", cid)
+        return int(m.group(1)) if m else 0
+    next_id = max((_id_num(c.get("id", 0)) for c in meta["changes"]), default=0) + 1
     change_id = f"ch_{next_id:03d}"
     
     # Default-Felder
