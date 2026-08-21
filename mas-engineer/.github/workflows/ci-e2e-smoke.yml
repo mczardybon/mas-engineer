@@ -5,9 +5,11 @@
 #         (the 11-check shell harness, R110-60 regression baseline).
 #  Cadence: every push to mas-t + every PR; ~3min timeout.
 #  Compat: respects block-copilot.yml; uses DEEPSEEK_API_KEY from secrets
-#          only when the optional goose-step is enabled.
+#         only when the optional goose-step is enabled.
 #  Cost:   ~1-2 min per run, no external API costs (no goose step in default
-#          matrix — goose runs locally, CI only does the shell harness).
+#         matrix — goose runs locally, CI only does the shell harness).
+#  Notify: Discord webhook on failure, no-op if DISCORD_WEBHOOK_URL
+#         secret is absent.
 # =============================================================================
 
 name: 🚬 ci-e2e-smoke (shell harness)
@@ -74,3 +76,20 @@ jobs:
           path: e2e-smoke.log
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: Notify Discord on failure
+        if: failure()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK" ]; then
+            echo "DISCORD_WEBHOOK_URL not set; skipping notification."
+            exit 0
+          fi
+          curl -fsS -X POST "$DISCORD_WEBHOOK" \
+            -H 'Content-Type: application/json' \
+            --data @- <<EOF
+          {
+            "content": ":x: **ci-e2e-smoke** failed on \`${{ github.ref_name }}\` — run <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.run_id }}>\nActor: ${{ github.actor }}\nCommit: ${{ github.sha }}"
+          }
+          EOF

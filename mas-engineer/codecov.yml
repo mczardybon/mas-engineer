@@ -1,0 +1,54 @@
+# =============================================================================
+#  codecov.yml — Codecov config for mas-engineer
+#
+#  Sets the 80% project coverage gate. This is a backup to the
+#  --cov-fail-under=80 enforced in ci-tests.yml (the runner-side gate
+#  always runs even if Codecov upload fails, so it is the primary
+#  mechanism). This file configures the Codecov PR-comment + status
+#  check behavior so PRs without enough coverage delta are flagged.
+#
+#  Free tier: Codecov is free for public OSS repos with no limit on
+#  uploads. No CODECOV_TOKEN strictly required for public repos, but
+#  setting it (as a secret) avoids the 1k-unauthenticated-uploads
+#  rate limit per hour.
+# =============================================================================
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...90"
+
+  status:
+    project:
+      default:
+        # Target 80% coverage on the project. Allow 1% noise before
+        # failing the status check. `if_ci_failed: error` means a
+        # CI failure on the base SHA also blocks the merge.
+        target: 80%
+        threshold: 1%
+        if_ci_failed: error
+        only_pulls: false
+    patch:
+      default:
+        # New / changed lines should be at 80% coverage. This is the
+        # line that actually catches "you added untested code".
+        target: 80%
+        threshold: 5%
+
+comment:
+  layout: "header, diff, flags, components, files, footer"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+# Hide noisy coverage data we never want surfaced.
+ignore:
+  - "docs/**"
+  - "logs/**"
+  - ".mase/**"
+  - "scripts/dev_*.sh"
+  - "scripts/goose-reinstall.sh"
+  - "tools/dev_install.sh"
+  - "**/__pycache__/**"
+  - "**/*.pyc"

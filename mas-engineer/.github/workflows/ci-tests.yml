@@ -5,6 +5,13 @@
 #  Cadence: every push to mas-t + every PR; 5min timeout per matrix leg.
 #  Compat: respects block-copilot.yml (early-exit when actor is copilot).
 #  Cost:   ~3-4 min per run, no external API costs.
+#  Coverage: pytest-cov with --cov-fail-under=80 (runner-side gate);
+#            Codecov v5 upload (Codecov-side backup gate, codecov.yml).
+#  Notify:  Discord webhook on failure, no-op if DISCORD_WEBHOOK_URL
+#            secret is absent (forks, public-readonly clones).
+#  Benchmark: lightweight `--durations` capture + check_durations.py
+#            regression detector (gated on push to mas-t only — too
+#            noisy for PRs).
 # =============================================================================
 
 name: 🧪 ci-tests (pytest)
@@ -62,13 +69,60 @@ jobs:
           # mas-engineer test deps (kept in sync with dev-install.sh).
           # We avoid `pip install -e .` because the package layout is flat
           # and tests expect to be run from the repo root.
-          pip install pytest pytest-asyncio pyyaml jsonschema
+          # pytest-cov is the pytest plugin wrapper for coverage.py.
+          pip install pytest pytest-asyncio pyyaml jsonschema pytest-cov
           # goose CLI is not needed for pytest-only runs.
 
-      - name: Run pytest
+      - name: Run pytest with coverage
         run: |
           cd "$GITHUB_WORKSPACE"
-          python -m pytest tests/ -q --tb=line --color=no --timeout=300
+          # mas-engineer is a flat layout: code lives in tools/ (154
+          # files), scripts/ has 2 helpers, no top-level package dir.
+          # pytest-cov expects either a package or explicit module
+          # paths. We use two --cov= flags to cover the source
+          # directories. --cov-fail-under=80 is the R110-238 gate.
+          # Adjust in this one place if the threshold changes.
+          # --durations=20 surfaces the 20 slowest tests for the
+          # benchmark regression detector (next step).
+          python -m pytest tests/ -q --tb=line --color=no --timeout=300 \
+            --cov=tools \
+            --cov=scripts \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=80 \
+            --durations=20 \
+            2>&1 | tee pytest-output.log
+
+      - name: Check test-duration regression (push only)
+        if: github.event_name == 'push' && hashFiles('pytest-output.log') != ''
+        run: |
+          # scripts/check_durations.py compares the top-N slowest
+          # test durations from this run against a checked-in
+          # tests/durations-baseline.json. Exits 1 if any of the
+          # top-N tests regresses >20% vs the baseline. The baseline
+          # is updated manually after intentional slowdowns (R110-238
+          # lesson: do not auto-update the baseline — that hides
+          # regressions).
+          python scripts/check_durations.py \
+            --current pytest-output.log \
+            --baseline tests/durations-baseline.json \
+            --top-n 20 \
+            --threshold-pct 20
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.12'
+        # Only upload once per matrix (the 3.12 leg). codecov-action v5
+        # is the OCI-based uploader; the legacy curl|bash codecov-bash
+        # uploader is DEPRECATED.
+        # fail_ci_if_error: false means a Codecov outage does not
+        # block the workflow — the runner-side --cov-fail-under=80
+        # is the real gate.
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          fail_ci_if_error: false
+          verbose: true
 
       - name: Upload pytest summary on failure
         if: failure()
@@ -76,7 +130,73 @@ jobs:
         with:
           name: pytest-failure-${{ matrix.python-version }}
           path: |
-            pytest-*.log
+            pytest-output.log
             .pytest_cache/
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: Notify Discord on failure
+        if: failure()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          # No-op when the secret is absent (forks, public clones).
+          if [ -z "$DISCORD_WEBHOOK" ]; then
+            echo "DISCORD_WEBHOOK_URL not set; skipping notification."
+            exit 0
+          fi
+          # Use a heredoc to keep the JSON readable. The gh.* vars
+          # are interpolated by the shell at run time.
+          curl -fsS -X POST "$DISCORD_WEBHOOK" \
+            -H 'Content-Type: application/json' \
+            --data @- <<EOF
+          {
+            "content": ":x: **ci-tests** failed on \`${{ github.ref_name }}\` — run <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.run_id }}>\nActor: ${{ github.actor }}\nCommit: ${{ github.sha }}\nMatrix: ${{ matrix.python-version }}"
+          }
+          EOF
+
+  # ---------------------------------------------------------------------------
+  # benchmark: separate job, gated on push to mas-t only. Benchmarks are
+  # too noisy on PRs (±10-20% variance on github-hosted runners) and
+  # would block legitimate PRs. Run after pytest passes to capture
+  # durations under stable conditions.
+  # ---------------------------------------------------------------------------
+  benchmark:
+    name: test duration baseline
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
+    needs: [pytest]
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: .
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-asyncio pyyaml jsonschema
+
+      - name: Capture test durations
+        run: |
+          # Run the same test suite with --durations=0 (every test) and
+          # produce a JSON report. The durations are parsed by
+          # check_durations.py for regression detection.
+          python -m pytest tests/ -q --tb=line --color=no --timeout=300 \
+            --durations=0 -p no:cacheprovider 2>&1 | tee pytest-bench.log
+
+      - name: Publish duration artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-durations-${{ github.sha }}
+          path: pytest-bench.log
+          if-no-files-found: ignore
+          retention-days: 30
