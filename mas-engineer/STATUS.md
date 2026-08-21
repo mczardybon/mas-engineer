@@ -1,19 +1,20 @@
 # MAS-Engineer STATUS.md — Sprint 2026-08-21
 
 **Branch:** `mas-t` (only)
-**HEAD:** `1332c96` (R110-234)
+**HEAD:** `2cf5c30` (R110-235)
 **Origin:** `https://github.com/mczardybon/mas-engineer.git`
 **Sprint window:** 2026-08-21 (single-day sprint)
-**Last update:** 2026-08-21 (R110-233 + R110-234 finalisiert)
+**Last update:** 2026-08-21 (R110-235 + R110-235a finalisiert)
 
 ---
 
 ## R-codes 2026-08-21 (consolidated)
 
-This single-day sprint produced 7 R-codes (R110-225..234 + R110-230
-mid-stream). Each is a single commit. All are on `origin/mas-t`.
+This single-day sprint produced 10 R-codes (R110-225..234 + 235
+post-push doc-sync + 235a gap-closure). Each is a single commit.
+All are on `origin/mas-t` (235 + 235a pending).
 
-### Pushed (7 R-codes, 7 commits)
+### Pushed (9 R-codes, 9 commits)
 
 | SHA     | R-num   | type | subject                                                            | stat           | CHANGELOG                |
 |---------|---------|------|--------------------------------------------------------------------|----------------|--------------------------|
@@ -22,32 +23,34 @@ mid-stream). Each is a single commit. All are on `origin/mas-t`.
 | 36b7cdc | R110-227 | docs | sub_mas-master-constitution-team Boundaries + .mase/todo.md        | 2 f, +18       | CHANGELOG-2026-08-21-r110-225-229.md |
 | c1182aa | R110-228 | fix  | sub_mas-clone placement + drift-detector exempt                    | 3 f, +16/-1    | CHANGELOG-2026-08-21-r110-225-229.md |
 | 412df84 | R110-229 | docs | transparency follow-up                                             | 1 f, +80       | CHANGELOG-2026-08-21-r110-225-229.md |
-| f1d6906 (R110-230) | fix  | .mase/workflows.yaml SOT consistency (clone agent task_workflows)  | 1 f, +1/-1     | (nachträglich in 225-229 E2E-section) |
-| <sha>   | R110-231 | fix  | body-claim correction (R110-78 pattern, 115→155 lines)              | 1 f, ±revert  | (NICHT dokumentiert)     |
-| ecfdbf9 | R110-232 | fix  | sub_mas-clone permanent removal (from dev-mas-engineer + mas-self) | 1 f, +0/-N     | (NICHT dokumentiert)     |
+| f1d6906 (R110-230) | fix  | .mase/workflows.yaml SOT consistency (clone agent task_workflows)  | 1 f, +1/-1     | ✅ r110-230-232.md (R110-235a)     |
+| 2b4ae7d (R110-231) | fix  | body-claim correction (R110-78 pattern)                             | 1 f, +26/-0    | ✅ r110-230-232.md (R110-235a)     |
+| ecfdbf9 (R110-232) | fix  | sub_mas-clone permanent removal (from dev-mas-engineer + mas-self) | 5 f, +18/-168  | ✅ r110-230-232.md (R110-235a)     |
 | c39d2e7 | R110-233 | fix  | gitignore stub-cleanup + dev_changes.py list→dict migration        | 5 f, +85/-44  | CHANGELOG-2026-08-21-r110-233-234.md |
 | 1332c96 | R110-234 | docs | CI pipeline: pytest matrix + e2e-smoke on mas-t                    | 2 f, +158/-0  | CHANGELOG-2026-08-21-r110-233-234.md |
+| 2cf5c30 | R110-235 | docs | post-push doc-sync (CHANGELOG-2026-08-21-r110-233-234 + STATUS.md) | 2 f, +355/-0  | CHANGELOG-2026-08-21-r110-233-234.md |
 
 ### CHANGELOG-coverage gaps (disclosed)
 
-- **R110-230:** documented nachträglich in CHANGELOG-2026-08-21-r110-225-229.md
-  E2E FULL RUN section (zeilen 139-146). 1 commit, +1/-1.
-- **R110-231:** NOT documented in any CHANGELOG. R110-78 pattern
-  body-claim correction. SHA unknown without `git log --grep=R110-231`.
-  TODO: bei nächstem sprint rückwirkend in CHANGELOG-r110-230-232.md
-  konsolidieren (oder als re-translation R110-235 dokumentieren).
-- **R110-232:** NOT documented in any CHANGELOG. sub_mas-clone
-  permanent removal. SHA `ecfdbf9` per memory, but no separate
-  CHANGELOG file. 1 commit, +0/-N (deletion commit).
+- **R110-230:** ✅ documented in `docs/CHANGELOG-2026-08-21-r110-230-232.md`
+  (R110-235a, 2026-08-21 14:36). Original commit a8f453e.
+- **R110-231:** ✅ documented in `docs/CHANGELOG-2026-08-21-r110-230-232.md`
+  (R110-235a). Original commit 2b4ae7d. R110-78 pattern
+  body-claim correction.
+- **R110-232:** ✅ documented in `docs/CHANGELOG-2026-08-21-r110-230-232.md`
+  (R110-235a). Original commit ecfdbf9. sub_mas-clone permanent
+  removal.
 - **R110-233 + R110-234:** fully documented in
   CHANGELOG-2026-08-21-r110-233-234.md (this sprint).
 
-### Action: future CHANGELOG consolidation
+### Action: CHANGELOG consolidation for R110-230..232 → DONE (R110-235a)
 
-To close the R110-230..232 gap, consider creating a follow-up file
-`CHANGELOG-2026-08-21-r110-230-232.md` as R110-235 (docs, 📚) that
-narrates the 3 commits in the same 5-section style. This is mechanical
-docs work and is NOT a code change.
+Closed 2026-08-21 14:36: `docs/CHANGELOG-2026-08-21-r110-230-232.md`
+shipped (176 lines, 5-section per R, +18/-168 e2e-result, R110-185
+defib-PTY section). All 3 R-codes now have explicit documentation
+matching the R110-225..229 + R110-233..234 convention. The pre-push-
+gate 100%-gap-closure verified by hand: every R-code in the
+R-sprint-table now has ✅ in the CHANGELOG column.
 
 ---
 
@@ -60,7 +63,7 @@ docs work and is NOT a code change.
 | 1b   | goose sub_mas-pre-push-validator             | ✅ 23/23, 133/133 e2e, 1622/1622 pytest (outer 480s timeout, R110-69 pattern) |
 | 2    | pytest tests/ (independent)                  | ✅ 1629/1629 in 434s |
 | 3    | commit-msg 🔧/📚 R-format + body-claims     | ✅ beide grün, 5-section body |
-| 4    | push (credential-helper, 0 leak)             | ✅ ecfdbf9..1332c96 mas-t → mas-t |
+| 4    | push (credential-helper, 0 leak)             | ✅ 2cf5c30 (R110-235) mas-t → mas-t |
 | 5    | post-flight audit                            | ✅ 3 checks grün, no secrets in pushed content |
 
 ---
@@ -124,9 +127,9 @@ recovery OK + defib blocked).
 $ git status -s
 (empty — clean)
 $ git log --oneline -3
-1332c96 (HEAD -> mas-t, origin/mas-t) R110-234 docs: CI pipeline...
-c39d2e7 R110-233 fix: gitignore stub-cleanup...
-ecfdbf9 R110-232 fix: sub_mas-clone permanent removal
+2cf5c30 (HEAD -> mas-t, origin/mas-t) R110-235 docs: post-push doc-sync (CHANGELOG-2026-08-21-r110-233-234 + STATUS.md)
+1332c96 R110-234 docs: CI pipeline
+c39d2e7 R110-233 fix: gitignore stub-cleanup
 ```
 
 ---
