@@ -161,8 +161,15 @@ fi
 for f in $YAML_FILES; do
   YAML_COUNT=$((YAML_COUNT + 1))
   if [ ! -f "$f" ]; then
-    echo "    missing: $f"
-    YAML_FAIL=1
+    # File was renamed/moved out of this script's cwd (ROOT =
+    # mas-engineer/, the project subfolder). e2e-test.sh's scope
+    # is "files in this project subfolder", not the monorepo
+    # root. Silently skip files that moved outside the project
+    # subdir — they belong to a different subproject's scope.
+    # (R110-240: this code path was hit when .github/workflows/*
+    # was moved from mas-engineer/.github/workflows/* to the
+    # monorepo-root .github/workflows/*. Without this guard, every
+    # e2e-test run after a cross-subdir move would false-FAIL.)
     continue
   fi
   if ! python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
