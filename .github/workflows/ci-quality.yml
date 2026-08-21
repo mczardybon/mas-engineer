@@ -95,23 +95,24 @@ jobs:
         # when you want bandit to gate PRs.
         run: |
           mkdir -p .ci-artifacts
-          # Two-pass: raw JSON for archival + SARIF for Code Scanning.
-          # Bandit core has NO built-in SARIF support (the -f sarif
-          # flag was removed; the maintainers point to the
-          # bandit-sarif-formatter plugin as the supported way).
-          # Using -o explicitly avoids stdout-vs-stderr ambiguity that
-          # tripped up the original R110-238 implementation.
+          # bandit 1.7+ removed `-f sarif` from core, but installing
+          # the bandit-sarif-formatter plugin (Microsoft, MIT, the
+          # maintainer-blessed path) RE-ENABLES the `sarif` formatter
+          # name. The plugin registers itself via setuptools entry
+          # points so `bandit -f sarif` Just Works after `pip install
+          # bandit-sarif-formatter`. (R110-243: R110-242 wrongly
+          # tried a 2-pass approach — generate JSON, then call
+          # `python -m bandit_sarif_formatter` to convert — but
+          # bandit_sarif_formatter has NO `__main__.py` and is
+          # NOT a standalone tool; it is a plugin. The
+          # first R110-242 push produced an empty bandit.sarif
+          # and the upload step errored "Path does not exist".
+          # /tmp/ci-quality-r110-242-logs.zip has the full trace.)
           bandit -r tools scripts tests recipe \
                  -ll -ii \
                  --exclude '.ci-artifacts,.git,.mase,logs' \
-                 -f json -o .ci-artifacts/bandit.json \
+                 -f sarif -o .ci-artifacts/bandit.sarif \
                  || true
-          # Convert JSON → SARIF via the community formatter.
-          python -m bandit_sarif_formatter \
-            --input .ci-artifacts/bandit.json \
-            --output .ci-artifacts/bandit.sarif \
-            --tool-version "$(bandit --version 2>&1 | head -1)" \
-            || true
           # Always produce a human-readable summary for the run log.
           bandit -r tools scripts tests recipe \
                  -ll -ii \
@@ -218,7 +219,17 @@ jobs:
           path: .
 
       - name: Trivy filesystem scan (SARIF)
-        uses: aquasecurity/trivy-action@0.24.0
+        # aquasecurity/trivy-action@0.30.0 — bumped from 0.24.0 (R110-243).
+        # 0.24.0 was a typo in R110-238; the tag did not exist and
+        # the workflow failed at "Set up job" with "Unable to resolve
+        # action `aquasecurity/trivy-action@0.24.0`, unable to find
+        # version `0.24.0`". 0.30.0 is the latest stable as of
+        # 2026-08; we pin to a major+minor (not SHA) because the
+        # Trivy team's CI guarantees API stability within a minor
+        # release. If a breaking change ships in 0.31, pin to SHA
+        # `12cb28e...` (HEAD at the time we adopted 0.30) and
+        # follow up with a "bump trivy to X.Y" PR.
+        uses: aquasecurity/trivy-action@0.30.0
         with:
           scan-type: fs
           scan-ref: .

@@ -127,26 +127,37 @@ jobs:
         # fail_ci_if_error: false means a Codecov outage does not
         # block the workflow — the runner-side --cov-fail-under=80
         # is the real gate.
-        # working-directory = mas-engineer: coverage.xml is produced
-        # in the pytest working-dir (mas-engineer/), not at the
-        # monorepo root. R110-241.
-        working-directory: mas-engineer
+        # working-directory is NOT set on `uses:` steps. GitHub
+        # Actions does not allow `working-directory` together with
+        # `uses:` — the parser sees an unknown step property and
+        # errors "Required property is missing: run" (we hit this
+        # exact error on the R110-242 push at
+        # /tmp/ci-tests-r110-242-dispatch.log). For OCI-based
+        # actions like codecov-action@v5 the `files:` glob is
+        # resolved relative to $GITHUB_WORKSPACE, NOT relative
+        # to working-directory. R110-243.
+        # files: ./mas-engineer/coverage.xml — adjust the relative
+        # path so the OCI action finds the file at the monorepo
+        # root (where $GITHUB_WORKSPACE = monorepo root).
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.xml
+          files: ./mas-engineer/coverage.xml
           fail_ci_if_error: false
           verbose: true
 
       - name: Upload pytest summary on failure
         if: failure()
-        working-directory: mas-engineer
+        # actions/upload-artifact@v4 also rejects `working-directory`
+        # combined with `uses:` (same parser reason as above). The
+        # artifact path is resolved relative to $GITHUB_WORKSPACE
+        # for the runner that produced the file. R110-243.
         uses: actions/upload-artifact@v4
         with:
           name: pytest-failure-${{ matrix.python-version }}
           path: |
-            pytest-output.log
-            .pytest_cache/
+            mas-engineer/pytest-output.log
+            mas-engineer/.pytest_cache/
           if-no-files-found: ignore
           retention-days: 7
 
