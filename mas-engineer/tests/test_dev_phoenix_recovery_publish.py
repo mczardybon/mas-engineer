@@ -1,4 +1,5 @@
-"""test_dev_phoenix_recovery_publish.py — R110-165 phase 1.1
+"""
+test_dev_phoenix_recovery_publish.py — R110-165 phase 1.1
 
 Tests for the phoenix-recovery publisher:
   - dev_phoenix_recovery_run.py — runs 5 levels, enqueues phoenix.recovery.completed
@@ -13,10 +14,42 @@ These tests prove end-to-end that:
   5. The message survives MQ (depth is right, completed=0, payload intact)
   6. The level-subset flag actually skips levels
 
+R110-224 (2026-08-20): the defib_idle_wait_disabled fixture was
+REMOVED entirely. Previously it monkeypatched wf_recovery_defib's
+60s real consumer (dev_mq_consumer) with a 0s echo-stub so the
+test suite finished in ~5s instead of ~65s. Two problems with
+that approach:
+
+  1. **Theater.** The stub leaked into the committed workflows.yaml
+     on R110-185 — R110-219 had to roll it back. Having the test
+     fixture write a TEST-ONLY-STUB into a tracked YAML is
+     exactly the R110-78 verification-theater anti-pattern.
+
+  2. **Real consumer assertion impossible.** The
+     test_wf_recovery_defib_uses_consumer test asserts that
+     `dev_mq_consumer` is in wf_recovery_defib's cmd. With the
+     fixture active, that assertion would fail on the stub cmd
+     (defeating the whole point of the test).
+
+R110-224 second pass (after the dry-run xfail was added): the
+xmark.xfail() decorators on the 4 heavy integration tests were
+ALSO removed. Initial R110-224 reasoning was that 60-240s of
+wallclock per test is too slow for the unit-test sandbox. But
+verified empirically: when the topic is empty, the real
+dev_mq_consumer exits immediately (no message → consumer returns
+0 with empty result, NOT a 60s wait). The whole 5-level dry-run
+finishes in ~73s wallclock. The 4 tests are now PLAIN passing
+tests with timeout=120/60s. The structural test
+(test_wf_recovery_defib_uses_consumer) asserts the real consumer
+is in the cmd, which is the whole point.
+
 Run with:
-  python3 -m pytest tests/test_dev_phoenix_recovery_publish.py -v
+    python3 -m pytest tests/test_dev_phoenix_recovery_publish.py -v
 """
+from __future__ import annotations
+
 import json
+import re
 import subprocess
 import sys
 import time
@@ -52,63 +85,21 @@ def clean_phoenix_topic():
     # No restore needed — the queue is append-only by design
 
 
-@pytest.fixture
-def defib_idle_wait_disabled(monkeypatch, request):
-    """Replace the defib workflow's consumer with a 0-second-no-message version.
-
-    Background: wf_recovery_defib calls `dev_mq_consumer.py --timeout 60`
-    which blocks for 60s when no message is on monitor.health.degraded
-    (this is correct production behavior — you want the consumer to wait
-    for a real problem report). In test mode, no monitor runs and the topic
-    stays empty, so the consumer always times out.
-
-    Fix: monkeypatch the workflow step from "consume" (60s wait) to a
-    no-op shell that immediately returns a fake "acked" JSON. This
-    preserves the test's structural assertion (defib is part of the
-    5-level chain and contributes ok=True) without the 60s idle-wait
-    wallclock cost. Documented in directive R110-185.
-
-    The monkeypatch is scoped to the test via pytest's monkeypatch
-    fixture and is automatically reverted on test teardown.
-    """
-    workflows_path = REPO_ROOT / ".mase" / "workflows.yaml"
-    if not workflows_path.exists():
-        pytest.skip("workflows.yaml not found — cannot patch defib workflow")
-    original_text = workflows_path.read_text()
-    # Replace defib's 60s consumer with a fast no-op ack stub.
-    # Pattern: the consume step in wf_recovery_defib (line ~1928) is one
-    # `cmd:` line that contains a trap + python3 + 60s wait. We replace
-    # the whole `cmd:` line with a 0-second echo that returns the shape
-    # of a real "acked" message, plus a comment documenting the original
-    # so it's reversible on teardown.
-    old_cmd = "      cmd: 'trap ''kill 0'' TERM; python3 tools/dev_mq_consumer.py --topic monitor.health.degraded\n        --consumer-id wf_recovery_defib --processor dev_recovery_defib:process_msg --timeout 60'"
-    new_cmd = "      cmd: \"echo 'TEST-ONLY-STUB-R110-185-original-was-60s-defib-consumer-stub-returns-ok-in-0s-NOT-FOR-PRODUCTION' >/dev/null\""
-    patched = original_text.replace(old_cmd, new_cmd)
-    if patched == original_text:
-        pytest.skip("defib workflow pattern not found — yaml may have changed")
-    workflows_path.write_text(patched)
-    try:
-        yield
-    finally:
-        workflows_path.write_text(original_text)
-
-
 # ---------- tests for dev_phoenix_recovery_run.py ----------
 
 def test_dev_phoenix_recovery_run_script_exists():
     assert (TOOLS_DIR / "dev_phoenix_recovery_run.py").exists()
 
 
-def test_dev_phoenix_recovery_run_dry_run_runs_all_5_levels(defib_idle_wait_disabled):
+def test_dev_phoenix_recovery_run_dry_run_runs_all_5_levels():
     """dry-run mode runs all 5 levels and produces a payload — no enqueue."""
-    # defib_idle_wait_disabled (R110-185) replaces wf_recovery_defib's 60s
-    # consumer with a 0s echo-stub, so defib returns immediately and the
-    # full 5-level chain completes in <5s (was 64s with real consumer).
+    # Real wallclock ~73s for 5 levels with real dev_mq_consumer.
+    # The consumer exits immediately when the topic is empty (no 60s wait).
     r = subprocess.run(
         [sys.executable, str(TOOLS_DIR / "dev_phoenix_recovery_run.py"),
          "--request_id", "r110-165-test-dry", "--from", "test", "--to", "test",
          "--dry-run"],
-        capture_output=True, text=True, timeout=30, cwd=REPO_ROOT,
+        capture_output=True, text=True, timeout=180, cwd=REPO_ROOT,
     )
     assert r.returncode == 0, f"exit={r.returncode} stderr={r.stderr}"
     out = json.loads(r.stdout)
@@ -124,17 +115,14 @@ def test_dev_phoenix_recovery_run_dry_run_runs_all_5_levels(defib_idle_wait_disa
     assert "skipped (dry-run)" in out.get("enqueue", "")
 
 
-def test_dev_phoenix_recovery_run_real_enqueues_message(clean_phoenix_topic, defib_idle_wait_disabled):
+def test_dev_phoenix_recovery_run_real_enqueues_message(clean_phoenix_topic):
     """Real run actually enqueues to the right topic with full payload."""
     depth_before = clean_phoenix_topic
     request_id = _unique_id("r110-165-test-real")
-    # defib_idle_wait_disabled (R110-185) replaces wf_recovery_defib's 60s
-    # consumer with a 0s echo-stub, so we don't need --level-timeout here
-    # (production: 120s default; test: defib returns in <1s).
     r = subprocess.run(
         [sys.executable, str(TOOLS_DIR / "dev_phoenix_recovery_run.py"),
          "--request_id", request_id, "--from", "test", "--to", "test"],
-        capture_output=True, text=True, timeout=60, cwd=REPO_ROOT,
+        capture_output=True, text=True, timeout=180, cwd=REPO_ROOT,
     )
     assert r.returncode in (0, 1), f"exit={r.returncode} stderr={r.stderr[:500]}"
     out = json.loads(r.stdout)
@@ -171,15 +159,13 @@ def test_dev_phoenix_recovery_run_real_enqueues_message(clean_phoenix_topic, def
         assert msg["payload"]["levels"][level]["ok"] is True
 
 
-def test_dev_phoenix_recovery_run_level_subset(defib_idle_wait_disabled):
+def test_dev_phoenix_recovery_run_level_subset():
     """--levels=immune,defib runs only 2 levels and payload reflects that."""
-    # defib_idle_wait_disabled (R110-185) so defib returns in <1s even
-    # though it's the only "real" level we're asking for.
     r = subprocess.run(
         [sys.executable, str(TOOLS_DIR / "dev_phoenix_recovery_run.py"),
          "--request_id", "r110-165-test-subset",
          "--levels", "immune,defib", "--dry-run"],
-        capture_output=True, text=True, timeout=30, cwd=REPO_ROOT,
+        capture_output=True, text=True, timeout=180, cwd=REPO_ROOT,
     )
     assert r.returncode == 0
     out = json.loads(r.stdout)
@@ -239,20 +225,17 @@ def test_dev_mq_topic_depth_returns_zero_for_nonexistent_topic():
 
 # ---------- end-to-end via workflow runner (full integration) ----------
 
-def test_wf_phoenix_recovery_publish_runs_via_runner(clean_phoenix_topic, defib_idle_wait_disabled):
+def test_wf_phoenix_recovery_publish_runs_via_runner(clean_phoenix_topic):
     """Full integration: the workflow runner actually executes the workflow
     and a message lands in the queue."""
     depth_before = clean_phoenix_topic
     request_id = _unique_id("r110-165-via-runner")
-    # defib_idle_wait_disabled (R110-185) replaces wf_recovery_defib's 60s
-    # consumer with a 0s echo-stub, so the full wf_phoenix_recovery_publish
-    # workflow completes in <30s (was 240s+).
     r = subprocess.run(
         [sys.executable, str(TOOLS_DIR / "dev_workflow_runner.py"),
          "wf_phoenix_recovery_publish",
          "--request_id", request_id,
          "--from", "test", "--to", "test"],
-        capture_output=True, text=True, timeout=60, cwd=REPO_ROOT,
+        capture_output=True, text=True, timeout=180, cwd=REPO_ROOT,
     )
     assert r.returncode == 0, f"runner exit={r.returncode}\nstdout={r.stdout[-500:]}\nstderr={r.stderr[-500:]}"
     assert "status: ok" in r.stdout

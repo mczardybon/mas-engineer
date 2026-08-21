@@ -64,57 +64,86 @@ def test_no_disabled_pre_push_checks():
 
 
 def test_category_drift_and_validator_agree_on_types():
-    """dev_category_drift.py and pre_push_validator.py must use the same
-    CONVENTIONAL_TYPES allowlist (R110-130 sync bug prevention)."""
+    """dev_category_drift.py and the validator must use the same
+    CONVENTIONAL_TYPES allowlist (R110-130 sync bug prevention).
+
+    R110-224 (2026-08-20): the original test read both
+    `tools/dev_category_drift.py` and `tools/pre_push_validator.py`
+    looking for a `CONVENTIONAL_TYPES = [...]` list. But:
+      - `tools/pre_push_validator.py` does not exist in this repo
+        (the validator runs as a goose recipe, not a standalone script).
+      - The 12-type allowlist lives in
+        `tests/test_pre_push_check_1_5_skill_alignment.py:435` as
+        `VALIDATOR_CONVENTIONAL_TYPES` and in
+        `tools/dev_category_drift.py` as `ALLOWED_CATEGORIES`.
+
+    Fixed: this test now reads both from the same source-of-truth
+    tuple (`VALIDATOR_CONVENTIONAL_TYPES` in
+    `test_pre_push_check_1_5_skill_alignment.py`) and compares
+    against `ALLOWED_CATEGORIES` in `dev_category_drift.py`. If the
+    validator is ever extracted to a standalone script, this test
+    should be updated to read from both locations.
+    """
     drift_path = REPO_ROOT / "tools" / "dev_category_drift.py"
-    validator_path = REPO_ROOT / "tools" / "pre_push_validator.py"
-    if not drift_path.exists() or not validator_path.exists():
-        pytest.skip("category_drift or validator not present")
+    if not drift_path.exists():
+        pytest.skip("dev_category_drift.py not present")
 
     drift = drift_path.read_text()
-    validator = validator_path.read_text()
-    # Find the CONVENTIONAL_TYPES / CONVENTIONAL_TYPE_ALLOWLIST lists
-    pattern = re.compile(r"(CONVENTIONAL_TYPE[A-Z_]*)\s*=\s*\[([^\]]+)\]")
-    drift_lists = pattern.findall(drift)
-    val_lists = pattern.findall(validator)
-    if not drift_lists or not val_lists:
-        pytest.skip("Could not find CONVENTIONAL_TYPES list in both files")
-    # Compare sorted union of types
-    def _flatten(t):
-        return set(re.findall(r"['\"](\w+)['\"]", t))
+
+    # R110-224: parse ALLOWED_CATEGORIES from the detector (named
+    # assignment to a tuple/list/set of strings). Robust against
+    # other string constants in the file (e.g. dict keys, argparser
+    # options, log messages) by requiring:
+    #   1. The assignment target name starts with ALLOWED / CONVENTIONAL
+    #   2. All elts are short lowercase strings (no underscores/digits)
+    #   3. The number of items is plausible for a category allowlist (1-20)
+    import ast as _ast
+    drift_ast = _ast.parse(drift)
     drift_types = set()
-    for _, body in drift_lists:
-        drift_types |= _flatten(body)
-    val_types = set()
-    for _, body in val_lists:
-        val_types |= _flatten(body)
-    # Should be 12 types per R110-130
+    for node in drift_ast.body:
+        if not isinstance(node, _ast.Assign):
+            continue
+        if not isinstance(node.value, (_ast.Tuple, _ast.List, _ast.Set)):
+            continue
+        target = node.targets[0]
+        if not isinstance(target, _ast.Name):
+            continue
+        name = target.id
+        if not (name.startswith("ALLOWED") or name.startswith("CONVENTIONAL")):
+            continue
+        items = []
+        for elt in node.value.elts:
+            if isinstance(elt, _ast.Constant) and isinstance(elt.value, str):
+                v = elt.value.rstrip(":").strip()
+                if v and v.isalpha() and v.islower() and len(v) <= 20:
+                    items.append(v)
+        if 1 <= len(items) <= 20:
+            drift_types = set(items)
+            break
+    # Source-of-truth: VALIDATOR_CONVENTIONAL_TYPES in the alignment test
+    from tests.test_pre_push_check_1_5_skill_alignment import VALIDATOR_CONVENTIONAL_TYPES
+    val_types = {t.rstrip(":") for t in VALIDATOR_CONVENTIONAL_TYPES}
+
     assert len(val_types) >= 8, (
         f"CONVENTIONAL_TYPES allowlist in validator has only {len(val_types)} types: {val_types}\n"
-        "Expected ≥ 8 per R110-130 expansion (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)."
+        "Expected >= 8 per R110-130 expansion (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)."
     )
     assert drift_types == val_types, (
-        f"CONVENTIONAL_TYPES mismatch between validator ({val_types}) and drift ({drift_types}).\n"
+        f"CONVENTIONAL_TYPES mismatch between validator ({sorted(val_types)}) and drift ({sorted(drift_types)}).\n"
         "R110-130 requires these to be synchronized — update both files."
     )
 
 
-def test_pre_push_validator_runs_clean_on_repo():
-    """Running pre_push_validator.py on HEAD must pass (no test-theater)."""
-    validator = REPO_ROOT / "tools" / "pre_push_validator.py"
-    if not validator.exists():
-        pytest.skip("pre_push_validator.py not present")
-    r = subprocess.run(
-        ["python3", str(validator), "--dry-run"],
-        capture_output=True, text=True, timeout=30,
-        cwd=str(REPO_ROOT),
-    )
-    # Either clean exit or warnings — not crash
-    assert r.returncode in (0, 1), (
-        f"pre_push_validator.py crashed (rc={r.returncode}).\n"
-        f"stdout: {r.stdout[:500]}\nstderr: {r.stderr[:500]}"
-    )
-
+# R110-224 (2026-08-20): REMOVED test_pre_push_validator_runs_clean_on_repo.
+# The test asserted that `tools/pre_push_validator.py` exists and runs
+# clean. But the validator is a goose recipe
+# (`recipe/sub/sub_mas-pre-push-validator.yaml`), dispatched by Check 17,
+# not a standalone script. The file never existed in this repo — keeping
+# the test was verification-theater (always skip → xfail dance). R110-225
+# will either (a) extract the validator to a standalone script and add
+# a real run-test, or (b) confirm goose-recipe-only is canonical and
+# leave the validator un-tested from the standalone-script angle.
+# For R110-224 the test is REMOVED to keep the suite at 100% pass + 0 skip.
 
 def test_secret_scanner_present():
     """A secret-scanner tool/script must exist (R110-102 R110-131)."""

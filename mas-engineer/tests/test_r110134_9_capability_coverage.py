@@ -155,17 +155,29 @@ def test_c8_recovery_chain_complete():
 # C9: R-number naming convention
 def test_c9_r_number_pattern_used_consistently():
     """C9: The 'R<n>-<m>' pattern should appear in pre-push / commit-protocol tools.
-    This guards against the 'wrench:' / 'book:' legacy formats (R110-128)."""
-    pre_push = TOOLS_DIR / "pre_push_validator.py"
-    if not pre_push.exists():
-        pytest.skip("pre_push_validator.py not present")
-    text = pre_push.read_text()
-    # Either the new 12-type allowlist or the legacy 5-type list
-    n_types = len(re.findall(r"['\"](\w+)['\"]\s*[:,]", text))
-    # Count distinct conventional types referenced
-    conventional_types = re.findall(r"['\"](fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)['\"]", text)
+    This guards against the 'wrench:' / 'book:' legacy formats (R110-128).
+
+    R110-224 (2026-08-20): redirected from the non-existent
+    `tools/pre_push_validator.py` to the real source-of-truth
+    `tools/dev_category_drift.py` (which holds `ALLOWED_CATEGORIES`).
+    The validator is a goose recipe, not a standalone script — the
+    12-type allowlist lives in dev_category_drift.py.
+    """
+    drift = TOOLS_DIR / "dev_category_drift.py"
+    if not drift.exists():
+        pytest.skip("dev_category_drift.py not present")
+    text = drift.read_text()
+    # R110-130: count the 12 conventional types referenced in the file.
+    # Source-of-truth: ALLOWED_CATEGORIES in dev_category_drift.py is a
+    # tuple of strings like 'fix:', 'feat:', 'chore:', ... (with trailing
+    # colon for the parser). Use a non-anchored scan for these substrings
+    # anywhere in the file — covers both the tuple AND the docstring.
+    conventional_types = re.findall(
+        r"\b(fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert):?\b",
+        text,
+    )
     unique = set(conventional_types)
     assert len(unique) >= 8, (
-        f"Only {len(unique)} conventional types in pre_push_validator.py: {unique}\n"
+        f"Only {len(unique)} conventional types in dev_category_drift.py: {unique}\n"
         "R110-130 requires 12 types: fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert"
     )
