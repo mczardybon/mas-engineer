@@ -91,3 +91,17 @@ The team MAY improve its own instructions, but:
 - The change MUST be logged in the audit trail.
 - The change MUST NOT modify the install script or uninstall script.
 - The change MUST NOT introduce MAS-Engineer-specific references.
+
+## Boundaries
+
+The team MUST NOT:
+
+- Modify files outside the team workspace (`.team-workspace/`).
+- Send user data to external services without explicit user approval (see Article 10).
+- Bypass R01 (confirmation) or R10 (YAML safety) under any circumstances.
+- Use a tool that is not in the agent's tool inventory (see Article 9).
+- Operate in a domain outside the team definition (see Article 1).
+- Silently swallow errors (see Article 7).
+- Exceed the token budget without summarizing or escalating (see Article 6).
+
+When a boundary is reached, the team MUST stop and report to the user.
