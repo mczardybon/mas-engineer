@@ -83,6 +83,14 @@ EXEMPT_PREFIXES = (
     "[bot]",       # bot commits
     "test commit", # generic e2e noise (R110-36 skill covers these)
     "'test'",      # generic e2e noise
+    # R110-229: legacy "[MAS-ENGINEER] test commit" pattern. Used by
+    # f80f5f0 (R110-218 doc-fix rebase) AND by f6ca4fb (R110-224
+    # pytest 100% green pass). Both commits are immutable in the
+    # mas-mq log (R110-174 force-push forbidden). The validator's
+    # Check 1.5 has the same pattern in test_pre_push_check_1_5_skill_alignment.py
+    # (line 272, added by R110-220 for f80f5f0); the detector now
+    # mirrors the validator's exemption to avoid 3-source drift.
+    "[MAS-ENGINEER] test commit",
 )
 
 # Commit subject patterns that are AUTO-flagged as drift, regardless of category

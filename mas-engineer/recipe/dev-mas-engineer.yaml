@@ -40,7 +40,13 @@ sub_recipes:
 - name: sub_mas-dev-director
   path: ./sub/sub_mas-dev-director.yaml
   description: Orchestrator for dev-mas-engineer operations
-- sub_mas-clone
+# sub_mas-clone.yaml existed pre-R110-222 (R110-210 era) and was re-added
+# in R110-222 as a sub-agent of dev-mas-engineer. R110-228 reverts that
+# placement: dev-mas-engineer is a thin delegator (R110-134 test spec)
+# that routes exclusively to sub_mas-dev-director. sub_mas-clone is
+# therefore registered ONLY in workflows.yaml.configs.mas-self.recovery
+# and dispatched from there when needed, not as a sub_recipes entry
+# of dev-mas-engineer.
 settings:
   timeout: 300
   max_turns: 50
