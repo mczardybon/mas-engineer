@@ -62,9 +62,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
+          # cache: pip intentionally OFF. mas-engineer has no
+          # requirements.txt/pyproject.toml. See ci-tests.yml for
+          # the full rationale. (R110-241)
 
       - name: Install bandit + pip-audit
+        working-directory: mas-engineer
         run: |
           python -m pip install --upgrade pip
           # bandit = Python code SAST (PyCQA). pip-audit = PyPA official
@@ -74,6 +77,7 @@ jobs:
           pip install bandit pip-audit
 
       - name: Bandit (Python SAST)
+        working-directory: mas-engineer
         # -ll = only medium+high severity. -ii = only high+medium confidence.
         # This filters out the noisy "assert_used" / "blacklist" findings
         # that bandit emits by default and which would drown the signal.

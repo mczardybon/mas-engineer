@@ -53,14 +53,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
+          # cache: pip intentionally OFF. mas-engineer has no
+          # requirements.txt/pyproject.toml. See ci-tests.yml for
+          # the full rationale. (R110-241)
 
       - name: Install minimal deps for e2e shell harness
+        working-directory: mas-engineer
         run: |
           python -m pip install --upgrade pip
           pip install pyyaml
 
       - name: Run e2e-test.sh
+        working-directory: mas-engineer
         run: |
           bash scripts/e2e-test.sh 2>&1 | tee e2e-smoke.log
           # The harness prints "Safe to push" on success. Fail otherwise.

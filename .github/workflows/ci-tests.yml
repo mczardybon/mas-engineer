@@ -61,9 +61,18 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
+          # cache: pip is intentionally OFF. actions/setup-python@v5's
+          # pip cache requires a requirements.txt or pyproject.toml in
+          # the working directory. mas-engineer has neither (flat
+          # layout, deps installed by dev-install.sh). Without an
+          # explicit cache-dependency-path, the cache step ERRORS and
+          # the whole Setup Python step fails. R110-241 removed the
+          # cache. The 5-10s pip install overhead per matrix leg is
+          # acceptable; we can revisit if a requirements.txt gets
+          # added.
 
       - name: Install dependencies
+        working-directory: mas-engineer
         run: |
           python -m pip install --upgrade pip
           # mas-engineer test deps (kept in sync with dev-install.sh).
@@ -74,8 +83,8 @@ jobs:
           # goose CLI is not needed for pytest-only runs.
 
       - name: Run pytest with coverage
+        working-directory: mas-engineer
         run: |
-          cd "$GITHUB_WORKSPACE"
           # mas-engineer is a flat layout: code lives in tools/ (154
           # files), scripts/ has 2 helpers, no top-level package dir.
           # pytest-cov expects either a package or explicit module
@@ -94,7 +103,8 @@ jobs:
             2>&1 | tee pytest-output.log
 
       - name: Check test-duration regression (push only)
-        if: github.event_name == 'push' && hashFiles('pytest-output.log') != ''
+        if: github.event_name == 'push' && hashFiles('mas-engineer/pytest-output.log') != ''
+        working-directory: mas-engineer
         run: |
           # scripts/check_durations.py compares the top-N slowest
           # test durations from this run against a checked-in
@@ -117,6 +127,10 @@ jobs:
         # fail_ci_if_error: false means a Codecov outage does not
         # block the workflow — the runner-side --cov-fail-under=80
         # is the real gate.
+        # working-directory = mas-engineer: coverage.xml is produced
+        # in the pytest working-dir (mas-engineer/), not at the
+        # monorepo root. R110-241.
+        working-directory: mas-engineer
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -126,6 +140,7 @@ jobs:
 
       - name: Upload pytest summary on failure
         if: failure()
+        working-directory: mas-engineer
         uses: actions/upload-artifact@v4
         with:
           name: pytest-failure-${{ matrix.python-version }}
@@ -178,14 +193,19 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
+          # cache: pip intentionally OFF. mas-engineer has no
+          # requirements.txt/pyproject.toml at the working-directory
+          # root. See the comment in the pytest job for details.
+          # (R110-241)
 
       - name: Install deps
+        working-directory: mas-engineer
         run: |
           python -m pip install --upgrade pip
           pip install pytest pytest-asyncio pyyaml jsonschema
 
       - name: Capture test durations
+        working-directory: mas-engineer
         run: |
           # Run the same test suite with --durations=0 (every test) and
           # produce a JSON report. The durations are parsed by
