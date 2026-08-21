@@ -195,7 +195,6 @@ def test_task_workflows_sample(n_per_group=2):
         "wf_recipe_generic": ["--task", "list"],
         # R110-43: use tempfile.gettempdir() (multi-user safe)
         "wf_team_package": ["--root_recipe", "recipe/root_recipe.yaml", "--output_path", os.path.join(tempfile.gettempdir(), "mas-pkg"), "--team_name", "testteam", "--sub_recipes_csv", "recipe/sub/sub_a.yaml,recipe/sub/sub_b.yaml"],
-        "wf_yaml_clone": ["--task", "list", "--new_name", "clone", "--emoji", "🧪"],
     }
     # R110-220: workflows that time out by design in the e2e sample (they
     # need an external state that the e2e harness does not set up: a
@@ -225,6 +224,16 @@ def test_task_workflows_sample(n_per_group=2):
         # dedicated `pytest` runner, not the workflow wrapper). Skip
         # here so the smoke test gives a clean 100% signal.
         "wf_test_run",
+        # R110-232: wf_yaml_clone with --new_name=clone auto-generates
+        # a sub_mas-clone.yaml side-effect on every e2e run (R110-223
+        # documented the loop). The e2e sample was the root cause of
+        # sub_mas-clone repeatedly re-appearing. The workflow is
+        # healthy in production (used to scaffold NEW agents from
+        # template; R110-228 fixed the validation regression); the
+        # e2e sample just cannot exercise "create new agent" in a
+        # smoke test without polluting recipe/sub/. Skipping it is
+        # a permanent fix for the R110-223 side-effect cycle.
+        "wf_yaml_clone",
     }
     groups = defaultdict(list)
     for wf in all_wfs:
@@ -382,7 +391,6 @@ def main():
 
     # 0. Cleanup test artifacts from previous runs
     artifacts = [
-        "recipe/sub/sub_mas-clone.yaml",
         "recipe/sub/sub_test-agent.yaml",
         "recipe/sub/sub_p-n.yaml",
         "recipe/sub/sub_mas-smoketest.yaml",
