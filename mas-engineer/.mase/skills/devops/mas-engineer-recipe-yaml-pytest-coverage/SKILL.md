@@ -3,6 +3,14 @@ name: mas-engineer-recipe-yaml-pytest-coverage
 description: How to systematically add pytest recipe-YAML sanity tests for mas-engineer (and similar YAML-recipe projects). Distinguishes MAS-internal recipes (test) vs demo-teams (skip). Detects R-rule patterns. Pattern from R103-R108 epic — 10-function test files. 100% MAS-internal coverage achieved. Use when: When test coverage is below target, when user asks to add tests for recipes, or when adding new sub_recipes/instructions. Also use when bulk-adding sanity tests across recipe/sub/. Use to distinguish MAS-internal (test) from demo-teams (skip per user).
 ---
 
+## When to use
+
+Load this skill when: How to systematically add pytest recipe-YAML sanity tests for mas-engineer (and similar YAML-recipe projects). Distinguishes MAS-internal recipes (test) vs demo-teams (skip). Detects R-rule patterns. Pattern from R103-R108 epic — 10-function test files. 100% MAS-internal coverage achieved. Use when: When test coverage is below target, when user asks to add tests for recipes, or when adding new sub_recipes/instructions. Also use when bulk-adding sanity tests across recipe/sub/. Use to distinguish MAS-internal (test) from demo-teams (skip per user).
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # Recipe-YAML pytest coverage (R103-R108 pattern)
 
 ## TL;DR

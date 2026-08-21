@@ -4,6 +4,14 @@ description: Kompletter Überblick über den mas-engineer dev branch — Fähigk
 category: devops
 ---
 
+## When to use
+
+Load this skill when: Kompletter Überblick über den mas-engineer dev branch — Fähigkeiten, Test-Infrastruktur, Architektur. Verwenden wenn man mit mas-engineer arbeitet oder wissen muss was es kann.
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # MAS-Engineer Dev Branch — Overview (Stand 2026-07-27, R108)
 
 ## Repo

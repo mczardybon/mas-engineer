@@ -4,6 +4,14 @@ description: How to avoid the 2 most common Hermes-side self-discipline failures
 category: devops
 ---
 
+## When to use
+
+Load this skill when: How to avoid the 2 most common Hermes-side self-discipline failures. Trap 1 is writing code directly when a sub-agent is the right tool. Trap 2 is writing a test with a relaxed threshold instead of asserting the actual invariant. Triggered any time Hermes is about to use write_file on a project with sub-agents or any time a test pass-condition is being decided. Real evidence is R110-36 from 2026-07-29 where both failures happened in one session.
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # Hermes Self-Discipline Traps (the R110-36 lesson)
 
 ## The 2 traps (both observed in R110-36, 2026-07-29)

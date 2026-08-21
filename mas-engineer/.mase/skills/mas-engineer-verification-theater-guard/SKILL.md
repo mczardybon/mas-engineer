@@ -4,6 +4,14 @@ description: How to prevent, detect, and fix "verification theater" — strong c
 category: devops
 ---
 
+## When to use
+
+Load this skill when: How to prevent, detect, and fix "verification theater" — strong claims in MAS-Engineer docs that aren't backed by actual test logs. Triggered when reviewing CERTIFICATE.md, EVIDENCE-*.md, SUMMARY.txt, or any e2e-results/*.md that uses "VERIFIED FUNCTIONAL", "ALL HYPOTHESES VERIFIED", "100% PASS", "we guarantee", "E2E-functional" patterns.
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # Verification Theater Guard (MAS-Engineer)
 
 ## The Pattern (2026-07-21 incident)

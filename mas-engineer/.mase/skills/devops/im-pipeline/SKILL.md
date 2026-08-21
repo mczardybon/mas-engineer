@@ -4,6 +4,14 @@ description: How to run mas-engineer's self-improvement IM-Pipeline (FIND→RANK
 category: devops
 ---
 
+## When to use
+
+Load this skill when: How to run mas-engineer's self-improvement IM-Pipeline (FIND→RANK→DESIGN→VALIDATE→APPLY) end-to-end with REAL file edits via the developer extension — plus the rule that Hermes never edits mas-engineer files directly, and the pattern for wiring an orphaned sub-expert into the pipeline via mandatory summon. Supersedes im-pipeline-v2-with-developer, im-pipeline-goose-expert-integration, and mas-engineer-e2e-im-test (merged 2026-07-28).
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # MAS-Engineer IM-Pipeline — running it, wiring experts into it, and who's allowed to edit what
 
 ## The non-negotiable rule (2026-07-21, user pushed back hard)

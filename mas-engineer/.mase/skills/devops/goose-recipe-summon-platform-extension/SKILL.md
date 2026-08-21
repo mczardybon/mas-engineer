@@ -4,6 +4,14 @@ description: Diagnose and fix silent sub_recipes dispatch failure in Goose 1.24.
 category: devops
 ---
 
+## When to use
+
+Load this skill when: Diagnose and fix silent sub_recipes dispatch failure in Goose 1.24.0+ recipes. Use when a recipe's orchestrator prints welcome but never invokes sub-agents via load/delegate.
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # Diagnose: goose recipe sub_recipes silent dispatch failure (Issue 7355/7570)
 
 ## Symptoms

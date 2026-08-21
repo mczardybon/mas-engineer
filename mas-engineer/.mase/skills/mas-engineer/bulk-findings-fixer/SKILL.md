@@ -4,6 +4,14 @@ description: The full history and current usage of tools/bulk_findings_fixer.py 
 category: mas-engineer
 ---
 
+## When to use
+
+Load this skill when: The full history and current usage of tools/bulk_findings_fixer.py — auto-fixes ~88% of mas-engineer findings via template-injection, including the v1 incident where it broke 148/148 YAML files, its root cause, and the v2 safety requirements. Supersedes bulk-findings-fixer-README.md, bulk-fixer-v1-WARNING.md, bulk-fixer-v1-bug-postmortem.md, and bulk-findings-fixer.md (merged 2026-07-28 — these were 4 files documenting one tool's evolution across 2026-07-24).
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # bulk_findings_fixer.py — auto-fix mas-engineer findings via template-injection
 
 ## Purpose

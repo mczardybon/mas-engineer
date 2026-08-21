@@ -4,6 +4,14 @@ description: Development workflow for MAS-Engineer Goose AI MCP project (github.
 category: devops
 ---
 
+## When to use
+
+Load this skill when: Development workflow for MAS-Engineer Goose AI MCP project (github.com/mczardybon/mas-engineer).
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # MAS-Engineer Development Workflow
 
 ## Context

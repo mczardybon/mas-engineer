@@ -3,6 +3,14 @@ name: hermes-write-file-mcp-stub-trap
 description: Diagnose & workaround when write_file reports success but file is empty/missing on disk
 ---
 
+## When to use
+
+Load this skill when: Diagnose & workaround when write_file reports success but file is empty/missing on disk.
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # write_file MCP Stub Trap
 
 ## Symptom

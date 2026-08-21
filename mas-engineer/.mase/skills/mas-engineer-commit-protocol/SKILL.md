@@ -4,6 +4,14 @@ description: Commit + push style protocol for mas-engineer (mczardybon/mas-engin
 category: devops
 ---
 
+## When to use
+
+Load this skill when: Commit + push style protocol for mas-engineer (mczardybon/mas-engineer) -- 4 emoji-categories (🔧|📝|📚|📊), R-sprint numbering (R<round>-<num>), em-dash format, 5-section body, author-identity, hook setup, push-pattern (credential-helper, NOT set-url), force-push backup-tag protocol. Load BEFORE any commit in this repo. Trigger when writing commit message, choosing emoji, picking R-number, setting up hooks in a new checkout, when validator Check 1.5 blocks push, when user says "schaue ins repo" or "commit + push kultur einhalten" or "transparenz" or "force-push" or "R110-127 update skill". Source-of-truth = validator Check 1.5 (recipe/instructions/sub_mas-pre-push-validator.md), NOT this skill — round-trip every claim through the validator.
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # MAS-Engineer Commit + Push Protocol
 
 **Supersedes:** scattered notes in commit-messages, implicit R-numbering, hook-less setups.

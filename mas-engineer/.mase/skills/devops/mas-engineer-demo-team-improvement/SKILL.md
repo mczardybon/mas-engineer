@@ -4,6 +4,14 @@ description: How to improve mas-engineer demo-team projects (the recipes the mas
 category: devops
 ---
 
+## When to use
+
+Load this skill when: How to improve mas-engineer demo-team projects (the recipes the mas itself generates) — file layout, R32 split pattern, constitution fix, validation workflow.
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # MAS-Engineer Demo-Team Improvement
 
 The demo-team is a **mas-engineer-generated project tree** at `recipe/sub/demo-team/`. The mas builds these for users (e.g. research-team, code-reviewer) — they are NOT mas-internal agents.

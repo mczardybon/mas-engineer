@@ -4,6 +4,14 @@ description: The complete pre-push gate for mas-engineer — secret scan, goose 
 category: devops
 ---
 
+## When to use
+
+Load this skill when: The complete pre-push gate for mas-engineer — secret scan, goose pre-push-validator run, the mandatory 100% e2e (happy-path + edge-case) rule, and the post-flight sub_recipe_ref audit that catches what the validator misses. Supersedes mandatory-e2e-before-push, pre-push-goose-validation, and mas-push-post-flight-audit (merged 2026-07-28, previously 3 overlapping skills covering different angles of the same "never push unvalidated code" rule).
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # Pre-Push Gate — secret scan → validator → e2e → post-flight audit
 
 ## The rules this enforces (both are hard user rules, not suggestions)

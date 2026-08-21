@@ -3,6 +3,14 @@ name: mas-engineer-directive-spec-writing
 description: How to write a .mase/directives/R<NR>-<topic>.md file for mas-engineer's IM-pipeline. Use when the user asks to create, update, or extend a directive in mas-engineer/.mase/directives/. Covers 9-section structure, naming convention, idempotenz rules, single-commit-per-spec, and how to avoid the spec-drift-in-direktive-itself trap (R110-78 lesson).
 ---
 
+## When to use
+
+Load this skill when: How to write a .mase/directives/R<NR>-<topic>.md file for mas-engineer's IM-pipeline. Use when the user asks to create, update, or extend a directive in mas-engineer/.mase/directives/. Covers 9-section structure, naming convention, idempotenz rules, single-commit-per-spec, and how to avoid the spec-drift-in-direktive-itself trap (R110-78 lesson).
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # Writing Directives for mas-engineer's IM-Pipeline
 
 A directive is a spec-package consumed by mas-engineer's self-improvement

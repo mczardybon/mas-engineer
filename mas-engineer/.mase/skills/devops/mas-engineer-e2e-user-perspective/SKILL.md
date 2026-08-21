@@ -4,6 +4,14 @@ description: How to interpret E2E tests, "fix this" prompts, and demo-team feedb
 category: devops
 ---
 
+## When to use
+
+Load this skill when: How to interpret E2E tests, "fix this" prompts, and demo-team feedback in mas-engineer — the user is the test driver (not the developer), demo teams are on-demand generated (not static), variance is a feature not a regression, and "fix the team recipe" is usually the wrong abstraction level. Use whenever an E2E prompt, a "fix das" prompt, or a demo-team result comes in. Complements mas-engineer-demo-team-improvement and mas-engineer-e2e-100-percent-recipe.
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # MAS-Engineer E2E from the User's Perspective
 
 ## The 5 trigger-points (checklist — read all 5 before responding)

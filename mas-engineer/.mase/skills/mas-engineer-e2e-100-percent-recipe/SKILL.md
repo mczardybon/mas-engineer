@@ -4,6 +4,14 @@ description: How to bring the mas-engineer e2e from <100% to 100% pass rate — 
 category: devops
 ---
 
+## When to use
+
+Load this skill when: How to bring the mas-engineer e2e from <100% to 100% pass rate — workflow-yaml bug fix patterns, runner refactor, and the exact 16 bugs that took it from 81.9% to 100% in one session. Use when: When e2e_run_all.py is below 100% pass rate, when the user asks to "fix the e2e", "improve test coverage", "make the workflows work", or when a mas-engineer task workflow fails.
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # Mas-Engineer e2e: 0% to 100% in 1 session
 
 ## TL;DR

@@ -4,6 +4,14 @@ description: How to pass long commit messages to git from a hybrid agent (Python
 category: devops
 ---
 
+## When to use
+
+Load this skill when: How to pass long commit messages to git from a hybrid agent (Python subprocess + file-based tool). Use when you get "fatal: could not get a message" or "git commit -m" splitting on whitespace instead of respecting newlines, or any time your multi-line commit message has >5 lines / >500 chars / backticks / heredocs.
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # Long Commit Messages in Hybrid Agent Sessions (2026-07-28)
 
 ## The Problem

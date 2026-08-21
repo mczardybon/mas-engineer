@@ -4,6 +4,14 @@ description: How to recognize that a "score=0" or "checks:[]" in mas-engineer's 
 category: devops
 ---
 
+## When to use
+
+Load this skill when: How to recognize that a "score=0" or "checks:[]" in mas-engineer's .mase/health-report.json (or similar framework metrics files) is an INIT-TIME STUB from dev_generic_init.py, not a real measurement. Triggered any time you see unexpected 0/0/empty/zero in a mas-engineer state file, before treating it as a bug in the producer code.
+
+For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
+
+
+
 # The Init-Time Stub Trap (R110-19, 2026-07-28)
 
 ## The Pattern
