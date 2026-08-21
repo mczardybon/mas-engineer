@@ -115,6 +115,8 @@ echo ""
 echo "[1/10] goose installed"
 if command -v goose >/dev/null 2>&1; then
   check_pass "goose installed: $(goose --version)"
+elif [ -n "$E2E_SKIP_ENV_REQUIRED" ]; then
+  check_skip "goose installed — not installed in CI (E2E_SKIP_ENV_REQUIRED=1)"
 else
   check_fail "goose installed — binary not in PATH"
 fi
@@ -126,6 +128,8 @@ echo ""
 echo "[2/10] DEEPSEEK_API_KEY set"
 if [ -n "$DEEPSEEK_API_KEY" ]; then
   check_pass "DEEPSEEK_API_KEY set (${DEEPSEEK_API_KEY:0:8}...)"
+elif [ -n "$E2E_SKIP_ENV_REQUIRED" ]; then
+  check_skip "DEEPSEEK_API_KEY set — not set in CI (E2E_SKIP_ENV_REQUIRED=1)"
 else
   check_fail "DEEPSEEK_API_KEY set — env var empty"
 fi

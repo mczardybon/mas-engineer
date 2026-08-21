@@ -65,6 +65,16 @@ jobs:
 
       - name: Run e2e-test.sh
         working-directory: mas-engineer
+        env:
+          # E2E_SKIP_ENV_REQUIRED=1 demotes checks #1 (goose installed)
+          # and #2 (DEEPSEEK_API_KEY set) from FAIL to SKIP. The
+          # ci-e2e-smoke job is a syntax/secret/link sanity check,
+          # not a live agent test; requiring goose + a real API key
+          # in CI would couple a 70 MB CLI download + secret
+          # provisioning to a job whose job is to check syntax.
+          # The live agent smoke (with secrets + stub LLM) is a
+          # separate workflow if/when we add one. (R110-242.)
+          E2E_SKIP_ENV_REQUIRED: "1"
         run: |
           bash scripts/e2e-test.sh 2>&1 | tee e2e-smoke.log
           # The harness prints "Safe to push" on success. Fail otherwise.

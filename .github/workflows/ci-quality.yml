@@ -75,6 +75,14 @@ jobs:
           # deprecated January 2024). Both query public OSV / PyPA
           # Advisory DB, no API token required.
           pip install bandit pip-audit
+          # bandit-sarif-formatter = community plugin that adds a
+          # `bandit-sarif` formatter to bandit, so bandit JSON output
+          # can be converted to SARIF for the GitHub Code Scanning
+          # tab. (R110-242: bandit 1.7.x dropped the experimental
+          # `-f sarif` flag in favor of this plugin, after bandit
+          # maintainers decided SARIF support should be optional to
+          # keep the core dependency tree lean. See bandit #1058.)
+          pip install bandit-sarif-formatter
 
       - name: Bandit (Python SAST)
         working-directory: mas-engineer
@@ -87,11 +95,23 @@ jobs:
         # when you want bandit to gate PRs.
         run: |
           mkdir -p .ci-artifacts
+          # Two-pass: raw JSON for archival + SARIF for Code Scanning.
+          # Bandit core has NO built-in SARIF support (the -f sarif
+          # flag was removed; the maintainers point to the
+          # bandit-sarif-formatter plugin as the supported way).
+          # Using -o explicitly avoids stdout-vs-stderr ambiguity that
+          # tripped up the original R110-238 implementation.
           bandit -r tools scripts tests recipe \
                  -ll -ii \
                  --exclude '.ci-artifacts,.git,.mase,logs' \
-                 -f sarif -o .ci-artifacts/bandit.sarif \
+                 -f json -o .ci-artifacts/bandit.json \
                  || true
+          # Convert JSON → SARIF via the community formatter.
+          python -m bandit_sarif_formatter \
+            --input .ci-artifacts/bandit.json \
+            --output .ci-artifacts/bandit.sarif \
+            --tool-version "$(bandit --version 2>&1 | head -1)" \
+            || true
           # Always produce a human-readable summary for the run log.
           bandit -r tools scripts tests recipe \
                  -ll -ii \
@@ -113,7 +133,18 @@ jobs:
         # --no-deps: skip transitive deps. mas-engineer has a flat test
         # dependency set (pytest, pyyaml, jsonschema, bandit, pip-audit)
         # which we list explicitly here.
+        # working-directory: mas-engineer — the SARIF output
+        # `.ci-artifacts/pip-audit.sarif` is RELATIVE to the working
+        # directory. If we omit it, the file lands in the monorepo
+        # root and the next "Upload" step (which IS pinned to
+        # mas-engineer) cannot find it. (R110-242: this is the
+        # silent-failure bug that the R110-241 audit caught — the
+        # SARIF upload step errored with "Path does not exist"
+        # but the python step itself exited 0 because of the
+        # `|| AUDIT_EXIT=$?` line, hiding the real cause.)
+        working-directory: mas-engineer
         run: |
+          mkdir -p .ci-artifacts
           # Generate a frozen requirements list of everything installed
           # in this job's venv. pip-audit reads this and queries the
           # OSV API. No requirements.txt needed in the repo.
