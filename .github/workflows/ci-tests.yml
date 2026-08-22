@@ -79,7 +79,11 @@ jobs:
           # We avoid `pip install -e .` because the package layout is flat
           # and tests expect to be run from the repo root.
           # pytest-cov is the pytest plugin wrapper for coverage.py.
-          pip install pytest pytest-asyncio pyyaml jsonschema pytest-cov
+          # pytest-timeout enables the --timeout=300 flag we use below
+          # (R110-246: without it, pytest crashes with
+          # "unrecognized arguments: --timeout=300" BEFORE any test
+          # runs, masking real failures and starving check_durations.py).
+          pip install pytest pytest-asyncio pyyaml jsonschema pytest-cov pytest-timeout
           # goose CLI is not needed for pytest-only runs.
 
       - name: Run pytest with coverage
@@ -213,7 +217,9 @@ jobs:
         working-directory: mas-engineer
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-asyncio pyyaml jsonschema
+          # pytest-timeout enables --timeout=300 in the pytest capture
+          # step below (R110-246: see comment in pytest job).
+          pip install pytest pytest-asyncio pyyaml jsonschema pytest-timeout
 
       - name: Capture test durations
         working-directory: mas-engineer

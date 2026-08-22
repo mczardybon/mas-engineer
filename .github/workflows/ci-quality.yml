@@ -281,7 +281,13 @@ jobs:
         # invented a story instead of `curl`-ing the refs API
         # to see whether the tag exists with a `v` prefix.
         # The `v` prefix is required.)
-        uses: aquasecurity/trivy-action@v0.30.0
+        # R110-246: bumped v0.30.0 -> v0.36.0. v0.30.0 transitively
+        # pulls aquasecurity/setup-trivy@v0.2.2 which DOES NOT EXIST
+        # (404 on /git/refs/tags/v0.2.2). v0.36.0 SHA-pins all
+        # transitive deps including setup-trivy@v0.2.6 which exists.
+        # Lesson: when bumping a composite action, verify EVERY
+        # transitive `uses:` resolves before pushing.
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
