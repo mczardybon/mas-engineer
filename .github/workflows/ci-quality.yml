@@ -121,25 +121,30 @@ jobs:
 
       - name: Upload Bandit SARIF to GitHub Code Scanning
         if: always()
-        # working-directory: mas-engineer — required because the
-        # Bandit step (5) writes `.ci-artifacts/bandit.sarif` inside
-        # the mas-engineer subdir, but the upload-sarif action's
-        # `sarif_file:` path is resolved relative to the JOB's
-        # working directory. R110-243 added working-directory to
-        # the Bandit run step (correct) but FORGOT to add it to
-        # the matching upload-sarif step, so the upload action
-        # resolved `sarif_file: .ci-artifacts/bandit.sarif`
-        # against the monorepo root (where the file does NOT
-        # exist) and errored "Path does not exist:
-        # .ci-artifacts/bandit.sarif". The GHA checkout_path for
-        # this job is /home/runner/work/mas-engineer/mas-engineer
-        # (the monorepo root) so the action's PWD is the
-        # monorepo root unless we explicitly pin the upload step
-        # to mas-engineer. (R110-244)
-        working-directory: mas-engineer
+        # sarif_file: mas-engineer/.ci-artifacts/bandit.sarif
+        # (R110-245). R110-243 wrote `sarif_file: .ci-artifacts/
+        # bandit.sarif` and relied on `working-directory:
+        # mas-engineer` to scope it. That was wrong: the upload
+        # step uses `uses: github/codeql-action/upload-sarif@v3`,
+        # not `run:`, and `working-directory` is ONLY available
+        # with `run:` per the GHA schema (actionlint rule
+        # syntax-check: "'working-directory' is not available
+        # with 'uses'. it is only available with 'run'"). R110-244
+        # made the same mistake on the upload step (`if: always()`
+        # + `working-directory: mas-engineer` are the two changes
+        # to the upload step, and the latter is the parse-fail
+        # that caused the 0.0s duration failure on R110-244 push).
+        # The correct fix is to make `sarif_file:` absolute
+        # relative to the JOB PWD (the monorepo root), i.e.
+        # prefix it with `mas-engineer/`. The Bandit run step
+        # (5) still has `working-directory: mas-engineer` (that's
+        # a `run:` step, so the property IS valid there) and
+        # writes the SARIF to `<monorepo>/mas-engineer/.ci-
+        # artifacts/bandit.sarif`. The upload step now reads from
+        # the same absolute path.
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: .ci-artifacts/bandit.sarif
+          sarif_file: mas-engineer/.ci-artifacts/bandit.sarif
           category: bandit
 
       - name: pip-audit (dependency vulnerabilities)
@@ -221,17 +226,23 @@ jobs:
 
       - name: Upload pip-audit SARIF to GitHub Code Scanning
         if: always()
-        # working-directory: mas-engineer — see the matching
-        # comment on the Bandit upload step (6) for the
-        # full post-mortem. R110-243 added this to the run
-        # step (7) but not to the upload step (8), so the
-        # upload action looked for `.ci-artifacts/pip-audit.sarif`
-        # in the monorepo root and errored "Path does not exist".
-        # The R110-244 fix is the same one-line change. (R110-244)
-        working-directory: mas-engineer
+        # sarif_file: mas-engineer/.ci-artifacts/pip-audit.sarif
+        # (R110-245). See the matching comment on the Bandit
+        # upload step (6) for the full post-mortem. The
+        # `working-directory: mas-engineer` on the upload step
+        # is INVALID (`uses:` steps do not accept
+        # `working-directory` per the GHA schema, actionlint
+        # syntax-check). The correct fix is to make
+        # `sarif_file:` absolute relative to the JOB PWD (the
+        # monorepo root). The pip-audit run step (7) still has
+        # `working-directory: mas-engineer` (that's a `run:`
+        # step, so the property IS valid there) and writes the
+        # SARIF to `<monorepo>/mas-engineer/.ci-artifacts/
+        # pip-audit.sarif`. The upload step now reads from the
+        # same absolute path.
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: .ci-artifacts/pip-audit.sarif
+          sarif_file: mas-engineer/.ci-artifacts/pip-audit.sarif
           category: pip-audit
 
   # ---------------------------------------------------------------------------
