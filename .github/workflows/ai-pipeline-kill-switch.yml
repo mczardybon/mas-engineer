@@ -52,7 +52,32 @@ jobs:
           echo ""
 
           # ONLY GitHub Copilot (Cloud) is detected. Nothing else.
-          if echo "$ACTOR $TRIGGERING_ACTOR" | grep -qiE '^(copilot|copilot-swe-agent|copilot-pull-request-reviewer|github-copilot|copilot-chat)([[:space:]]|$)'; then
+          # R110-251 fix: the original suffix group `([[:space:]]|$)`
+          # did not match GitHub's bot-naming convention `name[bot]`,
+          # so the regex returned NOMATCH for real Copilot actors
+          # (e.g. "copilot-swe-agent[bot]") and the guard never
+          # triggered. The new suffix group `(\[[a-z]+\]|[[:space:]]|$)`
+          # allows the literal "[bot]" (or any lowercase tag in
+          # brackets) as a valid terminator, so all real Copilot
+          # identities are now correctly detected. Verified against
+          # the following actor/triggering_actor pairs via local
+          # `bash -c "echo ... | grep -qiE ..."` simulation:
+          #   copilot-swe-agent[bot] copilot-swe-agent[bot]  -> MATCH
+          #   github-copilot[bot]      github-copilot[bot]    -> MATCH
+          #   copilot-chat[bot]        copilot-chat[bot]      -> MATCH
+          #   copilot-pull-request-reviewer[bot] ...         -> MATCH
+          #   github-copilot[bot]      mczardybon             -> MATCH
+          #   mczardybon               mczardybon             -> NOMATCH
+          #   dependabot[bot]          dependabot[bot]        -> NOMATCH
+          #   github-actions[bot]      mczardybon             -> NOMATCH
+          #   my-copilot-fork          mczardybon             -> NOMATCH
+          # The trailing `^` anchor and the explicit list of Copilot
+          # actor names remain unchanged: the only behavioural diff
+          # is the addition of `(\[[a-z]+\]|...)` to the suffix
+          # alternation, so non-Copilot names that happen to contain
+          # the substring "copilot" (e.g. a hypothetical user named
+          # "my-copilot-fork") still do NOT match.
+          if echo "$ACTOR $TRIGGERING_ACTOR" | grep -qiE '^(copilot|copilot-swe-agent|copilot-pull-request-reviewer|github-copilot|copilot-chat)(\[[a-z]+\]|[[:space:]]|$)'; then
             echo "  ⛔ GitHub Copilot detected. Aborting pipeline."
             echo "  ⛔ This repository is closed to GitHub Copilot pipelines."
             echo "  ⛔ See: ../docs/lessons-learned.md L08"
