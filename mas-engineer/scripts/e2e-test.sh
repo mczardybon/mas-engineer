@@ -206,54 +206,33 @@ else
 fi
 
 # -----------------------------------------------------------------
-# E2E #5: Doc links (in scope, context-aware)
+# E2E #5: Doc links (in scope, context-aware, code-block-aware)
+# -----------------------------------------------------------------
+# R110-253 fix: previous version of this check used a naive
+# `re.findall(r'\]\(([^)]+)\)'` over the entire markdown text, which
+# produced false-positives on regex-patterns inside backticks
+# (e.g. `](path)`, `r'\\d+'`, `re.search(r'["\\'](\\d+)\\s+checks?')`).
+# These are inline-code or fenced-code occurrences of `](X)`,
+# not actual markdown links. The fix strips fenced code blocks
+# (``` ... ```) and inline code spans (`...`) BEFORE scanning
+# for links, so the check now only flags real link targets.
 # -----------------------------------------------------------------
 echo ""
 echo "[5/10] Doc links (scope: $SCOPE_DESC)"
-python3 <<PY && check_pass "Doc links — all resolve" || check_fail "Doc links — see above"
-import re, os, sys
-scope = "$SCOPE"
-file_filter = "$FILE_FILTER"
-if scope == "all":
-  roots = ['docs', 'recipe/instructions', '.']
-else:
-  roots = ['docs', 'recipe/instructions', 'recipe', '.']
-  with open(file_filter) as f:
-    changed = set(line.strip() for line in f if line.strip())
-docs = []
-for r in roots:
-  if os.path.isdir(r):
-    for root, _, files in os.walk(r):
-      if any(x in root for x in ('/node_modules/', '/.git/', '/.monitor/memory/', '/.mase/mcp/')):
-        continue
-      for fn in files:
-        if fn.endswith('.md'):
-          full = os.path.join(root, fn)
-          if scope != "all" and full not in changed:
-            continue
-          docs.append(full)
-docs = sorted(set(d for d in docs if not d.startswith('vendor/') and not d.startswith('node_modules/')))
-total_broken = 0
-for doc in docs:
-  with open(doc) as f:
-    text = f.read()
-  doc_dir = os.path.dirname(doc)
-  links = re.findall(r'\]\(([^)]+)\)', text)
-  for l in links:
-    if l.startswith(('http://', 'https://', '#', 'mailto:')):
-      continue
-    path = l.split('#')[0]
-    if not path:
-      continue
-    if doc_dir and not path.startswith('/'):
-      full = os.path.join(doc_dir, path)
-    else:
-      full = path
-    if not os.path.exists(full):
-      print(f'    broken: {doc} -> {l}')
-      total_broken += 1
-sys.exit(0 if total_broken == 0 else 1)
-PY
+# R110-253 refactor: the original inline python check was a
+# one-shot heredoc that grew too complex to maintain (it had
+# inline code-stripping, regex tweaks, and a hardcoded scope
+# list — all in one ~40-line block). Extracted to
+# scripts/_check_doc_links.py (single source of truth) plus
+# scripts/_strip_code.py (shared utility). This block now
+# just sets env vars and calls the script.
+export E2E_SCOPE="$SCOPE"
+export E2E_FILE_FILTER="$FILE_FILTER"
+if python3 scripts/_check_doc_links.py; then
+  check_pass "Doc links — all resolve"
+else
+  check_fail "Doc links — see above"
+fi
 
 # -----------------------------------------------------------------
 # E2E #6: German words (in scope, false-positive aware)
@@ -446,6 +425,53 @@ if errors:
     print(f'  ... and {len(errors) - 10} more')
   sys.exit(1)
 PY
+
+# -----------------------------------------------------------------
+# E2E #11: CI workflow validation (R110-252)
+# -----------------------------------------------------------------
+# R110-252 — close the structural gap in e2e that only did
+# yaml.safe_load on workflows (catching ~2/7 of the latent CI
+# bug classes surfaced by R110-241..R110-250). The new
+# scripts/ci-validate.sh script runs four sub-checks:
+#   A. actionlint          — syntax / required-fields
+#   B. GHA JSON-Schema     — required-fields / type-mismatches
+#   C. output-dir check    — R110-250 mkdir-missing pattern
+#   D. pip dry-run         — R110-246 transitive-dep pattern
+# This is the pre-push hook that should have caught the 4
+# R110-241..R110-250 bugs at first commit, not 4 commits later.
+# Speed: ~1s for --all on the current 5 workflows. We delegate
+# the entire check to ci-validate.sh (single source of truth —
+# if you improve the checks there, e2e picks them up).
+#
+# Scope: when SCOPE=all we validate all workflows; otherwise
+# we only validate workflows changed in the current commit/
+# uncommitted state (mirrors check [3/10] YAML-parse scoping).
+#
+# Skip: E2E_SKIP_CI_VALIDATE=1 (use this in CI sandboxes that
+# cannot run actionlint or fetch the GHA workflow schema).
+# -----------------------------------------------------------------
+echo ""
+echo "[11/11] CI workflow validation (R110-252)"
+if [ -n "$E2E_SKIP_CI_VALIDATE" ]; then
+  check_skip "CI workflow validation — E2E_SKIP_CI_VALIDATE=1"
+elif [ -f "scripts/ci-validate.sh" ]; then
+  if [ "$SCOPE" = "all" ]; then
+    CI_ARGS="--all"
+  else
+    CI_ARGS=""
+  fi
+  if bash scripts/ci-validate.sh $CI_ARGS > /tmp/ci-validate.out 2>&1; then
+    check_pass "CI workflow validation — see /tmp/ci-validate.out for sub-check detail"
+    # Print the sub-check summary so the user sees it in the
+    # e2e log too (not just the temp file).
+    tail -8 /tmp/ci-validate.out | sed 's/^/    /'
+  else
+    check_fail "CI workflow validation — see /tmp/ci-validate.out"
+    sed 's/^/    /' /tmp/ci-validate.out
+  fi
+else
+  check_fail "CI workflow validation — scripts/ci-validate.sh not found (this is the R110-252 hook; if you see this, the script was not committed)"
+fi
 
 # Cleanup
 [ -f /tmp/e2e-changed-files-$$ ] && rm -f /tmp/e2e-changed-files-$$
