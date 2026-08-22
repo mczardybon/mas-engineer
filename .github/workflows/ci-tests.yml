@@ -227,7 +227,20 @@ jobs:
           # Run the same test suite with --durations=0 (every test) and
           # produce a JSON report. The durations are parsed by
           # check_durations.py for regression detection.
-          python -m pytest tests/ -q --tb=line --color=no --timeout=300 \
+          #
+          # NOTE: NO --timeout here on purpose (R110-248). The
+          # perf-bench run is meant to capture *real* durations,
+          # including the 4 test_dev_phoenix_recovery_publish tests
+          # that are ~72-76s on a fast GHA runner and can spike to
+          # 5+ min on a slow runner day. --timeout=300 in the main
+          # pytest matrix legs (added R110-246) is correct as a
+          # fail-fast guard for the real CI runs, but a per-test
+          # timeout in the bench run would CANCEL the very signal
+          # we need to measure. The 4 long-running phoenix tests
+          # are the top-4 duration contributors by design; if any
+          # one is cancelled, the regression gate produces false
+          # positives or no signal at all.
+          python -m pytest tests/ -q --tb=line --color=no \
             --durations=0 -p no:cacheprovider 2>&1 | tee pytest-bench.log
 
       - name: Publish duration artifact
