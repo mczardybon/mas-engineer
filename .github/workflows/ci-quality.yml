@@ -121,12 +121,29 @@ jobs:
 
       - name: Upload Bandit SARIF to GitHub Code Scanning
         if: always()
+        # working-directory: mas-engineer — required because the
+        # Bandit step (5) writes `.ci-artifacts/bandit.sarif` inside
+        # the mas-engineer subdir, but the upload-sarif action's
+        # `sarif_file:` path is resolved relative to the JOB's
+        # working directory. R110-243 added working-directory to
+        # the Bandit run step (correct) but FORGOT to add it to
+        # the matching upload-sarif step, so the upload action
+        # resolved `sarif_file: .ci-artifacts/bandit.sarif`
+        # against the monorepo root (where the file does NOT
+        # exist) and errored "Path does not exist:
+        # .ci-artifacts/bandit.sarif". The GHA checkout_path for
+        # this job is /home/runner/work/mas-engineer/mas-engineer
+        # (the monorepo root) so the action's PWD is the
+        # monorepo root unless we explicitly pin the upload step
+        # to mas-engineer. (R110-244)
+        working-directory: mas-engineer
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: .ci-artifacts/bandit.sarif
           category: bandit
 
       - name: pip-audit (dependency vulnerabilities)
+        if: always()
         # --strict: exit non-zero on unfixable vulns. We capture that and
         # upload as SARIF; the workflow itself stays green so other
         # signals (pytest, e2e) still surface. Drop --strict to make
@@ -134,13 +151,21 @@ jobs:
         # --no-deps: skip transitive deps. mas-engineer has a flat test
         # dependency set (pytest, pyyaml, jsonschema, bandit, pip-audit)
         # which we list explicitly here.
+        # if: always() — without this, a failure in the Bandit
+        # upload step (6) would skip this step (7) by default,
+        # leaving `pip-audit.sarif` un-written and the matching
+        # upload step (8) erroring "Path does not exist". R110-243
+        # post-push audit caught this: logs show step 7 is
+        # MISSING entirely between step 6 (ends 20:54:54.768)
+        # and step 8 (starts 20:54:55.064), proving it was
+        # SKIPPED not just hidden. (R110-244)
         # working-directory: mas-engineer — the SARIF output
         # `.ci-artifacts/pip-audit.sarif` is RELATIVE to the working
         # directory. If we omit it, the file lands in the monorepo
         # root and the next "Upload" step (which IS pinned to
         # mas-engineer) cannot find it. (R110-242: this is the
         # silent-failure bug that the R110-241 audit caught — the
-        # SARIF upload step errored with "Path does not exist"
+        # SARIF upload step errored "Path does not exist"
         # but the python step itself exited 0 because of the
         # `|| AUDIT_EXIT=$?` line, hiding the real cause.)
         working-directory: mas-engineer
@@ -196,6 +221,14 @@ jobs:
 
       - name: Upload pip-audit SARIF to GitHub Code Scanning
         if: always()
+        # working-directory: mas-engineer — see the matching
+        # comment on the Bandit upload step (6) for the
+        # full post-mortem. R110-243 added this to the run
+        # step (7) but not to the upload step (8), so the
+        # upload action looked for `.ci-artifacts/pip-audit.sarif`
+        # in the monorepo root and errored "Path does not exist".
+        # The R110-244 fix is the same one-line change. (R110-244)
+        working-directory: mas-engineer
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: .ci-artifacts/pip-audit.sarif
@@ -219,17 +252,25 @@ jobs:
           path: .
 
       - name: Trivy filesystem scan (SARIF)
-        # aquasecurity/trivy-action@0.30.0 — bumped from 0.24.0 (R110-243).
-        # 0.24.0 was a typo in R110-238; the tag did not exist and
-        # the workflow failed at "Set up job" with "Unable to resolve
-        # action `aquasecurity/trivy-action@0.24.0`, unable to find
-        # version `0.24.0`". 0.30.0 is the latest stable as of
-        # 2026-08; we pin to a major+minor (not SHA) because the
-        # Trivy team's CI guarantees API stability within a minor
-        # release. If a breaking change ships in 0.31, pin to SHA
-        # `12cb28e...` (HEAD at the time we adopted 0.30) and
-        # follow up with a "bump trivy to X.Y" PR.
-        uses: aquasecurity/trivy-action@0.30.0
+        # aquasecurity/trivy-action@v0.30.0 — pinned with the `v`
+        # prefix (R110-244). R110-238 originally wrote
+        # `aquasecurity/trivy-action@0.24.0` (no `v`); R110-243
+        # bumped it to `0.30.0` (still no `v`). Both failed with
+        # the same error: "Unable to resolve action
+        # `aquasecurity/trivy-action@0.30.0`, unable to find
+        # version `0.30.0`". The aquasecurity/trivy-action
+        # repository publishes tags with a `v` prefix
+        # (`v0.24.0`, `v0.30.0`, ..., `v0.36.0` — verified by
+        # GET https://api.github.com/repos/aquasecurity/trivy-
+        # action/tags?per_page=50). The bare-number reference
+        # `0.30.0` is a 404 against the git refs API, so GHA
+        # cannot resolve it. (R110-243 wrongly assumed the
+        # tag did not exist at all — that was the R110-174
+        # number-drift trap again: I saw "not found" and
+        # invented a story instead of `curl`-ing the refs API
+        # to see whether the tag exists with a `v` prefix.
+        # The `v` prefix is required.)
+        uses: aquasecurity/trivy-action@v0.30.0
         with:
           scan-type: fs
           scan-ref: .
