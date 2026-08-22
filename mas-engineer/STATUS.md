@@ -221,3 +221,30 @@ $ git status -s
 - TODO: `~/.hermes/skills/devops/mas-engineer-workflow/SKILL.md` — add
   e2e-test.sh [5/10] refactor as a reusable pattern (inline heredoc →
   2 standalone modules when check grows beyond ~30 lines)
+
+---
+
+## R110-255 (2026-08-22) — Check 17 timeout + duration spec retire
+
+**Type:** fix
+**Files changed:** `recipe/instructions/sub_mas-pre-push-validator.md` (+24/-3)
+
+**What:** Pre-push-validator Check 17 now uses `pytest --timeout=300 --ignore=.state`
+to match `ci-tests.yml` (R110-246). The R110-95 duration spec (9.65s) is RETIRED
+because R110-239 added 4 phoenix tests @ 75s each; new R110-255 baseline is
+7-7.5 min local, 14-15 min GHA.
+
+**Verification:**
+- `python3 -m pytest tests/ -q --tb=line --color=no --timeout=300 --ignore=.state` → 1629 passed in 7m 6s
+- `python3 -m pytest tests/test_dev_phoenix_recovery_publish.py -v --timeout=300` → 9 passed in 4m 58s
+- ci-tests.yml R110-254 (pre-fix measurement): 14m 32s, SUCCESS
+
+**Evidence:** `logs/e2e-evidence-gen2/R110-255-EVIDENCE.md` (8065 bytes)
+**Changelog:** `docs/CHANGELOG-2026-08-22-r110-255.md` (4812 bytes)
+
+**Root cause:** User correctly pointed out that the timeout had to be set higher
+(verbatim German user quote translated to English per LANGUAGE-RULE R110-172+173;
+original in commit message body and R110-255-EVIDENCE.md). I had used
+`--timeout=60` for local validation, producing 4 false-positive failures.
+Investigation revealed the R110-95 spec was pre-phoenix (1277 tests) and is
+now ~40× wrong.

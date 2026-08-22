@@ -796,12 +796,20 @@ else
     # Run pytest with retry (R-208): up to 3 attempts; success = pytest exit 0;
     # on_failure = cleanup (kill orphaned test consumers / remove temp artifacts) before retry.
     # Run pytest; use 'set -o pipefail' so $? reflects pytest's exit code, not tail's.
+    # --timeout=300 (R110-255): the 4 phoenix-recovery tests in
+    # tests/test_dev_phoenix_recovery_publish.py do subprocess.run(timeout=180)
+    # to spawn dev_phoenix_recovery_run.py which runs 5 phoenix levels
+    # (~75s wallclock). Without --timeout=300, a slow CI runner could
+    # exceed 180s on the inner subprocess. With --timeout=300 we are
+    # defensively guarded (pytest-timeout = 5 min, 4× the worst-case
+    # 75s observed per phoenix test). Matches ci-tests.yml flag set
+    # (R110-246). --ignore=.state: state is transient run-state, not test code.
     PYTEST_RC=1
     PYTEST_ATTEMPT=0
     while [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt 3 ]; do
         PYTEST_ATTEMPT=$((PYTEST_ATTEMPT + 1))
-        PYTEST_OUTPUT=$(python3 -m pytest tests/ -q --tb=line --color=no 2>&1 | tail -30)
-        (set -o pipefail; python3 -m pytest tests/ -q --tb=line --color=no >/dev/null 2>&1)
+        PYTEST_OUTPUT=$(python3 -m pytest tests/ -q --tb=line --color=no --timeout=300 --ignore=.state 2>&1 | tail -30)
+        (set -o pipefail; python3 -m pytest tests/ -q --tb=line --color=no --timeout=300 --ignore=.state >/dev/null 2>&1)
         PYTEST_RC=$?
         if [ "$PYTEST_RC" -eq 127 ]; then
             break   # pytest not installed — retrying will not help
@@ -844,11 +852,24 @@ fi
 PYTEST_SUMMARY: {"passed": 1277, "failed": 0, "errors": 0, "skipped": 0, "duration_seconds": 9.65, "exit_code": 0}
 ```
 
-**Duration reference (R110-95, 2026-08-04, 5x measurement):**
+**Duration reference (R110-95, 2026-08-04, 5x measurement, BEFORE phoenix tests):**
   Median: 9.65s | Mean: 9.60s | Std: 0.13s | Range: 9.46-9.77s
   Historical: 8.12s (R110-71 era, single-point). Spec is documentation-
   only; Check 17 does NOT BLOCK on duration. Variance is real (run-to-run
   ~0.3s); the 8.12s figure is now retired.
+
+**Duration reference (R110-255, 2026-08-22, AFTER R110-239 phoenix tests added):**
+  The 4 phoenix-recovery tests in tests/test_dev_phoenix_recovery_publish.py
+  each take ~73-76s wallclock (subprocess.run(timeout=180) on
+  dev_phoenix_recovery_run.py which runs all 5 phoenix levels). Total
+  phoenix cost: 4 × 75s = 300s. The other ~1620 tests run in ~130s.
+  Full test-suite wallclock: 420-450s (7-7.5 min) single-process.
+  Spec is documentation-only; Check 17 does NOT BLOCK on duration.
+  Measured R110-254 (2026-08-22): 1625 passed in 7m 16s (436s) local.
+  Measured R110-254 (2026-08-22): GHA matrix job 14m 32s wallclock.
+  (The R110-95 9.65s figure is RETIRED as of R110-255 — superseded
+  by the post-phoenix baseline above. Do NOT cite 9.65s for any
+  pre-2026-08-22 commits. Use 7-7.5 min local, 14-15 min GHA.)
 
 **Output block on BLOCK:**
 ```
