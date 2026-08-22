@@ -262,6 +262,19 @@ jobs:
         with:
           path: .
 
+      - name: Prepare Trivy artifact directory
+        # R110-250: trivy-action writes the SARIF to `output:` but
+        # does NOT create the parent directory. R110-246's bump to
+        # trivy-action v0.36.0 changed the output-path handling:
+        # the action no longer auto-creates `.ci-artifacts/` and
+        # fails with "open .ci-artifacts/trivy-fs.sarif: no such
+        # file or directory" before any scan happens. This step
+        # explicitly creates the directory so the SARIF write
+        # succeeds. Same pattern as the v0.30.0 fix would have
+        # needed; it was missed in R110-238 when the workflow was
+        # originally authored.
+        run: mkdir -p .ci-artifacts
+
       - name: Trivy filesystem scan (SARIF)
         # aquasecurity/trivy-action@v0.30.0 — pinned with the `v`
         # prefix (R110-244). R110-238 originally wrote
