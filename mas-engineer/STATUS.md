@@ -143,5 +143,81 @@ c39d2e7 R110-233 fix: gitignore stub-cleanup
   3-step pattern. Reusable for next cleanup-sprint.
 - `~/.hermes/skills/devops/mas-engineer-ci-pipeline-template/SKILL.md` —
   2-workflow pattern (pytest matrix + e2e-shell harness), Copilot-guard,
-  DEEPSEEK_API_KEY="" goose-skip, permissions zero-trust. Reusable for
+  DEEPSEEK_API_KEY=*** goose-skip, permissions zero-trust. Reusable for
   next CI addition.
+
+---
+
+## R110-252 + R110-253 (2026-08-22, mas-t) — CI-local-validation + e2e-false-positive cleanup
+
+**Commits:**
+- `c9ede3f` 🔧 R110-252 — feat: scripts/ci-validate.sh mirrors GHA CI locally (CI gap R110-241 audit)
+- `ed890da` 🔧 R110-253 — fix: e2e-test.sh [5/10] doc-links + [6/10] german-words 2 false-positives
+
+**Why these commits exist:** R110-241 surfaced 4 GHA-CI local-bypass gaps
+(trivy-action v0.30.0 transitive dep R110-246, codeql-action network dep,
+upload-sarif GHA-only, cache GHA-only). R110-252 builds `scripts/ci-validate.sh`
+(518 lines, NEW) that runs those same checks locally without GHA dependencies,
+and wires it into e2e-test.sh as the new [11/11] step.
+
+**After R110-252 the e2e --all run surfaced 2 pre-existing fails** that
+nobody had run end-to-end on this branch before:
+1. [5/10] doc-links false-positives: regex `r'\]\(([^)]+)\)'` matched Python
+   raw-strings (4 files in .mase/directives/ + .mase/skills/)
+2. [6/10] german-words: 4 violations in 2 files
+   (sub_mas-yaml-editor.md L16-17, sub_mas-self-audit.yaml L5+L7)
+
+R110-253 fixed both by extracting `scripts/_strip_code.py` (68L) +
+`scripts/_check_doc_links.py` (97L) as standalone modules, using a stricter
+regex `\[([^\]\n\\"\'`]{2,}?)\]\(([^\)\n\\"\'`]+)\)` that requires [text]
+and (url) to be ≥2 chars and not contain Python-source-like chars.
+
+**Net file change:** R110-252 = 1 file +518/-0. R110-253 = 5 files
++240/-49 (2 new modules + 3 modified: e2e-test.sh, sub_mas-yaml-editor.md,
+sub_mas-self-audit.yaml).
+
+**E2E --all result (reproducible, DEEPSEEK_API_KEY set):**
+```
+[5/10] Doc links (scope: all)
+  PASS: Doc links — all resolve
+[6/10] German words (scope: all)
+  PASS: German words — 0 violations
+...
+[11/11] CI workflow validation (R110-252)
+  PASS: CI workflow validation — see /tmp/ci-validate.out
+  CI VALIDATE RESULT: 3 PASS, 0 FAIL, 1 SKIP
+================================================================
+E2E RESULT: 12 PASS, 0 FAIL, 0 SKIP
+================================================================
+ALL CHECKS PASS (or SKIP). Safe to push.
+```
+
+The 1 SKIP is the pip-dry-run transitive-dep check (R110-246 pattern) —
+mas-engineer deliberately declares Python deps inline in GHA workflows,
+not in a requirements.txt; documented as known SKIP, not fail.
+
+**Evidence files:**
+- `logs/e2e-evidence-gen2/R110-252-EVIDENCE.md`
+- `logs/e2e-evidence-gen2/R110-253-EVIDENCE.md`
+- `mas-engineer/docs/CHANGELOG-2026-08-22-r110-252-253.md`
+
+**Working tree status (post-push):**
+```
+$ git log origin/mas-t --oneline -3
+ed890da (HEAD -> mas-t, origin/mas-t) 🔧 R110-253
+c9ede3f 🔧 R110-252
+9caaf59 🔧 R110-251
+$ git status -s
+(empty — clean)
+```
+
+**Memory + skills (R110-252+253 patterns to be persisted):**
+- TODO: `~/.hermes/skills/devops/mas-engineer-commit-protocol/SKILL.md` —
+  add "After every 🔧 R-sprint: write evidence file in logs/e2e-evidence-gen2/,
+  append STATUS.md section, write CHANGELOG-<date>.md" as mandatory step
+  before push (R110-126 protocol was missing this — R110-252+253 are the
+  first commits that did it right, prior commits left it as a post-hoc
+  documentation gap)
+- TODO: `~/.hermes/skills/devops/mas-engineer-workflow/SKILL.md` — add
+  e2e-test.sh [5/10] refactor as a reusable pattern (inline heredoc →
+  2 standalone modules when check grows beyond ~30 lines)
