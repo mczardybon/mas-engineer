@@ -62,9 +62,9 @@ R-sprint-table now has ✅ in the CHANGELOG column.
 | 1    | e2e-test.sh (11 checks)                      | ✅ 11/11 PASS (twice) |
 | 1b   | goose sub_mas-pre-push-validator             | ✅ 23/23, 133/133 e2e, 1622/1622 pytest (outer 480s timeout, R110-69 pattern) |
 | 2    | pytest tests/ (independent)                  | ✅ 1629/1629 in 434s |
-| 3    | commit-msg 🔧/📚 R-format + body-claims     | ✅ beide grün, 5-section body |
+| 3    | commit-msg 🔧/📚 R-format + body-claims     | ✅ both green, 5-section body |
 | 4    | push (credential-helper, 0 leak)             | ✅ 2cf5c30 (R110-235) mas-t → mas-t |
-| 5    | post-flight audit                            | ✅ 3 checks grün, no secrets in pushed content |
+| 5    | post-flight audit                            | ✅ 3 checks green, no secrets in pushed content |
 
 ---
 
