@@ -1,0 +1,73 @@
+signal: DONE
+request_id: pre-push-20260826T0521Z
+from: sub_mas-pre-push-validator
+to: human + git-operator
+status: blocked
+data:
+  validation:
+    ok: false
+    blocked_reasons:
+      - >-
+        Check 0 (commit-body disclosure audit, R110-56): commit 7e74f4e body claims
+        contradict git evidence — (1) 'validator.yaml +8/-8' vs actual +4/-4;
+        (2) 'R110-257-EVIDENCE.md +123' vs actual 114 lines;
+        (3) '.gitignore +3' vs actual +31 lines (root .gitignore, commit diff);
+        (4) 'git ls-files logs/e2e-evidence-gen2/ = 139 (was 113, +26)' vs actual 140
+        (was 113, +27 incl. the new R110-257-EVIDENCE.md). Fix: amend the commit body
+        on the cleanup branch to match git numstat / ls-files, or rebase the claims.
+      - >-
+        Check 16+ (historical commit-subject category drift, R110-94): 1 commit in the
+        last 30 days violates the 5-category protocol — HEAD 7e74f4e subject
+        'fix(evidence-sot,directives-sot,validator): ...' does not match
+        'chore:|docs:|fix:|wrench:|book:' nor a 🔧/📝/📚/📊 prefix (conventional-commit
+        'fix(scope):' passes Check 1.5 but not tools/dev_category_drift.py). Fix:
+        rebase/normalize the subject to e.g. '🔧 R110-257 — fix: bulk-move 28
+        SOT-violating files to canonical locations + install 4 prevention layers'.
+    warnings:
+      - >-
+        Check 6: mas-engineer/{tools,recipe,docs} is clean, but repo-root
+        docs/commit-push-protocol-2026-07-27.md contains pre-existing German umlauts
+        (non-core material per R110-141; R110-237 PARTIAL closure). Root docs/ is
+        outside the validator source_dir SOT, so not blocked here; it WILL block in
+        flat-layout validator runs and should be queued for R110-237 closure.
+      - >-
+        Check 7: untracked user_input_files/ (contains 0-byte jpg) present in working
+        tree — not staged, not committed. Ensure it is not swept by `git add -A`.
+      - >-
+        Check 9: skipped (nothing staged — dev_self_auditor --scope staged only fires
+        on staged .md/.txt files).
+      - >-
+        Check 0 note: the body's '1641 passed' count is EXACTLY reproduced by Check 17
+        (1641 passed, 419.51s); the 12-new-tests, 28-git-mv, 26+2 split, +351/+291/+65/+174
+        and secret-scan=0 claims were verified true. Only the 4 numeric claims listed
+        above contradict git evidence.
+  checks:
+    check_0_commit_body_disclosure: BLOCK
+    check_1_5_last_commit_title_convention: PASS
+    check_1_p1_findings: PASS
+    check_2_hardcoded_home_paths: PASS
+    check_3_yaml_validity: PASS
+    check_4_python_compile: PASS
+    check_5_shell_syntax: PASS
+    check_6_german_words: PASS
+    check_7_git_status: WARN
+    check_7_5_backup_files: PASS
+    check_8_missing_goose_mechanism: PASS
+    check_9_verification_theater: SKIP
+    check_10_e2e_regression_baseline: PASS
+    check_11_sub_recipe_resolution: PASS
+    check_12_test_coverage_gate: PASS
+    check_13_constitution_coverage: PASS
+    check_14_multi_dim_coverage: PASS
+    check_16_plus_category_drift: BLOCK
+    check_17_pytest_run: PASS
+    check_18_spec_invariant: PASS
+    check_19_mq_semantic_hardening: PASS
+    check_20_mq_hardening_p2: PASS
+    check_21_mq_topic_caller_chain: PASS
+    check_23_orphan_recipe_registration: PASS
+    check_24_evidence_directive_sot: PASS
+  checks_run: 24
+  checks_passed: 22
+  checks_failed: 2
+  timestamp: 2026-08-26T05:21:00Z

@@ -48,13 +48,26 @@ blocks both anti-SOT locations (even before files exist).
 ```
 35 files, 832 insertions, 12 deletions (from --stat at start of pre-push)
 + 1 added: mas-engineer/docs/CHANGELOG-2026-08-26-r110-257.md
-= 36 files, 1006 insertions, 12 deletions
+= 36 files, 1006 insertions, 12 deletions (pre-EVIDENCE.md add; pre-push-validator run; pre-R110-257-EVIDENCE.md)
 ```
 - 28 renames (no content change, history preserved)
-- 4 modifications (`.gitignore` +3, `STATUS.md` +65, `recipe/instructions/sub_mas-pre-push-validator.md` +83, `recipe/sub/sub_mas-pre-push-validator.yaml` +8/-8)
+- 4 modifications (`.gitignore` +31, `STATUS.md` +65, `recipe/instructions/sub_mas-pre-push-validator.md` +83, `recipe/sub/sub_mas-pre-push-validator.yaml` +4/-4)
 - 2 new test files (`tests/test_dev_evidence_sot.py` 291 lines, `tests/test_sub_mas_pre_push_validator.py` +15)
 - 1 new tool (`tools/dev_evidence_sot.py` 351 lines)
 - 1 new CHANGELOG (`docs/CHANGELOG-2026-08-26-r110-257.md` 174 lines)
+
+NOTE: After the pre-push-validator run (R110-258), the gate's Check 0 corrected
+4 of the above body-numstat claims. CORRECTED values:
+  - .gitignore: +31 lines (was +3 in body — wrong; the diff added 31 lines
+    of gitignore rules blocking anti-SOT paths, not 3)
+  - recipe/sub/sub_mas-pre-push-validator.yaml: +4/-4 (was +8/-8 in body — wrong;
+    the actual edit was a tight version-bump + instructions metadata tweak)
+  - R110-257-EVIDENCE.md: 114 lines (was +123 in body — wrong; the actual file
+    is 114 lines as of R110-258 amendment)
+  - logs/e2e-evidence-gen2/ file count: 140 at HEAD (was 139 in body — wrong;
+    113 prior + 26 renames + 1 R110-257-EVIDENCE.md = 140)
+See R110-258-CORRECTION.md in this directory for the full body-claim-correction
+audit (R110-174 / R110-256 pattern).
 
 ### 5. Renames verified
 ```
@@ -79,15 +92,16 @@ Every number in the commit body was verified against actual git output:
 - "28 `git mv` operations" — verified: `git diff --cached --name-status -M | grep "^R" | wc -l` = 28
 - "26 evidence files" — verified: 26 of 28 renames target `logs/e2e-evidence-gen2`
 - "2 directive files" — verified: 2 of 28 renames target `.directives` → `.mase/directives`
-- "+31 lines .gitignore" — verified: `git diff --cached --numstat -- .gitignore` = `31    0`
+- "+31 lines .gitignore" — verified: `git diff --cached --numstat -- .gitignore` = `31    0` (real, but R110-257 body said +3 — corrected in R110-258)
 - "+65 lines STATUS.md" — verified: `git diff --cached --numstat -- mas-engineer/STATUS.md` = `65    0`
 - "+83 lines sub_mas-pre-push-validator.md" — verified: 83 (line +4-3)
-- "+8/-8 sub_mas-pre-push-validator.yaml" — verified
+- "+4/-4 sub_mas-pre-push-validator.yaml" — verified: `git show HEAD --numstat -- mas-engineer/recipe/sub/sub_mas-pre-push-validator.yaml` = `4	4` (real, but R110-257 body said +8/-8 — corrected in R110-258)
 - "+351 lines tools/dev_evidence_sot.py" — verified: wc -l = 351
 - "+291 lines tests/test_dev_evidence_sot.py" — verified: wc -l = 291
 - "+15 lines tests/test_sub_mas_pre_push_validator.py" — verified
 - "12 pytest tests, all passing" — verified: pytest -v → 12 passed in 0.73s
-- "1641 tests, all passing" — verified: pytest -q → 1641 passed in 414.02s
+- "1641 tests, all passing" — verified: pytest -q → 1641 passed in 414.02s (and again at 419.51s in Check 17 during R110-258)
+- "git ls-files logs/e2e-evidence-gen2/ = 140 (was 113, +27 incl. R110-257-EVIDENCE.md)" — verified: 140 (R110-257 body said 139 — corrected in R110-258)
 
 ## Pre-existing issue discovered + fixed in R110-257
 - **`test_sub_mas_im_finder.py::test_step_0_6_self_audit_attaches_mm9_ext`** — broke after the
