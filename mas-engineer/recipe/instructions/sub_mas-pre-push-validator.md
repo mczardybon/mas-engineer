@@ -23,7 +23,7 @@ everything is healthy.
 
 ## Procedure VALIDATE
 
-Run the following 23 checks IN ORDER. Stop at the first failure if a hard
+Run the following 24 checks IN ORDER. Stop at the first failure if a hard
 block is detected, but always collect all warnings.
 
 ### Check 0: Commit-body disclosure audit (NEW v2.1.0, R110-56)
@@ -1327,6 +1327,87 @@ path 2. The freshness window is 5 min — if a CI step is taking longer
 than 5 min between when it refreshed the confirmation and when it
 actually triggers a preflight, the bypass might expire. Re-run
 `e2e_run_all.py --auto-confirm` to refresh.
+
+### Check 24: evidence/directive SOT-location audit (NEW v2.9.0, R110-257)
+
+**Goal:** Every evidence-archive file MUST live in `logs/e2e-evidence-gen2/`
+(REPO-ROOT) and every directive MUST live in `mas-engineer/.mase/directives/`.
+Prevents the R110-217/R110-218 (directives) and R110-194/210/214/215/216/229/230/255
+(evidence) bug class from recurring: a file written at the wrong location
+silently accumulates until a future cleanup has to bulk-move it via 28
+`git mv` operations. Check 24 runs `tools/dev_evidence_sot.py --strict --git`
+(the SOURCE OF TRUTH for what "SOT" means — the pytest test and this
+check both call it) and BLOCKS the push at SOT-validation time, before
+the wrong-location file ever reaches HEAD.
+
+DETECTION→CORRECTION→PREVENTION cycle (R110-257):
+  - R110-194/210/214/215/216/229/230/255 (DETECTION) 26 evidence files
+    accumulated at `mas-engineer/logs/e2e-evidence-gen2/` (wrong SOT,
+    7 different R-numbers over multiple sessions)
+  - R110-217/R110-218 (DETECTION) 2 directive files in `mas-engineer/.directives/`
+    (wrong SOT — R110-115 DIREKTIVE 1 mandates `.mase/directives/`)
+  - R110-257 (CORRECTION+PREVENTION) this commit:
+    (1) CORRECTION: 28 `git mv` operations to the right SOT locations
+    (2) PREVENTION layer 1: `.gitignore` blocks `mas-engineer/.directives/`
+        and `mas-engineer/logs/` (catches accidental file creation)
+    (3) PREVENTION layer 2: `tools/dev_evidence_sot.py` (this check's
+        source of truth) scans the working tree + git index + dir health
+    (4) PREVENTION layer 3 (this check): wired into pre-push-validator
+        as Check 24 — every push validates SOT locations BEFORE the
+        commit lands at HEAD
+
+**Idempotency:** If `check_24_evidence_sot` already appears in this
+file, skip the insert and keep the existing block. Detection via
+`grep -q "check_24_evidence_sot"`.
+
+```bash
+# Check 24: evidence/directive SOT-location audit (R110-257)
+echo "🔍 Check 24: evidence/directive SOT-location audit (R110-257)"
+python3 tools/dev_evidence_sot.py --strict --git > /tmp/sot_check_24.txt 2>&1
+SOT_RC=$?
+if [ "$SOT_RC" -ne 0 ]; then
+    echo "  ❌ BLOCK: Check 24 — file(s) at wrong SOT location"
+    sed 's/^/     /' /tmp/sot_check_24.txt
+    echo "     Fix: move files to their correct SOT location:"
+    echo "       - evidence:    logs/e2e-evidence-gen2/  (REPO-ROOT, NOT mas-engineer/)"
+    echo "       - directives:  mas-engineer/.mase/directives/  (NOT mas-engineer/.directives/)"
+    echo "       Or delete them. .gitignore blocks new files at anti-SOT locations."
+    exit 1
+fi
+echo "  ✅ Check 24 passed: all evidence/directive files at SOT locations"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 24: evidence/directive SOT-location audit (R110-257)
+  ✅ Check 24 passed: all evidence/directive files at SOT locations
+```
+
+**Output block on BLOCK (R110-217/218 + R110-194/210/.../255 bug pattern):**
+```
+🔍 Check 24: evidence/directive SOT-location audit (R110-257)
+  ❌ BLOCK: Check 24 — file(s) at wrong SOT location
+     ============================================================
+     R110-257 EVIDENCE/DIRECTIVE SOT CHECKER
+     ============================================================
+     SOT evidence:      logs/e2e-evidence-gen2/ (REPO-ROOT)
+     SOT directives:    mas-engineer/.mase/directives/
+     Anti-SOT evidence: mas-engineer/logs/
+     Anti-SOT direct.:  mas-engineer/.directives/
+     ------------------------------------------------------------
+       ❌ evidence_sot_working_tree:
+           mas-engineer/logs/e2e-evidence-gen2/R110-256-some-file.log
+     Fix: move files to their correct SOT location:
+       - evidence:    logs/e2e-evidence-gen2/  (REPO-ROOT, NOT mas-engineer/)
+       - directives:  mas-engineer/.mase/directives/  (NOT mas-engineer/.directives/)
+       Or delete them. .gitignore blocks new files at anti-SOT locations.
+```
+
+**Reference:** R110-257 (DETECTION→CORRECTION→PREVENTION directive),
+R110-217/R110-218 (the directive-SOT violators), R110-194/R110-210/
+R110-214/R110-215/R110-216/R110-229/R110-230/R110-255 (the 26 evidence
+SOT violators), R110-115 DIREKTIVE 1 (the SOT rule for directives),
+R110-143 (the SOT rule for evidence at REPO-ROOT).
 
 **R110-62 doc-fix note:** this section was rewritten to replace the
 older aspirational "RECURSION_OVERRIDE=2 MAS_NO_SESSION=1" claim.

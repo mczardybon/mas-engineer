@@ -208,6 +208,37 @@ mas-engineer/recipe/sub/.backups/
 mas-engineer/testproject/
 
 # ============================================================
+# SOT-ORTE (R110-257, 2026-08-26): FALSCHE orte für
+# directives + evidence-archive sind VERBOTEN.
+#
+# SOT:
+#   - directives:        mas-engineer/.mase/directives/
+#   - evidence-archive:  logs/e2e-evidence-gen2/  (REPO-ROOT)
+#
+# Per R110-143 (9ba8705, 2026-08-15) ist logs/e2e-evidence-gen2/ der
+# zentrale evidence-ort (906 files committed damals). Per R110-193
+# (bb36cd0, 2026-08-18) wurden files in mas-engineer/logs/e2e-evidence-gen2/
+# als "verstoss gegen R110-143 precedent" markiert. Per dev_directive_applier.py
+# (R110-115 DIREKTIVE 1) lesen alle tools directives aus
+# mas-engineer/.mase/directives/ — der mas-engineer/.directives/ ordner
+# existiert in der SOT nicht.
+#
+# Prevention layers:
+#   1. .gitignore (dieser block) — files können nicht committed werden
+#   2. pre-push-validator Check 19 (dev_evidence_sot.py) — fail-fast
+#   3. dev_evidence_sot.py standalone — manueller SOT-ort-check
+# ============================================================
+# Block wrong SOT location for directives (committed accidentally
+# in R110-217 + R110-218 — moved by R110-257 to .mase/directives/)
+mas-engineer/.directives/
+mas-engineer/.directives/**
+# Block wrong SOT location for evidence-archive (26 files committed
+# in R110-194/210/214/215/216/229/230/255 — moved by R110-257 to
+# repo-root logs/e2e-evidence-gen2/)
+mas-engineer/logs/
+mas-engineer/logs/**
+
+# ============================================================
 # LEGACY SNAPSHOTS (history cruft, see tools/cleanup_repo_v1.sh P3)
 # ============================================================
 mas-engineer/recipe/sub/legacy/*-ORIGINAL.yaml

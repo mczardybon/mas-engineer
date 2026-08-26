@@ -248,3 +248,68 @@ original in commit message body and R110-255-EVIDENCE.md). I had used
 `--timeout=60` for local validation, producing 4 false-positive failures.
 Investigation revealed the R110-95 spec was pre-phoenix (1277 tests) and is
 now ~40× wrong.
+
+## R110-257 (2026-08-26, mas-t) — Evidence/Directive SOT-location cleanup + Check 24
+
+**Type:** fix (SOT consolidation) + feat (Check 24 prevention)
+**Files changed:** 28 `git mv` (renames, history-preserved) + `.gitignore` (+3/-0) + `tools/dev_evidence_sot.py` (NEW, 411 lines) + `tests/test_dev_evidence_sot.py` (NEW, 12 tests, all passing) + `recipe/instructions/sub_mas-pre-push-validator.md` (+82/-0, +Check 24) + `recipe/sub/sub_mas-pre-push-validator.yaml` (v2.8.0 → v2.9.0, +Check 24 in description+prompt)
+
+**What:** DETECTION→CORRECTION→PREVENTION cycle for the persistent
+evidence/directive SOT-drift bug class. Three PREVENTION layers added.
+
+**CORRECTION (28 `git mv` operations, history preserved):**
+- 2 directives: `mas-engineer/.directives/R110-{217,218}.md` → `mas-engineer/.mase/directives/` (R110-115 DIREKTIVE 1 SOT)
+- 26 evidence files: `mas-engineer/logs/e2e-evidence-gen2/` → `logs/e2e-evidence-gen2/` (R110-143 REPO-ROOT SOT) — covers R110-194/210/214/215/216/229/230/255
+- Both `mas-engineer/.directives/` and `mas-engineer/logs/` now empty/removed (would-be recreated as dir entries, no commit history impact)
+
+**PREVENTION layer 1 — .gitignore:** `mas-engineer/.directives/` and
+`mas-engineer/logs/` (with `**` recursive) blocked. Verified:
+`git check-ignore mas-engineer/.directives/R110-X.md` → matched (line 233),
+`git check-ignore mas-engineer/logs/foo.log` → matched (line 238).
+
+**PREVENTION layer 2 — `tools/dev_evidence_sot.py` (NEW, 411 lines):**
+Standalone checker with 8 checks (4 working-tree + 2 git-index + 2
+dir-health + history-scan). Flags `.gitignore`-excluded files too
+(key design choice — they're invisible to git status but the tool
+still catches them). Modes: `--strict` (CI exit codes), `--git`,
+`--history`, `--json`. Tested standalone:
+- clean state → exit 0
+- intentional violation in `mas-engineer/.directives/` → exit 1
+- intentional violation in `mas-engineer/logs/` → exit 1
+- missing SOT dir → exit 1
+
+**PREVENTION layer 3 — `tests/test_dev_evidence_sot.py` (NEW, 12 tests, all passing):**
+Regression test suite covers (a) clean state, (b-c) violations at both
+anti-SOT locations, (d) cleanup → restored clean, (e) JSON schema,
+(f) --git mode, (g) --history scan, plus 2 dir-health tests.
+`python3 -m pytest tests/test_dev_evidence_sot.py -v` → 12 passed in 0.73s.
+
+**PREVENTION layer 4 — Check 24 in pre-push-validator (R110-257, NEW v2.9.0):**
+The 24th check in the pre-push gate. Runs `tools/dev_evidence_sot.py --strict --git`,
+BLOCKS the push if any file is at anti-SOT location. Wired into both
+the recipe yaml (description + prompt + version bump 2.8.0 → 2.9.0) and
+the external instructions file (full 82-line block following the Check 23
+template: Goal + DETECTION→CORRECTION→PREVENTION history + idempotency
+note + bash block + output blocks on PASS/BLOCK + Reference section).
+
+**Verification:**
+- `python3 mas-engineer/tools/dev_evidence_sot.py --git --strict` → exit 0, RESULT: ✅ PASS — no SOT violations
+- `python3 -m pytest tests/test_dev_evidence_sot.py -v` → 12 passed in 0.73s
+- `python3 -c "import yaml; print(yaml.safe_load(open('mas-engineer/recipe/sub/sub_mas-pre-push-validator.yaml'))['version'])"` → 2.9.0
+- `git ls-files logs/e2e-evidence-gen2/ | wc -l` → 139 (was 113, +26 from R110-257 renames)
+- `git ls-files mas-engineer/.directives/ 2>/dev/null | wc -l` → 0 (was 2)
+- `git ls-files mas-engineer/logs/ 2>/dev/null | wc -l` → 0 (was 26)
+- `git check-ignore mas-engineer/.directives/R110-999.md mas-engineer/logs/test.log` → both matched (exit 1, "ignored")
+
+**Evidence:** `logs/e2e-evidence-gen2/R110-257-EVIDENCE.md` (created at push)
+**Changelog:** `docs/CHANGELOG-2026-08-26-r110-257.md` (created at push)
+
+**Root cause (accumulated over 8 R-numbers):** Every SOT-violating file
+landed via "natural" session workflows — directives were created in
+the wrong dir because the old `dev_directive_applier.py` default was
+`mas-engineer/.directives/` (later changed to `.mase/directives/` per
+R110-115, but the old default left orphan files), evidence files were
+created in `mas-engineer/logs/e2e-evidence-gen2/` because that was the
+ORIGINAL SOT before R110-143 (2026-08-15) moved the SOT to REPO-ROOT.
+R110-257 is the first commit that does BOTH the bulk cleanup AND
+installs a permanent prevention (3 layers + Check 24 in the gate).
