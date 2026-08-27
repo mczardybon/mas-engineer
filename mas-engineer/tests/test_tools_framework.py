@@ -641,12 +641,18 @@ class TestDevFastScan:
         assert score == 0
 
     def test_scan_settings_high_timeout_low_severity(self, tmp_path):
-        """Settings with timeout>900 → B2 low-severity finding."""
+        """Settings with timeout>900 → B2 low-severity finding.
+
+        R110-261a: scan_settings now uses per-file pass/fail (was
+        per-condition). With timeout=1000 (out of range) and
+        max_turns=100 (in range), the file is NOT a pass because
+        BOTH conditions must hold. So score=0, not 10.
+        """
         (tmp_path / "a.yaml").write_text("settings:\n  timeout: 1000\n  max_turns: 100\n")
         findings, score, total = dev_fast_scan.scan_settings(str(tmp_path))
         assert any(f["type"] == "B2" for f in findings)
-        # max_turns=100 → ok += 1 (between 50 and 300)
-        assert score == 10  # ok/total*10 = 1/1*10
+        # R110-261a: per-file pass/fail; timeout out of range → not a pass.
+        assert score == 0
 
     def test_scan_settings_low_max_turns_finding(self, tmp_path):
         """Settings with max_turns<30 → B3 finding."""
@@ -661,19 +667,20 @@ class TestDevFastScan:
         assert any(f["type"] == "B4" for f in findings)
 
     def test_scan_settings_optimal_scores_full(self, tmp_path):
-        """Settings with timeout 300-900 and max_turns 50-300 → no findings.
+        """Settings with timeout 300-900 and max_turns 30-300 → no findings.
 
-        Note: scan_settings increments 'ok' twice per file (once for timeout,
-        once for max_turns in the [50,300] range), so with one optimal file
-        the score is 2/1*10 = 20 (the score is not bounded to 10). This is a
-        known quirk in the code. Test asserts the no-finding case.
+        R110-261a: scan_settings now uses per-file pass/fail (was
+        per-condition). With both conditions in range, the file IS
+        a pass, so ok=1, total=1, score=1/1*10=10.0 (was 20.0 in the
+        pre-fix per-condition counter). Score is now correctly
+        bounded to 10.
         """
         (tmp_path / "a.yaml").write_text("settings:\n  timeout: 500\n  max_turns: 100\n")
         findings, score, total = dev_fast_scan.scan_settings(str(tmp_path))
         assert findings == []
         assert total == 1
-        # ok = 2 (timeout ok + max_turns ok), score = 2/1*10 = 20
-        assert score == 20
+        # R110-261a: per-file pass/fail, ok=1, score=1/1*10=10.
+        assert score == 10
 
     def test_scan_structure_empty_dir(self, tmp_path):
         """scan_structure on dir with no yaml → C1 finding, score 0, count 0."""

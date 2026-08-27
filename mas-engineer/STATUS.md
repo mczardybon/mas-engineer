@@ -383,3 +383,70 @@ driven and need real-subcommand subprocess tests with tmp_path +
 mocked I/O, not library tests. R110-261 is scope-limited to the
 library-importable 10. A future sprint (R110-262) will do the
 subprocess-test expansion.
+
+### R110-261a (2026-08-27) — Library-Bug-Fixes revealed by R110-261
+
+**Branch:** `mas-t-tests`
+**HEAD:** R110-261a (pending push)
+**Type:** fix
+**Type-emoji:** 🔧
+**Depends on:** R110-261 (cdaf2a1)
+**Changelog:** `docs/CHANGELOG-2026-08-27-r110-261a.md`
+**Evidence:** `logs/e2e-evidence-gen2/R110-261a-EVIDENCE.md`
+
+#### Summary
+
+R110-261's coverage-sprint revealed 2 real library-bugs and 1
+docstring/test-shape issue. R110-261 declared them "tracked as
+R110-261a" and out-of-scope. R110-261a is the fix-up commit.
+
+#### Bugs fixed
+
+1. **dev_fast_scan.scan_settings** (tools/dev_fast_scan.py):
+   per-condition `ok` counter → per-file pass/fail, cap at 10.
+   - 1 perfect file: 20.0 → 10.0 ✅
+   - 1 half-good file: 10.0 (misleading) → 0.0 ✅
+   - 20 perfect files: uncapped → capped at 10.0 ✅
+   - Findings B1/B2/B3/B4 still emitted per-condition (unchanged)
+
+2. **dev_intention_parser.analyse_intention**
+   (tools/dev_intention_parser.py): `requires_confirmation` now
+   also exposed at top-level as alias for
+   `restrictions["requires_confirmation"]`. Backward-compat;
+   restrictions[...] remains authoritative.
+
+#### Test updates (R110-261a required)
+
+- 2 existing tests in tests/test_tools_framework.py
+  (`test_scan_settings_high_timeout_low_severity` and
+  `test_scan_settings_optimal_scores_full`) were updated to
+  assert the post-fix per-file pass/fail math. They previously
+  documented the bug as a "known quirk"; they now document
+  the fix.
+
+#### Numbers (verified pre-commit)
+
+| Metric | R110-261 baseline | R110-261a result |
+|--------|-------------------|------------------|
+| Test count | 1755 | 1764 (+9 new regression tests in test_r110261a) |
+| All tests green | 1755/1755 | 1764/1764 (incl. updated test_tools_framework) |
+| e2e-test.sh | 12/12 | 12/12 |
+| dev_fast_scan 1 good file score | 20.0 (bug) | 10.0 ✅ |
+| dev_intention_parser top-level requires_confirmation | KeyError | True ✅ |
+
+#### Diff stat (R110-261a)
+
+```
+ tests/test_r110261a_library_bug_fixes.py | 131 ++++++++++++
+ tests/test_tools_framework.py            |  22 ++--
+ tools/dev_fast_scan.py                   |  21 ++-
+ tools/dev_intention_parser.py            |   8 +-
+ 4 files changed, 211 insertions(+), 18 deletions(-)
+```
+
+#### Why R110-261a is a separate commit (not folded into R110-261)
+
+1. **Commit hygiene** — R110-261 = test-only, R110-261a = test+source.
+2. **Bisect-ability** — clean isolation if the fix breaks something.
+3. **Pre-push-gate body-claim pattern (R110-78 / R110-258)** — split
+   "tests reveal bug" from "tests pass after fix".
