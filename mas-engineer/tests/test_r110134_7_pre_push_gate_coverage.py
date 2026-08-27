@@ -1,4 +1,4 @@
-"""
+r"""
 test_r110134_7_pre_push_gate_coverage.py — R110-134
 
 Verifies that the pre-push-gate actually covers the invariants it

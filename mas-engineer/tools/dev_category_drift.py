@@ -12,6 +12,11 @@ Why standalone: pre-push-validator (sub_mas-pre-push-validator.yaml) already
          (e.g. a contributor who committed 5 fix:* without proper subject
          2 weeks ago) is surfaced without needing a push attempt.
 
+R110-259: aligned with Check 1.5's regex (line 194 of sub_mas-pre-push-validator.md):
+   r'^(fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:'
+   Both the validator's Check 1.5 and this detector now match the same 12
+   conventional-commit types, with OR without a parenthesized scope.
+
 Exit codes:
   0 = no drift (or all drift is in exempted commits like merge/revert)
   1 = drift found (one or more commits violate the protocol)
@@ -25,6 +30,7 @@ Usage:
 """
 import argparse
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -54,6 +60,16 @@ ALLOWED_CATEGORIES = (
     "build:",
     "ci:",
     "revert:",
+)
+
+# R110-259: full conventional-commit regex, mirrors Check 1.5 (validator
+# recipe/instructions/sub_mas-pre-push-validator.md line 194) exactly.
+# 12 types, parenthesized scope OPTIONAL (e.g. "fix(scope): desc" or
+# "fix: desc"). The old ALLOWED_CATEGORIES tuple's startswith() check
+# rejected parenthesized scopes — Check 1.5 accepts them. This regex
+# is the single source-of-truth for conventional-commit conformity.
+CONVENTIONAL_COMMIT_RE = re.compile(
+    r"^(fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:"
 )
 
 # R-sprint emoji prefixes (R110-126): validator Check 1.5 explicitly allows
@@ -146,11 +162,15 @@ def classify_drift(commits, cutoff_date=None):
         if any(subj.startswith(p) for p in EXEMPT_PREFIXES) or subj.lower() in NON_PROTOCOL_NOISE:
             exempt.append(c)
             continue
-        # Conform: starts with one of the 5 allowed categories
-        if any(subj.startswith(p) for p in ALLOWED_CATEGORIES):
+        # Conform (R110-259): mirror Check 1.5's conventional-commit regex.
+        # This accepts BOTH 'fix: desc' AND 'fix(scope): desc' — the old
+        # startswith() check rejected parenthesized scopes, creating a
+        # Check 1.5 ↔ Check 16+ spec gap. The regex matches all 12 canonical
+        # conventional-commit types with optional parenthesized scope.
+        if CONVENTIONAL_COMMIT_RE.match(subj):
             conform.append(c)
             continue
-        # Conform (R-sprint emoji): validator Check 1.5 allows 🔧|📝|📚|📊
+        # Legacy conform (R-sprint emoji): validator Check 1.5 allows 🔧|📝|📚|📊
         # R<round>-<num> [follow-up] — desc. Accept the same here.
         if any(subj.startswith(e) for e in ALLOWED_EMOJI_PREFIXES):
             conform.append(c)
