@@ -264,6 +264,50 @@ for yp in sorted(ALL_YAMLS):
 
     fname = os.path.basename(yp)
 
+    # R110-270: scope-restrict recipe-structure checks (MM1-MM3, A5, Q1)
+    # to files that look like recipes. Two-tier check:
+    #   (1) Path-based: anything under `recipe/` is a recipe.
+    #   (2) Content-based: a YAML is recipe-like if it has at least ONE
+    #       of the canonical recipe markers (`instructions:`, `prompt:`,
+    #       `about:`, `parameters:`). This catches:
+    #         - recipe/sub/*.yaml, recipe/instructions/*.md? no, .yaml
+    #         - tools/auto-dashboard-v2-update.yaml (recipe-like: has
+    #           `instructions:`, `title:`, `version:`, `description:`)
+    #         - root_recipe.yaml, test-executor recipes
+    #       and excludes:
+    #         - codecov.yml (no recipe markers)
+    #         - .mase/*.yaml (framework config: `guardian:`, `workflows:`,
+    #           `schedule:` — no recipe markers)
+    #         - .github/*.yml (GitHub Actions: `jobs:`, `on:`, `steps:`)
+    #         - .backups/*.yaml (excluded already by path patterns)
+    #         - testproject/*.yaml (sandbox config: `mas_dependency:`, etc.)
+    _RECIPE_PATH_HINTS = ('/recipe/',)
+    _RECIPE_CONTENT_MARKERS = ('instructions:', 'prompt:', 'about:', 'parameters:')
+
+    def _is_recipe_like(path: str, payload: dict) -> bool:
+        # Path-based: anything under recipe/ is in.
+        if any(h in ('/' + path) for h in _RECIPE_PATH_HINTS):
+            return True
+        # Content-based: at least one recipe marker in raw text.
+        # We re-read the file because we already consumed the YAML
+        # payload via yaml.safe_load, but the raw text has comments
+        # and block-scalar markers that the payload drops. This is
+        # cheap (file already in OS page cache).
+        try:
+            with open(path) as _f:
+                _raw = _f.read()
+        except OSError:
+            return False
+        return any(marker in _raw for marker in _RECIPE_CONTENT_MARKERS)
+
+    if not _is_recipe_like(yp, data):
+        # Non-recipe YAML (CI config, framework config, project config):
+        # skip recipe-structure checks. We still emit Q2 (parse errors)
+        # which fires before this guard via the try/except above. All
+        # other recipe-specific findings are suppressed — they would
+        # be false positives for non-recipes.
+        continue
+
     # --- MM: YAML Structure (9 types) ---
     top_keys = set(data.keys())
     if not top_keys & {'about', 'name', 'version'}:
@@ -688,6 +732,14 @@ for _pt in PY_TOOLS:
     # Only flag files that actually write to a dashboard/JSON output
     # path (contain 'data.json' or 'dashboards' string) — pure
     # logging/serialization tools are out of scope.
+    #
+    # R110-270 refinement: NDJSON writes (one JSON object per line,
+    # written via `f.write(json.dumps(...))`) are intentionally compact
+    # and do not need `indent` — but DO benefit from `ensure_ascii=False`
+    # to keep file diffs stable across encodings. Skip files that are
+    # clearly NDJSON writers (one json.dumps per write call, then
+    # newline-appended) and require BOTH flags only for pretty-printed
+    # multi-line JSON output.
     if ('data.json' in _src or 'dashboards' in _src) and 'json.dump' in _src:
         # Match each json.dump/dumps call individually (non-greedy to
         # stay inside one paren-group, even if call spans multiple lines).
@@ -696,13 +748,27 @@ for _pt in PY_TOOLS:
             r"json\.dump(?:s)?\s*\((?:[^()]|\n)*?\)", _src)
         for _call in _json_dumps:
             # Must contain BOTH indent and ensure_ascii to be mode-safe
+            # for multi-line pretty output. NDJSON-only writers
+            # (no indent expected) are still flagged if ensure_ascii is
+            # missing, but only when the call is for an interactive
+            # stdout/print path (heuristic: look for a 'print' wrapper
+            # within +/- 2 lines of the call).
             _has_indent = 'indent' in _call
             _has_ascii = 'ensure_ascii' in _call
-            if not (_has_indent and _has_ascii):
+            _is_print = bool(re.search(
+                r'print\s*\(\s*' + re.escape(_call[:20]),
+                _src))
+            if _is_print and not (_has_indent and _has_ascii):
                 add_finding('Q4c', 'medium', _pt,
                             f'data_json_drift: json.dump missing indent/ensure_ascii: "{_call[:80].strip()}..."',
                             'Different run modes may produce different on-disk JSON layouts',
                             'Pass indent=2 and ensure_ascii=False to all json.dump calls')
+            elif not _is_print and not _has_ascii:
+                # NDJSON/file-write: only flag missing ensure_ascii
+                add_finding('Q4c', 'low', _pt,
+                            f'data_json_drift: file-write json.dump missing ensure_ascii: "{_call[:80].strip()}..."',
+                            'ensure_ascii=False keeps file diffs stable across encodings',
+                            'Pass ensure_ascii=False to NDJSON/file-write json.dump calls')
 
     # Q4d: hardcoded confidence markers (R110-10 bug #3)
     # Detects numeric confidence values (0.X or 1.0) hardcoded in

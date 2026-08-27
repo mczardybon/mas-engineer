@@ -793,8 +793,10 @@ if [ ! -d "tests" ]; then
     echo "PYTEST_SUMMARY: {\"passed\": 0, \"failed\": 0, \"errors\": 0, \"skipped\": 0, \"exit_code\": 5, \"note\": \"no tests dir\"}"
     echo "  ✅ Check 17 passed: no tests/ dir (PASSED, WARN-only)"
 else
-    # Run pytest with retry (R-208): up to 3 attempts; success = pytest exit 0;
-    # on_failure = cleanup (kill orphaned test consumers / remove temp artifacts) before retry.
+    # Run pytest with retry (R-208): up to 2 attempts (R110-270: was 3
+    # but with 1965+ tests full-suite ~450s, 2 attempts is enough — 3rd
+    # almost never helps and can double wallclock to 1350s/22.5min);
+    # success = pytest exit 0; on_failure = cleanup before retry.
     # Run pytest; use 'set -o pipefail' so $? reflects pytest's exit code, not tail's.
     # --timeout=300 (R110-255): the 4 phoenix-recovery tests in
     # tests/test_dev_phoenix_recovery_publish.py do subprocess.run(timeout=180)
@@ -804,18 +806,42 @@ else
     # defensively guarded (pytest-timeout = 5 min, 4× the worst-case
     # 75s observed per phoenix test). Matches ci-tests.yml flag set
     # (R110-246). --ignore=.state: state is transient run-state, not test code.
+    #
+    # R110-270 OUTER-CAP (was missing!): single suite run is 420-450s
+    # on mas-t-tests @ 1965 tests. Without an outer cap, a hanging
+    # test (e.g. broker waiting for a topic) blocks the validator
+    # indefinitely. `timeout 540` (= 9 min) gives 90s headroom over
+    # the worst-case 7.5min run, fits in the 15min local-budget and
+    # is well under GHA's 30min default. On outer timeout, fail-fast
+    # with the tail of pytest output (preserved in $PYTEST_OUTPUT).
     PYTEST_RC=1
     PYTEST_ATTEMPT=0
-    while [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt 3 ]; do
+    MAX_ATTEMPTS=2   # R110-270: was 3 (caused 22.5min worst case)
+    OUTER_TIMEOUT=540 # R110-270: seconds (9 min). Worst-case 7.5min run + 90s headroom.
+    while [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt "$MAX_ATTEMPTS" ]; do
         PYTEST_ATTEMPT=$((PYTEST_ATTEMPT + 1))
-        PYTEST_OUTPUT=$(python3 -m pytest tests/ -q --tb=line --color=no --timeout=300 --ignore=.state 2>&1 | tail -30)
-        (set -o pipefail; python3 -m pytest tests/ -q --tb=line --color=no --timeout=300 --ignore=.state >/dev/null 2>&1)
-        PYTEST_RC=$?
+        # set -o pipefail ensures $? reflects pytest's exit code, not tail's.
+        # R110-270: SINGLE pytest invocation (was: 2 invocations per attempt
+        # in the old code, which doubled wallclock to 900s+). Now: one run
+        # with output captured to PYTEST_OUTPUT, exit code captured
+        # separately via PIPESTATUS[0].
+        set -o pipefail
+        PYTEST_OUTPUT=$(timeout "$OUTER_TIMEOUT" python3 -m pytest tests/ -q --tb=line --color=no --timeout=300 --ignore=.state 2>&1 | tail -30)
+        PYTEST_RC=${PIPESTATUS[0]}
+        set +o pipefail
+        # If `timeout` killed pytest, exit code is 124. Treat as
+        # "hanging test" — fail fast, do NOT retry (same hang will recur).
+        if [ "$PYTEST_RC" -eq 124 ]; then
+            echo "  ❌ BLOCK: Check 17 — pytest exceeded outer ${OUTER_TIMEOUT}s cap (likely hanging test). NOT retrying."
+            echo "     Run individually: python3 -m pytest tests/test_<suspect>.py -v"
+            echo "PYTEST_SUMMARY: {\"passed\": 0, \"failed\": 0, \"errors\": 0, \"skipped\": 0, \"exit_code\": 124, \"note\": \"outer timeout\"}"
+            exit 1
+        fi
         if [ "$PYTEST_RC" -eq 127 ]; then
             break   # pytest not installed — retrying will not help
         fi
-        if [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt 3 ]; then
-            echo "  ⚠️  RETRY $PYTEST_ATTEMPT/3: pytest exit=$PYTEST_RC — cleaning up before retry (R-208)"
+        if [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+            echo "  ⚠️  RETRY $PYTEST_ATTEMPT/$MAX_ATTEMPTS: pytest exit=$PYTEST_RC — cleaning up before retry (R-208)"
             pkill -f 'dev_mq_consumer' 2>/dev/null || true   # kill orphaned test consumers
             rm -rf /tmp/mas-engineer-test /tmp/mas-engineer 2>/dev/null || true   # remove temp artifacts
         fi
@@ -858,18 +884,29 @@ PYTEST_SUMMARY: {"passed": 1277, "failed": 0, "errors": 0, "skipped": 0, "durati
   only; Check 17 does NOT BLOCK on duration. Variance is real (run-to-run
   ~0.3s); the 8.12s figure is now retired.
 
-**Duration reference (R110-255, 2026-08-22, AFTER R110-239 phoenix tests added):**
+**Duration reference (R110-270, 2026-08-27, AFTER R110-265/266/267/269 +73 tests):**
   The 4 phoenix-recovery tests in tests/test_dev_phoenix_recovery_publish.py
   each take ~73-76s wallclock (subprocess.run(timeout=180) on
   dev_phoenix_recovery_run.py which runs all 5 phoenix levels). Total
-  phoenix cost: 4 × 75s = 300s. The other ~1620 tests run in ~130s.
-  Full test-suite wallclock: 420-450s (7-7.5 min) single-process.
-  Spec is documentation-only; Check 17 does NOT BLOCK on duration.
+  phoenix cost: 4 × 75s = 300s. The other ~1960 tests run in ~140s.
+  Full test-suite wallclock: 440-460s (7.3-7.7 min) single-process.
+  R110-270 OUTER-CAP: 540s (9 min) hard kill via `timeout`. On outer-
+  cap trigger (exit 124), Check 17 BLOCKS without retry. This prevents
+  the indefinite-block bug that would happen if a test hung (no MQ
+  broker cleanup, no orphan kill) — the previous code had no upper
+  bound and could hang forever.
+  MAX_ATTEMPTS=2 (R110-270): was 3, but worst-case 3 × 460s = 1380s
+  (23 min) exceeded local CI budget. 2 × 540s = 1080s (18 min) worst
+  case is acceptable. Empirical: flake rate is <1% so 3rd retry
+  almost never helps.
+  Spec is documentation-only; Check 17 does NOT BLOCK on duration
+  UNLESS the outer cap is hit (which IS a hard BLOCK).
+  Measured R110-269 (2026-08-27): 1965 passed in 7m 26s (446s) local.
   Measured R110-254 (2026-08-22): 1625 passed in 7m 16s (436s) local.
   Measured R110-254 (2026-08-22): GHA matrix job 14m 32s wallclock.
   (The R110-95 9.65s figure is RETIRED as of R110-255 — superseded
-  by the post-phoenix baseline above. Do NOT cite 9.65s for any
-  pre-2026-08-22 commits. Use 7-7.5 min local, 14-15 min GHA.)
+  by the post-phoenix baseline above. Use 7.3-7.7 min local, 14-15
+  min GHA.)
 
 **Output block on BLOCK:**
 ```

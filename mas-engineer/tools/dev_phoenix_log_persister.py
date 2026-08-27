@@ -141,8 +141,10 @@ def process_msg(msg: dict) -> dict:
     }
 
     log_path = LOG_DIR / f"{request_id}.json"
+    # R110-270: ensure_ascii=False (phoenix log_entry may contain
+    # unicode in classification labels, error messages, etc.)
     with open(log_path, "w") as f:
-        json.dump(log_entry, f, indent=2)
+        json.dump(log_entry, f, indent=2, ensure_ascii=False)
 
     # Phase 4 (R110-169): auto-escalate degraded runs. We import
     # the MQ module here (not at top of file) so that this module
@@ -175,8 +177,9 @@ def process_msg(msg: dict) -> dict:
             )
             # Re-write the log with the escalation msg id
             log_entry["escalation_msg_id"] = escalation_msg_id
+            # R110-270: ensure_ascii=False (re-write also needs it)
             with open(log_path, "w") as f:
-                json.dump(log_entry, f, indent=2)
+                json.dump(log_entry, f, indent=2, ensure_ascii=False)
         except Exception as e:
             # Escalation failure must not lose the original log.
             # Surface the error in the return value; defib can
@@ -209,4 +212,5 @@ def process_msg(msg: dict) -> dict:
 if __name__ == "__main__":
     msg = json.loads(sys.stdin.read() or "{}")
     result = process_msg(msg)
-    print(json.dumps(result, indent=2))
+    # R110-270: ensure_ascii=False for unicode-safe stdout output
+    print(json.dumps(result, indent=2, ensure_ascii=False))

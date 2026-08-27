@@ -322,15 +322,20 @@ if __name__ == '__main__':
             'total': total, 'running': running, 'completed': completed,
             'failed': failed, 'avg_duration_ms': avg_dur,
         }
-        print(json.dumps(result))
+        # R110-270: ensure_ascii=False (data may contain non-ASCII task names);
+        # indent=2 not needed for print-to-stdout, kept compact.
+        print(json.dumps(result, ensure_ascii=False))
 
     elif '--mq-stats' in sys.argv:
         # NEW (R110-156): MQ-side aggregate for the `dispatches` topic.
         result = mq_stats()
         if result is None:
-            print(json.dumps({"error": "dev_message_queue unavailable"}))
+            # R110-270: ensure_ascii=False for unicode-safe error message
+            print(json.dumps({"error": "dev_message_queue unavailable"},
+                             ensure_ascii=False))
         else:
-            print(json.dumps(result, indent=2))
+            # R110-270: ensure_ascii=False added
+            print(json.dumps(result, indent=2, ensure_ascii=False))
 
     elif '--clear' in sys.argv:
         clear()
