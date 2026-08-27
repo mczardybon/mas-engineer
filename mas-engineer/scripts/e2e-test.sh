@@ -112,7 +112,7 @@ echo "================================================================"
 # E2E #1: goose is installed
 # -----------------------------------------------------------------
 echo ""
-echo "[1/10] goose installed"
+echo "[1/12] goose installed"
 if command -v goose >/dev/null 2>&1; then
   check_pass "goose installed: $(goose --version)"
 elif [ -n "$E2E_SKIP_ENV_REQUIRED" ]; then
@@ -125,7 +125,7 @@ fi
 # E2E #2: DEEPSEEK_API_KEY set
 # -----------------------------------------------------------------
 echo ""
-echo "[2/10] DEEPSEEK_API_KEY set"
+echo "[2/12] DEEPSEEK_API_KEY set"
 if [ -n "$DEEPSEEK_API_KEY" ]; then
   check_pass "DEEPSEEK_API_KEY set (${DEEPSEEK_API_KEY:0:8}...)"
 elif [ -n "$E2E_SKIP_ENV_REQUIRED" ]; then
@@ -138,7 +138,7 @@ fi
 # E2E #3: YAML files parse (in scope)
 # -----------------------------------------------------------------
 echo ""
-echo "[3/10] YAML parse (scope: $SCOPE_DESC)"
+echo "[3/12] YAML parse (scope: $SCOPE_DESC)"
 YAML_FAIL=0
 YAML_COUNT=0
 if [ "$SCOPE" = "all" ]; then
@@ -191,7 +191,7 @@ fi
 # E2E #4: Secret scan (tracked + history) — always full repo
 # -----------------------------------------------------------------
 echo ""
-echo "[4/10] Secret scan"
+echo "[4/12] Secret scan"
 SECRETS=$(git ls-files 2>/dev/null | xargs grep -lE 'sk-[a-f0-9]{30,}|ghp_[A-Za-z0-9]{30,}' 2>/dev/null || true)
 if [ -n "$SECRETS" ]; then
   check_fail "Secret scan (tracked) — found: $SECRETS"
@@ -218,7 +218,7 @@ fi
 # for links, so the check now only flags real link targets.
 # -----------------------------------------------------------------
 echo ""
-echo "[5/10] Doc links (scope: $SCOPE_DESC)"
+echo "[5/12] Doc links (scope: $SCOPE_DESC)"
 # R110-253 refactor: the original inline python check was a
 # one-shot heredoc that grew too complex to maintain (it had
 # inline code-stripping, regex tweaks, and a hardcoded scope
@@ -238,7 +238,7 @@ fi
 # E2E #6: German words (in scope, false-positive aware)
 # -----------------------------------------------------------------
 echo ""
-echo "[6/10] German words scan (scope: $SCOPE_DESC)"
+echo "[6/12] German words scan (scope: $SCOPE_DESC)"
 GERMAN_WORDS="ich nicht auch noch schon sehr ueber jedoch jedem eines einer einem einen waere funktionieren funktioniert geht machen gemacht erstellen erstellt benoetigt braucht verwendet benutzen benutzt kannst solltest wuerde sollte eigentlich natuerlich endlich normalerweise anschliessend beim uebrigens lediglich einige mehrere allerdings trotzdem deshalb deswegen folglich somit zunaechst zuerst daraufhin hierbei dabei davon dazu dafuer dagegen darueber darunter danach davor dazwischen gleichzeitig inzwischen zwischendurch einher einhergehend mittels anhand mithilfe zuhilfenahme kraft vermoege gemaess entsprechend betreffend hinsichtlich bezueglich"
 EXCLUDE_FILES="../docs/lessons-learned.md"
 python3 <<PY && check_pass "German words — 0 hits" || check_fail "German words — see above"
@@ -286,7 +286,7 @@ PY
 # E2E #7: Agent smoke (all agents in scope, --explain)
 # -----------------------------------------------------------------
 echo ""
-echo "[7/10] Agent smoke (goose run --explain, scope: $SCOPE_DESC)"
+echo "[7/12] Agent smoke (goose run --explain, scope: $SCOPE_DESC)"
 AGENT_FAIL=0
 AGENT_COUNT=0
 if [ "$SCOPE" = "all" ]; then
@@ -319,7 +319,7 @@ fi
 # E2E #8: Install dry-run — looks for install.sh in root OR tools/
 # -----------------------------------------------------------------
 echo ""
-echo "[8/10] Install dry-run"
+echo "[8/12] Install dry-run"
 # Find install script: prefer root, fall back to tools/dev_install.sh
 INSTALL_SCRIPT=""
 if [ -f "install.sh" ]; then
@@ -351,7 +351,7 @@ fi
 # E2E #9: Uninstall dry-run — looks for uninstall.sh or reset equivalent
 # -----------------------------------------------------------------
 echo ""
-echo "[9/10] Uninstall dry-run"
+echo "[9/12] Uninstall dry-run"
 # Find uninstall script: prefer root, fall back to tools/dev_uninstall.sh
 # If neither exists, run the install's cleanup step as the "uninstall" test
 UNINSTALL_SCRIPT=""
@@ -402,7 +402,7 @@ fi
 # E2E #10: SOT consistency (in scope)
 # -----------------------------------------------------------------
 echo ""
-echo "[10/10] SOT consistency"
+echo "[10/12] SOT consistency"
 python3 <<'PY' && check_pass "SOT consistency" || check_fail "SOT consistency — see above"
 import yaml, sys
 sot = yaml.safe_load(open('.mase/workflows.yaml'))
@@ -451,7 +451,7 @@ PY
 # cannot run actionlint or fetch the GHA workflow schema).
 # -----------------------------------------------------------------
 echo ""
-echo "[11/11] CI workflow validation (R110-252)"
+echo "[11/12] CI workflow validation (R110-252)"
 if [ -n "$E2E_SKIP_CI_VALIDATE" ]; then
   check_skip "CI workflow validation — E2E_SKIP_CI_VALIDATE=1"
 elif [ -f "scripts/ci-validate.sh" ]; then
@@ -471,6 +471,43 @@ elif [ -f "scripts/ci-validate.sh" ]; then
   fi
 else
   check_fail "CI workflow validation — scripts/ci-validate.sh not found (this is the R110-252 hook; if you see this, the script was not committed)"
+fi
+
+# -----------------------------------------------------------------
+# E2E #12: R110-262 redteam-2 — adversarial coverage of recently-fixed
+#          spec gaps (R110-259, R110-251, R110-260)
+# -----------------------------------------------------------------
+# R110-262 closeout: after the 3 spec-level gaps (Check 0 commit-title
+# hybrid form, Hard-Stop Copilot regex, coverage-gate wiring) were
+# fixed in separate commits, we add an e2e-level smoke that runs the
+# 3 redteam-1 pytest modules. If any of them regress, the e2e fails
+# before the push goes out.
+# -----------------------------------------------------------------
+echo ""
+echo "[12/12] R110-262 redteam-2 — adversarial coverage of spec gaps"
+if [ -n "$E2E_SKIP_PYTEST" ]; then
+  check_skip "R110-262 redteam-2 — E2E_SKIP_PYTEST=1"
+elif [ -d "tests" ]; then
+  # Scope: only run the 3 R110-262 redteam-1 test files regardless of
+  # SCOPE (these are structural gap tests, not in-scope tests).
+  # The full pytest run is owned by ci-tests.yml; this is the
+  # pre-push smoke.
+  PYTEST_OUT="/tmp/r110262-redteam2-$$.log"
+  if python3 -m pytest \
+      tests/test_r110262_check0_adversarial_titles.py \
+      tests/test_r110262_hardstop_copilot_regex.py \
+      tests/test_r110262_coverage_gate_wiring.py \
+      --no-header -q --tb=line \
+      > "$PYTEST_OUT" 2>&1; then
+    N_PASSED=$(grep -oE '[0-9]+ passed' "$PYTEST_OUT" | tail -1 || echo "0 passed")
+    check_pass "R110-262 redteam-2 — 3 spec-gap tests PASS ($N_PASSED)"
+  else
+    check_fail "R110-262 redteam-2 — see $PYTEST_OUT"
+    tail -20 "$PYTEST_OUT" | sed 's/^/    /'
+  fi
+  rm -f "$PYTEST_OUT"
+else
+  check_skip "R110-262 redteam-2 — no tests/ directory in scope"
 fi
 
 # Cleanup
