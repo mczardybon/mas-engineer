@@ -313,3 +313,73 @@ created in `mas-engineer/logs/e2e-evidence-gen2/` because that was the
 ORIGINAL SOT before R110-143 (2026-08-15) moved the SOT to REPO-ROOT.
 R110-257 is the first commit that does BOTH the bulk cleanup AND
 installs a permanent prevention (3 layers + Check 24 in the gate).
+
+---
+
+## R110-261 (2026-08-27) — Coverage Sprint for 10 simple tools
+
+**Branch:** `mas-t-tests`
+**HEAD:** R110-261 (pending push)
+**Type:** test
+**Type-emoji:** 📊
+**Changelog:** `docs/CHANGELOG-2026-08-27-r110-261.md`
+**Evidence:** `logs/e2e-evidence-gen2/R110-261-EVIDENCE.md`
+
+### Summary
+
+The coverage improvement sprint R110-260's commit body predicted as
+"follow-up: R110-261". Adds 88 direct library-function tests for 10
+importable `tools/dev_*.py` modules across 3 new test files.
+
+### Numbers (all verified pre-commit)
+
+| Metric | R110-260 baseline | R110-261 result |
+|--------|-------------------|-----------------|
+| Test count | 1667 | 1755 (+88) |
+| Test files | (existing) | +3 new |
+| New tests green | n/a | 88/88 |
+| Full suite green | 1667/1667 | 1755/1755 |
+| Full suite wallclock | ~7m 30s | 7m 03s |
+| e2e-test.sh | 12/12 | 12/12 |
+| pre-push-validator | Check 1-16+ pass | Check 1-16+ pass (Check 17 = 1755/1755) |
+| .mase/pre-push-test-coverage tests | 126 | 169 |
+| .mase/pre-push-test-coverage ratio | 1.10 | 1.47 |
+| .mase/pre-push-e2e-baseline baseline_pass | 83 | 133 |
+
+### Tools covered (10/10 simple library-importable tools)
+
+1. dev_evidence_sot (Round 1, +17 tests)
+2. dev_dashboard_data (Round 1)
+3. dev_architecture_checker (Round 2, +32 tests)
+4. dev_audit_deps (Round 2)
+5. dev_auto_project (Round 2)
+6. dev_editor_large (Round 2)
+7. dev_fast_scan (Round 3, +39 tests)
+8. dev_haerte_propagation (Round 3)
+9. dev_intention_parser (Round 3)
+10. dev_category_drift (Round 3)
+
+### Library-bugs found (NOT fixed here, tracked as R110-261a)
+
+- dev_fast_scan: score=20 (not 10) for 2-pass/1-file
+- dev_intention_parser: requires_confirmation only at restrictions[...]
+- dev_category_drift: commit-shape is {hash,date,subject} not {message,files}
+
+### Diff stat (R110-261)
+
+```
+ tests/test_r110261_tools_coverage.py        | 222 ++++++
+ tests/test_r110261_tools_coverage_round2.py | 331 ++++++++
+ tests/test_r110261_tools_coverage_round3.py | 430 +++++++++++
+ .mase/pre-push-e2e-baseline.json            |  17 +++--
+ .mase/pre-push-test-coverage.json           |  12 +++--
+```
+
+### Why not push the 80% gate up to ~30%?
+
+The remaining un-tested tools (dev_workspace, dev_im_finder_scan,
+dev_template_generator, dev_directive_applier, etc.) are CLI-arg
+driven and need real-subcommand subprocess tests with tmp_path +
+mocked I/O, not library tests. R110-261 is scope-limited to the
+library-importable 10. A future sprint (R110-262) will do the
+subprocess-test expansion.
