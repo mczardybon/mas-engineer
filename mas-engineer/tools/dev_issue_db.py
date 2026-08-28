@@ -389,6 +389,16 @@ if __name__ == "__main__":
     mark_w = sub.add_parser("mark-wontfix")
     mark_w.add_argument("hash")
     mark_w.add_argument("--reason", required=True)
+    # R110-272: mark-fixed CLI surface (IssueDB.mark_fixed was internal-only
+    # in R110-177; R110-271 had to use mark-wontfix as a workaround for fixed
+    # issues, polluting the wontfix stats. This restores the proper
+    # fixed/closed state.)
+    mark_f = sub.add_parser("mark-fixed")
+    mark_f.add_argument("hash")
+    mark_f.add_argument("--commit-sha", required=True,
+                        help="Commit SHA that fixed the issue (recorded in past_validation_outcomes)")
+    mark_f.add_argument("--validated-by", default="im-validator",
+                        help="Validator agent name (default: im-validator)")
     args = p.parse_args()
     db = IssueDB(args.db)
     if args.cmd == "stats":
@@ -413,3 +423,15 @@ if __name__ == "__main__":
         changed = db.mark_wontfix(args.hash, args.reason)
         db.save()
         print(f"mark-wontfix changed={changed}")
+    elif args.cmd == "mark-fixed":
+        # R110-272: CLI surface for IssueDB.mark_fixed
+        # commit_sha is required; --validated-by defaults to "im-validator"
+        if not args.commit_sha or not args.commit_sha.strip():
+            print("ERROR: --commit-sha must be non-empty", file=__import__('sys').stderr)
+            __import__('sys').exit(1)
+        changed = db.mark_fixed(
+            args.hash, args.commit_sha,
+            validated_by=args.validated_by,
+        )
+        db.save()
+        print(f"mark-fixed changed={changed}")
