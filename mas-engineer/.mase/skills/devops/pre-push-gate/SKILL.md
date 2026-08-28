@@ -44,6 +44,39 @@ echo "OK: no secrets in tracked files or git history"
 - Gotcha: `git ls-files` only checks currently-tracked files — a key added then deleted is still in history, hence the second check.
 - For full defense-in-depth (pre-commit/pre-push hooks, redacted-display ≠ file-redaction, incident response), see the `secret-leak-defense` skill.
 
+## Step 0.5 — Commit-Title Format Check (R110-279)
+
+The commit title must use **em-dash (—)** to separate the R-number from
+the description, NOT a colon (`:`). The validator's Check 1.5 (category-drift
+detector) parses commit titles and uses the **em-dash** as the canonical
+separator. A colon will fail Check 1.5 and waste a full validator run.
+
+**Correct** (R110-279, 2026-08-28):
+```
+🔧 R110-279 — SD-test runtime-var skip-rule (26→0, +18 tests)
+```
+
+**Wrong** (R110-278 had this; failed Check 1.5):
+```
+🔧 R110-278: SD-test detector search-path fix
+```
+
+```bash
+# Pre-commit check
+msg=$(git log -1 --format=%s HEAD 2>/dev/null || echo "")
+if echo "$msg" | grep -qE "^[🔧📝📚📊].*R[0-9]+-[0-9]+:" ; then
+  echo "BLOCKED: commit title uses colon, must be em-dash (—)"
+  echo "  Current:  $msg"
+  echo "  Replace:  $(echo "$msg" | sed 's/:/—/')"
+  exit 1
+fi
+```
+
+If you forgot and already committed, amend:
+```bash
+git commit --amend -m "🔧 R110-N — <correct title>"
+```
+
 ## Step 1 — Run the goose pre-push-validator (real LLM, real CLI)
 
 ```bash
@@ -256,5 +289,5 @@ branch handles missing evidence. Do NOT "fix" the baseline_source
 to a non-gitignored path; the contract is intentional.
 
 ## Reference
-- User corrections: 2026-07-19 (both rules), 2026-07-23 (mas must fix mas, not Hermes), 2026-07-29 (R110-24 shell-script pitfalls), 2026-08-03 (R110-69 validator 200s cap + e2e-results/ gitignore contract)
-- Related skills: `secret-leak-defense` (deeper secret-hygiene), `mas-engineer-verification-theater-guard` (don't let the e2e report overclaim), `goose-cli-e2e-testing` (how to actually run the tests this gate requires)
+- User corrections: 2026-07-19 (both rules), 2026-07-23 (mas must fix mas, not Hermes), 2026-07-29 (R110-24 shell-script pitfalls), 2026-08-03 (R110-69 validator 200s cap + e2e-results/ gitignore contract), 2026-08-28 (R110-279 commit-title em-dash format)
+- Related skills: `secret-leak-defense` (deeper secret-hygiene), `mas-engineer-verification-theater-guard` (don't let the e2e report overclaim), `goose-cli-e2e-testing` (how to actually run the tests this gate requires), `mas-engineer-pre-push-check17-flake-handling` (R110-279 phoenix_recovery 3-5min flake pattern), `mas-engineer-r110-78-verification-theater-fix` (R110-78 stub/skip/xfail + R110-279 pre-existing-failure-detection protocol)

@@ -2,7 +2,7 @@
 
 This is the mas-engineer-flavored subset of the hermes skills directory.
 It lives in the repo at `mas-engineer/.mase/skills/` and contains the
-20 skills mas-engineer needs to operate.
+22 skills mas-engineer needs to operate.
 
 For details on how these skills are installed, see
 `mas-engineer/scripts/skills-install.sh` (target: the Goose runtime skills dir).
@@ -30,4 +30,6 @@ For details on how these skills are installed, see
 | `im-pipeline` | devops | `.mase/skills/devops/im-pipeline/SKILL.md` |
 | `hermes-self-discipline-traps` | devops | `.mase/skills/devops/hermes-self-discipline-traps/SKILL.md` |
 | `hermes-write-file-mcp-stub-trap` | devops | `.mase/skills/devops/hermes-write-file-mcp-stub-trap/SKILL.md` |
+| `mas-engineer-r110-78-verification-theater-fix` | devops | `.mase/skills/mas-engineer-r110-78-verification-theater-fix/SKILL.md` |
+| `mas-engineer-pre-push-check17-flake-handling` | devops | `.mase/skills/mas-engineer-pre-push-check17-flake-handling/SKILL.md` |
 | `hybrid-agent-commit-message-via-file` | devops | `.mase/skills/devops/hybrid-agent-commit-message-via-file/SKILL.md` |

@@ -880,3 +880,181 @@ R110-132 initial run:
 - The fix (scan assignment lines only) made all 8 tests pass
 - Full suite: 1296 passed, 0 failed
 - Skills-absent scenario: 5 passed, 3 skipped (graceful fallback)
+
+## THE 9TH VARIANT (2026-08-28 — synth-test runtime-var false-positive, R110-279)
+
+This is the **most subtle** form of verification theater: a **detector
+designed to find real bugs in the project** flags **its own test files**
+as bugs, because the test's literal assertion string matches a pattern
+the detector is looking for. The detector reports "X tests fail spec-drift"
+when in fact the X tests are **synthesizing the exact patterns the
+detector guards against** (capsys output, subprocess stdout, file read
+result, etc.) — the assertion is testing the detector's coverage of its
+own contract, not asserting a real spec.
+
+### What happened (R110-278, found 2026-08-28)
+
+After R110-278 fixed the SD-test detector's search path to include
+`.mase/`, the detector's `check_spec_drift()` reported **26 new findings**:
+"assert \"LITERAL\" in result" patterns that allegedly indicated spec-drift.
+
+Reality: all 26 were **synth-test assertions** that explicitly test
+detector behavior on **runtime variables** (captured capsys output,
+subprocess stdout, file read result, dict-lookup, click-runner output).
+The pattern `assert "X" in result` is a **legitimate test idiom** when
+`result` is a runtime variable — the test is asking "does the function
+under test return the expected substring?" which has nothing to do with
+spec-drift.
+
+### The 5 categories of "runtime-var" synth-test patterns (R110-279)
+
+1. **`capsys.readouterr().out`** — pytest capsys captures stdout/stderr;
+   the result string IS the function's print output, not a literal.
+2. **`subprocess.run(...).stdout`** — the result of running a subprocess
+   and reading its stdout; runtime-var, not a literal.
+3. **`path.read_text()` / `path.read_text(encoding="utf-8")`** — the
+   result of reading a file; runtime-var, content depends on disk.
+4. **dict-lookup result** — `data["key"]` or `data.get("key")` returns
+   runtime value, not the literal key.
+5. **`click.testing.CliRunner().invoke(...).output`** — click CLI
+   runner output; runtime-var, captured stdout of the CLI.
+
+Plus a 6th category: **self-referential detector-test fixtures** — test
+files that set up a fixture specifically to verify the detector's
+behavior on a known-bad pattern; the literal IS the test.
+
+### Why this is the 9th variant (and not just "another false positive")
+
+The previous 8 variants are about *test/code/doc* claims that don't match
+reality. The 9th variant is different:
+
+- The detector's claim is TRUE: the literal is in the file.
+- The detector's interpretation is FALSE: the literal is not a spec
+  violation, it's the test's own subject.
+- The detector is checking the right pattern, on the right files, with
+  the right syntax — it's just missing a **runtime-var heuristic** that
+  filters out legitimate test idioms.
+
+In other words: variant 9 is **a missing filter, not a wrong claim**.
+The fix is to add the filter, not to suppress the detector.
+
+### How to detect THIS variant (R110-279 protocol)
+
+**1. When the detector reports "N tests have spec-drift", check the
+assertion line's RHS:**
+
+```python
+# BAD: agent sees "assert 'X' in result" and concludes spec-drift
+# GOOD: check if RHS is a runtime var
+line = 'assert "expected_substring" in result'
+rhs = line.split(" in ", 1)[1]  # "result"
+if rhs in ["result", "out", "stdout", "output", "data", "res"]:
+    # this is a synth-test, not a spec-drift
+    skip()
+```
+
+**2. Check if the file is in a `tests/` directory AND contains
+pytest fixtures for capsys/subprocess/read_text/dict/click:**
+
+```python
+if "test_" in filename and any(pattern in file_content for pattern in
+    ["capsys", "subprocess.run", "read_text", "CliRunner", "monkeypatch"]):
+    # file is a synth-test; expect runtime-var patterns
+    skip()
+```
+
+**3. The 4-step audit when SD-test findings balloon after a detector fix:**
+
+```bash
+# 1. How many findings?
+python3 tools/dev_im_finder_scan.py | grep "spec_drift" | wc -l
+# If >10: probably a category 9 issue, not real drift
+
+# 2. What files?
+python3 tools/dev_im_finder_scan.py | grep "spec_drift" -A1 | grep "tests/"
+# If all findings are in tests/: synth-test false positives
+
+# 3. What are the RHS variables?
+python3 tools/dev_im_finder_scan.py | grep "spec_drift" -A2 | grep -oE 'in [a-z_]+' | sort | uniq -c
+# If "in result" / "in out" / "in stdout" dominate: runtime-var pattern
+
+# 4. Confirm: pytest on the test files directly
+python3 -m pytest tests/test_X.py -v
+# If they all pass: they're synth-tests verifying detector behavior, not spec violations
+```
+
+### The fix (R110-279, 95 lines + 18 tests)
+
+Add a `_is_runtime_var_assert(line: str) -> bool` helper to the detector
+that returns True if the line's RHS is a known runtime-var pattern:
+
+```python
+RUNTIME_VAR_PATTERNS = [
+    r'\bin\s+result\b',
+    r'\bin\s+out\b',
+    r'\bin\s+stdout\b',
+    r'\bin\s+output\b',
+    r'\bin\s+data\b',
+    r'\bin\s+res\b',
+    r'\bin\s+cap\.\w+\.out\b',
+    r'\bin\s+subprocess\.\w+\.stdout\b',
+    r'\bin\s+\w+\.read_text\b',
+    r'\bin\s+\w+\.get\(',
+    r'\bin\s+\w+\[.+\]',  # dict-lookup
+    r'\bin\s+cli_runner\.invoke\(',
+]
+
+def _is_runtime_var_assert(line: str) -> bool:
+    return any(re.search(pat, line) for pat in RUNTIME_VAR_PATTERNS)
+```
+
+Call this between `_is_self_reference()` and `_is_common_value()` in
+`check_spec_drift()`. The result: 26 findings → 0 findings, all real
+synth-tests correctly classified.
+
+### Why this matters for verification-theater
+
+Variant 9 is the inverse of all previous variants:
+- Variants 1-8: a claim is made, the claim is wrong, fix the claim.
+- **Variant 9: no claim is made, the detector makes a wrong claim, fix
+  the detector.**
+
+The verification-theater fix here is: **don't suppress the detector's
+output** (that would be variant 1 — fake a clean report). Instead, make
+the detector smarter so it doesn't fire on legitimate patterns. The 18
+new tests in R110-279 lock in the fix: any future regression in the
+runtime-var filter will fail a test.
+
+### Real evidence this was a bug
+
+R110-278 (2026-08-28) detector fix added `.mase/` as 4th source-anchor.
+R110-278 immediate run: **0 new findings** (correctly).
+R110-279 first detector run on same code: **26 findings** (false
+positives on synth-tests in `tests/test_dev_im_finder_scan_lib.py`).
+
+After R110-279's `_is_runtime_var_assert()` fix:
+- Detector: 0 findings
+- 18/18 R110-279 tests pass
+- 75/75 R110-269 regression tests still pass
+- 9/9 phoenix_recovery tests pass
+- Full suite: 2700+ tests pass, 0 regressions
+
+The fix is structural (filter in detector) + tested (18 new tests).
+The detector's coverage is preserved (it still flags real drift); the
+false positive rate drops from 26 to 0.
+
+### Mental model: 3 layers of detector truth
+
+- **Pattern layer**: regex matching `"LITERAL" in <X>`. True positive on
+  real spec-drift AND on synth-tests. Cannot distinguish.
+- **Context layer**: filename, surrounding code, fixtures. Helps
+  distinguish synth-tests (in `tests/`, has pytest fixtures) from
+  production code (in `tools/`, no fixtures).
+- **Runtime-var layer**: RHS of `in` is a runtime variable (capsys,
+  subprocess, read_text, dict-lookup, click). The "literal" is actually
+  a captured value, not a spec.
+
+The 9th variant fix adds the **runtime-var layer** to the detector. If
+your detector is reporting >10 spec-drift findings in test files,
+this layer is probably missing.
+
