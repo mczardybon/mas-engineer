@@ -108,7 +108,11 @@ def test_detector_finds_drift_for_synth_test(tmp_path, monkeypatch):
     import subprocess
     # Use the existing test directory and write a new test
     test_path = os.path.join(REPO_ROOT, "tests", "test_zz_r110279_synth.py")
-    synth_line = '    assert "ZOMBIEXYZ_FORTY_TWO_LITERAL_NOT_IN_ANY_SOURCE_R110279" in recipe'
+    # Build the literal via string concatenation so the detector's
+    # string-extractor doesn't see it as a literal IN THIS file
+    # (the synth file written below is what the detector should flag)
+    L1 = "ZOMBIE" + "XYZ_FORTY_TWO_LITERAL_NOT_IN_ANY_SOURCE_R110279"
+    synth_line = '    assert "' + L1 + '" in recipe'
     with open(test_path, "w") as f:
         f.write(f"def test_r110279_synth():\n{synth_line}\n")
     try:

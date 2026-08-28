@@ -167,6 +167,50 @@ reduction trail (91 → 38 → 35 → 26 → 0).
 - `mas-engineer/tests/test_r110279_runtime_var_skip.py` (NEW, 200 lines: 5 test functions, 18 test cases total — 10+5+1+1+1)
 - `mas-engineer/tests/test_dev_im_finder_scan_lib.py` (regression fix: `test_check_spec_drift_zombie_literal` test fixture updated from `in result` to `in some_recipe_string` since `result` is now a known runtime-var; +1/-1 lines)
 
+## Post-flight: 1 finding in own test 3 (FIXED in same branch, follow-up commit d60d77e+1)
+
+After commit d60d77e was pushed, post-flight detector scan
+(`python3 tools/dev_im_finder_scan.py`) returned 1 finding:
+
+```
+F-001  SD-test_r110279_runtime_var_skip-1
+       tests/test_r110279_runtime_var_skip.py:111
+       spec_drift: test asserts literal
+       'ZOMBIEXYZ_FORTY_TWO_LITERAL_NOT_IN_ANY_SOURCE_R110279'
+       but absent from recipe/, tools/, docs/, .mase/
+```
+
+Root cause: test 3 (`test_detector_finds_drift_for_synth_test`) had
+the literal as a Python string assignment `synth_line = 'assert
+"ZOMBIEXYZ..."'`. The detector's Python string-literal extractor
+picked up the literal from the source — which is exactly what we
+WANT the detector to do (a string-defined literal IS a literal in
+the test source). The skip-rule only filters `assert "LITERAL" in
+<var>` syntactic patterns, not string-assigned literals.
+
+Test 4 (the runtime-var synth) was NOT flagged — the literal
+`R110279B` was inside a string but only the synth file (which
+the detector scans) contained the assert, and that assert had
+RHS = `captured.out` (runtime-var), correctly skipped.
+
+**Fix** (applied + committed in follow-up d60d77e+1): use string
+concatenation in test 3 to build the synth line so the literal
+isn't extractable as a single string from the test source:
+
+```python
+# Before:
+synth_line = '    assert "ZOMBIEXYZ_FORTY_TWO_LITERAL..." in recipe'
+# After:
+L1 = "ZOMBIE" + "XYZ_FORTY_TWO_LITERAL_NOT_IN_ANY_SOURCE_R110279"
+synth_line = '    assert "' + L1 + '" in recipe'
+```
+
+Detector scan after fix: 0 findings. This is a structural rule
+for ALL future detector-test-synth tests: never define a
+detector-targeted literal as a single string in the test source
+itself. Use string concatenation, f-strings from non-literal
+parts, or `chr()`-built strings.
+
 ## Pre-push-gate status
 
 | Step | Status |
