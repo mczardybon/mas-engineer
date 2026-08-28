@@ -367,6 +367,14 @@ class IssueDB:
             "by_status": {"open": 0, "fixed": 0, "wontfix": 0,
                           "false_positive": 0},
             "by_type": {},
+            # R110-273: status-filtered type counts.
+            # `by_type` (legacy) counts ALL issues by type (mixed status).
+            # Use `by_type_open` for the dashboard "currently broken" view.
+            # `by_type_<status>` is per-status (open/fixed/wontfix/false_positive).
+            "by_type_open": {},
+            "by_type_fixed": {},
+            "by_type_wontfix": {},
+            "by_type_false_positive": {},
         }
         for i in self._data["issues"].values():
             s = i["status"]
@@ -374,6 +382,15 @@ class IssueDB:
                 summary["by_status"][s] += 1
             t = i["type"]
             summary["by_type"][t] = summary["by_type"].get(t, 0) + 1
+            # R110-273: also write to status-filtered dict (if status matches)
+            if s == "open":
+                summary["by_type_open"][t] = summary["by_type_open"].get(t, 0) + 1
+            elif s == "fixed":
+                summary["by_type_fixed"][t] = summary["by_type_fixed"].get(t, 0) + 1
+            elif s == "wontfix":
+                summary["by_type_wontfix"][t] = summary["by_type_wontfix"].get(t, 0) + 1
+            elif s == "false_positive":
+                summary["by_type_false_positive"][t] = summary["by_type_false_positive"].get(t, 0) + 1
         return summary
 
 
