@@ -821,3 +821,98 @@ def test_sd_test_still_flags_real_drift(mod):
         assert not pat.search(GERMAN_DRIFT), (
             f"German drift {GERMAN_DRIFT!r} should NOT be skipped, "
             f"but pattern {pat.pattern!r} matches it")
+
+
+# 17. R110-277: Q4c detector recursion guard — skip when matched
+# `json.dumps(...)` substring is just a fragment of the detector's own
+# issue-message literals (e.g. "print(json.dumps(...))" inside the
+# fix-text on line 800/805 of dev_im_finder_scan.py).
+
+def test_q4c_recursion_guard_skips_issue_message_fragments():
+    """R110-277: the Q4c detector must skip `json.dumps(...)` substrings
+    that are inside its own issue-message literals (recursion guard).
+
+    Real-world impact: before the fix, the detector itself triggered 3
+    Q4c findings because the issue-text on lines 800/805 contains
+    "print(json.dumps(...))" and "json.dump(...)" — the regex matched
+    the literal text inside the f-string.
+    """
+    import re
+    src = open('tools/dev_im_finder_scan.py').read()
+    # The recursion guard is the line: _arg check before the
+    # _is_print / _has_ascii / add_finding branch.
+    assert '_arg = _call.split(\'(\', 1)[1].rstrip(\')\').strip()' in src, (
+        "R110-277 recursion guard not found in dev_im_finder_scan.py")
+    assert '_arg in (\'...\',)' in src, (
+        "R110-277: `_arg in ('...',)` skip-marker not found")
+
+
+def test_q4c_recursion_guard_does_not_skip_real_calls():
+    """R110-277 NEGATIVE test: real json.dump calls with valid arguments
+    must still be flagged.
+
+    A `json.dumps(_payload)` call with a real identifier as the arg
+    must NOT be skipped by the recursion guard.
+    """
+    import re
+    _json_dumps = re.findall(
+        r"json\.dump(?:s)?\s*\((?:[^()]|\n)*?\)",
+        "json.dumps(_payload)")
+    assert len(_json_dumps) == 1
+    _call = _json_dumps[0]
+    _arg = _call.split('(', 1)[1].rstrip(')').strip()
+    # R110-277 recursion-guard logic
+    _skip = (not _arg or _arg in ('...',) or set(_arg) <= {' ', '.'})
+    assert not _skip, (
+        f"Real call {repr(_call)} with arg {repr(_arg)} was "
+        f"incorrectly skipped by the recursion guard")
+
+
+def test_q4c_recursion_guard_scanner_output_reduced():
+    """R110-277: the scanner output for dev_im_finder_scan.py itself
+    must contain 0 Q4c findings (was 3 before the recursion-guard fix).
+
+    This is an end-to-end integration test that proves the recursion
+    guard actually works in the full scanner run, not just in isolation.
+    """
+    import subprocess, json, re
+    result = subprocess.run(
+        ['python3', 'tools/dev_im_finder_scan.py'],
+        capture_output=True, text=True,
+        cwd='.', check=False,
+    )
+    assert result.returncode == 0, f"scanner failed: {result.stderr[:300]}"
+    content = result.stdout
+    m = re.search(r'---JSON_START---\n', content)
+    assert m, "no JSON_START marker in scanner output"
+    start = content.find('{', m.end())
+    depth, in_str, escape, end = 0, False, False, start
+    for i in range(start, len(content)):
+        c = content[i]
+        if escape:
+            escape = False
+            continue
+        if in_str:
+            if c == '\\':
+                escape = True
+            elif c == '"':
+                in_str = False
+            continue
+        if c == '"':
+            in_str = True
+            continue
+        if c in '{[':
+            depth += 1
+        elif c in '}]':
+            depth -= 1
+            if depth == 0 and i > start:
+                end = i + 1
+                break
+    data = json.loads(content[start:end])
+    q4c_self = [f for f in data['findings']
+                if f['type'] == 'Q4c'
+                and 'dev_im_finder_scan.py' in f.get('file', '')]
+    assert len(q4c_self) == 0, (
+        f"R110-277: expected 0 Q4c findings for dev_im_finder_scan.py "
+        f"after the recursion-guard fix, got {len(q4c_self)}: "
+        f"{[f['issue'][:80] for f in q4c_self]}")

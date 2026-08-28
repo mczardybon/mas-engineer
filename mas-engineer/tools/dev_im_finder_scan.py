@@ -777,6 +777,17 @@ for _pt in PY_TOOLS:
         _json_dumps = re.findall(
             r"json\.dump(?:s)?\s*\((?:[^()]|\n)*?\)", _src)
         for _call in _json_dumps:
+            # R110-277: recursion guard — skip when the matched
+            # `json.dumps(...)` substring is just a fragment of the
+            # detector's own issue-message literals (lines 800, 805 etc.
+            # contain "print(json.dumps(...))" inside the fix-text).
+            # Heuristic: a real json.dump call has at least one
+            # identifier / dict-literal / variable name between the
+            # parens; an issue-message fragment has only "..." or
+            # whitespace.
+            _arg = _call.split('(', 1)[1].rstrip(')').strip()
+            if not _arg or _arg in ('...',) or set(_arg) <= {' ', '.'}:
+                continue
             # Must contain BOTH indent and ensure_ascii to be mode-safe
             # for multi-line pretty output. NDJSON-only writers
             # (no indent expected) are still flagged if ensure_ascii is

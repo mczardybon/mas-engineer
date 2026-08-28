@@ -561,3 +561,71 @@ Tests 16.1–16.8 in section 16. Includes **negative test** (`test_sd_test_still
 - The 35 remaining SD-test findings are scanner-output test
   description drift, not code defects. Further reduction would
   require test-file structure awareness (out of scope).
+
+## R110-277 — Q4c detector recursion guard (3→0 self-findings)
+
+**Date:** 2026-08-28 06:00 UTC
+**Branch:** mas-t-tests
+**Evidence file:** logs/e2e-evidence-gen2/R110-277-EVIDENCE.md
+
+### Subject
+
+R110-276 fixed the print(json.dumps(...)) on line 1462 of
+`tools/dev_im_finder_scan.py`. But the detector's own issue-message
+strings on lines 800 + 805 contain literal `print(json.dumps(...))`
+and `json.dump(...)` substrings — the Q4c detector's regex
+`r"json\.dump(?:s)?\s*\((?:[^()]|\n)*?\)"` matched those literals
+recursively, emitting 3 self-findings. **R110-277 adds a recursion
+guard** to filter out these issue-message fragments.
+
+### Source-code change (`tools/dev_im_finder_scan.py`, +11/-0)
+
+```python
+for _call in _json_dumps:
+    # R110-277: recursion guard — skip when the matched
+    # `json.dumps(...)` substring is just a fragment of the
+    # detector's own issue-message literals (lines 800, 805 etc.
+    # contain "print(json.dumps(...))" inside the fix-text).
+    # Heuristic: a real json.dump call has at least one
+    # identifier / dict-literal / variable name between the
+    # parens; an issue-message fragment has only "..." or
+    # whitespace.
+    _arg = _call.split('(', 1)[1].rstrip(')').strip()
+    if not _arg or _arg in ('...',) or set(_arg) <= {' ', '.'}:
+        continue
+    ...
+```
+
+### 3 unit tests added (`tests/test_dev_im_finder_scan_lib.py`, +95/-0, section 17)
+
+1. `test_q4c_recursion_guard_skips_issue_message_fragments` —
+   source-inspection test: the recursion guard IS in the file
+2. `test_q4c_recursion_guard_does_not_skip_real_calls` — **NEGATIVE
+   test**: `json.dumps(_payload)` with a real identifier is NOT skipped
+3. `test_q4c_recursion_guard_scanner_output_reduced` — **end-to-end
+   integration test**: actual `python3 tools/dev_im_finder_scan.py`
+   output must have 0 Q4c findings for `dev_im_finder_scan.py`
+
+### E2E result
+
+| Check | Result |
+|-------|--------|
+| `python3 tools/dev_im_finder_scan.py` | 35 findings (was 38, Q4c 3→0) |
+| `pytest tests/test_dev_im_finder_scan_lib.py` | 71 passed in 30.07s (was 68, +3) |
+| Q4c findings in self-file (before R110-277) | 3 |
+| Q4c findings in self-file (after R110-277) | 0 |
+
+### Why this commit exists
+
+R110-276 was the major threshold-tuning commit (-58% findings). The
+remaining 38 findings included 3 Q4c findings for the detector itself
+— a recursion-bug. R110-277 fixes the recursion-bug without changing
+the spec, by adding a guard that recognizes "issue-message fragments"
+(no real identifier between the parens) vs. "real json.dump calls"
+(real identifier, dict-literal, or variable name).
+
+This is **NOT** threshold tuning (R110-276 pattern) — it's a true
+detector fix for a self-recursion bug. The 4-bucket categorization in
+the `detector-threshold-tuning` skill labels this as "real defect" +
+"dogfooding self-fix" combined.
+
