@@ -450,3 +450,53 @@ R110-261a" and out-of-scope. R110-261a is the fix-up commit.
 2. **Bisect-ability** — clean isolation if the fix breaks something.
 3. **Pre-push-gate body-claim pattern (R110-78 / R110-258)** — split
    "tests reveal bug" from "tests pass after fix".
+
+---
+
+## R110-275 — fix NN1 skip-block ordering: move _is_sub_or_wf above 60-line guard
+
+**Date:** 2026-08-28 03:49 UTC
+**Commit:** 403c6d32105ed727f73554c500978832042b12cb (pushed to mas-t-tests)
+**Evidence file:** logs/e2e-evidence-gen2/R110-275-EVIDENCE.md
+
+### Subject
+
+R110-274 introduced two NN1 scope-restriction guards in
+`tools/dev_im_finder_scan.py` but placed the 60-line micro-agent
+guard (R98) BEFORE the new `_is_sub_or_wf` guard. Inside the 60-line
+guard, the code referenced `_is_sub_or_wf`, but the variable was
+defined AFTER it — a latent NameError for any sub-recipe near the
+60-line threshold.
+
+R110-275 reorders: `_is_sub_or_wf` is now defined BEFORE the 60-line
+guard so both guards can reference it safely.
+
+### File stat
+
+```
+mas-engineer/tools/dev_im_finder_scan.py | 27 ++++++++++++++-------------
+ 1 file changed, 14 insertions(+), 13 deletions(-)
+```
+
+Pure reorder, net 0 lines added. Pre-fix line count: 1454,
+post-fix line count: 1454.
+
+### E2E result
+
+| Check | Result |
+|-------|--------|
+| `pytest tests/test_dev_im_finder_scan_lib.py + dedup + evidence_sot` | 80/80 PASS in 17.46s |
+| `dev_im_finder_scan.py` full scan | 89 findings (vs 169 raw, vs 19 NN1 false-positives in R110-273) |
+| `dev_evidence_sot.py --strict --git` | ✅ PASS, 0 SOT violations |
+| `test_clean_state_exits_zero` (was failing in prior validator) | PASS |
+| `git -c credential.helper=... push origin mas-t-tests` | OK 0204228..403c6d3 |
+| post-flight sub_recipe_ref audit | OK 115 sub-agents, 77 refs, 0 broken, 100% coverage |
+
+### Memory / skill TODOs
+
+- The R110-174 lesson on body-claim verification is now demonstrated
+  in this commit: line counts re-checked from `wc -l`, not guessed.
+- The 6 remaining real findings (1 NN1 + 3 NN3 + 2 Q4c) are out of
+  scope for R110-275 and will be addressed in a future round.
+- The 83 `SD-test_*_description` findings are scanner-output test
+  description drift, not code defects.
