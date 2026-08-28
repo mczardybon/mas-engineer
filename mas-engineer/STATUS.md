@@ -751,3 +751,47 @@ patched both in source and evidence).
 - Reflog originals: `15d04c9` HEAD@{9}, `eb6c9e1` HEAD@{7}
 - Backup tags: `pre-94cedf6-backup`, `pre-15d04c9-backup`
 
+
+---
+
+## R110-283 — Tag-audit + skill-updates (R110-281 lessons) (2026-08-28)
+
+**Branch:** `mas-t-tests` (only)
+**Origin-HEAD before:** `7802caa` (R110-282 EVIDENCE)
+**Origin-HEAD after:** `tbd` (this commit)
+
+### User-decision (option a, "so lassen")
+
+Recovery-tags `pre-15d04c9-backup` + `pre-94cedf6-backup` bleiben
+als audit-trail im repo. Sie dokumentieren den R110-281 force-push
+vorfall und ermöglichen forensische analyse falls später nötig.
+
+### Was geupdated wurde (skills + memory, NICHT im repo)
+
+1. **skills/devops/pre-push-gate/SKILL.md** (+48 lines, neue
+   "Pitfall — R110-281 force-push-versehen" section): symptom,
+   was-schief-ging (4 punkte), prevention, lesson (5 punkte),
+   recovery-tags. Reference-list erweitert.
+
+2. **skills/mas-engineer-commit-protocol/SKILL.md** (war bereits
+   in R110-281 session updated, +5 hard-rules am anfang).
+
+3. **memory: FORCE-PUSH-VERBOT entry** direkt unter LANGUAGE-RULE
+   hinzugefügt (sichtbar bei JEDER zukünftigen session-injection,
+   vor allen anderen entries).
+
+4. **Recovery-tags: bleiben.** Dokumentation in R110-281 CHANGELOG
+   + R110-283 STATUS. Falls user sie später löschen will:
+   `git tag -d pre-15d04c9-backup pre-94cedf6-backup`.
+
+### Reference
+
+- R-number: R110-283
+- Branch: `mas-t-tests`
+- Type: 📝 doc-only (STATUS update)
+- Files: `mas-engineer/STATUS.md` (+47 lines, dieser abschnitt)
+- Skills updated (in `~/.hermes/skills/`, nicht im repo):
+  - pre-push-gate/SKILL.md (+48 lines R110-281 pitfall)
+  - mas-engineer-commit-protocol/SKILL.md (+5 hard-rules R110-281)
+- Memory updated: FORCE-PUSH-VERBOT entry unter LANGUAGE-RULE
+- Recovery-tags: bleiben (user-decision option a)
