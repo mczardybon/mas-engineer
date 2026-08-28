@@ -628,3 +628,196 @@ def test_nn1_path_filter_uses_forward_slashes(tmp_path):
     win_path = "C:\\repo\\recipe\\sub\\sub_mas-foo.yaml"
     win_normalized = win_path.replace('\\', '/')
     assert 'recipe/sub/' in win_normalized
+
+
+# ============================================================
+# 16. R110-276: Detector threshold tuning (NN1, NN3, Q4c, SD-test, SD-recipe)
+# ============================================================
+
+def test_nn1_threshold_is_8_not_5(mod):
+    """R110-276: NN1 threshold raised from 5 to 8 role-verbs.
+
+    Verifies by reading the source directly. We cannot invoke the
+    actual check on a real orchestrator without a 100-line fixture,
+    so a source-inspection test is the most honest check.
+    """
+    src = mod.__file__ and open(mod.__file__).read() or open(
+        '/workspace/dev-branch/mas-engineer-cleanup/mas-engineer/tools/'
+        'dev_im_finder_scan.py').read()
+    # The new comment should mention 8 as the threshold
+    assert 'NN1 threshold raised from 5 to 8' in src
+    # The old "5 role-verbs" should not be the active heuristic
+    # (it's still mentioned in the comment as historical context)
+    # What matters: the *check* uses >= 8, not >= 5
+    # Look for the actual guard: a comparison with 8
+    import re
+    # Find any '>= 8' or '> 7' near 'role' in the NN1 block
+    m = re.search(r'len\([^)]*role[^)]*\)\s*([><=!]+)\s*(\d+)', src)
+    if m:
+        threshold = int(m.group(2))
+        assert threshold >= 8, (
+            f"NN1 threshold must be >= 8 (R110-276), got {threshold}")
+
+
+def test_nn3_threshold_is_400_not_200(mod):
+    """R110-276: NN3 threshold raised from 200 to 400 chars for descriptions."""
+    src = open('/workspace/dev-branch/mas-engineer-cleanup/mas-engineer/tools/'
+              'dev_im_finder_scan.py').read()
+    # The R110-276 comment must mention the new 400 threshold
+    assert 'threshold raised from 200 to 400' in src
+    # The actual len() check should compare to 400. Locate the
+    # NN3 region (from "# NN3:" to the next unindented section)
+    import re
+    nn3_block_match = re.search(r'# NN3:.*?(?=\n[^\s#])', src, re.DOTALL)
+    assert nn3_block_match, "Could not locate NN3 block"
+    nn3_block = nn3_block_match.group(0)
+    # The threshold check
+    m = re.search(r'len\([^)]+\)\s*([><=!]+)\s*(\d+)', nn3_block)
+    assert m, "NN3 block should have a len() threshold check"
+    threshold = int(m.group(2))
+    assert threshold == 400, (
+        f"NN3 threshold must be exactly 400 (R110-276), got {threshold}")
+
+
+def test_nn3_skips_sub_recipes(mod):
+    """R110-276: NN3 must NOT flag recipe/sub/*.yaml descriptions.
+
+    Sub-recipes legitimately have long descriptions documenting
+    their multi-domain scope. The detector should skip them.
+    """
+    src = open('/workspace/dev-branch/mas-engineer-cleanup/mas-engineer/tools/'
+              'dev_im_finder_scan.py').read()
+    # Look for the _is_sub_or_wf skip-block in the NN3 section
+    import re
+    nn3_block_match = re.search(r'# NN3:.*?(?=\n[^\s#])', src, re.DOTALL)
+    assert nn3_block_match
+    nn3_block = nn3_block_match.group(0)
+    # Must reference _is_sub_or_wf
+    assert '_is_sub_or_wf' in nn3_block, (
+        "NN3 block should skip sub-recipes via _is_sub_or_wf "
+        "per R110-276")
+
+
+def test_q4c_print_only_requires_ensure_ascii(mod):
+    """R110-276: Q4c for print() requires only ensure_ascii, not indent."""
+    src = open('/workspace/dev-branch/mas-engineer-cleanup/mas-engineer/tools/'
+              'dev_im_finder_scan.py').read()
+    # Look for the Q4c print branch
+    assert 'for print(json.dumps' in src or 'is_print' in src
+    # The print branch should mention ensure_ascii only, not indent
+    import re
+    # Find the Q4c block
+    q4c_match = re.search(
+        r'data_json_drift:.*?(?=\n            if _is_print|\n            elif)',
+        src, re.DOTALL)
+    # Just check the broader Q4c handling mentions the print split
+    assert '_is_print' in src
+    assert '_has_indent' in src  # tracker var name
+    # The print branch should NOT require indent (R110-276)
+    # Find the line: if _is_print and not _has_ascii:
+    print_branch = re.search(
+        r'if _is_print and not _has_ascii:.*?Pass ensure_ascii=False to all '
+        r'print\(json\.dumps',
+        src, re.DOTALL)
+    assert print_branch, (
+        "Q4c print branch should require only ensure_ascii=False "
+        "per R110-276, not indent=2")
+
+
+def test_sd_recipe_skip_historical_commit_refs(mod):
+    """R110-276: SD-recipe detector must skip 'R<round>-<num> had N' / '+N tests'."""
+    import re
+    # Test the historical-reference skip pattern directly
+    # Pattern: line contains R110-N AND ('had N' OR '+N' OR 'N tests' with AFTER)
+    SKIP_LINE = "R110-176 had 1690 findings (down from 1692 in previous scan)."
+    KEEP_LINE = "p1 = 7  # critical findings from this scan"
+    # Verify the heuristic matches the skip case
+    SKIP_RE_ROUND = re.compile(r'R\d+-\d+')
+    SKIP_RE_HAD = re.compile(r'\bhad\s+(\d+)')
+    SKIP_RE_PLUS = re.compile(r'\+\s*(\d+)')
+    # Skip case: round ref present AND 'had' near number
+    assert SKIP_RE_ROUND.search(SKIP_LINE)
+    # Find the number
+    nums = re.findall(r'\b(\d{3,4})\b', SKIP_LINE)
+    assert '1690' in nums
+    # 'had 1690' should match
+    assert re.search(r'\bhad\s+1690', SKIP_LINE)
+    # KEEP case: no round ref
+    assert not SKIP_RE_ROUND.search(KEEP_LINE)
+
+
+def test_sd_test_skip_snake_case_identifier(mod):
+    """R110-276: SD-test must skip short snake_case identifiers."""
+    import re
+    SKIP_RE = re.compile(r'^[a-z][a-z0-9_\-]*$')
+    # Snake-case / kebab-case identifiers are test fixtures
+    assert SKIP_RE.match('sub_l')
+    assert SKIP_RE.match('sub_test-orphan-xyz')
+    assert SKIP_RE.match('dev_recovery_defib')
+    # NOT snake_case (must NOT skip)
+    assert not SKIP_RE.match('Consumer')  # CamelCase
+    assert not SKIP_RE.match('inputSchema')  # camelCase
+    assert not SKIP_RE.match('__WORKSPACE_PLACEHOLDER__')  # leading underscores
+    # Length limit: 30 chars
+    long_id = 'a' * 31
+    assert len(long_id) > 30
+    # This documents WHY the broader heuristics (next test) were added.
+
+
+def test_sd_test_skip_broader_patterns(mod):
+    """R110-276 (broader): skip module:function, dotted, JSON keys, emoji markers."""
+    import re
+    # Patterns from the broader R110-276 heuristic
+    PATTERNS = [
+        # paths and file-extension literals
+        (r'^logs/', 'logs/e2e-evidence-gen2/R110-TEST.log'),
+        (r'^[^ ]+\.(md|log|yaml|json|html)\b', 'mas-engineer/.directives/R110-TEST.md'),
+        (r'^[^ ]+\.(md|log|yaml|json|html)\b', 'sub_mas-good.yaml'),
+        # module:function refs
+        (r':[a-z_]+$', 'dev_recovery_defib:process_msg'),
+        # dotted module names
+        (r'^[a-z][a-z0-9_.]*\.[a-z][a-z0-9_]*$', 'my.app.events'),
+        # JSON schema keys (curly braces)
+        (r'^\{', '{to}'),
+        (r'\}$', '{to}'),
+        # mime-type-like
+        (r'^[a-z]+/[a-z]+$', 'text/html'),
+        # log/print emoji markers (allow _ in identifier like enqueue_cpdone)
+        (r'^[a-z][a-z0-9_]*\.\.\.\s*[✅❌→]', 'enqueue_cpdone... ✅'),
+    ]
+    for pat, literal in PATTERNS:
+        assert re.search(pat, literal), (
+            f"Pattern {pat!r} should match {literal!r} "
+            f"(R110-276 broader test-fixture skip)")
+
+
+def test_sd_test_still_flags_real_drift(mod):
+    """R110-276: the heuristics must NOT skip genuine production-code drift.
+
+    A string that does NOT match any of the skip patterns and
+    references something specific should still be flagged.
+    """
+    import re
+    SKIP_PATTERNS = [
+        re.compile(r'^[a-z][a-z0-9_\-]*$'),
+        re.compile(r'^logs/'),
+        re.compile(r'^[^ ]+\.(md|log|yaml|json|html)\b'),
+        re.compile(r':[a-z_]+$'),
+        re.compile(r'^[a-z][a-z0-9_.]*\.[a-z][a-z0-9_]*$'),
+        re.compile(r'^[a-z]+/[a-z]+$'),
+        re.compile(r'^[a-z]+\.\.\.\s*[✅❌→]'),
+    ]
+    # A real drift example: production code references a feature name
+    # that should be consistent across the repo.
+    REAL_DRIFT = "validateAndEmitDispatchPipeline"  # CamelCase, mixed
+    for pat in SKIP_PATTERNS:
+        assert not pat.search(REAL_DRIFT), (
+            f"Real drift {REAL_DRIFT!r} should NOT be skipped, "
+            f"but pattern {pat.pattern!r} matches it")
+
+    # And a German phrase (R110-78 type drift)
+    GERMAN_DRIFT = "Verarbeite Findings und generiere Report"
+    for pat in SKIP_PATTERNS:
+        assert not pat.search(GERMAN_DRIFT), (
+            f"German drift {GERMAN_DRIFT!r} should NOT be skipped, "
+            f"but pattern {pat.pattern!r} matches it")

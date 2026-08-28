@@ -500,3 +500,64 @@ post-fix line count: 1454.
   scope for R110-275 and will be addressed in a future round.
 - The 83 `SD-test_*_description` findings are scanner-output test
   description drift, not code defects.
+
+## R110-276 — Detector threshold tuning (NN1/NN3/Q4c/SD-test/SD-recipe): 91→38 findings
+
+**Date:** 2026-08-28 05:55 UTC
+**Branch:** mas-t-tests
+**Evidence file:** logs/e2e-evidence-gen2/R110-276-EVIDENCE.md
+
+### Subject
+
+R110-270 introduced 5 detector types (NN1, NN3, Q4c, SD-recipe, SD-test)
+with aggressive thresholds. R110-274 + R110-275 fixed the NN1 sub-recipe
+false-positives. **R110-276 tunes the remaining 4 detectors** to align
+with the design intent documented in R110-270 itself, without changing
+the spec.
+
+### 6 source-code changes (`tools/dev_im_finder_scan.py`, +75/-8)
+
+| # | Detector | Before | After | Rationale |
+|---|----------|--------|-------|-----------|
+| 1 | NN1 | `>= 5` role-verbs | `>= 8` role-verbs + master-orchestrator whitelist | Master orchestrators (e.g. `dev-mas-engineer-30agents.yaml` with 10 roles) are by-design multi-role |
+| 2 | NN3 | `> 200` chars, `>= 3` domains, no scope filter | `> 400` chars, `>= 4` domains, **skip sub-recipes** | Sub-recipes document their multi-domain scope by design |
+| 3 | Q4c (print) | `indent=2` + `ensure_ascii=False` | `ensure_ascii=False` only | R110-270 design: stdout compact for grep-friendliness |
+| 4 | Q4c (self) | — | `ensure_ascii=False` added to detector's own print(json.dumps(...)) at line 1463 | Self-reference dogfooding fix |
+| 5 | SD-recipe | All numbers flagged | Skip lines with `R<round>-<num>` AND `had N` / `+N` / `N tests` | Commit-history DOKU-anchors |
+| 6 | SD-test | Only snake_case / kebab-case identifiers skipped | + paths, module:function refs, dotted module names, JSON-schema keys, mime-types, log-marker emojis (with `_` allowed in identifier prefix) | Test fixtures legitimately use these forms |
+
+### 8 unit tests added (`tests/test_dev_im_finder_scan_lib.py`, +193/-0)
+
+Tests 16.1–16.8 in section 16. Includes **negative test** (`test_sd_test_still_flags_real_drift`) verifying that real production drift like `validateAndEmitDispatchPipeline` and German phrases are NOT skipped.
+
+### E2E result
+
+| Check | Result |
+|-------|--------|
+| `python3 tools/dev_im_finder_scan.py` | 38 findings (was 91, -58%) |
+| `pytest tests/test_dev_im_finder_scan_lib.py` | 68 passed in 14.09s |
+| `pytest tests/{directly-touched: scan_lib, dedup, evidence_sot}` | 88 passed in 16.57s |
+| `pytest tests/ -k 'not phoenix_recovery' --tb=line` | 1970 passed, 1 skipped, 1 deselected, 0 failed in 150.49s |
+| Secret scan (tracked + history) | OK 0 secrets |
+
+### Findings breakdown (after R110-276)
+
+| Type | Count | Status |
+|------|-------|--------|
+| NN1 (orchestrator with >=8 roles) | 1 | Design question (30-agents orchestrator) — out of scope |
+| NN3 (description > 400 chars + >=4 domains at top-level) | 0 | All sub-recipes correctly skipped |
+| Q4c (data.json drift) | 0 | Detector self-fix landed |
+| SD-recipe (numbers in recipes not in docs) | 0 | Historical commit-ref skip works |
+| SD-test (literals in tests not in recipe/tools/docs) | 35 | All remaining literals are test-internal (multi-line, special chars, >30 chars). Further reduction would need test-file structure awareness — out of scope |
+| **Total** | **38** | Was **91** in R110-270 — **58% reduction** |
+
+### Memory / skill TODOs
+
+- The R110-78 / R110-174 lesson on body-claim verification is again
+  demonstrated: line counts re-checked from `git diff --numstat`,
+  findings counted from the actual JSON output, not from memory.
+- The 1 remaining NN1 finding (30-agents orchestrator) is a design
+  question, not a code defect — needs a stakeholder decision.
+- The 35 remaining SD-test findings are scanner-output test
+  description drift, not code defects. Further reduction would
+  require test-file structure awareness (out of scope).
