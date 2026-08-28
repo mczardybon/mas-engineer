@@ -629,3 +629,62 @@ detector fix for a self-recursion bug. The 4-bucket categorization in
 the `detector-threshold-tuning` skill labels this as "real defect" +
 "dogfooding self-fix" combined.
 
+---
+
+## R110-278 — SD-test detector search-path fix (35→26 findings, -26%)
+
+**Evidence file:** logs/e2e-evidence-gen2/R110-278-EVIDENCE.md
+
+### What
+
+After R110-277 the scanner reported 35 findings (all SD-test).
+Manual analysis showed 9 of those were false-positives: the
+literals ("Consumer", "inputSchema", "__WORKSPACE_PLACEHOLDER__")
+are canonical descriptions in `.mase/workflows.yaml` and
+`.mase/mcp/server.js`, but `check_spec_drift()` only searched
+`recipe/`, `tools/`, `docs/`. R110-278 adds `.mase/` as a 4th
+source-anchor dir (with a skip-list of data-only subdirs to
+prevent the scanner descending into `workflow_runs/` (6123 files)).
+
+### Code
+
+```python
+search_dirs = [
+    os.path.join(repo_root, 'recipe'),
+    os.path.join(repo_root, 'tools'),
+    os.path.join(repo_root, 'docs'),
+    os.path.join(repo_root, '.mase'),  # R110-278
+]
+_SD_DATA_DIRS = {
+    'pipeline', 'workflow_runs', 'phoenix_logs', 'checkpoints',
+    'mq', 'backups', 'coverage', 'dashboards', 'im', 'recovery',
+}
+# os.walk uses `dirs[:] = []` to actually prune (not just `continue`).
+```
+
+### E2E result
+
+| Check | Result |
+|-------|--------|
+| `python3 tools/dev_im_finder_scan.py` | 26 findings (was 35, SD-test 35→26 = -26%) |
+| `pytest tests/test_dev_im_finder_scan_lib.py` | 75 passed in 224.07s (was 71, +4 new R110-278 tests) |
+| SD-test findings (before R110-278) | 35 |
+| SD-test findings (after R110-278) | 26 |
+| Goose pre-push-validator | 133/133 PASS (100%, 84.8s) |
+
+### Why this commit exists
+
+R110-277 was a single-bug-fix (recursion-guard). R110-278 is a
+**structural improvement** — fixes a class of false-positives
+(9 of 35 = 26% of the SD-test findings were noise) by adding
+the canonical framework-source dir to the search space. The
+`_SD_DATA_DIRS` skip-list prevents the scanner from descending
+into runtime data dirs (which would have slowed the scan from
+30s to 5+ minutes AND masked real drift with incidental
+literal matches in data files like `issue_db.json`).
+
+Body-claim verification (R110-174 applied): all numbers in the
+EVIDENCE.md verified BEFORE writing. workflow_runs/ file count
+re-verified mid-commit (was 6115 in comment, actual = 6123,
+patched both in source and evidence).
+

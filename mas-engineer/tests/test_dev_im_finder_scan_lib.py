@@ -916,3 +916,150 @@ def test_q4c_recursion_guard_scanner_output_reduced():
         f"R110-277: expected 0 Q4c findings for dev_im_finder_scan.py "
         f"after the recursion-guard fix, got {len(q4c_self)}: "
         f"{[f['issue'][:80] for f in q4c_self]}")
+
+
+# =============================================================================
+# Section 18 — R110-278: SD-test search-path fix (.mase/ as 4th source-anchor)
+# =============================================================================
+# Before R110-278: check_spec_drift() only searched recipe/, tools/, docs/.
+# Test literals like "Consumer" (canonical workflow desc in .mase/workflows.yaml)
+# or "inputSchema" (mcp/server.js JSON-RPC spec) were flagged as drift even
+# though they ARE in the canonical source — just in .mase/, not in
+# recipe/tools/docs. 35 findings (mostly false-positives).
+# After R110-278: .mase/ is added as a 4th source-anchor dir, with a
+# skip-list of data-only subdirs (pipeline/, workflow_runs/, etc.). 26
+# findings remain (real drift or test-fixture literals, but the false-
+# positives are gone). 35 → 26 = -26% reduction.
+import re
+import pathlib
+
+def test_sd_test_mase_added_to_search_dirs():
+    """R110-278: '.mase/' is now a member of search_dirs in check_spec_drift().
+
+    The search_dirs list in tools/dev_im_finder_scan.py must include
+    `.mase/` (or a path ending in `.mase`) as the 4th entry.
+    """
+    src = pathlib.Path('tools/dev_im_finder_scan.py').read_text()
+    # find the search_dirs list inside check_spec_drift()
+    m = re.search(
+        r'search_dirs\s*=\s*\[\s*(.*?)\]',
+        src, re.DOTALL,
+    )
+    assert m, "could not find search_dirs list in dev_im_finder_scan.py"
+    block = m.group(1)
+    # check that '.mase' is referenced (as os.path.join(.mase) or literal)
+    assert '.mase' in block, (
+        f"R110-278: .mase/ missing from search_dirs. Found:\n{block[:500]}"
+    )
+
+
+def test_sd_test_data_dirs_skip_list_present():
+    """R110-278: _SD_DATA_DIRS set excludes runtime/data-only subdirs.
+
+    The skip-list must include at least: pipeline, workflow_runs,
+    dashboards, backups, coverage, phoenix_logs, checkpoints, mq, im.
+    Without the skip-list, workflow_runs/ (6115 files) would slow the
+    scanner to 5+ minutes AND mask real drift with incidentally-matched
+    literals.
+    """
+    src = pathlib.Path('tools/dev_im_finder_scan.py').read_text()
+    # find _SD_DATA_DIRS set
+    m = re.search(
+        r'_SD_DATA_DIRS\s*=\s*\{([^}]+)\}',
+        src, re.DOTALL,
+    )
+    assert m, "_SD_DATA_DIRS set not found in dev_im_finder_scan.py"
+    block = m.group(1)
+    # must include the critical data-dirs
+    must_include = ['pipeline', 'workflow_runs', 'backups', 'coverage',
+                    'phoenix_logs', 'mq', 'dashboards']
+    missing = [d for d in must_include
+               if not re.search(rf'\b{re.escape(d)}\b', block)]
+    assert not missing, (
+        f"R110-278: _SD_DATA_DIRS missing: {missing}\n"
+        f"Block was:\n{block[:400]}"
+    )
+
+
+def test_sd_test_mase_data_dirs_excluded_via_dirs_prune():
+    """R110-278: the os.walk inside check_spec_drift() must use dirs[:]=[]
+    to actually prune the walk (not just `continue`) — otherwise the
+    scanner descends into workflow_runs/ (6115 files) anyway.
+    """
+    src = pathlib.Path('tools/dev_im_finder_scan.py').read_text()
+    # R110-278 fix: don't rely on _SD_DATA_DIRS as the regex anchor
+    # (it's mentioned twice — definition + usage). Instead, find the
+    # os.walk(d) inside the SD-test block and check that somewhere
+    # in the ~30 lines after it, `dirs[:] = []` appears.
+    m = re.search(
+        r'for root,\s*dirs,\s*files\s+in\s+os\.walk\(d\):',
+        src,
+    )
+    assert m, "could not find the os.walk(d) loop in check_spec_drift()"
+    # grab the next ~2000 chars and look for the prune
+    after = src[m.end():m.end() + 2000]
+    assert 'dirs[:] = []' in after or 'dirs[:]=[]' in after, (
+        "R110-278: os.walk does not prune _SD_DATA_DIRS via dirs[:]=[]. "
+        "Scanner would still descend into workflow_runs/ (6115 files) "
+        "and take 5+ minutes.\n"
+        f"After os.walk:\n{after[:600]}"
+    )
+    # also confirm it's conditional on _SD_DATA_DIRS (not some other pruning)
+    assert '_SD_DATA_DIRS' in after, (
+        "R110-278: dirs[:] = [] is present but not tied to "
+        "_SD_DATA_DIRS — the prune logic is broken.\n"
+        f"After os.walk:\n{after[:600]}"
+    )
+
+
+def test_sd_test_mase_integration_findings_reduced():
+    """R110-278: end-to-end integration test — the scanner's total
+    finding count must be ≤30 after adding .mase/ as a 4th source-anchor.
+
+    Before R110-278: 35 findings (with .mase/ ignored).
+    After R110-278: 26 findings (with .mase/ searched, data-dirs skipped).
+    Threshold ≤30 gives us a regression margin: if someone accidentally
+    breaks the skip-list, the count could spike back to 35+.
+    """
+    import subprocess, json
+    result = subprocess.run(
+        ['python3', 'tools/dev_im_finder_scan.py'],
+        capture_output=True, text=True,
+        cwd='.', check=False,
+    )
+    assert result.returncode == 0, f"scanner failed: {result.stderr[:300]}"
+    content = result.stdout
+    m = re.search(r'---JSON_START---\n', content)
+    assert m, "no JSON_START marker in scanner output"
+    start = content.find('{', m.end())
+    depth, in_str, escape, end = 0, False, False, start
+    for i in range(start, len(content)):
+        c = content[i]
+        if escape:
+            escape = False
+            continue
+        if in_str:
+            if c == '\\':
+                escape = True
+            elif c == '"':
+                in_str = False
+            continue
+        if c == '"':
+            in_str = True
+            continue
+        if c in '{[':
+            depth += 1
+        elif c in '}]':
+            depth -= 1
+            if depth == 0 and i > start:
+                end = i + 1
+                break
+    data = json.loads(content[start:end])
+    total = data.get('total', len(data.get('findings', [])))
+    # R110-278: 35 → 26 (-9 findings, -26%). Threshold ≤30 gives
+    # regression margin.
+    assert total <= 30, (
+        f"R110-278: scanner total jumped to {total} "
+        f"(was 26 after R110-278, was 35 before R110-278). "
+        f"Possible regression in .mase/ search-path or skip-list."
+    )

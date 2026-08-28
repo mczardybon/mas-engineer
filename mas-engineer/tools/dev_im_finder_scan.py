@@ -913,7 +913,28 @@ def check_spec_drift(findings, repo_root='.'):
         os.path.join(repo_root, 'recipe'),
         os.path.join(repo_root, 'tools'),
         os.path.join(repo_root, 'docs'),
+        # R110-278: add .mase/ as a 4th source-anchor dir. The mas-engineer
+        # framework canonical sources (workflows.yaml, mcp/server.js,
+        # best-practices.yaml, validation.yaml, etc.) live here. Without
+        # this, test literals like "Consumer" (workflows.yaml desc),
+        # "inputSchema" (mcp/server.js JSON-RPC spec), or
+        # "__WORKSPACE_PLACEHOLDER__" (mcp/dashboard.html) are flagged
+        # as drift even though they ARE in the canonical source.
+        # We skip the obvious data-only subdirs (pipeline/, workflow_runs/,
+        # dashboards/data.json, phoenix_logs/, checkpoints/, mq/, backups/,
+        # coverage/, changes.*.json, *.log) because those are
+        # data/runtime artifacts, not source-of-truth.
+        os.path.join(repo_root, '.mase'),
     ]
+    # R110-278: data-only subdirs of .mase/ that must NOT be searched.
+    # These are runtime/data artifacts where literals appear
+    # incidentally (e.g. issue_db.json tracks previously-found issues,
+    # workflow_runs/*.json records past test outputs). Including them
+    # would mask real drift.
+    _SD_DATA_DIRS = {
+        'pipeline', 'workflow_runs', 'phoenix_logs', 'checkpoints',
+        'mq', 'backups', 'coverage', 'dashboards', 'im', 'recovery',
+    }
     per_file_idx = {}
     for tf in sorted(glob.glob(os.path.join(tests_dir, '**', 'test_*.py'),
                               recursive=True)):
@@ -982,14 +1003,26 @@ def check_spec_drift(findings, repo_root='.'):
                         or re.match(r'^[a-z]+/[a-z]+$', L)
                         or re.match(r'^[a-z][a-z0-9_]*\.\.\.\s*[✅❌→]', L)):
                     continue
-                # actual spec-drift: literal not in recipe/tools/docs
+                # actual spec-drift: literal not in recipe/tools/docs/.mase
                 hit = False
                 for d in search_dirs:
                     if not os.path.isdir(d):
                         continue
-                    for root, _, files in os.walk(d):
+                    for root, dirs, files in os.walk(d):
                         if _is_pycache_or_backup(root):
                             continue
+                        # R110-278: skip data-only subdirs of .mase/
+                        # (pipeline, workflow_runs, etc.) — those are
+                        # runtime artifacts, not source-of-truth. Use
+                        # `dirs[:] = ...` to prune the walk so we don't
+                        # even descend into workflow_runs/ (6123 files!)
+                        if d.endswith(os.sep + '.mase') or d == '.mase':
+                            rel_root = os.path.relpath(root, d)
+                            top = rel_root.split(os.sep, 1)[0]
+                            if top in _SD_DATA_DIRS:
+                                dirs[:] = []
+                                files = []
+                                continue
                         for f in files:
                             p = os.path.join(root, f)
                             try:
@@ -1010,7 +1043,7 @@ def check_spec_drift(findings, repo_root='.'):
                     f'SD-test_{base}-{per_file_idx[base]}', 'medium',
                     f'{tf}:{ln}',
                     f"spec_drift: test asserts literal '{L}' but it is absent "
-                    f'from recipe/, tools/, docs/ (literal-only-in-tests = '
+                    f'from recipe/, tools/, docs/, .mase/ (literal-only-in-tests = '
                     f'test is stale or recipe was updated without test fix)',
                     f'Test will fail until the literal is restored or the test '
                     f'is updated to the new value (R110-71/R110-78 pattern)',
