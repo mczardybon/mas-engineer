@@ -668,16 +668,6 @@ for yp in ALL_YAMLS:
             _round_count = int(os.environ.get('IM_ROUND_COUNT', '99'))
             if _round_count - _skip_round < 5:
                 continue  # recently split, skip
-    # R98 fix (IM-007): skip micro-agents (<60 lines) — they are split sub-agents
-    # by design. NN1's "5+ role-verbs" pattern is normal for small focused agents
-    # that handle a few related operations. Only flag actual orchestrators that
-    # haven't been split. Filtered 23/31 false positives in R98 analysis.
-    try:
-        _line_count = sum(1 for _ in open(yp))
-    except Exception:
-        _line_count = 999
-    if _line_count < 60:
-        continue
     # R110-274: NN1 scope-restriction. Sub-recipes in recipe/sub/ are
     # already split sub-agents by design (per the recipe/sub/ directory
     # convention). Flagging them as "multi-role" was a false positive:
@@ -686,10 +676,21 @@ for yp in ALL_YAMLS:
     # multiple steps). Only flag recipe/*.yaml at the top level.
     # Note: ALL_YAMLS contains RELATIVE paths (e.g. "recipe/sub/foo.yaml"),
     # not absolute, so we must match without leading slash.
+    # R110-275: only skip the NN1 check, not the whole iteration —
+    # NN2/NN3 must still run on sub-recipes.
     _yp_norm = yp.replace('\\', '/')
-    if 'recipe/sub/' in _yp_norm or 'recipe/wf_' in _yp_norm:
-        continue  # R110-274: by-design orchestrator/sub-agent
-    if len(found_roles) >= 5:
+    _is_sub_or_wf = ('recipe/sub/' in _yp_norm or 'recipe/wf_' in _yp_norm)
+    # R98 fix (IM-007): skip micro-agents (<60 lines) — they are split sub-agents
+    # by design. NN1's "5+ role-verbs" pattern is normal for small focused agents
+    # that handle a few related operations. Only flag actual orchestrators that
+    # haven't been split. Filtered 23/31 false positives in R98 analysis.
+    try:
+        _line_count = sum(1 for _ in open(yp))
+    except Exception:
+        _line_count = 999
+    if _line_count < 60 and not _is_sub_or_wf:
+        continue
+    if not _is_sub_or_wf and len(found_roles) >= 5:
         add_finding('NN1', 'medium', yp,
                     f'multi_role_agent: {len(found_roles)} distinct roles ({found_roles[:5]})',
                     'Agent may violate single-responsibility principle',
