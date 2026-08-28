@@ -678,6 +678,17 @@ for yp in ALL_YAMLS:
         _line_count = 999
     if _line_count < 60:
         continue
+    # R110-274: NN1 scope-restriction. Sub-recipes in recipe/sub/ are
+    # already split sub-agents by design (per the recipe/sub/ directory
+    # convention). Flagging them as "multi-role" was a false positive:
+    # 18/19 NN1 issues in R110-273 were sub-recipes. Also skip
+    # recipe/wf_*.yaml (workflow recipes that intentionally orchestrate
+    # multiple steps). Only flag recipe/*.yaml at the top level.
+    # Note: ALL_YAMLS contains RELATIVE paths (e.g. "recipe/sub/foo.yaml"),
+    # not absolute, so we must match without leading slash.
+    _yp_norm = yp.replace('\\', '/')
+    if 'recipe/sub/' in _yp_norm or 'recipe/wf_' in _yp_norm:
+        continue  # R110-274: by-design orchestrator/sub-agent
     if len(found_roles) >= 5:
         add_finding('NN1', 'medium', yp,
                     f'multi_role_agent: {len(found_roles)} distinct roles ({found_roles[:5]})',
