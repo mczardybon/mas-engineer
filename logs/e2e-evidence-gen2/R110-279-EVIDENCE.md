@@ -99,7 +99,10 @@ the source-search step.
 1. python3 tools/dev_im_finder_scan.py → 0 SD-test findings (was 26, -26 = -100%)
 2. pytest tests/test_r110279_runtime_var_skip.py
    → 18/18 PASS (16 unit in 29s + 2 e2e detector runs in 87s)
-3. pytest tests/test_dev_im_finder_scan_lib.py
+3. pytest tests/test_dev_phoenix_recovery_publish.py
+   → 9/9 PASS in 296s (4:56) — R110-279 ändert nichts an phoenix,
+     aber saubere post-push-Verifikation bestätigt: keine cross-effect
+3a. pytest tests/test_dev_im_finder_scan_lib.py
    → 75/75 PASS in 224s (regression: test_check_spec_drift_zombie_literal
      updated from `in result` to `in some_recipe_string` since
      `result` is now a known runtime-var)
