@@ -287,7 +287,7 @@ def test_check_spec_drift_zombie_literal(mod, tmp_path):
     tests.mkdir()
     (tests / "test_foo.py").write_text(
         'def test_x():\n'
-        '    assert "ZOMBIE_12345_LITERAL" in result\n'
+        '    assert "ZOMBIE_12345_LITERAL" in some_recipe_string\n'
     )
     mod.check_spec_drift(mod.findings, repo_root=str(tmp_path))
     types = [f["type"] for f in mod.findings]

@@ -856,6 +856,88 @@ _SD_INT_CMP_RE = re.compile(
 _SD_URL_RE = re.compile(r'https?://', re.IGNORECASE)
 _SD_WS_ONLY_RE = re.compile(r'^\s*$')
 
+# R110-279: regex to match `assert "LITERAL" in <RHS>` where RHS is a
+# captured/runtime value. The regex captures the literal (group 1) and
+# the RHS expression (group 2) so the skip-rule can decide whether the
+# RHS is a runtime-var (out, result, content, intake, capsys, ...) or
+# a static source literal (recipe, yaml, etc.). The optional `\s*\[...\]`
+# at the end handles subscript access like `rules["bp_autonomie"]`.
+# The pattern is NOT anchored to start-of-line because the assert
+# clause may follow a semicolon-separated assignment on the same line,
+# e.g. `captured = capsys.readouterr(); assert "x" in captured.out`.
+# Caller is responsible for `re.search` (not `re.match`).
+_SD_ASSERT_RUNTIME_RE = re.compile(
+    r'''assert\s+["']([^"']{4,80})["']\s+in\s+'''
+    r'''([a-zA-Z_][\w\.]*(?:\(\))?(?:\.[a-zA-Z_]\w*)*)\s*(?:\[[^\]]*\])?''')
+
+# R110-279: recognized runtime-variable names on the RHS of `in`. These
+# are captured in the test (capsys.readouterr().out, file.read_text(),
+# function return values, etc.). A literal asserted against a runtime
+# value is by definition not a static source-literal — it can only be
+# produced by the code under test. The drift detector's purpose is to
+# catch stale static literals; runtime-var asserts are a different
+# concern (the test itself will fail if the function regresses).
+_SD_RUNTIME_VARS = frozenset({
+    'out', 'output', 'stdout', 'stderr', 'result', 'content',
+    'captured', 'captured_output', 'intake', 'printed', 'printed_output',
+    'response', 'rules', 'data', 'config', 'cli', 'cli_output',
+    'tmp', 'tmpdir', 'tmp_path', 'tmpdir_str',
+})
+
+# R110-279: regex for common "captured-output" method calls on the RHS,
+# e.g. capsys.readouterr().out, result.stdout, CliRunner().invoke(...).output.
+# These are always runtime values regardless of the variable name.
+_SD_RUNTIME_CALL_RE = re.compile(
+    r'''capsys\.readouterr\(\)\.(?:out|err)\b'''
+    r'''|context\.(?:stdout|stderr)\b'''
+    r'''|cli\.invoke\([^)]*\)\.output\b'''
+    r'''|runner\.invoke\([^)]*\)\.output\b'''
+    r'''|result\.(?:stdout|stderr|output)\b''')
+
+# R110-279: recognized subscript keys (e.g. rules["bp_autonomie"]) for
+# dict-of-rules / dict-of-config runtime vars. A literal in a runtime
+# dict access is still a runtime check, not static-source drift.
+_SD_RUNTIME_DICT_KEYS = frozenset({
+    'rules', 'data', 'config', 'cfg', 'result', 'response', 'intake',
+    'parsed', 'output', 'captured', 'output_data',
+})
+
+
+def _is_runtime_var_assert(line: str) -> bool:
+    """R110-279: True if the line is `assert "LITERAL" in <runtime_var>`.
+
+    Used to skip SD-test findings for runtime-output assertions. The
+    drift detector catches stale static-source literals; assertions
+    against captured output (capsys, file content, function return
+    values, parsed dicts) test runtime behavior, not static source,
+    and are already protected by pytest itself.
+
+    Handles two patterns:
+    1. The line has ONLY the assert statement (common in single-stmt
+       test bodies): `assert "x" in out`
+    2. The line has the assert as the LAST statement after earlier
+       assignments: `captured = capsys.readouterr(); assert "x" in captured.out`
+       Here we look for the assert clause and check its RHS only.
+    """
+    # Find the `assert "LITERAL" in RHS` clause in the line
+    m = _SD_ASSERT_RUNTIME_RE.search(line)
+    if not m:
+        return False
+    rhs = m.group(2) or ''
+    # Method-call RHS (capsys.readouterr().out, etc.) — always runtime
+    if _SD_RUNTIME_CALL_RE.search(line):
+        return True
+    # Subscript RHS (rules["..."], data["..."], etc.) — runtime if dict
+    # key matches a runtime-dict-key name. The subscript may come AFTER
+    # a method call: `result.stdout.split()` doesn't apply, but
+    # `rules["bp_autonomie"]` does.
+    if '[' in line and rhs.split('.')[0] in _SD_RUNTIME_DICT_KEYS:
+        return True
+    # Plain variable RHS — runtime if name matches a runtime-var name
+    # (e.g. out, result, content, intake).
+    rhs_simple = rhs.split('.')[0].split('(')[0]
+    return rhs_simple in _SD_RUNTIME_VARS
+
 def _is_pycache_or_backup(path: str) -> bool:
     return ('__pycache__' in path or path.endswith('.pyc')
             or '/llm-backup/' in path)
@@ -969,6 +1051,19 @@ def check_spec_drift(findings, repo_root='.'):
                 if _SD_WS_ONLY_RE.match(L):
                     continue
                 if _is_self_reference(L, line):
+                    continue
+                # R110-279: skip runtime-output asserts. The literal
+                # is being checked against a captured value (capsys
+                # output, file content, function return, parsed dict),
+                # so it can only be produced by the code under test —
+                # not a static source-literal. The drift detector's
+                # purpose is to catch stale static literals, not
+                # runtime-behavior regressions (pytest itself catches
+                # those). This is the 4th and last high-volume skip
+                # rule in the R110-275..278..279 series; combined with
+                # the .mase/ source-anchor (R110-278), brings SD-test
+                # findings from 91 (R110-275) to ~0.
+                if _is_runtime_var_assert(line):
                     continue
                 if _is_common_value(L, search_dirs):
                     continue
