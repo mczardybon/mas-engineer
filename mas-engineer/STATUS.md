@@ -795,3 +795,65 @@ vorfall und ermöglichen forensische analyse falls später nötig.
   - mas-engineer-commit-protocol/SKILL.md (+5 hard-rules R110-281)
 - Memory updated: FORCE-PUSH-VERBOT entry unter LANGUAGE-RULE
 - Recovery-tags: bleiben (user-decision option a)
+
+
+---
+
+## R110-292 — dev_dashboard_data.py coverage 67% → 93% (55 tests) (2026-08-29)
+
+**Branch:** `mas-t-tests` (only)
+**Origin-HEAD before:** `cae8420` (R110-291)
+**Origin-HEAD after:** `tbd` (this commit)
+
+### Coverage-Push (Charge 8 der R110-285+ Sprint-Serie)
+
+Ziel: ≥85% total coverage im mas-engineer repo. R110-284 baseline
+war 62% (R110-284 EVIDENCE). R110-285..291 brachten +2.0pp (priority-
+1 files alle ≥82%, einige 100%). R110-292: dev_dashboard_data.py
+67% → 93% (+26pp, +0.4pp total).
+
+**Was hinzukam (55 tests, 762 lines, 1 file):**
+- mas-engineer/tests/test_dev_dashboard_data_r110292.py
+- Coverage 8 funcs: shell, load_json, yaml_load, get_git_log,
+  _phase1_topics_summary (3 PHASE1 topics), generate_data
+  (parent-dir detect, agents, changes 6-branches, schedule,
+  build, dispatch file+tool-fallback, health, mq block with
+  by_topic back-compat + compactable + prometheus), notification
+  (env+walkup+expanduser), main (--workspace + positional)
+
+**Coverage (--cov=dev_dashboard_data):**
+- dev_dashboard_data.py 93% (21 missing stmts von 299; mostly
+  bare except-paths in categorize-type + build-list + prometheus-
+  excerpt; tested happy-paths but not every error-class)
+
+**Verifikation:**
+- pytest mas-engineer/tests/test_dev_dashboard_data_r110292.py
+  → 55/55 PASS in 0.18s
+- pytest full suite (19 test-files, 2.193 tests across 15
+  batches, kein r110279_timeout_var_skip block) → 0 failed
+- Pre-push-gate Step 0 (secret scan, tracked + history):
+  OK 0 secrets
+- Pre-push-gate Step 1 (pre-commit hook, staged content):
+  OK PASS
+- Pre-push-gate Step 2 (pytest tests/test_dev_dashboard_data_
+  r110292.py): OK 55/55
+
+**Side effects:**
+- Keine — pure test-additive. Keine änderung an
+  dev_dashboard_data.py selbst.
+
+### Reference
+
+- R-number: R110-292
+- Branch: `mas-t-tests`
+- Type: 🔧 test-only (1 file added, 0 modified)
+- Files: `mas-engineer/tests/test_dev_dashboard_data_r110292.py`
+  (NEW, +762 lines, 55 tests)
+- Evidence: `logs/e2e-evidence-gen2/R110-292-COVERAGE-DASHBOARD-DATA.md`
+  (NEW, +120 lines, this section condensed)
+- Cumulative R110-285+ series: +8 files pushed (intention_parser,
+  dispatch_tracker, audit_deps, template_generator, architecture_
+  checker, recovery_defib, issue_db, dashboard_data)
+- Remaining priority-2: dev_category_drift.py, dev_phoenix_log_
+  persister.py (R110-293 + R110-294 targets)
+- HEAD: 2cf5c30 → cae8420 → R110-292 (this commit)
