@@ -857,3 +857,98 @@ war 62% (R110-284 EVIDENCE). R110-285..291 brachten +2.0pp (priority-
 - Remaining priority-2: dev_category_drift.py, dev_phoenix_log_
   persister.py (R110-293 + R110-294 targets)
 - HEAD: 2cf5c30 → cae8420 → R110-292 (this commit)
+
+## R110-293 — dev_category_drift.py 68% → 100% (charge 9)
+
+**Bug:** `mas-engineer/tools/dev_category_drift.py` (239 lines,
+4 funcs: `run_git_log` / `classify_drift` / `format_human` /
+`main`) hatte nur 68% coverage. R110-259 (charge 0) hatte 7
+tests für `CONVENTIONAL_COMMIT_RE` hinzugefügt — aber diese
+importieren das modul NICHT direkt, sondern lesen den regex aus
+der source. Daher war der tatsächliche coverage = ~0%.
+
+Zero direct tests für: `run_git_log()` (subprocess happy-path
++ CalledProcessError + malformed-line filtering),
+`classify_drift()` (6 paths: cutoff exempt, prefix exempt,
+noise exempt, regex conform, emoji conform, drift),
+`format_human()` (empty + with-drift + with-exempt + <unset>
+cutoff + hash-shortened-to-8), `main()` (--path + --since +
+--convention-since + --json + exit-codes 0/1/2 + if-main
+guard).
+
+Eine regression in `classify_drift()` würde R110-130 `wrench:`
+exemption re-introduzieren oder R110-258 spec-gap
+(Check 1.5 ↔ Check 16+) wieder öffnen. Eine regression in
+`main()` würde den cron/CI exit-code contract (0/1/2) brechen.
+
+**Fix:** `mas-engineer/tests/test_dev_category_drift_r110293.py`
+(NEW, 515 lines, 48 tests):
+- Constants (6): 12 types, 4 emojis, default cutoff
+  2026-08-04, exempt prefixes, legacy [MAS-ENGINEER], noise
+- CONVENTIONAL_COMMIT_RE (6, R110-259 mirror): all-12 types
+  +with-scope, rejects unknown/uppercase/no-colon/whitespace
+- run_git_log (3): 2-commit-list, CalledProcessError,
+  malformed-line filtering via mock-patched subprocess
+- classify_drift (15): 6 paths + mixed + cutoff-precedence +
+  noise-exact-match-only (wip: stuff is NOT exempt — important
+  finding)
+- format_human (5): empty/drift/exempt/<unset>/hash-shortened
+- main (12): exit-codes 0/1/2 + --json + runpy.run_module for
+  `if __name__ == "__main__":` coverage
+
+**Pitfalls discovered:**
+1. `wip: stuff` is NOT exempt — only bare `wip`/`tmp`/`draft`
+   (any case) via exact-match (lowercased). Test fix from initial
+   `wip: stuff` → `wip`.
+2. `main()` takes 0 args — reads `sys.argv` directly. Tests
+   use `monkeypatch.setattr(sys, "argv", [...])`.
+3. `if __name__ == "__main__":` only executes via
+   `runpy.run_module("dev_category_drift", run_name="__main__")`.
+4. Malformed-line filtering tested via `unittest.mock.patch` of
+   `subprocess.run` returning a fake stdout with 4 lines
+   (1 valid + 1 blank + 1 no-separator + 1 2-parts).
+5. `GIT_COMMITTER_DATE` via `env` dict only — initial test had
+   syntax-error from trying to use shell-prefix + env.
+
+**E2E (real-flow, N=48 scenarios):**
+  1. Constants & structure               6  → PASS
+  2. CONVENTIONAL_COMMIT_RE              6  → PASS
+  3. run_git_log (incl mock-patched)     3  → PASS
+  4. classify_drift (6 paths + mixed)   15  → PASS
+  5. format_human (5 incl <unset>)        5  → PASS
+  6. main (12 incl runpy __main__ exec) 12  → PASS
+  ─────────────────────────────────────────────
+  Total: 48/48 in 0.34s
+
+**Coverage:** dev_category_drift.py **100%** (80/80 stmts, 0
+missing) — first charge in R110-285+ series to reach 100%.
+
+**Pre-push-gate:**
+- pytest mas-engineer/tests/test_dev_category_drift_r110293.py
+  → 48/48 PASS in 0.34s
+- Coverage: 80/80 stmts = 100%
+- Pre-push-gate Step 0 (secret scan, tracked + history):
+  OK 0 secrets
+- Pre-push-gate Step 1 (pre-commit hook, staged content):
+  OK PASS
+- Pre-push-gate Step 2 (pytest …r110293): OK 48/48 in 0.34s
+
+**Side effects:**
+- Keine — pure test-additive. Keine änderung an
+  dev_category_drift.py selbst.
+
+### Reference
+- R-number: R110-293
+- Branch: `mas-t-tests`
+- Type: 🔧 test-only (1 file added, 0 modified)
+- Files: `mas-engineer/tests/test_dev_category_drift_r110293.py`
+  (NEW, +515 lines, 48 tests)
+- Evidence: `logs/e2e-evidence-gen2/R110-293-COVERAGE-CATEGORY-DRIFT.md`
+  (NEW, +70 lines, this section condensed)
+- Cumulative R110-285+ series: +9 files pushed (intention_parser,
+  dispatch_tracker, audit_deps, template_generator, architecture_
+  checker, recovery_defib, issue_db, dashboard_data, category_drift)
+- Remaining priority-2: dev_phoenix_log_persister.py
+  (R110-294 target, final charge)
+- Total delta: +2.9pp across 9 charges (target ≥85% total
+  coverage, on-track)
