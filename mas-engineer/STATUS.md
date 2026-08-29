@@ -1107,3 +1107,53 @@ phoenix_log_persister — 3 actually, all 3 at 100%).
 - R110-78 body-claim-drift protocol reinforced: when test
   infrastructure requires unique-source literals, redact them
   in changelogs/evidence/STATUS even if it hurts narrative clarity
+
+## R110-298 (2026-08-29) — Coverage Sprint for dev_evidence_sot.py library mode (35 tests)
+
+R110-257 added 7 integration tests via subprocess. R110-298 imports
+the tool as a library and exercises 8 check_* helpers + scan_history
++ main() directly via monkeypatched sys.argv, so coverage.py can
+attribute hits to specific lines.
+
+Library functions covered:
+  - _is_evidence_file, _is_any_file_in_anti_sot_logs
+  - check_evidence_sot_working_tree, check_evidence_sot_git_index
+  - check_directives_sot_working_tree, check_directives_sot_git_index
+  - check_sot_evidence_dir_health, check_sot_directives_dir_health
+  - scan_history_for_violators
+  - main() with --json, --strict, --history, --git
+
+Total: 35 new tests, all pass in 0.46s.
+
+## R110-299 (2026-08-29) — Coverage Sprint for dev_parallel.py library mode (29 tests)
+
+R110-237 added 12 backpressure tests. R110-299 complements by
+testing print helpers + ParalllPool class + batch_dispatch /
+get_group_agents / dispatch_group helpers as a library.
+
+Notable: test_run_with_backpressure_serializes proves
+threading.BoundedSemaphore caps concurrency at 1 when backpressure=1.
+
+Total: 29 new tests, all pass in 0.29s.
+
+## R110-300 (2026-08-29) — Coverage Sprint for dev_workspace.py extended branches (12 tests)
+
+R110-266 + R110-269 covered 23 functions. R110-300 fills gaps in:
+  - cmd_init_recovery  (3 tests: idempotent rerun, preserves
+                                  existing sub_recipes, no main_recipe)
+  - count_files        (2 tests: glob *.yaml, no-matches returns 0)
+  - cmd_clean          (1 test:  rmtree on dir with files)
+  - cmd_status         (6 tests: missing-ws, valid/corrupt changes.json,
+                                  config.yaml, yaml+py counts, docs subdirs)
+
+Total: 12 new tests, all pass in 0.11s.
+
+## R110-298..300 Summary (2026-08-29)
+
+- 76 new tests across 3 commits
+- dev_evidence_sot.py  +35 (helpers + main library mode)
+- dev_parallel.py      +29 (print helpers + ParalllPool + dispatch)
+- dev_workspace.py     +12 (extended branches: cmd_init_recovery
+                             idempotent, cmd_status with changes.json)
+- HEAD: 03f9c2d
+- Pushed to mas-t-tests branch
