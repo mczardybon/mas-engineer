@@ -1088,6 +1088,22 @@ phoenix_log_persister — 3 actually, all 3 at 100%).
 
 - R110-293 fix: subjects→out in test_dev_category_drift_r110293.py
   (1 file, 6 lines, now in _SD_RUNTIME_VARS skip-rule)
-- R110-279 fix: synth literal → R110296SYNTH_LITERAL_ULTRA_UNIQUE_NO_OTHER_MATCH
+- R110-279 fix: synth literal → unique R110296* value
   in test_r110279_runtime_var_skip.py (1 file, 11 lines)
 - All 4 affected test suites green: 104/104 PASS in 215s
+- NOTE: full literal value intentionally redacted in
+  STATUS.md + CHANGELOG to keep _is_common_value
+  unique-source (R110-78 body-claim-drift prevention)
+
+## R110-297 (2026-08-29) — Redact synth-literal leak in R110-296 docs (R110-78 body-claim-drift)
+
+- Redacted <REDACTED-R110296-synth-literal> from 3 files
+  (STATUS.md R110-296 section, CHANGELOG-2026-08-29-r110-296.md,
+  EVIDENCE-R110-296-FIX-SD-TEST-DRIFT.md)
+- Now full literal appears in EXACTLY 1 source: the test file
+  mas-engineer/tests/test_r110279_runtime_var_skip.py
+- detector._is_common_value() no longer skips the finding
+  → synth test PASSES (was 1 failed in 913d6f7 push)
+- R110-78 body-claim-drift protocol reinforced: when test
+  infrastructure requires unique-source literals, redact them
+  in changelogs/evidence/STATUS even if it hurts narrative clarity

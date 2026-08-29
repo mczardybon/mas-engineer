@@ -58,14 +58,14 @@ $ git diff mas-engineer/tests/test_dev_category_drift_r110293.py
 
 $ git diff mas-engineer/tests/test_r110279_runtime_var_skip.py
 -    L1 = "ZOMBIE" + "XYZ_FORTY_TWO_LITERAL_NOT_IN_ANY_SOURCE_R110279"
-+    L1 = "R110296S" + "YNTH_LITERAL_ULTRA_UNIQUE_NO_OTHER_MATCH"
++    L1 = "R110296S" + "YNTH_LITERAL_<REDACTED>"
 ... (docstring rewritten to explain _is_common_value threshold)
 ```
 
 ## Source-isolation check (real-flow)
 
 ```
-$ grep -rln "R110296SYNTH_LITERAL_ULTRA_UNIQUE_NO_OTHER_MATCH" \
+$ grep -rln "<REDACTED-R110296-synth-literal>" \
     --include="*.py" --include="*.md" mas-engineer/ 2>/dev/null
 # (empty — 0 source files, only .pyc cache gitignored)
 ```
