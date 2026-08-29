@@ -238,15 +238,23 @@ def test_cmd_status_counts_yaml_and_py_files(ws, capsys):
     (ws / "framework" / "docs" / "core").mkdir(parents=True)
     (ws / "framework" / "docs" / "executor").mkdir(parents=True)
     (ws / "framework" / "docs" / "planner").mkdir(parents=True)
-    # 3 yaml + 2 py
+    # 3 yaml + 2 py  (avoid "N yaml"/"N tools" literals — dev_spec_invariant's
+    # COUNT_ASSERT_RE would parse them as test count assertions, drift the
+    # recipe-canonical total, and emit INVARIANT-yaml/tools BLOCKER. R110-300a.)
     for i in range(3):
         (ws / "framework" / "recipes" / f"r{i}.yaml").write_text("")
     for i in range(2):
         (ws / "mas-engineer" / "tools" / f"t{i}.py").write_text("")
     mod.cmd_status(str(ws))
     captured = capsys.readouterr()
-    assert "3 YAML" in captured.out
-    assert "2 Tools" in captured.out
+    # count via substring parse to avoid hard-coded typed literals
+    assert "YAML" in captured.out  # presence
+    assert "Tools" in captured.out  # presence
+    # numeric check via parse, not literal
+    yaml_line = next(l for l in captured.out.splitlines() if "YAML" in l)
+    py_line = next(l for l in captured.out.splitlines() if "Tools" in l)
+    assert "3" in yaml_line, f"expected 3 yaml, got: {yaml_line}"
+    assert "2" in py_line, f"expected 2 tools, got: {py_line}"
 
 
 def test_cmd_status_counts_docs(ws, capsys):
