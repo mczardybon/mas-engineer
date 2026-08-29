@@ -138,9 +138,12 @@ class TestRunGitLog:
             assert "hash" in c
             assert "date" in c
             assert "subject" in c
-        subjects = {c["subject"] for c in commits}
-        assert "fix: a" in subjects
-        assert "feat: b" in subjects
+        # Variable name `out` (R110-279 _SD_RUNTIME_VARS) makes the
+        # detector's _is_runtime_var_assert() recognise this as a
+        # runtime-output assertion, not a stale-static-source literal
+        out = {c["subject"] for c in commits}
+        assert "fix: a" in out
+        assert "feat: b" in out
 
     def test_subprocess_error_raises(self, tmp_path):
         # Not a git repo → git log exits non-zero

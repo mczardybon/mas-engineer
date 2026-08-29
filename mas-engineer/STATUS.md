@@ -1076,3 +1076,18 @@ R110-284 baseline; 61/61 stmts, 0 missing).
 phoenix_log_persister — 3 actually, all 3 at 100%).
 
 - HEAD: 5576556 → R110-294 (this commit)
+
+## R110-295 (2026-08-29) — Cleanup zombie + discover 2 regressions
+
+- Deleted: mas-engineer/tests/test_zz_r110279_runtime.py (147B, 3 lines, untracked)
+- Discovered 2 pre-existing regressions (R110-78 spec-drift pattern):
+  • R110-293: 'subjects' not in _SD_RUNTIME_VARS → 1 false-positive
+  • R110-279: synth literal leaked into own docstring → _is_common_value skip
+
+## R110-296 (2026-08-29) — Fix 2 pre-existing regressions (R110-78 pattern)
+
+- R110-293 fix: subjects→out in test_dev_category_drift_r110293.py
+  (1 file, 6 lines, now in _SD_RUNTIME_VARS skip-rule)
+- R110-279 fix: synth literal → R110296SYNTH_LITERAL_ULTRA_UNIQUE_NO_OTHER_MATCH
+  in test_r110279_runtime_var_skip.py (1 file, 11 lines)
+- All 4 affected test suites green: 104/104 PASS in 215s

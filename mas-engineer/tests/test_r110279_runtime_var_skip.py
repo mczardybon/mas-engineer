@@ -109,9 +109,20 @@ def test_detector_finds_drift_for_synth_test(tmp_path, monkeypatch):
     # Use the existing test directory and write a new test
     test_path = os.path.join(REPO_ROOT, "tests", "test_zz_r110279_synth.py")
     # Build the literal via string concatenation so the detector's
-    # string-extractor doesn't see it as a literal IN THIS file
-    # (the synth file written below is what the detector should flag)
-    L1 = "ZOMBIE" + "XYZ_FORTY_TWO_LITERAL_NOT_IN_ANY_SOURCE_R110279"
+    # string-extractor doesn't see it as a literal IN THIS file.
+    # We further isolate it: the synth literal below is unique to
+    # this test alone (it is NOT a substring of any other file,
+    # including the docstring of this function — see R110-296).
+    # _is_common_value() uses file-count > 1 to skip "common" values
+    # so we must guarantee the literal appears in EXACTLY 1 source
+    # location (the synth file) at scan-time.
+    #
+    # R110-279 original literal was 'ZOMBIEXYZ_FORTY_TWO_LITERAL_NOT_IN_ANY_SOURCE_R110279'
+    # but it appeared in the docstring (Z.114), so _is_common_value
+    # saw 2 file-matches (docstring + synth file) and skipped the
+    # finding. R110-296 changed the literal to a unique value that
+    # only appears in the synth file (no docstring, no other match).
+    L1 = "R110296S" + "YNTH_LITERAL_ULTRA_UNIQUE_NO_OTHER_MATCH"
     synth_line = '    assert "' + L1 + '" in recipe'
     with open(test_path, "w") as f:
         f.write(f"def test_r110279_synth():\n{synth_line}\n")
@@ -121,7 +132,7 @@ def test_detector_finds_drift_for_synth_test(tmp_path, monkeypatch):
             capture_output=True, text=True, timeout=120,
         )
         # The detector must emit at least one SD-test finding for our synth
-        assert "ZOMBIEXYZ_FORTY_TWO_LITERAL_NOT_IN_ANY_SOURCE_R110279" in result.stdout, (
+        assert L1 in result.stdout, (
             f"Detector should flag the synth literal but output:\n{result.stdout[-1000:]}"
         )
         # And the finding should reference the test file
