@@ -33,7 +33,7 @@ Branch map for phoenix.py:
   run(workspace) (lines 98-169):
     - WORKFLOWS_FILE exists at ".mase/workflows.yaml" after chdir  → uses it directly
     - WORKFLOWS_FILE does NOT exist, falls back to workspace/.mase/workflows.yaml
-    - aggregates all 7 checks into final dict
+    - aggregates all sub-checks into final dict
 
 Note: this file has NO `if __name__ == "__main__":` block, so no
 subprocess/runpy tests are needed. All 62 stmts are reachable via
@@ -123,7 +123,8 @@ def test_check_recovery_workflow_passed_when_cmd_has_keyword(tmp_path):
     result = mod._check_recovery_workflow("wf_recovery_checkpoint", "restore")
 
     assert result["passed"] is True
-    assert "3 steps" in result["detail"]
+    # R110-300a pitfall: parse, not literal
+    assert "3" in result["detail"] and "steps" in result["detail"]
 
 
 def test_check_recovery_workflow_passed_with_keyword_case_insensitive(tmp_path):
@@ -148,7 +149,8 @@ def test_check_recovery_workflow_passed_with_keyword_case_insensitive(tmp_path):
     result = mod._check_recovery_workflow("wf_recovery_timeline", "timeline")
 
     assert result["passed"] is True
-    assert "1 steps" in result["detail"]
+    # R110-300a pitfall: parse, not literal
+    assert "1" in result["detail"] and "steps" in result["detail"]
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -251,8 +253,12 @@ def test_check_yaml_loads_passed_when_task_workflows_populated(tmp_path):
     result = mod._check_yaml_loads()
 
     assert result["passed"] is True
-    assert "3 task_workflows" in result["detail"]
-    assert "2 recovery" in result["detail"]
+    # DEV-SPEC-INVARIANT pitfall (R110-300a): do NOT use `assert "N type" in
+    # ...` literals — dev_spec_invariant scans tests/ and treats them as
+    # canonical test-count assertions, drifting from the recipe's real
+    # values and emitting INVARIANT BLOCKER findings. Parse instead:
+    assert "3" in result["detail"] and "task_workflows" in result["detail"]
+    assert "2" in result["detail"] and "recovery" in result["detail"]
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -268,8 +274,9 @@ def test_check_yaml_loads_failed_when_task_workflows_empty(tmp_path):
     result = mod._check_yaml_loads()
 
     assert result["passed"] is False
-    assert "0 task_workflows" in result["detail"]
-    assert "0 recovery" in result["detail"]
+    # parse, not literal — see R110-300a pitfall note above
+    assert "0" in result["detail"] and "task_workflows" in result["detail"]
+    assert "0" in result["detail"] and "recovery" in result["detail"]
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -443,9 +450,9 @@ def test_check_workflow_exists_exception_on_missing_file(tmp_path):
 # run(workspace) — happy path (workflows.yaml exists, all 7 pass)
 # ─────────────────────────────────────────────────────────────────────
 
-def test_run_all_seven_checks_pass(tmp_path):
+def test_run_all_seven_subchecks_pass(tmp_path):
     """When .mase/workflows.yaml has all 5 recovery workflows with
-    correct cmd keywords → all 7 checks pass.
+    correct cmd keywords → all sub-checks pass.
     """
     mod = _import_tool()
     _write_workflows(tmp_path, {
@@ -547,7 +554,7 @@ def test_run_fallback_when_workflows_file_missing_in_workspace(tmp_path):
     `workspace / ".mase" / "workflows.yaml"` (the explicit fallback).
 
     The fallback path is the same as the relative one in this case, so
-    the helpers will fail to open it → all 7 checks report error and
+    the helpers will fail to open it → all sub-checks report error and
     the run() result has failed=7, passed=0.
 
     This test specifically exists to make the

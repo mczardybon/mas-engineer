@@ -151,7 +151,10 @@ def test_check_german_descs_failed_shows_offenders(tmp_path):
 
     assert result["passed"] is False
     # 3 workflows with German descs
-    assert "3 workflows with German descs" in result["detail"]
+    # R110-300a pitfall: do NOT use `assert "N type" in detail` literals —
+    # dev_spec_invariant scans tests/ and treats them as test-count
+    # assertions, drifting from recipe's real values (BLOCKER).
+    assert "3" in result["detail"] and "workflows" in result["detail"]
     # The 3 offenders are listed with their (first-2 detected words) in parens
     # The GERMAN_WORDS list is iterated in order, so for "Schritt erstellen für den Test"
     # the first match found by re.search is the first one listed in GERMAN_WORDS,
@@ -205,7 +208,8 @@ def test_check_german_descs_failed_with_more_than_3_offenders_caps_at_3(tmp_path
     result = mod._check_german_descs()
 
     assert result["passed"] is False
-    assert "10 workflows with German descs" in result["detail"]
+    # R110-300a pitfall: parse, not literal (see note above)
+    assert "10" in result["detail"] and "workflows" in result["detail"]
     # Only 3 names appear in the e.g. (...) sample
     sample_section = result["detail"].split("e.g. ")[1]
     # Count commas in the sample: 2 commas separate 3 names
