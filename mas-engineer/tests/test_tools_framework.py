@@ -170,8 +170,13 @@ class TestDevPytestHook:
 
     def test_run_pre_test_checks_returns_true(self, monkeypatch, capsys):
         """run_pre_test_checks() returns True (only warns, never blocks)."""
-        # Use a non-existent checker path so the early-return path triggers
-        monkeypatch.setattr(os.path, "exists", lambda p: False)
+        # R110-303: The dev_pytest_hook now anchors _CHECKER to its own
+        # location (Path(__file__).resolve().parent / "dev_rule_checker.py")
+        # instead of using a CWD-relative os.path.exists call. To trigger
+        # the "checker not found" early-return branch in tests, we monkeypatch
+        # the module's _CHECKER constant to a path that does NOT exist.
+        fake_missing = Path("/tmp/does-not-exist-dev_rule_checker.py")
+        monkeypatch.setattr(dev_pytest_hook, "_CHECKER", fake_missing)
         result = dev_pytest_hook.run_pre_test_checks()
         assert result is True
         captured = capsys.readouterr()
