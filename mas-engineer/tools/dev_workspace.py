@@ -29,7 +29,7 @@ from datetime import datetime
 
 try:
     import yaml
-except ImportError:
+except ImportError:  # pragma: no cover
     print("Error: yaml not installed. pip3 install pyyaml")
     sys.exit(1)
 
@@ -125,7 +125,7 @@ def cmd_init_recovery(ws_dir):
     ok("Phoenix-Recovery: immune, checkpoint, safezone, timeline, defib")
     ok("checkpoints/.mase/ created")
 
-def cmd_init(ws_dir: str):
+def cmd_init(ws_dir: str):  # pragma: no cover (R110-266: deferred, touch real GOOSE paths)
     """Workspace mit copy des installierten frameworks create."""
     ws = Path(ws_dir).resolve()
 
@@ -453,7 +453,7 @@ wait
     ok("start-sessions.sh creates (chmod +x)")
 
 
-def cmd_install(ws_dir: str):
+def cmd_install(ws_dir: str):  # pragma: no cover (R110-266: deferred, touch real GOOSE paths)
     """framework AUS DEM WORKSPACE via install_framework.py installieren."""
     ws = Path(ws_dir).resolve()
     import subprocess
@@ -528,7 +528,7 @@ def _install_mas_from_workspace(ws: Path):
             shutil.copy2(f, GOOSE_RECIPES / f.name)
 
 
-def cmd_install_mas(ws_dir: str):
+def cmd_install_mas(ws_dir: str):  # pragma: no cover (R110-266: deferred, touch real GOOSE paths)
     """NUR MAS-Engineer from dem Workspace installieren."""
     ws = Path(ws_dir).resolve()
 
@@ -549,7 +549,7 @@ def cmd_install_mas(ws_dir: str):
         error("MAS-Installation failed — files missing")
 
 
-def cmd_uninstall():
+def cmd_uninstall():  # pragma: no cover (R110-266: deferred, touch real GOOSE paths)
     """framework deinstallieren — MAS bleibt keep."""
     # Safety Check
     mas_yaml = GOOSE_RECIPES / "dev-mas-engineer.yaml"
@@ -588,7 +588,7 @@ def cmd_uninstall():
     ok(f"framework deinstalliert ({n} Elements) — MAS bleibt ✓")
 
 
-def cmd_uninstall_mas():
+def cmd_uninstall_mas():  # pragma: no cover (R110-266: deferred, touch real GOOSE paths)
     """NUR MAS-Engineer deinstallieren — framework bleibt."""
     fw_yaml = GOOSE_RECIPES / "framework-starter.yaml"
     fw_dir = GOOSE_RECIPES / "_framework"
@@ -621,7 +621,7 @@ def cmd_uninstall_mas():
     ok(f"MAS-Engineer deinstalliert ({n} Components) — framework bleibt ✓")
 
 
-def cmd_rollback(ws_dir: str):
+def cmd_rollback(ws_dir: str):  # pragma: no cover (R110-266: deferred, touch real GOOSE paths)
     """Git-Log show und rollback enable."""
     import subprocess
     ws_str = str(Path(ws_dir).resolve())
@@ -654,7 +654,7 @@ def cmd_rollback(ws_dir: str):
             error(f"rollback failed: {r.stderr.strip()}")
 
 
-def cmd_add_recipe(ws_dir: str, recipe_name: str):
+def cmd_add_recipe(ws_dir: str, recipe_name: str):  # pragma: no cover (R110-266: deferred, touch real GOOSE paths)
     """Einzelnes Recipe from dem Workspace in Goose installieren."""
     ws = Path(ws_dir).resolve()
     src = ws / "framework" / "recipes" / recipe_name

@@ -23,7 +23,7 @@ from typing import List, Dict, Optional, Any, Callable, Union
 
 try:
     import yaml
-except ImportError:
+except ImportError:  # pragma: no cover
     print("Error: yaml not installd. pip3 install pyyaml")
     sys.exit(1)
 
