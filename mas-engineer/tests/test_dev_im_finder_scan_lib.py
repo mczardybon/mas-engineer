@@ -641,9 +641,7 @@ def test_nn1_threshold_is_8_not_5(mod):
     actual check on a real orchestrator without a 100-line fixture,
     so a source-inspection test is the most honest check.
     """
-    src = mod.__file__ and open(mod.__file__).read() or open(
-        '/workspace/dev-branch/mas-engineer-cleanup/mas-engineer/tools/'
-        'dev_im_finder_scan.py').read()
+    src = open(mod.__file__).read()
     # The new comment should mention 8 as the threshold
     assert 'NN1 threshold raised from 5 to 8' in src
     # The old "5 role-verbs" should not be the active heuristic
@@ -661,8 +659,7 @@ def test_nn1_threshold_is_8_not_5(mod):
 
 def test_nn3_threshold_is_400_not_200(mod):
     """R110-276: NN3 threshold raised from 200 to 400 chars for descriptions."""
-    src = open('/workspace/dev-branch/mas-engineer-cleanup/mas-engineer/tools/'
-              'dev_im_finder_scan.py').read()
+    src = open(mod.__file__).read()
     # The R110-276 comment must mention the new 400 threshold
     assert 'threshold raised from 200 to 400' in src
     # The actual len() check should compare to 400. Locate the
@@ -685,8 +682,7 @@ def test_nn3_skips_sub_recipes(mod):
     Sub-recipes legitimately have long descriptions documenting
     their multi-domain scope. The detector should skip them.
     """
-    src = open('/workspace/dev-branch/mas-engineer-cleanup/mas-engineer/tools/'
-              'dev_im_finder_scan.py').read()
+    src = open(mod.__file__).read()
     # Look for the _is_sub_or_wf skip-block in the NN3 section
     import re
     nn3_block_match = re.search(r'# NN3:.*?(?=\n[^\s#])', src, re.DOTALL)
@@ -700,8 +696,7 @@ def test_nn3_skips_sub_recipes(mod):
 
 def test_q4c_print_only_requires_ensure_ascii(mod):
     """R110-276: Q4c for print() requires only ensure_ascii, not indent."""
-    src = open('/workspace/dev-branch/mas-engineer-cleanup/mas-engineer/tools/'
-              'dev_im_finder_scan.py').read()
+    src = open(mod.__file__).read()
     # Look for the Q4c print branch
     assert 'for print(json.dumps' in src or 'is_print' in src
     # The print branch should mention ensure_ascii only, not indent

@@ -483,6 +483,44 @@ hermes-initiated docs-only commit, +13 files, 0 code-changes,
   protocol section 7, routine fix + transparency report = no
   CHANGELOG. The STATUS.md entries are the changelog.
 
+### R110-306-ci-red-pre-existing-fixes (new 2026-08-30, DRAFT)
+- **File**: `.mase/directives/R110-306-ci-red-pre-existing-fixes.md` (85 lines, 2026-08-30)
+- **Goal**: Fix 2 pre-existing CI bugs that have been red on every commit
+  on `origin/mas-t-tests` since 7397957 (R110-303 base). `ci-quality` green,
+  `ci-tests` + `ci-e2e-smoke` red — not caused by the 3 docs-only commits
+  we just pushed (R110-303 + R110-304 + R110-305), all of which are
+  `.mase/directives/STATUS.md` text or `logs/e2e-evidence-gen2/` data,
+  0 code-changes (verified via `git diff --stat 7397957..HEAD`).
+- **Bug 1** (ci-tests red, Python 3.11 + 3.12):
+  4 tests in `tests/test_dev_im_finder_scan_lib.py`
+  (test_nn1_threshold_is_8_not_5, test_nn3_threshold_is_400_not_200,
+  test_nn3_skips_sub_recipes, test_q4c_print_only_requires_ensure_ascii)
+  fail with `FileNotFoundError: /workspace/dev-branch/mas-engineer-cleanup/
+  mas-engineer/tools/dev_im_finder_scan.py` — hardcoded absolute path
+  that exists on user's local machine but not in GitHub Actions runner
+  checkout (`/home/runner/work/...`). Line 841 already uses relative
+  `tools/...` (R110-129 conftest chdir makes it work) — the 4 broken
+  tests are copy-paste siblings. Fix: replace hardcoded path with
+  `open(mod.__file__).read()` (the pattern already used on line 644).
+- **Bug 2** (ci-e2e-smoke red): `ci-e2e-smoke.yml` install-step
+  runs `pip install pyyaml` only. But `e2e-test.sh` check #12
+  (R110-262 redteam-2, scripts/e2e-test.sh:496) invokes
+  `python3 -m pytest tests/test_r110_262_*.py` for 3 spec-gap
+  test files — fails with `No module named pytest`, exits non-zero.
+  Fix: add pytest to pip install (`pip install pyyaml pytest`).
+- **Verification (local)**: pytest 4/4 PASS for the 4 previously-failing
+  tests. `bash scripts/e2e-test.sh` = 13/13 PASS, 0 FAIL, 0 SKIP
+  (check #12 specifically: 48 passed). YAML valid.
+- **Refs**: R110-276 (NN3 test-content), R110-262 (redteam-2 e2e #12),
+  R110-129 (conftest chdir R-FIX), R110-305 (previous docs-only commit
+  on this branch).
+- **Code-change scope**: 3 files, +46/-10 lines total.
+  `.github/workflows/ci-e2e-smoke.yml`: `pip install pyyaml` →
+  `pip install pyyaml pytest` + 5 comment lines.
+  `mas-engineer/tests/test_dev_im_finder_scan_lib.py`: 4 hardcoded
+  paths → 4 `mod.__file__` lookups.
+  `mas-engineer/.mase/directives/STATUS.md`: this entry (+36 lines).
+
 ## PHASE-Status-Legende
 
 - `OPEN` -- spec existiert, implementation ausstehend

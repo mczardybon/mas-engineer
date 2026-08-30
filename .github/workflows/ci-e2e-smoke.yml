@@ -61,7 +61,12 @@ jobs:
         working-directory: mas-engineer
         run: |
           python -m pip install --upgrade pip
-          pip install pyyaml
+          # pyyaml: required by e2e #1..#11 (yaml.safe_load of every recipe/sub/*.yaml)
+          # pytest: required by e2e #12 (R110-262 redteam-2 — 3 spec-gap test files
+          #         invoked via `python3 -m pytest` inside e2e-test.sh:496). Without
+          #         pytest, check #12 fails with "No module named pytest" and the
+          #         whole harness exits non-zero. (R110-306 fix.)
+          pip install pyyaml pytest
 
       - name: Run e2e-test.sh
         working-directory: mas-engineer
