@@ -807,17 +807,18 @@ else
     # 75s observed per phoenix test). Matches ci-tests.yml flag set
     # (R110-246). --ignore=.state: state is transient run-state, not test code.
     #
-    # R110-270 OUTER-CAP (was missing!): single suite run is 420-450s
-    # on mas-t-tests @ 1965 tests. Without an outer cap, a hanging
-    # test (e.g. broker waiting for a topic) blocks the validator
-    # indefinitely. `timeout 540` (= 9 min) gives 90s headroom over
-    # the worst-case 7.5min run, fits in the 15min local-budget and
-    # is well under GHA's 30min default. On outer timeout, fail-fast
-    # with the tail of pytest output (preserved in $PYTEST_OUTPUT).
+    # R110-303 OUTER-CAP UPDATE: R110-270 calibrated 540s for 1965 tests
+    # on mas-t-tests (R110-269: 446s). After R110-302 added 207 new tests
+    # bringing total to 2714, single suite run grew to ~9min (539s last
+    # observed). The old 540s cap barely fits (no headroom) — bump to
+    # 720s (12 min) to restore safety margin. Bumping to 900s would be
+    # over-budget against the 15min local-budget. Revisit if/when test
+    # count crosses 3500.
+    # On outer timeout, fail-fast with the tail of pytest output.
     PYTEST_RC=1
     PYTEST_ATTEMPT=0
     MAX_ATTEMPTS=2   # R110-270: was 3 (caused 22.5min worst case)
-    OUTER_TIMEOUT=540 # R110-270: seconds (9 min). Worst-case 7.5min run + 90s headroom.
+    OUTER_TIMEOUT=720 # R110-303: was 540 (R110-270). 12 min for 2714 tests.
     while [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt "$MAX_ATTEMPTS" ]; do
         PYTEST_ATTEMPT=$((PYTEST_ATTEMPT + 1))
         # set -o pipefail ensures $? reflects pytest's exit code, not tail's.
