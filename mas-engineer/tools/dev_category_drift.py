@@ -81,6 +81,29 @@ CONVENTIONAL_COMMIT_RE = re.compile(
 # between skill/detector/validator -- the validator is source-of-truth.)
 ALLOWED_EMOJI_PREFIXES = ("🔧", "📝", "📚", "📊")
 
+# R-sprint round-up prefix (R110-304): the no-emoji `R<round>-<num>:
+# <topic> — desc` form. Used in R110-303 (3 commits: 627d67a, e69bfbf,
+# 6c0d452) before the R-sprint em-dash convention was re-established
+# in the user's working session. The form is a valid round-up label
+# (it is a direct reference to the R-sprint number, scope-equivalent
+# to a round bracket). Adding it here mirrors the validator Check 1.5
+# allowance (R110-304 updates the validator in lockstep) and keeps
+# the 3 R110-303 commits out of the drift list (otherwise they would
+# pollute every Check 16+ run). Per R110-174 re-translation-pattern:
+# R110-303 was already pushed (force-push forbidden), so R110-304
+# is the transparent fix-commit, not an amend.
+#
+# Pattern: `R<round>-<num>` followed by EITHER `:` directly, OR a
+# space and then optional follow-up/phase/sub-name and THEN `:`.
+# Examples (all accepted):
+#   - "R110-303: dev_pytest_hook ..."
+#   - "R110-303 phase 2: coverage tests ..."
+#   - "R110-303 follow-up: fix test ..."
+#   - "R110-304 sub-name: do thing"
+R_SPRINT_COLON_RE = re.compile(
+    r"^R\d+-\d+((?: (?:follow-up|phase \d+|[\w-]+))?): "
+)
+
 # Default cutoff: when the 5-category commit-protocol was EFFECTIVELY enforced.
 # Timeline:
 #   2026-07-27 -- R108-10 (e2c4501): protocol introduced + Check 1.5 added to validator (formal)
@@ -173,6 +196,14 @@ def classify_drift(commits, cutoff_date=None):
         # Legacy conform (R-sprint emoji): validator Check 1.5 allows 🔧|📝|📚|📊
         # R<round>-<num> [follow-up] — desc. Accept the same here.
         if any(subj.startswith(e) for e in ALLOWED_EMOJI_PREFIXES):
+            conform.append(c)
+            continue
+        # R-sprint round-up colon form (R110-304): the no-emoji
+        # `R<round>-<num>: <topic> — desc` style. Matches the format
+        # used in R110-303 and any future round-up commit that
+        # references an R-sprint by its bare number. See
+        # R_SPRINT_COLON_RE definition above.
+        if R_SPRINT_COLON_RE.match(subj):
             conform.append(c)
             continue
         # Else: drift

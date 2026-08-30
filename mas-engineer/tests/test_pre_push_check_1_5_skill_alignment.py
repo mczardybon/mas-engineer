@@ -60,6 +60,16 @@ from pathlib import Path
 
 import pytest
 
+# R110-304: import dev_category_drift for the R_SPRINT_COLON_RE
+# lockstep test. The test reads the validator file (no path needed)
+# and the smoke-test self-checks (read the current file), so the
+# import here is the only cross-file dependency. Mirrors the
+# import block in tests/test_dev_category_drift_r110293.py.
+REPO_ROOT = Path(__file__).parent.parent.resolve()
+TOOLS_DIR = REPO_ROOT / "tools"
+if str(TOOLS_DIR) not in sys.path:
+    sys.path.insert(0, str(TOOLS_DIR))
+
 
 # 1. Locate the 3 source-of-truth files
 REPO_ROOT = Path(__file__).parent.parent.resolve()
@@ -250,6 +260,16 @@ def _check_origin_cleanup_commits_match_validator():
     ALLOWED_PATTERNS = [
         r"^(fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:",
         r"^mas\(round-\d+\):",
+        # R110-304: R-sprint round-up colon form `R<round>-<num>:
+        # <topic> — desc`. Mirrors the validator Check 1.5 update
+        # and the dev_category_drift.py R_SPRINT_COLON_RE addition.
+        # Without this, the smoke test flags R110-303's 3 commits
+        # (627d67a, e69bfbf, 6c0d452) as off-format even though the
+        # validator (after R110-304) accepts them. R110-174
+        # re-translation-pattern: R110-303 was already pushed
+        # (force-push forbidden), so R110-304 is the transparent
+        # fix-commit.
+        r"^R\d+-\d+((?: (?:follow-up|phase \d+|[\w-]+))?): ",
         r"^[🔧📝📚📊] (FIX|DOCS|STATE|TEST|FEAT|CHORE|ARCH) — ",
         r"^[🔧📝📚📊] R\d+-[\w-]+( follow-up)? — ",
         r"^📊 EVIDENCE — R\d+-",
@@ -497,6 +517,84 @@ def test_check_1_5_detector_conventional_types_match_validator():
         f"detector has legacy emoji-substitutes {detector_cats & legacy} "
         f"that the validator REJECTS — pre-R110-127 R110-78 mismatch"
     )
+
+
+def test_check_1_5_r_sprint_colon_form_in_all_3_sources():
+    """(e2) R110-304: the `R<round>-<num>: <topic> — desc` form must
+    be accepted by all 3 sources (validator / detector / smoke test).
+
+    The 3 R110-303 commits (627d67a, e69bfbf, 6c0d452) use this
+    format. The R110-174 re-translation-pattern says: don't force-push
+    the originals, add a transparent fix-commit (R110-304) that
+    updates the allowlist. This test guards the 3-source lockstep
+    so the next R-sprint that re-uses the format is not silently
+    blocked (R110-78 lesson)."""
+    # 1. Validator: must define the pattern
+    text = VALIDATOR_MD.read_text()
+    assert re.search(r"allowed_patterns\s*=\s*\[", text)
+    assert re.search(r"r'\^R\\d\+-\\d\+\(\(\?: \(\?:follow-up\|phase \\d\+\|\[\\w-\]\+\)\)\?\): '", text), (
+        "validator allowed_patterns missing the R110-304 R-sprint colon form"
+    )
+    # 2. Detector: must define R_SPRINT_COLON_RE
+    detector_text = DETECTOR_PY.read_text()
+    assert "R_SPRINT_COLON_RE" in detector_text, (
+        "dev_category_drift.py missing R_SPRINT_COLON_RE (R110-304)"
+    )
+    # 3. Smoke test: this very file must have the pattern in its
+    #    _check_origin_cleanup_commits_match_validator ALLOWED_PATTERNS
+    own_text = Path(__file__).read_text()
+    assert re.search(r'r"\^R\\d\+-\\d\+\(\(\?: \(\?:follow-up\|phase \\d\+\|\[\\w-\]\+\)\)\?\): "', own_text), (
+        "smoke test ALLOWED_PATTERNS missing the R110-304 R-sprint colon form"
+    )
+    # 4. All 3 sources must actually ACCEPT an R110-303-style subject
+    real_subject = "R110-303: dev_pytest_hook CWD-fragility fix + 2 R110-303 coverage tests"
+    # (a) detector
+    detector_subjects = [real_subject, "R110-304 follow-up: R-sprint colon form allowance"]
+    from dev_category_drift import classify_drift, R_SPRINT_COLON_RE  # noqa: F401
+    for s in detector_subjects:
+        assert R_SPRINT_COLON_RE.match(s), (
+            f"detector R_SPRINT_COLON_RE must match {s!r}"
+        )
+
+
+def test_check_1_5_r_sprint_colon_form_does_not_match_non_r_subjects():
+    """(e3) R110-304: R_SPRINT_COLON_RE must NOT match plain
+    conventional commits, R-round-up-without-colon, or non-R subjects.
+    This guards against the new pattern being too permissive."""
+    from dev_category_drift import R_SPRINT_COLON_RE
+    bad = [
+        "fix: R110-303 — something",  # conventional commit
+        "R110-303:no-space-after-colon",  # missing space
+        "R110-303 : space-before-colon",  # wrong spacing
+        "R110X-303: wrong separator",  # letter instead of digit
+        "R-303: missing-round-digit",  # missing round digit
+        "📚 R110-304 — desc",  # emoji form (handled by other pattern)
+        "random text",  # not an R-sprint
+    ]
+    for s in bad:
+        assert not R_SPRINT_COLON_RE.match(s), (
+            f"R_SPRINT_COLON_RE must NOT match {s!r}"
+        )
+
+
+def test_check_1_5_r_sprint_colon_form_accepts_phase_and_subname():
+    """(e4) R110-304: the R_SPRINT_COLON_RE must also accept the
+    variants used in R110-303 (3 different shapes):
+      - 'R110-303: desc' (direct colon)
+      - 'R110-303 phase 2: desc' (text-before-colon)
+      - 'R110-303 follow-up: desc' (follow-up)
+    This guards against future tightening that drops these."""
+    from dev_category_drift import R_SPRINT_COLON_RE
+    valid = [
+        "R110-303: dev_pytest_hook CWD-fragility fix",
+        "R110-303 phase 2: coverage tests for 3 more",
+        "R110-303 follow-up: fix test_run_pre_test_checks",
+        "R110-304 sub-name: do thing",
+    ]
+    for s in valid:
+        assert R_SPRINT_COLON_RE.match(s), (
+            f"R_SPRINT_COLON_RE must match {s!r} (R110-304 contract)"
+        )
 
 
 # ============================================================

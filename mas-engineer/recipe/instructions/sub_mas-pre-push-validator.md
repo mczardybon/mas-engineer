@@ -193,6 +193,14 @@ for t in history:
 allowed_patterns = [
     r'^(fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:',  # conventional commits
     r'^mas\(round-\d+\):',  # MAS self-improve rounds
+    # R110-304: R-sprint round-up colon form `R<round>-<num>:
+    # <topic> — desc`. Mirrors the same addition in
+    # tools/dev_category_drift.py (R_SPRINT_COLON_RE) and the
+    # smoke test in tests/test_pre_push_check_1_5_skill_alignment.py
+    # (R110-304 update). All 3 sources stay in lockstep (R110-78
+    # lesson: validator / detector / skill must agree, or the next
+    # R-sprint silently re-introduces drift).
+    r'^R\d+-\d+((?: (?:follow-up|phase \d+|[\w-]+))?): ',
 ]
 # Conventional commits with allowed emojis (the 4 in repo history)
 for allowed in ALLOWED_EMOJIS:
