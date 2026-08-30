@@ -1233,3 +1233,67 @@ stmts = testable. Coverage gap to 85% is 8353 lines = ~417 tests at
 20 lines/test. Realistic multi-day effort, not one session.
 
 Evidence: logs/e2e-evidence-gen2/coverage-R110-302.json
+
+---
+
+## R110-302 round 3 (2026-08-29) — Coverage sprint round 3: 5 more small tools at 100%, 116 tests
+
+Follow-up to R110-302 round 2 (5 small tools covered). This round
+targets 5 more small 0%-files, this time with 2 from the
+`pre_check_lib/` package (R110-300a/301 red zone) plus 3 from
+`tools/`. Continues the same library-mode + `runpy.run_path`
+pattern from R110-298..300.
+
+| File                              | Stmts | Tests | Coverage |
+|-----------------------------------|-------|-------|----------|
+| pre_check_lib/german.py           | 57    | 16    | 100%     |
+| dev_yaml_generator_core.py        | 60    | 33    | 100%     |
+| dashboard_prd_template.py         | 61    | 14    | 100%     |
+| dev_write_filter.py               | 62    | 32    | 100%     |
+| pre_check_lib/phoenix.py          | 62    | 21    | 100%     |
+| TOTAL                             | 302   | 116   | 100%/file |
+
+All 116 tests pass in 0.42s.
+
+**Pushed** (commit `edaca0c`, Sat 2026-08-29 23:40 UTC by Hermes cron,
+not in a session — these 3 R110-302 rounds were driven by automated
+coverage-sprint tooling, not by a user request):
+- `fc4e7b7` — R110-302 sprint round 2: 5 small tools → 100%, 91 tests
+- `af7a558` — R110-302 evidence + STATUS (this entry into `mas-engineer/STATUS.md` + coverage JSON committed to `logs/e2e-evidence-gen2/`)
+- `edaca0c` — R110-302 sprint round 3: 5 more small tools at 100%, 116 tests
+- `532eefe` — R110-300a pitfall round 2: fix "N type" literals in 2 new
+  test files (test_r110302_pre_check_phoenix.py + test_r110302_pre_check_german.py).
+  Hermes-cron auto-fix after R110-302 sprint round 3 introduced the
+  same pitfall that R110-300a had warned about.
+
+**Pitfalls encoded in test files (R110-302 round 3 specific):**
+1. `dev_write_filter.check_target()` rejects paths OUTSIDE `MAS_DIR`
+   (i.e. pytest's `tmp_path` is under `/tmp` → rejected). Fix:
+   helper that places targets under `MAS_DIR/tests/_r110302_dwf_tmp/`
+   so path is inside `MAS_DIR` and ends in `.yaml`.
+2. `dashboard_prd_template` computes `STATUS_FILE` / `SIGNAL_FILE` at
+   IMPORT time, so subprocess tests don't contribute to in-process
+   coverage for the `__main__` block. Solved by `runpy.run_path()`
+   in-process tests for all branches.
+3. Coverage in the `pre_check_lib/` package subdir needs
+   `--cov=pre_check_lib.<name>` not `--cov=tools/pre_check_lib/<name>`.
+
+**Verification:**
+- Local: all 5 test files green in 0.42s
+- Total coverage after round 3: ~28.5% (was 27.2% after round 2,
+  +1.3pp; gap to 85% target = 56.5pp; ~7800 lines remaining
+  = ~390 tests at 20 lines/test)
+- Full pytest: 2703/2703 pass (R110-302 round 3 baseline; before
+  R110-303 added 79 more = 2782, then R110-304 baseline = 2812)
+- No COUNT_ASSERT_RE pitfall (round 2 was clean; round 3 had
+  `test_run_all_seven_checks_pass` + 9 "N type" literals that
+  `532eefe` patched in the same cron cycle)
+
+**Refs:**
+- R110-298..300 (library-mode + runpy.run_path pattern foundation)
+- R110-301 (25.7% baseline, 55 of 80 tools at 0%, gap analysis)
+- R110-300a (CAT-3 COUNT_ASSERT_RE pitfall, the bug that
+  `532eefe` fixed in round 3)
+- R110-303 (the 5 smallest zero-coverage top-level tools
+  follow-up, brings the same library-mode pattern to dev_*.py
+  top-level modules)
