@@ -323,6 +323,13 @@ def generate_data(ws):
     history_file = os.path.join(dash_dir, 'history.json')
     history = load_json(history_file, {"health_trend": [], "build_size": []})
 
+    # R110-312: history.json may contain pre-R110-149 entries that
+    # used the legacy 'mas' key (instead of 'score'). Migrate on
+    # load so the dashboard schema test sees 'score' for every entry.
+    for entry in history.get('health_trend', []):
+        if 'mas' in entry and 'score' not in entry:
+            entry['score'] = entry.pop('mas')
+
     now_str = datetime.now().strftime('%H:%M')
     mas_health = 100
     if degraded_count > 0:

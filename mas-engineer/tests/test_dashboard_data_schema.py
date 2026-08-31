@@ -352,3 +352,45 @@ def test_history_health_trend_grows_monotonically():
         h = json.load(f)
     assert len(h["health_trend"]) >= 1
     assert len(h["health_trend"]) <= 24
+
+
+# ─── R110-312: LEGACY 'mas' KEY MIGRATION ────────────────────────
+
+def test_health_trend_migrates_legacy_mas_key_to_score(tmp_path, monkeypatch):
+    """R110-312: history.json entries from pre-R110-149 eras used the
+    legacy 'mas' key (instead of 'score'). generate_data() must
+    migrate on load so the schema assertion holds for all entries.
+    """
+    # Build a fake dashboard dir with a legacy-shape history.json
+    fake_dash = tmp_path / "dashboards"
+    fake_dash.mkdir()
+    legacy_history = {
+        "health_trend": [
+            {"time": "10:00", "mas": 100},   # legacy shape
+            {"time": "10:05", "mas": 70},    # legacy shape
+            {"time": "10:10", "score": 50},  # current shape (must be kept)
+        ],
+        "build_size": [],
+    }
+    (fake_dash / "history.json").write_text(json.dumps(legacy_history))
+
+    # Build a fake workspace with the minimal structure generate_data needs
+    fake_ws = tmp_path / "ws"
+    fake_ws.mkdir()
+    (fake_ws / ".mase" / "dashboards").mkdir(parents=True)
+    (fake_ws / ".mase" / "dashboards" / "history.json").write_text(
+        json.dumps(legacy_history)
+    )
+    # Minimal recipe/sub dir
+    (fake_ws / "recipe" / "sub").mkdir(parents=True)
+    (fake_ws / "recipe" / "sub" / "sub_mas-test.yaml").write_text("name: test\nversion: 1\n")
+
+    d = dev_dashboard_data.generate_data(str(fake_ws))
+    scores = [e.get("score") for e in d["health_trend"]]
+    # All entries must have a 'score' key (the legacy 'mas' was migrated)
+    assert all("score" in e for e in d["health_trend"]), \
+        f"legacy 'mas' entries not migrated: {d['health_trend']}"
+    # Original 'mas' values preserved
+    assert 100 in scores
+    assert 70 in scores
+    assert 50 in scores
