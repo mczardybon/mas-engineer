@@ -1297,3 +1297,43 @@ coverage-sprint tooling, not by a user request):
 - R110-303 (the 5 smallest zero-coverage top-level tools
   follow-up, brings the same library-mode pattern to dev_*.py
   top-level modules)
+
+## R110-316 (2026-09-01) — 3-source lockstep smoke test for RECIPE_EXCLUDE (1 new test)
+
+R110-315 fixed the **single-source** problem: `RECIPE_EXCLUDE` in
+`tests/test_unix_test_word.py` was missing the new `sub_-.yaml` 0-byte
+test-side-effect fixture. R110-316 noticed the e2e-runner
+(`tools/e2e_run_all.py::artifacts`) has a PARALLEL list that was
+NEVER in lockstep with `RECIPE_EXCLUDE`. Pre-R110-316, the 2 lists
+could silently disagree: pytest tolerated a 0-byte fixture that
+e2e silently dropped (or vice versa). R110-316 added a smoke test
+that enforces **A ∪ B ⊇ C** where:
+- A = `RECIPE_EXCLUDE` in `tests/test_unix_test_word.py`
+- B = `artifacts` list in `tools/e2e_run_all.py`
+- C = filesystem reality (`recipe/sub/*.yaml` of size 0)
+
+| File | + | - | Why |
+|------|---|---|-----|
+| `tests/test_pre_push_check_1_5_skill_alignment.py` | +125 | 0 | New test enforces A ∪ B ⊇ C with explicit diagnostic naming A/B/C sets |
+| `tools/e2e_run_all.py` | +9 | 0 | 1 line code (`sub_-.yaml` in artifacts) + 8 lines comment explaining R110-316 lockstep role |
+| `.mase/directives/R110-316-recipe-exclude-3-source-lockstep-test.md` | +61 | 0 | Sprint planning doc, force-added per R110-0d57265 pattern |
+| **Total** | **+195** | **0** | **1 new test, 1 source-list entry, 1 directive** |
+
+Verification:
+- `test_check_1_5_recipe_exclude_3_source_lockstep` synthetic-drift
+  verified BOTH directions: clean→PASS, inject `sub_NEW_DRIFT.yaml`→
+  FAIL with diagnostic naming A/B/C sets, cleanup→PASS. NOT vacuous.
+- 12/12 1.5 alignment tests PASS (was 11/11 pre-R110-316, +1 new)
+- 30/30 targeted pytest PASS (alignment + unix_test_word + r110_78)
+- 0 secrets in pushed content (commit ab43dbc)
+- Body-claim `+59 → +61` off-by-2 caught via R110-305 / R110-173 rule
+  before `git commit`, corrected in `/tmp/r110-316-msg.txt`
+
+Evidence: `logs/e2e-evidence-gen2/R110-316-EVIDENCE.md`
+
+**Refs:**
+- R110-313..315 (pre-existing red discovery + single-source fix)
+- Skill: `mas-engineer-pre-existing-test-fix-3-source-lockstep` (Failure
+  Mode 3 added in this round)
+- Skill: `pre-push-body-claim-verification` (R110-305 + R110-173
+  used for the off-by-2 catch)
