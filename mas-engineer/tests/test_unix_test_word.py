@@ -30,6 +30,14 @@ REPO_ROOT = Path(__file__).parent.parent.resolve()
 # is permanently removed; the e2e sample no longer re-introduces it.
 RECIPE_EXCLUDE = {
     "sub_test-agent.yaml",  # auto-generated test artifact (0 bytes)
+    # R110-315: sub_-.yaml is a 0-byte fixture left behind by some test
+    # runs (specifically test_r110261_tools_coverage which uses it as a
+    # negative test case). Pre-R110-315, this file would cause
+    # test_all_recipe_files_non_empty to fail whenever it appeared in
+    # the working tree after a pytest run. Like sub_test-agent.yaml,
+    # this is NOT a deployable recipe — it is a test-side-effect.
+    # See R110-313 cleanup attempt for the prior history.
+    "sub_-.yaml",  # 0-byte test fixture, see R110-315
 }
 
 
