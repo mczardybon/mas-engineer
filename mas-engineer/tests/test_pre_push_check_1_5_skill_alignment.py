@@ -271,7 +271,15 @@ def _check_origin_cleanup_commits_match_validator():
         # fix-commit.
         r"^R\d+-\d+((?: (?:follow-up|phase \d+|[\w-]+))?): ",
         r"^[🔧📝📚📊] (FIX|DOCS|STATE|TEST|FEAT|CHORE|ARCH) — ",
-        r"^[🔧📝📚📊] R\d+-[\w-]+( follow-up)? — ",
+        # R110-314: extend char-class to allow `/` between multiple
+        # R-sprint numbers (e.g. "R110-311/R110-312 — ..."). Pre-R110-314
+        # the test flagged 0d57265 as off-format despite it being a valid
+        # docs commit covering two R-sprint rounds. The detector accepts
+        # this form (R110-313 evidence), and the validator (after R110-304)
+        # also accepts `R\d+-\d+:` colon form — so this regex should match
+        # the slash variant too. Pure cosmetic lockstep with validator +
+        # detector.
+        r"^[🔧📝📚📊] R\d+-[\w/-]+( follow-up)? — ",
         r"^📊 EVIDENCE — R\d+-",
         # R110-179: cover the "emoji + conventional-commit" hybrid style
         # (e.g. "📝 docs(directives): R110-177 ..."). Without these two
