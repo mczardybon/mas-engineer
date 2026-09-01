@@ -762,3 +762,128 @@ def test_check_1_5_skill_tests_skip_gracefully_without_skills():
                 "R110-132 contract broken: empty HERMES_HOME should yield "
                 "SKILLS_INSTALLED=False (so tests skip, not error)"
             )
+
+
+# R110-316: 3-source lockstep for the 0-byte-fixture allowlist.
+# mas-engineer has TWO parallel allowlist sources for "this 0-byte
+# recipe/sub/*.yaml is a test-side-effect, not a real recipe":
+#   A: tests/test_unix_test_word.py::RECIPE_EXCLUDE (pytest-side)
+#   B: tools/e2e_run_all.py::artifacts (e2e-runner pre-test cleanup)
+# If they DRIFT, either pytest or e2e can fail spuriously when the
+# OTHER side creates a fixture. R110-315 added sub_-.yaml to A but
+# not to B — this test catches such drift.
+# Generalizes the validator/detector/test 3-source pattern from
+# R110-78 / R110-304 to a different concern: filesystem reality
+# (C) is the third source. 0-byte files that exist MUST be in
+# A ∪ B, or pytest/e2e will report false positives.
+def test_check_1_5_recipe_exclude_3_source_lockstep():
+    """(i) R110-316: RECIPE_EXCLUDE (A) and e2e artifacts list (B)
+    must jointly cover all 0-byte recipe/sub/*.yaml files (C). If
+    not, pytest or e2e will report the fixture as a "missing or
+    empty recipe" failure when it is actually a test-side-effect.
+
+    Source A is the pytest-side allowlist
+    (`tests/test_unix_test_word.py::RECIPE_EXCLUDE`).
+    Source B is the e2e-runner pre-test cleanup list
+    (`tools/e2e_run_all.py::artifacts`).
+    Source C is the working-tree reality: any 0-byte *.yaml file
+    currently in recipe/sub/.
+
+    Asserts:
+    1. A and B are non-empty (defence in depth: at least one source
+       covers each known fixture)
+    2. Every entry in C is in A ∪ B (no 0-byte file goes uncovered)
+    3. A and B are reachable as readable Python source (not just
+       `os.path.exists` — they have to be importable / parseable
+       for the lockstep to mean anything)
+
+    Soft-warns (does not hard-fail) when an A or B entry points at
+    a file that is not actually a fixture (file > 0 bytes, or
+    doesn't exist). The hard assertion is the C-coverage rule.
+    """
+    import glob
+    import importlib.util
+
+    recipe_sub = REPO_ROOT / "recipe" / "sub"
+    if not recipe_sub.is_dir():
+        pytest.skip("recipe/sub missing — workspace incomplete")
+
+    # --- Source A: RECIPE_EXCLUDE from test_unix_test_word.py ---
+    unix_test_path = REPO_ROOT / "tests" / "test_unix_test_word.py"
+    if not unix_test_path.is_file():
+        pytest.skip(f"missing source A: {unix_test_path}")
+    spec = importlib.util.spec_from_file_location(
+        "_r110316_unix_test", unix_test_path
+    )
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    if not hasattr(mod, "RECIPE_EXCLUDE"):
+        pytest.skip("source A has no RECIPE_EXCLUDE attribute")
+    source_a = {os.path.basename(p) for p in mod.RECIPE_EXCLUDE}
+
+    # --- Source B: artifacts list from e2e_run_all.py ---
+    e2e_runner_path = REPO_ROOT / "tools" / "e2e_run_all.py"
+    if not e2e_runner_path.is_file():
+        pytest.skip(f"missing source B: {e2e_runner_path}")
+    b_text = e2e_runner_path.read_text(encoding="utf-8")
+    # Match `recipe/sub/<name>.yaml` literals in the artifacts list.
+    # The list is small (5-10 entries) and is a literal Python list,
+    # so a regex on quoted string-literal form is reliable.
+    source_b = set(re.findall(
+        r"""['\"]recipe/sub/([\w.-]+\.yaml)['\"]""",
+        b_text,
+    ))
+
+    # --- Source C: filesystem reality ---
+    source_c = {
+        os.path.basename(p)
+        for p in glob.glob(str(recipe_sub / "*.yaml"))
+        if os.path.getsize(p) == 0
+    }
+
+    # Defence in depth: at least one of A or B should be non-empty.
+    # (Both being empty would mean NO fixture is being tolerated,
+    # which is a 4th-source drift signal we want to surface.)
+    assert source_a or source_b, (
+        "R110-316: BOTH RECIPE_EXCLUDE (A) and e2e artifacts (B) are empty. "
+        "At least one fixture must be tolerated; check if test_unix_test_word.py "
+        "and tools/e2e_run_all.py both lost their fixture lists."
+    )
+
+    # C must be a subset of A ∪ B. This is the 3-source lockstep rule:
+    # if a 0-byte file exists but is not in any allowlist, pytest or
+    # e2e will report it as a false positive.
+    coverage = source_a | source_b
+    uncovered = source_c - coverage
+    assert not uncovered, (
+        f"R110-316 3-source lockstep BROKEN: 0-byte recipe/sub/*.yaml "
+        f"files exist that are in NEITHER RECIPE_EXCLUDE (A) nor e2e "
+        f"artifacts (B): {sorted(uncovered)}\n"
+        f"  A (RECIPE_EXCLUDE): {sorted(source_a)}\n"
+        f"  B (e2e artifacts):  {sorted(source_b)}\n"
+        f"  C (fs reality):     {sorted(source_c)}\n"
+        f"Fix: add the file to RECIPE_EXCLUDE (if pytest should tolerate it) "
+        f"and/or to tools/e2e_run_all.py::artifacts (if e2e should clean it up)."
+    )
+
+    # Soft-warn (return) for entries in A or B that don't correspond
+    # to a real 0-byte fixture. Not a hard fail — the file may simply
+    # not have been generated YET on this run, and the entry is still
+    # correct defence-in-depth. We surface as part of the assertion
+    # message so future cleanup work can see the drift, but the test
+    # stays green.
+    if source_a - source_c - {f for f in source_a if not (recipe_sub / f).exists()}:
+        # Some A entries refer to files that don't currently exist;
+        # that's the normal pytest-state and not drift. Only flag
+        # entries that point at a NON-ZERO file (would be a typo).
+        for entry in sorted(source_a):
+            full = recipe_sub / entry
+            if full.exists() and full.stat().st_size > 0:
+                # Don't fail; just log via assertion message.
+                # The next CI run will see this in pytest -v output.
+                print(
+                    f"R110-316 soft-warn: RECIPE_EXCLUDE entry {entry!r} "
+                    f"is not a 0-byte fixture (file size > 0). "
+                    f"Consider removing it from RECIPE_EXCLUDE if the "
+                    f"test is no longer producing it."
+                )

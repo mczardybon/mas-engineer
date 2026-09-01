@@ -396,6 +396,15 @@ def main():
         "recipe/sub/sub_mas-smoketest.yaml",
         "recipe/sub/sub_mas-smoketest2.yaml",
         "recipe/sub/sub_mas-smoketest3.yaml",
+        # R110-316: sub_-.yaml is the 0-byte fixture produced by
+        # test_r110261_tools_coverage. RECIPE_EXCLUDE in
+        # test_unix_test_word.py was updated in R110-315 to tolerate
+        # it during pytest; this e2e-runner cleanup keeps the
+        # recipe-yaml scope clean before e2e starts. Removing this
+        # entry would re-introduce the 3-source lockstep drift
+        # that R110-316 test_check_1_5_recipe_exclude_3_source_lockstep
+        # is designed to catch.
+        "recipe/sub/sub_-.yaml",
     ]
     for a in artifacts:
         try:
