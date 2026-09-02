@@ -1337,3 +1337,82 @@ Evidence: `logs/e2e-evidence-gen2/R110-316-EVIDENCE.md`
   Mode 3 added in this round)
 - Skill: `pre-push-body-claim-verification` (R110-305 + R110-173
   used for the off-by-2 catch)
+
+## R110-317 (2026-09-01) — transparency follow-up: R110-316 evidence closure
+
+No code change. Audit-trail-only commit that closes the evidence
+trail for R110-316: STATUS.md section (this R110-317 was itself
+not yet written at R110-316 push time), CHANGELOG entry, and
+EVIDENCE file. Follows the R110-252/253/254/229/231/255 convention
+that every R-sprint commit has a matching evidence file in
+`logs/e2e-evidence-gen2/`.
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `mas-engineer/STATUS.md` | +41 | 0 | R110-316 section (this very section) |
+| `mas-engineer/docs/CHANGELOG-2026-09-01-r110-316.md` | +156 | 0 | NEW, modeled on R110-297 format |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-316-EVIDENCE.md` | +125 | 0 | NEW, force-added (logs/ in .gitignore Z.242) |
+| **Total** | **+322** | **0** | **0 code, 1 modified doc, 2 added docs** |
+
+Verification:
+- Body-claim `+40 → +41` off-by-1 caught via R110-305 / R110-174
+  before `git commit`, corrected to `+41` in `/tmp/r110-317-msg.txt`
+- 30/30 targeted pytest PASS (no regression from R110-316)
+- 0 secrets in pushed content (commit 09c8d99)
+
+**Refs:**
+- R110-316 (ab43dbc) — the `test:` commit whose evidence this closes
+- R110-252/253/254 + R110-229/231/255 — the R-sprint evidence-file
+  convention
+- R110-281 — force-push-verbot respected (no `--force`, no
+  `--force-with-lease`); R110-317 uses normal `git push`
+
+## R110-318 (2026-09-01) — session-start auto-cleanup of test-side-effect zombie files
+
+**Goal:** prevent the `tests/test_zz_*.py` + `recipe/sub/*.yaml` 0-byte
+zombie class at the source, by adding a `pytest_sessionstart` hook in
+`tests/conftest.py` that runs BEFORE pytest collection. The hook
+auto-deletes `tests/test_zz_*.py` (and matching `.pyc`) and emits a
+WARNING (read-only, no delete) for `recipe/sub/*.yaml` 0-byte files
+NOT in the `RECIPE_EXCLUDE` allowlist. Pairs with R110-316
+(detection-at-pre-push) to give two layers of protection.
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `mas-engineer/tests/conftest.py` | +109 | 0 | +18 docstring, +1 import, +90 hook (pytest_sessionstart) |
+| `mas-engineer/tests/test_r110318_session_start_zombie_cleanup.py` | +200 | 0 | NEW, 7 tests (cleanup + warning + no-op + multi) |
+| `mas-engineer/.mase/directives/R110-318-session-start-zombie-cleanup.md` | +185 | 0 | NEW, 9-section spec |
+| `mas-engineer/STATUS.md` | +80 | 0 | R110-317 + R110-318 sections appended |
+| **Total** | **+574** | **0** | **2 modified, 2 added** |
+
+Verification:
+- 7/7 R110-318 tests PASS in 0.14s (all 7 test cases)
+- 48/48 targeted pytest PASS (R110-318 + alignment + unix_test_word
+  + 134_7 pre-push-gate + 259 category-drift) in 1.20s
+- 0 secrets in staged content (conftest.py + tests + directive)
+- Body-claim `+109` (conftest), `+200` (tests), `+185` (directive),
+  `+80` (STATUS.md); total `+574`; all per-file claims verified
+  against `git diff --stat` and `wc -l` before commit
+  (initial estimates +111/+250/+198 were off — corrected after
+  R110-305 re-verify; STATUS.md final +80 due to repeated
+  re-verifications under R110-305)
+
+**Design decisions:**
+- Read-mostly: only `tests/test_zz_*.py` is auto-deleted; `recipe/sub/*.yaml`
+  is WARNING-only (deletion would be too dangerous; user might have a
+  legitimate 0-byte fixture)
+- `importlib.util.spec_from_file_location` to load `RECIPE_EXCLUDE`
+  (best-effort, fallback to empty allowlist on error)
+- Hook uses `pathlib.Path.unlink()`, which raises `FileNotFoundError`
+  on race condition; we accept this as a no-op
+- `tests/__init__.py` (0-byte by convention) is NEVER matched
+  (pattern is `test_zz_*.py`, not `*.py`)
+
+**Refs:**
+- R110-316 (ab43dbc) — 3-source lockstep (the detection layer)
+- R110-295 — original zombie-recovery commit that established the
+  manual `find -size 0` cleanup pattern (R110-318 automates it)
+- R110-279 — origin of the `test_zz_*.py` test-side-effect pattern
+- R110-129 — `os.chdir(REPO_ROOT)` precedent for conftest-level setup
+- R110-311 — `COVERAGE_PROCESS_START` precedent for conftest-level env
+  setup before test collection
