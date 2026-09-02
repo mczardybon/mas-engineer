@@ -1416,3 +1416,35 @@ Verification:
 - R110-129 — `os.chdir(REPO_ROOT)` precedent for conftest-level setup
 - R110-311 — `COVERAGE_PROCESS_START` precedent for conftest-level env
   setup before test collection
+
+## R110-319 (2026-09-01) — transparency follow-up: R110-318 evidence closure
+
+No code change. Audit-trail-only commit that closes the evidence
+trail for R110-318: CHANGELOG entry (analog R110-316 → R110-317),
+EVIDENCE file (force-added, logs/ in .gitignore), and STATUS.md
+section (this R110-319 was itself not yet written at R110-318 push
+time, same precedent as R110-317 for R110-316).
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `mas-engineer/STATUS.md` | +32 | 0 | R110-319 section (this very section) |
+| `mas-engineer/docs/CHANGELOG-2026-09-01-r110-318.md` | +177 | 0 | NEW, modeled on R110-316 CHANGELOG format |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-318-EVIDENCE.md` | +193 | 0 | NEW, force-added (logs/ in .gitignore Z.242) |
+| **Total** | **+402** | **0** | **0 code, 1 modified doc, 2 added docs** |
+
+Verification:
+- Body-claim `+32 → +32` exact match (initial estimate +45 off-by-13
+  caught via R110-305 / R110-174 before `git commit`, corrected
+  to +32 in `/tmp/r110-319-msg.txt`; final total +402 not +415)
+- 48/48 targeted pytest still PASS (R110-318 + alignment + unix)
+- 0 secrets in pushed content (commit pending)
+- 4 rounds of `git diff --numstat` + `wc -l` re-verify per
+  R110-305: status +32, CHANGELOG +177, EVIDENCE +193, total +402
+
+**Refs:**
+- R110-318 (0fb0fdf) — the `🔧 code` commit whose evidence this closes
+- R110-316 + R110-317 (ab43dbc + 09c8d99) — the 2-step R-sprint
+  evidence-closure pattern R110-319 follows (R316 = code, R317 =
+  evidence, R318 = prevention, R319 = R318 evidence)
+- R110-281 — force-push-verbot respected (no `--force`, no
+  `--force-with-lease`); R110-319 uses normal `git push`
