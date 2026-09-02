@@ -1448,3 +1448,50 @@ Verification:
   evidence, R318 = prevention, R319 = R318 evidence)
 - R110-281 — force-push-verbot respected (no `--force`, no
   `--force-with-lease`); R110-319 uses normal `git push`
+
+## R110-320 (2026-09-02) — fix UnboundLocalError in dev_registry_merge.empty-findings path
+
+Bug fix, not a coverage push. `tools/dev_registry_merge.py::merge_findings()`
+referenced the local variable `now` AFTER the `for f_item in findings:`
+loop that assigned it. Empty-findings input (a valid per-API value,
+e.g. `--findings '[]'`) skipped the loop entirely, then the post-loop
+`reg['last_updated'] = now` crashed with `UnboundLocalError: cannot
+access local variable 'now'`. Fix: hoist `now = ...` out of the loop
+and assign `reg['last_updated'] = now` once before
+`reg['pattern_stats'] = {...}`. +5/-1 lines, no API change, no
+behavior change for the non-empty path (per-iteration `now` is the
+same value at sub-millisecond granularity).
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `mas-engineer/tools/dev_registry_merge.py` | +5 | -1 | Hoist `now` out of for-loop |
+| `mas-engineer/tests/test_r110320_registry_merge_empty_findings.py` | +166 | 0 | NEW, 4 tests in 2 classes |
+| `mas-engineer/.mase/directives/R110-320-registry-merge-empty-fix.md` | +142 | 0 | NEW, force-added |
+| `mas-engineer/STATUS.md` | +47 | 0 | R110-320 section (this very section) |
+| **Total** | **+360** | **-1** | **2 modified code/docs, 2 new docs/tests** |
+
+Verification:
+- 4/4 R110-320 regression tests PASS in 0.78s
+- Empty-findings repro (pre-fix → UnBoundLocalError; post-fix → exit 0,
+  valid JSON `{"new_patterns": 0, "merged_count": 0, "confidence_avg": 0.0}`)
+- 0 secrets in pushed content (tracked + new files scanned; commit pending)
+- 4 rounds of `git diff --numstat` + `wc -l` re-verify per
+  R110-305: tools/dev_registry_merge.py +5/-1, test +166, directive
+  +142, STATUS +47, total +360/-1
+- No overlap with R110-310 (commit 3523302) — R110-310's 54 subprocess
+  smoke tests cover only `--help` (argparse path); R110-320 covers the
+  `__main__` empty-findings path (post-argparse execution path)
+
+**Refs:**
+- R110-310 (3523302) — sitecustomize.py + COVERAGE_PROCESS_START
+  pattern that made the R110-320 subprocess regression test pattern
+  possible (without R110-310, the test would need its own subprocess
+  CWD-anchoring helper from scratch)
+- R110-129 — `os.chdir(REPO_ROOT)` precedent for conftest-level setup
+- R110-303 — CWD-anchored subprocess helper pattern
+- Skill: `pre-push-gate` — full e2e + secret scan + validator rules
+- Skill: `pre-push-body-claim-verification` (R110-174 + R110-305) —
+  4 rounds of `git diff --numstat` + `wc -l` re-verify
+- Skill: `mas-engineer-coverage-push-workflow` — same-scope comparison
+  pattern + `--help`-only-smoke limitation note (R110-320 closes that
+  gap for the one file whose empty-findings path was a latent crash)
