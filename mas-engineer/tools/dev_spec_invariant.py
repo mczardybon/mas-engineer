@@ -140,7 +140,8 @@ def extract_count_from_recipes(recipe_dir):
             data = yaml.safe_load(open(yf, errors='ignore'))
         except Exception:
             continue
-        if not isinstance(data, (dict, list)):
+        if data is None:
+            # Empty yaml / yaml that parses to None -> nothing to scan
             continue
 
         def walk(node):
@@ -157,6 +158,14 @@ def extract_count_from_recipes(recipe_dir):
                         continue
                     result.setdefault(typ, set()).add(int(cnt))
 
+        # R110-322: was `if not isinstance(data, (dict, list)): continue`,
+        # which silently dropped top-level string scalars. A top-level string
+        # with a count-declaration (e.g. `5 ab here`) is exactly the kind of
+        # single-line scalar value the docstring promises to scan, and a
+        # recipe whose entire body is a one-liner count-declaration was
+        # being skipped — a real spec-drift false negative. Now: any node
+        # that walk() can handle (dict / list / single-line str) is walked;
+        # only None (parse-to-null) is treated as "no data".
         walk(data)
     return result
 

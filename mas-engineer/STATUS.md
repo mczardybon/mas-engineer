@@ -1552,3 +1552,63 @@ the 5 files with 0% coverage and ≥200 stmts are
 `dev_spec_invariant.py` (229). Each is a candidate for the
 R110-320 pattern (latent bug + 1 fix + 1-4 tests) in future
 R110-322+ sprints.
+
+## R110-322 (2026-09-03) — fix top-level scalar yaml drop in dev_spec_invariant
+
+Code fix + regression tests. Item #5 on the R110-321 candidate list
+(`dev_spec_invariant.py`, 229 stmts, 0% cov). The R110-320 pattern:
+probe with edge-case tests, find a latent spec-drift false negative,
+fix it, write regression tests.
+
+**Bug:** `extract_count_from_recipes()` early-returned
+`if not isinstance(data, (dict, list)): continue`, silently dropping
+top-level string scalars. The docstring promises to scan
+"single-line string scalar VALUES" but the implementation
+over-restricted. A recipe whose entire body is a one-liner
+count-declaration (e.g. `5 ab here`) was silently skipped — the
+exact kind of spec-drift false negative the invariant checker
+is supposed to prevent.
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `mas-engineer/tools/dev_spec_invariant.py` | +10 | -1 | `if data is None: continue` + walk(data) call works for str/dict/list top-level |
+| `mas-engineer/tests/test_r110322_spec_invariant_scalar_yaml.py` | +188 | -0 | NEW, 8 tests (4 bug-surface + 2 regression + 2 no-regression) |
+| `mas-engineer/STATUS.md` | +60 | -0 | R110-322 section (this very section) |
+| `mas-engineer/.mase/directives/R110-322-spec-invariant-scalar-yaml-fix.md` | +247 | -0 | NEW, force-added |
+| **Total** | **+505** | **-1** | **2 modified, 2 new** |
+
+Verification:
+- 8/8 R110-322 tests PASS in 1.31s (subprocess pattern, R110-310-style)
+- 5/5 R110-320 + 3/3 Check-18 + 4/4 pre-existing dev_spec_invariant
+  tests still PASS (no regression sweep: 20/20 in 2.46s)
+- `tools/dev_spec_invariant.py` cov: pre-R322=0%, post-R322=**60%**
+  (137/229 stmts, 92 missing). Delta: +60pp from 0% to 60%.
+- 0 secrets in pushed content (tracked + new files scanned)
+- 4 rounds of `git diff --numstat` + `wc -l` re-verify per
+  R110-305: directive +247/-0, STATUS +60/-0, test +188/-0,
+  dev_spec_invariant +10/-1, total +505/-1 (stable across all 4 rounds)
+- STATUS.md trailing blank stripped per R110-305 (`git diff --check`)
+
+**Refs:**
+- R110-320 (e7ef060) — the R-sprint pattern R110-322 follows
+- R110-321 (this file's prior section) — the candidate list
+  R110-322 picks up (dev_spec_invariant.py was item #5)
+- R110-310 (3523302) — sitecustomize.py + COVERAGE_PROCESS_START
+  pattern that makes subprocess-style cov measurement possible
+  (without this, the 8 R110-322 tests would not contribute to
+  dev_spec_invariant.py's cov)
+- R110-129 — conftest.py os.chdir(REPO_ROOT) precedent
+- R110-303 — CWD-anchored subprocess helper pattern
+- Skill: `pre-push-gate` — full e2e + secret scan + validator rules
+- Skill: `pre-push-body-claim-verification` (R110-174 + R110-305) —
+  4 rounds of `git diff --numstat` + `wc -l` re-verify
+- Skill: `mas-engineer-coverage-push-workflow` — same-scope
+  comparison pattern
+
+**Future R-sprint candidates** (not in R110-322):
+dev_spec_invariant.py is at 60% (137/229). The 92 missing stmts are
+mostly the `__main__` argparse + JSON dump branch (lines 197-236,
+249-261) and the `_find_canonical` git-blame helper (lines 280-298).
+Future R110-323+ could close that 40pp gap by writing direct-import
+tests for the `to_findings()` API (no argparse), but the
+spec-drift-bug-fix is what R110-322 is about — not the cov-push.
