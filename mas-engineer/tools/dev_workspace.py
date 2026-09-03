@@ -811,8 +811,18 @@ def _ask_name(agent_type):
         return name
 
 
-def _ask_description():
-    """Interaktive query from Description und Emoji."""
+def _ask_description(name):
+    """Interaktive query from Description und Emoji.
+
+    `name` is the agent name (already validated). When the user
+    enters an empty description, we fall back to a human-friendly
+    form of `name` (e.g. "my-cool-agent" → "My Cool Agent").
+    The name parameter is REQUIRED — R110-324-BUG-A fix.
+    Previously this function referenced an undefined `name` in
+    the empty-description fallback, which raised NameError. The
+    caller at line 1286 has `name` in scope; passing it as a
+    parameter makes the dependency explicit and testable.
+    """
     print()
     try:
         desc = input("  Description (z.B. 'Database-Cleanup'): ").strip()
@@ -826,6 +836,7 @@ def _ask_description():
 def _generate_agent(agent_type, name, description, emoji, workspace):
     """copyrt Template und replaces Platzholder. generated bei framework a minimum-YAML."""
     import shutil
+    import yaml  # R110-324-BUG-B: needed for safe_dump on user-controlled fields
 
     ws = Path(workspace)
 
@@ -857,34 +868,56 @@ def _generate_agent(agent_type, name, description, emoji, workspace):
 
     if agent_type == "mas_sub" and MAS_TEMPLATE.exists():
         content = MAS_TEMPLATE.read_text()
-        content = content.replace("{NAME}", name.upper().replace("-", " "))
-        content = content.replace("{name}", name.lower())
-        content = content.replace("{name}", name.lower())
-        content = content.replace("{EMOJI}", emoji)
-        content = content.replace("{BESCHREIBUNG}", description)
-        content = content.replace("{TASK}", description)
-        content = content.replace("{Titel}", description)
+        # R110-324-BUG-B fix: sanitize user input before string
+        # substitution. {NAME}, {name}, {EMOJI}, {BESCHREIBUNG},
+        # {TASK}, {Titel} are the placeholders in the template.
+        # We replace newlines with spaces and strip control chars
+        # so a malicious description can't inject YAML structure.
+        safe_name = " ".join(name.split())  # collapse whitespace
+        safe_emoji_str = emoji.replace("\n", "").replace("\r", "")
+        safe_desc = " ".join(description.split())  # collapse whitespace
+        content = content.replace("{NAME}", safe_name.upper().replace("-", " "))
+        content = content.replace("{name}", safe_name.lower())
+        content = content.replace("{EMOJI}", safe_emoji_str)
+        content = content.replace("{BESCHREIBUNG}", safe_desc)
+        content = content.replace("{TASK}", safe_desc)
+        content = content.replace("{Titel}", safe_desc)
         dst.write_text(content)
     else:
         # minimum-YAML for framework
+        # R110-324-BUG-B fix: use yaml.safe_dump for user-controlled
+        # fields (title, description) so quote/newline chars can't
+        # break out of the YAML string. The prompt field uses a
+        # literal block (|) which is safer but still needs the
+        # content to be free of leading whitespace/control chars;
+        # we sanitize by replacing newlines with spaces and
+        # collapsing runs of whitespace.
         display_name = name.upper().replace("-", " ")
-        content = f"""version: 1.0.0
-title: "{display_name} — {description}"
-description: 'v1.0.0 | framework: {description}'
-
-prompt: |
-  {emoji} {display_name} (v1.0.0)
-  ⛔ Reasonrulen:
-     1. NOTHING automatically applied
-     2. framework-governance.md noten
-  🎯 {description}
-
-settings:
-  timeout: 600
-  max_steps: 100
-  provider: openai
-  model: filtered/deepseek/deepseek-v4-flash
-"""
+        safe_desc = description.replace("\n", " ").replace("\r", " ")
+        safe_desc = " ".join(safe_desc.split())  # collapse whitespace
+        safe_emoji = emoji.replace("\n", "").replace("\r", "")
+        # yaml.safe_dump guarantees proper escaping
+        metadata = {
+            "version": "1.0.0",
+            "title": f"{display_name} — {safe_desc}",
+            "description": f"v1.0.0 | framework: {safe_desc}",
+            "prompt": (
+                f"{safe_emoji} {display_name} (v1.0.0)\n"
+                f"⛔ Reasonrulen:\n"
+                f"   1. NOTHING automatically applied\n"
+                f"   2. framework-governance.md noten\n"
+                f"🎯 {safe_desc}\n"
+            ),
+            "settings": {
+                "timeout": 600,
+                "max_steps": 100,
+                "provider": "openai",
+                "model": "filtered/deepseek/deepseek-v4-flash",
+            },
+        }
+        # default_flow_style=False preserves the readable style
+        # (block, not inline) for human-edited YAML.
+        content = yaml.safe_dump(metadata, default_flow_style=False, allow_unicode=True, sort_keys=False)
         dst.write_text(content)
 
     rel = dst.relative_to(ws)
@@ -1283,7 +1316,7 @@ def cmd_scaffold(args):
     if getattr(args, 'quiet', False):
         desc, emoji = name.replace("-", " ").title(), "🤖"
     else:
-        desc, emoji = _ask_description()
+        desc, emoji = _ask_description(name)  # R110-324-BUG-A: pass name explicitly
         if not desc:
             return
 
