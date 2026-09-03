@@ -164,3 +164,73 @@ class TestNonEmptyFindingsNoRegression:
         # Still only 1 pattern, but count==2
         assert len(reg["patterns"]) == 1
         assert reg["patterns"][0]["count"] == 2
+
+
+class TestCollisionHandler:
+    """R110-321: cover the `n += 1` line-23 collision handler.
+
+    The 4 R110-320 tests use unique `type` values ('Z1', 'Z2'),
+    so the `existing_ids` set never contains a collision with the
+    `n=1` candidate. This test pre-seeds the registry with a
+    "fake" pattern whose name != 'cross_generisch' (so it doesn't
+    match by name in line 50-53) but whose id collides with what
+    `generate_id('Z3', ...)` would return. This forces the
+    collision branch to fire: `n=1` collides → `n=2` → ID `-002`.
+
+    Real-world use: this only happens if a manual edit or
+    out-of-band writer creates a registry pattern with a
+    conflicting ID. Not a likely production path, but the
+    defensive code (line 23) is still meaningful — without it,
+    two patterns would share an ID and downstream tooling
+    (lookup-by-id) would break.
+    """
+
+    def test_id_collision_uses_n2_id(self, tmp_registry):
+        """Pre-seed with id='BP-CF-GENERI-001' (name='__fake__' so existing-by-name misses).
+
+        Then a finding type='Z3' (which generates base='BP-CF-GENERI')
+        finds existing_ids contains the base, n=1 collides, n=2 → ID '-002'.
+        """
+        import yaml
+        # Pre-seed: pattern with ID matching what generate_id(Z3) would
+        # produce, but name that DOESN'T match (so existing-by-name
+        # in line 50-53 returns None, falling through to line 66
+        # generate_id call where the collision fires).
+        pre_seed = {
+            'patterns': [
+                {
+                    'id': 'BP-CF-GENERI-001',
+                    'name': '__fake_collision_seeder__',
+                    'count': 1,
+                }
+            ]
+        }
+        tmp_registry.write_text(yaml.dump(pre_seed))
+
+        finding = json.dumps([{
+            "type": "Z3",  # → PATTERN_NAMES[Z3]='cross_generisch' → base='BP-CF-GENERI'
+            "agent": "r110321-tester",
+            "detail": "force line 23 collision path",
+            "severity": "hoch",
+        }])
+
+        r = _run(finding, tmp_registry, project="r110321-collision")
+        assert r.returncode == 0, f"exit {r.returncode}, stderr={r.stderr}"
+        d = json.loads(r.stdout)
+        assert d["new_patterns"] == 1, f"got new_patterns={d['new_patterns']}, expected 1 (collision was not duplicated)"
+        assert d["merged_count"] == 0, f"got merged_count={d['merged_count']}, expected 0 (name mismatch, no merge)"
+
+        reg = yaml.safe_load(tmp_registry.read_text())
+        # 2 patterns: the pre-seed + the new one with id=-002
+        assert len(reg["patterns"]) == 2, f"got {len(reg['patterns'])} patterns, expected 2"
+        # Pre-seed untouched
+        assert reg["patterns"][0]["id"] == "BP-CF-GENERI-001"
+        assert reg["patterns"][0]["name"] == "__fake_collision_seeder__"
+        # New pattern: ID must be -002 (n incremented after collision)
+        new_pattern = reg["patterns"][1]
+        assert new_pattern["id"] == "BP-CF-GENERI-002", (
+            f"expected id='BP-CF-GENERI-002' (n=2 after collision), "
+            f"got {new_pattern['id']!r} — line 23 collision path not taken"
+        )
+        assert new_pattern["name"] == "cross_generisch"
+        assert new_pattern["count"] == 1
