@@ -1612,3 +1612,23 @@ mostly the `__main__` argparse + JSON dump branch (lines 197-236,
 Future R110-323+ could close that 40pp gap by writing direct-import
 tests for the `to_findings()` API (no argparse), but the
 spec-drift-bug-fix is what R110-322 is about — not the cov-push.
+
+The 4 remaining 0%-cov / ≥200-stmt candidates from the R110-321 list:
+  - dev_im_finder_scan.py (1660 stmts) — IM-finder scanner, 53+
+    feature types A-MM + NN. Has existing test coverage
+    (test_dev_im_finder_scan_dedup + test_dev_im_finder_scan_lib
+    = 83 tests), but cov tool reports "module not imported"
+    (R110-320/321 limitation: no `tools/__init__.py`). Real cov
+    likely >0% when measured via subprocess pattern.
+  - dev_workspace.py (1445 stmts) — workspace state manager. Has
+    test_r110266_workspace.py.
+  - dev_template_generator.py (901 stmts) — yaml scaffolding. Has
+    test_r110265_template_generator.py + test_dev_template_generator_r110288.py.
+  - dev_dashboard_data.py (566 stmts) — dashboard metrics. Has
+    test_dev_dashboard_data.py + test_dev_dashboard_data_r110292.py
+    + test_dashboard_data_schema.py + test_dashboard_mq_block.py.
+
+R110-323 (next sprint, the user already approved the queue) starts
+with dev_im_finder_scan.py — the largest by far (1660 stmts) and
+arguably the highest-leverage target given it's the IM-pipeline's
+primary scanner.
