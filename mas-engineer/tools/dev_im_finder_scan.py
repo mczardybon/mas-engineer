@@ -1110,8 +1110,15 @@ def check_spec_drift(findings, repo_root='.'):
                         # (pipeline, workflow_runs, etc.) — those are
                         # runtime artifacts, not source-of-truth. Use
                         # `dirs[:] = ...` to prune the walk so we don't
-                        # even descend into workflow_runs/ (6123 files!)
-                        if d.endswith(os.sep + '.mase') or d == '.mase':
+                        # even descend into workflow_runs/ (6123 files!).
+                        # R110-323-BUG-2: removed dead `d == '.mase'`
+                        # branch. search_dirs is always built via
+                        # os.path.join(repo_root, '.mase') so d always has
+                        # a separator; the bare-equality check could
+                        # never fire. See
+                        # tests/test_r110323_im_finder_scan_bug_fixes.py
+                        # for the regression test.
+                        if d.endswith(os.sep + '.mase'):
                             rel_root = os.path.relpath(root, d)
                             top = rel_root.split(os.sep, 1)[0]
                             if top in _SD_DATA_DIRS:
@@ -1288,10 +1295,24 @@ def check_spec_drift_reverse(findings, repo_root='.'):
                 # Heuristic: line contains "R\d+-\d+" (commit reference) and
                 # either "had" or "+N" near the number.
                 if re.search(r'R\d+-\d+', line):
+                    # R110-323-BUG-1 fix: explicit parens for clarity +
+                    # added sub-condition for the historical-ref-without-AFTER
+                    # case (e.g. "R110-271 mentions 1690 tests"). Without the
+                    # 4th sub-condition, the line would wrongly fire as a
+                    # load-bearing count-anchor. See
+                    # tests/test_r110323_im_finder_scan_bug_fixes.py for the
+                    # regression test that locks this in.
                     if (re.search(rf'\bhad\s+{re.escape(num)}', line)
                             or re.search(rf'\+\s*{re.escape(num)}\b', line)
-                            or re.search(rf'{re.escape(num)}\s+tests?\b', line)
-                                and 'AFTER' in line):
+                            or (re.search(rf'{re.escape(num)}\s+tests?\b', line)
+                                and 'AFTER' in line)
+                            # 4th sub-condition: any count-anchor word on a
+                            # line with a commit reference is a historical
+                            # reference, not a load-bearing assertion. The
+                            # original 3 sub-conditions only covered
+                            # "had N", "+N", and "AFTER N tests" — all
+                            # narrower than the general historical-ref case.
+                            or re.search(rf'\b{re.escape(num)}\s+{re.escape(word)}\b', line)):
                         continue
                 # Skip "16 critical checks" or "17 critical checks" (test-anchor
                 # is "X critical checks" not "X checks")
