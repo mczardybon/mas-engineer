@@ -42,7 +42,16 @@ def load_json(path, default=None):
     if os.path.exists(path):
         try:
             with open(path) as f:
-                return json.load(f)
+                data = json.load(f)
+            # R110-330-BUG-3: A JSON file containing just `null`
+            # causes json.load to return None. Pre-fix code passed
+            # that None through to the caller, who would then
+            # crash on None[-10:] or None.values() etc. Now we
+            # return the caller's default for None (or any
+            # falsy non-container, to be safe).
+            if data is None:
+                return default if default is not None else {}
+            return data
         except:
             pass
     return default if default is not None else {}
@@ -495,6 +504,13 @@ def generate_data(ws):
             "checks": health_checks,
         },
         "health_trend": history['health_trend'],
+        # R110-330-BUG-2 fix: surface the build_size list (computed
+        # in-memory at lines 344-348) in the returned data so
+        # main() can persist it to history.json. Pre-fix this list
+        # was only in the local `history` dict and never made it
+        # into the return value, so main() wrote the SCALAR
+        # `build['latest_size_kb']` (BUG-1) as a substitute.
+        "build_size_trend": history['build_size'],
         "mq": mq_block,
     }
 
@@ -551,8 +567,17 @@ def main():
 
     history_path = os.path.join(dash_dir, 'history.json')
     with open(history_path, 'w') as f:
+        # R110-330-BUG-1 fix: pre-fix code wrote
+        #   data.get('build', {}).get('latest_size_kb', [])
+        # which is a SCALAR (int, set at line 296), so history.json
+        # contained {"build_size": 42} instead of a list of
+        # {"time": "12:34", "kb": 42} dicts. On next load,
+        # generate_data() would crash iterating the int.
+        # Post-fix: use the `build_size_trend` list (added in
+        # the return block at R110-330-BUG-2) which is the actual
+        # list of build size entries.
         json.dump({"health_trend": data['health_trend'],
-                   "build_size": data.get('build', {}).get('latest_size_kb', [])}, f, indent=2)
+                   "build_size": data.get('build_size_trend', [])}, f, indent=2)
 
     # Send notification for realtime updates
     send_dashboard_notification(data, workspace=ws_abs)
