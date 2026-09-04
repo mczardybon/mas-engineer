@@ -260,7 +260,6 @@ def create_bp_checklist(project_path, dry_run=False):
     bp_template = os.path.join(STATE_TEMPLATES, 'bp_checklist.md')
     if os.path.exists(bp_template):
         if not dry_run:
-            import shutil
             shutil.copy2(bp_template, bp_target)
         ok(f"BP-CHECKLIST.md (Template, {os.path.getsize(bp_template)} bytes)")
         return
@@ -419,7 +418,7 @@ def create_tests(project_path, dry_run=False):
             with open(test_file, "w") as f:
                 f.write('''"""Test: YAML-Syntax allr Agenten."""
 import os
-import yaml
+import yaml  # noqa: F401  -- used by scaffolded test below
 
 SUBS_DIR = os.path.join(os.path.dirname(__file__), "..", "recipe", "sub")
 
@@ -622,8 +621,7 @@ def create_state_files(project_path, dry_run=False):
         }
     }
     with open(os.path.join(state_dir, "guardian.yaml"), 'w') as f:
-        import yaml as _y
-        _y.dump(guardian, f, default_flow_style=False, allow_unicode=True)
+        yaml.dump(guardian, f, default_flow_style=False, allow_unicode=True)
 
     # schedule.yaml: empty Verbetterungs-Historie
     schedule = {
@@ -631,8 +629,7 @@ def create_state_files(project_path, dry_run=False):
         "history": [], "metrics": {}, "recommendation": {"status": "ready"}
     }
     with open(os.path.join(state_dir, "schedule.yaml"), 'w') as f:
-        import yaml as _y
-        _y.dump(schedule, f, default_flow_style=False, allow_unicode=True)
+        yaml.dump(schedule, f, default_flow_style=False, allow_unicode=True)
 
     # audit.log.jsonl: empty
     audit = os.path.join(state_dir, "audit.log.jsonl")
@@ -973,12 +970,12 @@ def cmd_bootstrap(project_name, dry_run=False, web_research=False):
             if os.path.exists(src):
                 shutil.copy2(src, os.path.join(dest_mcp, f))
         ok("Dashboard MCP Server portiert")
-        # npm install try
+        # npm install try (R110-334: bare except → narrow except)
         try:
             subprocess.run(['npm', 'install'], cwd=dest_mcp, capture_output=True, text=True, timeout=60)
             ok("npm install in .mase/mcp/")
-        except:
-            warn("npm install failed — manuell execute")
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as e:
+            warn(f"npm install failed ({type(e).__name__}) — manuell execute")
 
     header("Step 6: Recovery-Templates + Docs")
     mas_recovery = os.path.join(mas_source, "recipe", "template", "recovery")
