@@ -29,7 +29,7 @@ CONFIRMATION_DATEI = os.path.join(MAS_DIR, ".mase/.last_confirmation")
 def load_rules(path):
     if not os.path.exists(path):
         return []
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
     return data.get("rules", [])
 
@@ -38,7 +38,7 @@ def get_rules(mode=None):
     m = mode or "mas"
     if m == "generic":
         if os.path.exists(REGEL_GENERIC_DATEI):
-            with open(REGEL_GENERIC_DATEI) as f:
+            with open(REGEL_GENERIC_DATEI, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
             return data.get("rules", data.get("rules", []))
         return []
@@ -48,7 +48,7 @@ def get_rules(mode=None):
         # Load additionally aus workflows.yaml (R12-R18)
         WORKFLOWS_DATEI
         if os.path.exists(WORKFLOWS_DATEI):
-            with open(WORKFLOWS_DATEI) as f:
+            with open(WORKFLOWS_DATEI, encoding="utf-8") as f:
                 wf = yaml.safe_load(f)
             restrictions = wf.get("configs", {}).get("mas-self", {}).get("restrictions", {})
             for key, val in restrictions.items():
@@ -65,14 +65,14 @@ def get_rules(mode=None):
 def check_mode():
     if not os.path.exists(MODE_DATEI):
         return "unbekannt"
-    with open(MODE_DATEI) as f:
+    with open(MODE_DATEI, encoding="utf-8") as f:
         return f.read().strip()
 
 def check_confirmation():
     """Checks if user confirmation exists within the last 5 minutes"""
     if not os.path.exists(CONFIRMATION_DATEI):
         return False
-    with open(CONFIRMATION_DATEI) as f:
+    with open(CONFIRMATION_DATEI, encoding="utf-8") as f:
         ts = int(f.read().strip())
     return int(time.time()) - ts < 300
 
@@ -82,7 +82,7 @@ def check_rule(rule_id, action=""):
     import os as _wf_os
     if _wf_os.path.exists(WORKFLOWS_DATEI):
         try:
-            with open(WORKFLOWS_DATEI) as f:
+            with open(WORKFLOWS_DATEI, encoding="utf-8") as f:
                 wf = yaml.safe_load(f)
             restrictions = wf.get("configs", {}).get("mas-self", {}).get("restrictions", {})
             for key, val in restrictions.items():
@@ -93,8 +93,16 @@ def check_rule(rule_id, action=""):
                         "name": val.get("description", key),
                         "hardness": 5 if val.get("level") == "extreme" else (4 if val.get("level") == "strong" else 3)
                     })
-        except:
-            pass
+        except (yaml.YAMLError, OSError, KeyError, TypeError) as e:
+            # R110-340: narrow bare `except:` to the 4 error classes
+            # that the rules-builder can actually raise. Other
+            # exceptions (KeyboardInterrupt, SystemExit, real bugs)
+            # now propagate instead of being silently swallowed.
+            print(
+                f"⚠️ rule-builder: skipping malformed rule entry: "
+                f"{type(e).__name__}: {e}",
+                file=sys.stderr,
+            )
     for rule in rules:
         if rule["id"] != rule_id:
             continue
@@ -126,7 +134,7 @@ def check_rule(rule_id, action=""):
             # Read registry
             domains = {}
             if _os9.path.exists(reg_path):
-                with open(reg_path) as f:
+                with open(reg_path, encoding="utf-8") as f:
                     reg = _yaml9.safe_load(f) or {}
                 domains = reg.get("domains", {})
             
@@ -136,7 +144,7 @@ def check_rule(rule_id, action=""):
             # Read active_domain
             active_domain = None
             if _os9.path.exists(domain_file):
-                with open(domain_file) as f:
+                with open(domain_file, encoding="utf-8") as f:
                     active_domain = f.read().strip()
             
             akt = action.lower()
@@ -193,7 +201,7 @@ def check_rule(rule_id, action=""):
                 
                 special_path = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), ".mase/agents/special_agents.yaml")
                 if _os.path.exists(special_path):
-                    with open(special_path) as _f:
+                    with open(special_path, encoding="utf-8") as _f:
                         special = _yaml.safe_load(_f)
                     if special and "agents" in special:
                         fname = _os.path.basename(path)
@@ -308,8 +316,18 @@ def check_rule(rule_id, action=""):
             for p in mas_mode_paths:
                 if os.path.exists(p):
                     try:
-                        work_on = open(p).read().strip().lower()
-                    except Exception:
+                        # R110-340: file-leak + encoding fix
+                        # (was `work_on = open(p).read().strip().lower()`).
+                        # The bare `open(p)` left the file unclosed until
+                        # GC, triggering ResourceWarning on each call.
+                        with open(p, encoding="utf-8") as _f:
+                            work_on = _f.read().strip().lower()
+                    except (OSError, UnicodeDecodeError) as e:
+                        print(
+                            f"⚠️ mas-mode load failed for {p}: "
+                            f"{type(e).__name__}: {e}",
+                            file=sys.stderr,
+                        )
                         pass
                     break
 
@@ -367,7 +385,7 @@ def check_rule(rule_id, action=""):
                                   f"cannot verify registration (fresh clone?)",
                         "action": "OK"}
 
-            with open(wf_path) as f:
+            with open(wf_path, encoding="utf-8") as f:
                 wf = yaml.safe_load(f)
             sub_agents = wf.get("configs", {}).get("mas-self", {}).get("sub_agents", {})
             all_registered = set()
@@ -502,9 +520,22 @@ def check_rule(rule_id, action=""):
                 session_count = 0
                 if _os.path.exists(counter_path):
                     try:
-                        cd = _yaml.safe_load(open(counter_path)) or {}
+                        # R110-340: file-leak + encoding fix
+                        # (was `cd = _yaml.safe_load(open(counter_path))`
+                        # which left the file unclosed).
+                        with open(counter_path, encoding="utf-8") as _cf:
+                            cd = _yaml.safe_load(_cf) or {}
                         session_count = int(cd.get("data", {}).get("applied_count", 0))
-                    except Exception:
+                    except (yaml.YAMLError, OSError, ValueError, KeyError, TypeError) as e:
+                        # R110-340: narrowed from `except Exception:` so
+                        # real bugs propagate.  ValueError/TypeError from
+                        # int() coercion now also caught (int("not a number")
+                        # raises ValueError, not just OSError).
+                        print(
+                            f"⚠️ session-count load failed: "
+                            f"{type(e).__name__}: {e}",
+                            file=sys.stderr,
+                        )
                         session_count = 0
                 if session_count < target:
                     return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
@@ -547,9 +578,20 @@ def check_rule(rule_id, action=""):
             if _os56.path.exists(history_path):
                 try:
                     import yaml as _y56
-                    hd = _y56.safe_load(open(history_path)) or {}
+                    # R110-340: file-leak fix (was `_y56.safe_load(open(history_path))`
+                    # which left the file unclosed).  Also explicit
+                    # UTF-8 encoding.
+                    with open(history_path, encoding="utf-8") as _yf:
+                        hd = _y56.safe_load(_yf) or {}
                     history = hd.get("edits", [])
-                except:
+                except (yaml.YAMLError, OSError, KeyError, TypeError) as e:
+                    # R110-340: narrow bare `except:` so real bugs
+                    # propagate instead of being silently swallowed.
+                    print(
+                        f"⚠️ history-load: using empty history: "
+                        f"{type(e).__name__}: {e}",
+                        file=sys.stderr,
+                    )
                     history = []
 
             # Clean old entries (>120s)
@@ -592,10 +634,20 @@ def check_rule(rule_id, action=""):
             # Save history
             try:
                 import yaml as _y56s
-                with open(history_path, "w") as f:
+                # R110-340: explicit UTF-8 encoding (locale-default
+                # is non-deterministic on Windows / non-UTF-8 locales).
+                with open(history_path, "w", encoding="utf-8") as f:
                     _y56s.safe_dump({"edits": history, "last_check": now, "recent_failures_60s": recent_failures}, f)
-            except:
-                pass
+            except (yaml.YAMLError, OSError) as e:
+                # R110-340: narrow bare `except:` so real bugs propagate.
+                # YAMLError: yaml.safe_dump failure (e.g. non-serializable
+                # data in history entry). OSError: write/close failure
+                # (e.g. disk full, EACCES on history_path).
+                print(
+                    f"⚠️ history-save: dropping this entry: "
+                    f"{type(e).__name__}: {e}",
+                    file=sys.stderr,
+                )
 
             # NON-EDIT actions (write/shell/delegate): just log, never block
             if not is_edit_action:
@@ -659,7 +711,7 @@ def check_rule(rule_id, action=""):
             if mode_file is None:
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": "No .mas-mode found — work_on mode not determinable", "action": "BLOCKED"}
-            with open(mode_file) as _f:
+            with open(mode_file, encoding="utf-8") as _f:
                 mode = _f.read().strip()
             akt = action.lower()
             if mode != "mas":
@@ -680,7 +732,16 @@ def check_rule(rule_id, action=""):
                 if result.returncode == 1:
                     return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                             "detail": result.stdout.strip(), "action": "BLOCKED"}
-            except Exception:
+            except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
+                # R110-340: narrowed from `except Exception:` so real
+                # bugs propagate.  SubprocessError: timeout, CalledProcessError,
+                # etc.  FileNotFoundError: dev_architecture_checker.py
+                # not on PATH.  OSError: underlying IO failure.
+                print(
+                    f"⚠️ dev_architecture_checker.py exec failed: "
+                    f"{type(e).__name__}: {e}",
+                    file=sys.stderr,
+                )
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": "dev_architecture_checker.py not found", "action": "WARNING"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
@@ -748,7 +809,7 @@ def check_rule(rule_id, action=""):
             wf_path = os.path.join(BASE_DIR, ".mase/workflows.yaml")
             sub_agent_found = False
             if os.path.exists(wf_path):
-                with open(WORKFLOWS_DATEI) as f:
+                with open(WORKFLOWS_DATEI, encoding="utf-8") as f:
                     wf = yaml.safe_load(f)
                 sub_agents = wf.get("configs", {}).get("mas-self", {}).get("sub_agents", {})
                 all_sub_agent_names = []
