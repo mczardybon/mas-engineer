@@ -137,6 +137,22 @@ def load_all_sources(workspace: str) -> Dict:
 # REGEL-PAKET BAUER
 # ──────────────────────────────────────────────
 
+def _truncate_value(s: str, maxlen: int) -> str:
+    """R110-328-BUG-1: Truncate a value to a single line + "...".
+
+    A multiline value would otherwise break the YAML-comment block
+    (because each line of the value would become a separate comment
+    line). The fix: take only the first line, truncate to maxlen,
+    and add "..." if truncated. This is the same pattern the
+    nested-dict branch had at line 147-149 (pre-fix); now it's
+    extracted to a helper and used in all 3 branches.
+    """
+    s = s.split("\n", 1)[0]  # first line only
+    if len(s) > maxlen:
+        s = s[:maxlen - 3] + "..."
+    return s
+
+
 def _format_dict_block(data: Dict, prefix: str = "# ", indent: str = "") -> str:
     """Formatiert a Dict als YAML-commentblock."""
     lines = []
@@ -144,19 +160,15 @@ def _format_dict_block(data: Dict, prefix: str = "# ", indent: str = "") -> str:
         if isinstance(value, dict):
             lines.append(f"{indent}{prefix}{key}:")
             for sk, sv in value.items():
-                s = str(sv)[:120]
-                if "\n" in s:
-                    s = s.split("\n")[0] + "..."
-                lines.append(f"{indent}  {prefix}{sk}: {s}")
+                lines.append(f"{indent}  {prefix}{sk}: {_truncate_value(str(sv), 120)}")
         elif isinstance(value, list):
             lines.append(f"{indent}{prefix}{key}:")
             for item in value[:5]:
-                s = str(item)[:100]
-                lines.append(f"{indent}  {prefix}- {s}")
+                lines.append(f"{indent}  {prefix}- {_truncate_value(str(item), 100)}")
             if len(value) > 5:
                 lines.append(f"{indent}  {prefix}... +{len(value)-5} mehr")
         else:
-            lines.append(f"{indent}{prefix}{key}: {str(value)[:120]}")
+            lines.append(f"{indent}{prefix}{key}: {_truncate_value(str(value), 120)}")
     return "\n".join(lines)
 
 def _format_bp_rules(bp: Dict, section_keys: List[str]) -> str:
@@ -176,7 +188,12 @@ def _format_bp_rules(bp: Dict, section_keys: List[str]) -> str:
         for rule in rules:
             if isinstance(rule, dict) and rule.get("auto_apply"):
                 rid = rule.get("id", "?")
-                rtext = rule.get("rule", "")[:150]
+                # R110-328-BUG-2 fix: rule["rule"] can be any YAML scalar
+                # (int, None, dict, list, str). The pre-fix code did
+                # `rule.get("rule", "")[:150]` which crashed with
+                # TypeError on non-string types. str() wrapper makes
+                # the slice safe.
+                rtext = str(rule.get("rule", ""))[:150]
                 lines.append(f"  • [{rid}] {rtext}")
     
     return "\n".join(lines)
@@ -326,11 +343,13 @@ settings:
     titel = f"sub_mas-{name} — {_shorten(task, 60)}"
     
     # Statische placeholder
+    # R110-328: removed duplicate "{TASK}" entry (was a no-op since
+    # Python takes the last value, but a code smell — same anti-pattern
+    # we fixed in R110-326 BUG-B in dev_workspace.py).
     replacements = {
         "{NAME}": name.upper(),
         "{name}": name.lower() if name else name,
         "{EMOJI}": emoji,
-        "{TASK}": task,
         "{TASK}": task,
         "{DESCRIPTION}": _shorten(task, 80),
         "{Titel}": titel,
@@ -361,12 +380,21 @@ settings:
         else:
             unreplaced.append(placeholder)
     
-    # Nicht-replacese placeholder (aus Template, not in replacements?) 
-    # -> Als empty String replace
-    all_found = re.findall(r"\{[A-Z_]+\}", result)
+    # R110-328-BUG-3: Find any {placeholder} in the result that wasn't
+    # in `replacements`. Pre-fix regex was r"\{[A-Z_]+\}" which missed
+    # lowercase + mixed-case placeholders (e.g. {name}, {Mixed_Case},
+    # {unknown_lower}), so they were silently kept in the output.
+    # New regex r"\{[^}]+\}" matches any non-empty braces content.
+    # Pre-fix warning message also misnamed these as "Nicht-replacese"
+    # (mixing in unused-replacements and unfilled-template placeholders
+    # with different semantic meanings). Now we separate them:
+    #   unused_in_template: in replacements but template didn't use it
+    #   unfilled_in_output: in result but not in replacements (was silent)
+    unfilled_in_output = []
+    all_found = re.findall(r"\{[^}]+\}", result)
     for ph in all_found:
         if ph not in replacements:
-            unreplaced.append(ph)
+            unfilled_in_output.append(ph)
             result = result.replace(ph, "")
     
     # Aufraeumen: Emptylines mit only Whitespace remove (max 1 Durchlauf)
@@ -374,8 +402,19 @@ settings:
         result = result.replace("\n\n\n", "\n\n")
     
     if unreplaced:
-        print(f"  ℹ️  Nicht-replacese placeholder: {', '.join(unreplaced)}")
-    
+        # R110-328-BUG-3: Distinguish "unused in template" (placeholder
+        # in replacements but template didn't use it — informational)
+        # from "unfilled in output" (placeholder in template but not in
+        # replacements — was a silent bug pre-fix, now a warning).
+        print(f"  ℹ️  Unused replacements (template did not use): "
+              f"{', '.join(unreplaced)}")
+    if unfilled_in_output:
+        # This is the one that was silent pre-fix. Now we WARN so the
+        # user knows they have a placeholder in the template that wasn't
+        # provided a value.
+        print(f"  ⚠️  Unfilled placeholders in template (replaced with ''): "
+              f"{', '.join(unfilled_in_output)}")
+
     return result
 
 # ──────────────────────────────────────────────
