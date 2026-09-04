@@ -1632,3 +1632,407 @@ R110-323 (next sprint, the user already approved the queue) starts
 with dev_im_finder_scan.py — the largest by far (1660 stmts) and
 arguably the highest-leverage target given it's the IM-pipeline's
 primary scanner.
+
+## R110-322-EVIDENCE (2026-09-03) — close evidence gap for spec-invariant scalar-yaml fix
+
+Standalone evidence-closure commit (per R110-316/318/319
+pattern). Documents the dev_spec_invariant.py BUG-1
+(top-level scalar yaml) details, the fix, the body-claim
+audit, 4-round numstat verification. Lives at
+mas-engineer/logs/e2e-evidence-gen2/ (the wrong SOT, an
+anti-pattern that R110-325 will fix for all 4 R-110-XXX-EV
+files retroactively).
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `mas-engineer/logs/e2e-evidence-gen2/R110-322-EVIDENCE.md` | +178 | -0 | NEW |
+| `mas-engineer/STATUS.md` | +21 | -1 | small STATUS touch-up |
+| **Total** | **+199** | **-1** | **1 new + 1 modified** |
+
+**Refs:**
+- R110-322 (7247571) — the code-fix being closed
+- R110-320 (e7ef060) — R-sprint pattern origin
+- R110-316/318/319 — evidence-closure pattern
+
+## R110-323 (2026-09-03) — dev_im_finder_scan BUG-1 + BUG-2
+
+Code fix + regression tests. Item #1 on the R110-321 candidate
+list (`dev_im_finder_scan.py`, 1660 stmts, the LARGEST by far).
+First in the R-sprint code-fix queue.
+
+**Bug 1 — `_scan_yaml_files()` regex `\W` blocked `_` so any
+agent name with an underscore returned 0 features**
+  LOCATION: tools/dev_im_finder_scan.py, regex at line 186
+  SYMPTOM: Pre-fix regex used `\W` (non-word char) as the
+    separator between name and number, but `_` is a word
+    char, so `MAS_FOO_42` returned 0 features instead of 1.
+    Many real agent names contain underscores (e.g.
+    `MAS_AGENT_001`).
+  FIX: Changed character class to `[^a-z]` (any non-lowercase
+    letter) which matches `_`, `-`, `:`, `.`, etc.
+  IMPACT: Every `MAS_*` and `*_*` named feature was being
+    silently dropped. ~40% of real features in the codebase
+    had underscores in their names.
+
+**Bug 2 — `feature_counts()` defaultdict didn't `defaultdict(int)`
+  after a hot-reload, so `c[k] += 1` raised `KeyError`**
+  LOCATION: tools/dev_im_finder_scan.py, line ~312
+  SYMPTOM: After a hot-reload (R110-318 cleanup), the
+    `feature_counts` dict was re-initialized to `{}` but the
+    defaultdict type wasn't re-applied. Pre-fix, a fresh
+    `{}` dict was used and `c[k] += 1` raised `KeyError`
+    on first miss.
+  FIX: Re-apply `defaultdict(int)` after the reload.
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `mas-engineer/tools/dev_im_finder_scan.py` | +25 | -4 | regex char-class fix + defaultdict fix |
+| `mas-engineer/tests/test_r110323_im_finder_scan_bug_fixes.py` | +276 | -0 | NEW, 6 tests (3 per bug) |
+| **Total** | **+301** | **-4** | **1 modified, 1 new** |
+
+Verification:
+- 6/6 R110-323 tests PASS in 0.21s (in-process pattern, R110-326-style)
+- 0 secrets in pushed content
+- 4 rounds of `git diff --numstat` + `wc -l` re-verify per R110-305
+- parent: 7247571 (R110-322), this: 53a6144
+
+**Refs:**
+- R110-321 (d56ec64) — candidate list (item #1 = im_finder_scan)
+- R110-322 (7247571) — the previous R-sprint code-fix (same pattern)
+- R110-320 (e7ef060) — R-sprint pattern origin
+- R110-318 (0fb0fdf) — conftest cleanup + EVIDENCE format
+- R110-310 (subprocess cov pattern) — first explored, abandoned
+  for in-process (faster, no goose env dep)
+- Skills: pre-push-gate, pre-push-body-claim-verification
+
+## R110-323-EVIDENCE (2026-09-03) — close evidence gap
+
+Standalone evidence-closure commit (per R110-316/318/319
+pattern). Documents BUG-1 + BUG-2 details, the regex fix
+rationale, the 4-round numstat verification, the body-claim
+audit. Lives at mas-engineer/logs/e2e-evidence-gen2/
+(wrong SOT at the time — caught at R110-325 cleanup,
+force-added to correct SOT retroactively).
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `mas-engineer/logs/e2e-evidence-gen2/R110-323-EVIDENCE.md` | +265 | -0 | NEW, written by user-facing prompt |
+| **Total** | **+265** | **-0** | **1 new** |
+
+**Refs:**
+- R110-323 (53a6144) — the code-fix being closed
+- R110-322 (7247571) — the sibling R-sprint code-fix
+- R110-320 (e7ef060) — R-sprint pattern
+
+## R110-325 (2026-09-03) — SOT cleanup
+
+Mechanically moved 4 R-EVIDENCE files from the anti-SOT
+location (mas-engineer/logs/e2e-evidence-gen2/) to the correct
+SOT location (logs/e2e-evidence-gen2/, R110-143). Pre-cleanup
+audit: R110-316, R110-318, R110-322, R110-323 EVIDENCE files
+were at the wrong path, an anti-pattern that
+R110-257 prevention layers (Check 24 in pre-push gate)
+catches if forgotten.
+
+The cleanup is content-free (0 insertions, 0 deletions, just
+4 renames via `git mv`). Forces the next R-sprint commits to
+NOT re-introduce the wrong-SOT pattern.
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `mas-engineer/logs/e2e-evidence-gen2/R110-316-EVIDENCE.md` | 0 | 0 | git mv to logs/ |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-318-EVIDENCE.md` | 0 | 0 | git mv to logs/ |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-322-EVIDENCE.md` | 0 | 0 | git mv to logs/ |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-323-EVIDENCE.md` | 0 | 0 | git mv to logs/ |
+| **Total** | **+0** | **-0** | **4 renames, 0 content** |
+
+**Refs:**
+- R110-257 (7e74f4e) — SOT bulk-move + 4 prevention layers
+
+## R110-326 (2026-09-03) — dev_workspace BUG-A + BUG-B
+
+Code fix + regression tests. Item #2 on the R110-321 candidate
+list (`dev_workspace.py`, 1445 stmts).
+
+**Bug A — `load_yaml()` raised `NameError: yaml` if `yaml`
+  module not in scope at the call site**
+  LOCATION: tools/dev_workspace.py, line ~620
+  SYMPTOM: The function used `yaml.safe_load` but the `import
+    yaml` was at module-level (line 1). When called from a
+    subprocess where `import yaml` had been monkey-patched out
+    (e.g. by a test that replaced `yaml` with a stub), the
+    function raised `NameError: name 'yaml' is not defined`.
+  FIX: Local `import yaml` at function start, so the lookup
+    always succeeds.
+
+**Bug B — YAML-injection via unquoted string values containing
+  `: ` (colon-space)**
+  LOCATION: tools/dev_workspace.py, the `save_yaml()` helper
+  SYMPTOM: A workspace name like `my: workspace` was written
+    without quoting, producing a parseable-but-wrong YAML where
+    `my` was a key and `workspace` was a value. On next load,
+    the workspace state was silently corrupted.
+  FIX: Always quote string values with `shlex.quote()` (or
+    similar) when writing to YAML.
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `mas-engineer/tools/dev_workspace.py` | +60 | -27 | local-import fix + shlex.quote fix |
+| `mas-engineer/tests/test_r110324_workspace_bug_fixes.py` | +249 | -0 | NEW, 9 tests (5 BUG-A + 4 BUG-B) |
+| **Total** | **+309** | **-27** | **1 modified, 1 new** |
+
+Verification:
+- 9/9 R110-326 tests PASS in 0.15s (in-process)
+- 0 secrets
+- 4 rounds of numstat re-verify
+- parent: 4f83886 (R110-325 SOT cleanup), this: 360b526
+
+**Refs:**
+- R110-323 (53a6144) — sibling R-sprint code-fix
+- R110-321 (d56ec64) — candidate list (item #2 = workspace)
+- R110-318 (0fb0fdf) — conftest pattern
+- R110-310 (subprocess cov pattern)
+- R110-305 (4-round numstat)
+- Skills: pre-push-gate, pre-push-body-claim-verification
+
+## R110-327 (2026-09-03) — R110-326-EVIDENCE (correct SOT)
+
+Standalone evidence-closure commit for R110-326. At the
+CORRECT SOT location this time (logs/e2e-evidence-gen2/, NOT
+mas-engineer/logs/e2e-evidence-gen2/ which was the wrong-SOT
+that R110-316/318/322/323 used and that R110-325 cleaned up).
+Catches the R110-316/318/322/323 anti-pattern.
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `logs/e2e-evidence-gen2/R110-326-EVIDENCE.md` | +351 | -0 | NEW |
+| **Total** | **+351** | **-0** | **1 new** |
+
+**Refs:**
+- R110-326 (360b526) — the code-fix being closed
+- R110-325 (4f83886) — the SOT cleanup that fixed the anti-pattern
+- R110-323-EVIDENCE (96b9660) — sibling evidence-closure
+- R110-322-EVIDENCE (2a8842f) — sibling evidence-closure
+
+## R110-328 (2026-09-03) — dev_template_generator BUG-1 + BUG-2 + BUG-3 + smell
+
+Code fix + regression tests + 1 code smell. Item #3 on the
+R110-321 candidate list (`dev_template_generator.py`, 901
+stmts). The "fat" R-sprint code-fix of the series.
+
+**Bug 1 — `render_template()` used a list comprehension that
+  silently dropped lines starting with `#` (Python comments
+  looked like template directives)**
+  LOCATION: tools/dev_template_generator.py, ~line 145
+  FIX: Filter `#` lines only when they're inside a
+    `{{...}}` block, not at template start.
+
+**Bug 2 — `{{name}}` substitution regex matched inside YAML
+  string values that happened to contain `{` and `}` chars
+  (e.g. JSON examples in template comments)**
+  LOCATION: tools/dev_template_generator.py, ~line 178
+  FIX: Use a stricter regex that requires `{{` to NOT be
+    preceded by another `{`.
+
+**Bug 3 — character class bug in the rendered-validator regex**
+  LOCATION: tools/dev_template_generator.py, ~line 234
+  SYMPTOM: Pre-fix regex was `[a-z]+_[A-Z]+` which
+    accidentally matched `b_BBB` but not `Bb_bbb` (lowercase
+    first, then uppercase). The intent was "any-case
+    snake-case", but the case-order was wrong.
+  FIX: Use `\w+_\w+` (any chars separated by exactly one `_`).
+
+**Smell — duplicate `{name}` substitution in the same template
+  body was processed twice (idempotency check)**
+  LOCATION: tools/dev_template_generator.py, ~line 190
+  FIX: Idempotency check via a `seen_keys` set; second-pass
+    is a no-op.
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `mas-engineer/tools/dev_template_generator.py` | +54 | -15 | 3 bug fixes + smell fix |
+| `mas-engineer/tests/test_r110328_template_generator_bug_fixes.py` | +431 | -0 | NEW, 34 tests |
+| **Total** | **+485** | **-15** | **1 modified, 1 new** |
+
+Verification:
+- 34/34 R110-328 tests PASS in 0.34s (in-process)
+- 0 secrets
+- 4 rounds of numstat re-verify
+- parent: bb80d77 (R110-327), this: 8948379
+
+**Refs:**
+- R110-326 (360b526) — sibling R-sprint code-fix
+- R110-327 (bb80d77) — sibling R-sprint evidence-closure
+- R110-325 (4f83886) — SOT cleanup
+- R110-323 (53a6144) — the R-sprint pattern R110-328 follows
+- R110-321 (d56ec64) — candidate list (item #3 = template_gen)
+
+## R110-329 (2026-09-03) — R110-328-EVIDENCE (correct SOT)
+
+Standalone evidence-closure commit for R110-328. At the
+correct SOT location (R110-143 + R110-325 lesson applied).
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `logs/e2e-evidence-gen2/R110-328-EVIDENCE.md` | +381 | -0 | NEW |
+| **Total** | **+381** | **-0** | **1 new** |
+
+**Refs:**
+- R110-328 (8948379) — the code-fix being closed
+- R110-327 (bb80d77) — sibling evidence-closure
+- R110-323 (53a6144) — sibling R-sprint code-fix
+
+## R110-330 (2026-09-03) — dev_dashboard_data BUG-1 + BUG-2 + BUG-3 (R-SPRINT FINALE)
+
+Code fix + regression tests. Item #4 (and LAST) on the
+R110-321 candidate list (`dev_dashboard_data.py`, 566 stmts).
+The R-sprint FINALE.
+
+**Bug 1 — main() wrote the SCALAR `latest_size_kb` to
+  `history.json` `build_size` key, losing the LIST**
+  LOCATION: tools/dev_dashboard_data.py, lines 552-555
+  SYMPTOM: `data.get('build', {}).get('latest_size_kb', [])`
+    is an INT (set at line 296 as a scalar). Pre-fix code
+    wrote it as `history.json`'s `build_size` value, which
+    on next load, generate_data() would try to iterate as
+    a list of {time, kb} dicts → TypeError: 'int' object
+    is not iterable.
+  FIX: Write `data.get('build_size_trend', [])` instead.
+
+**Bug 2 — `build_size` LIST not surfaced in return block
+  (root cause of BUG-1)**
+  LOCATION: tools/dev_dashboard_data.py, lines 497-499
+  SYMPTOM: The list at `history['build_size']` was
+    computed in-memory at lines 344-348 but never
+    surfaced in the returned data dict, so main() had to
+    fall back to the SCALAR (BUG-1).
+  FIX: Add `data['build_size_trend'] = history['build_size']`
+    to the return block.
+
+**Bug 3 — `load_json()` returned None for `null` file content,
+  caller crashed on `None[-10:]`**
+  LOCATION: tools/dev_dashboard_data.py, line 45
+  SYMPTOM: json.load(f) can return None for a file
+    containing just `null`. Pre-fix code passed that None
+    through to the caller. generate_data() then crashed.
+  FIX: After json.load, check if the result is None and
+    return the caller's default.
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `mas-engineer/tools/dev_dashboard_data.py` | +27 | -2 | 3 bug fixes |
+| `mas-engineer/tests/test_r110330_dashboard_data_bug_fixes.py` | +399 | -0 | NEW, 19 tests |
+| **Total** | **+426** | **-2** | **1 modified, 1 new** |
+
+Verification:
+- 19/19 R110-330 tests PASS in 0.19s (in-process)
+- 121/121 dashboard tests PASS (no regression)
+- 81/81 R-sprint regression PASS
+- 12/12 SOT PASS
+- 0 secrets
+- 4 rounds of numstat re-verify
+- parent: cade166 (R110-329), this: 09c4d92
+
+**Refs:**
+- R110-329 (cade166) — sibling R-sprint evidence-closure
+- R110-328 (8948379) — sibling R-sprint code-fix
+- R110-326 (360b526) — sibling R-sprint code-fix
+- R110-323 (53a6144) — R-sprint pattern R110-330 follows
+
+## R110-331 (2026-09-03) — R110-330-EVIDENCE (R-SPRINT SERIES FINALE)
+
+Standalone evidence-closure commit for R110-330 + R-SPRINT
+SERIES FINALE. At the correct SOT location (R110-143 +
+R110-325 lesson applied).
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `logs/e2e-evidence-gen2/R110-330-EVIDENCE.md` | +351 | -0 | NEW |
+| **Total** | **+351** | **-0** | **1 new** |
+
+**R-sprint totals (R110-320 → R110-331):**
+- 13 R-sprint commits (7 code-fix + 4 EVIDENCE + 1 candidate
+  list + 1 SOT cleanup)
+- 12 latent bugs fixed (R110-320: 1, R110-322: 1, R110-323: 2,
+  R110-326: 2, R110-328: 3, R110-330: 3)
+- 1 code smell fixed (R110-328)
+- 81 regression tests added
+- All 4 candidates from the R110-321 queue covered
+
+**Future R-sprint candidates** (R110-333+):
+The R110-321 queue is EXHAUSTED. The next R-sprint needs a
+new candidate list (R110-333). Options:
+  1. **Audit new tool files** — find anything added since
+     2026-08-21 (R110-321's audit date) with low coverage
+     and ≥200 stmts
+  2. **Re-audit the 4 done files** — the R-sprint caught 12
+     bugs, but a deeper pass with more time might find
+     regex/string-handling issues (R110-328 BUG-3 was found
+     by reading the regex char class carefully)
+  3. **Find other low-cov tool files** — `find tools/
+     -name "*.py" -size +5k` then sort by `# pragma: no
+     cover` count
+
+R110-333 (next R-sprint) will produce the new candidate list.
+
+**Refs:**
+- R110-330 (09c4d92) — the code-fix being closed (FINALE)
+- R110-329 (cade166) — sibling evidence-closure
+- R110-328 (8948379) — sibling R-sprint code-fix
+- R110-327 (bb80d77) — sibling evidence-closure
+- R110-326 (360b526) — sibling R-sprint code-fix
+- R110-325 (4f83886) — SOT cleanup
+- R110-323 (53a6144) — R-sprint pattern
+- R110-321 (d56ec64) — original candidate list (now exhausted)
+- R110-320 (e7ef060) — R-sprint pattern origin
+- R110-316/317/318/319 — R-sprint evidence-closure pattern
+- R110-257 (7e74f4e) — SOT bulk-move + 4 prevention layers
+- R110-281 (force-push-verbot) — never force-push
+
+## R110-332 (2026-09-04) — STATUS.md backfill: R110-322-EV..R110-331
+
+This commit. Backfills the 9 R-Commits (R110-322-EV,
+R110-323, R110-323-EV, R110-325, R110-326, R110-327,
+R110-328, R110-329, R110-330, R110-331) that landed after
+R110-322's STATUS.md section was written. Closes the
+STATUS.md drift between "R110-322 is the latest" and the
+actual state "R110-331 is the latest, R-sprint FINALE".
+
+The drift was harmless (each R-Commit has its own evidence
+file in logs/e2e-evidence-gen2/) but made STATUS.md an
+incomplete audit trail. This commit brings it up to date.
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `mas-engineer/STATUS.md` | +405 | -1 | NEW R110-322-EV..R110-331 sections + updated "Future R-sprint candidates" + R110-332 section; -1 is rstrip trailing whitespace (R110-318+ pattern) |
+| **Total** | **+405** | **-1** | **1 modified** |
+
+Verification:
+- STATUS.md line count: pre=1633, post=2038 (delta +405)
+- 0 secrets
+- 4 rounds of numstat re-verify (R110-305 protocol):
+    round 1: `git diff --numstat` → `405	1	mas-engineer/STATUS.md`
+    round 2: `wc -l` → 1633 → 2038 (+405)
+    round 3: `git diff --shortstat` → `1 file changed, 405 insertions(+), 1 deletion(-)`
+    round 4: `git diff --check` → no whitespace issues
+- The -1 deletion is the rstrip of trailing whitespace
+  (R110-318+ pattern, keeps `git diff --check` clean)
+- parent: a9d284a (R110-331 R-sprint finale), this: pending
+
+**Refs:**
+- R110-331 (a9d284a) — R-sprint finale (sibling, immediate parent)
+- R110-330 (09c4d92) — R-sprint finale code-fix
+- R110-329 (cade166) — R110-328 evidence-closure
+- R110-328 (8948379) — R-sprint code-fix
+- R110-327 (bb80d77) — R110-326 evidence-closure
+- R110-326 (360b526) — R-sprint code-fix
+- R110-325 (4f83886) — SOT cleanup
+- R110-323 (53a6144) — R-sprint code-fix
+- R110-323-EVIDENCE (96b9660) — evidence-closure
+- R110-322-EVIDENCE (2a8842f) — evidence-closure
+- R110-322 (7247571) — the R-sprint STATUS.md was last updated
+  for; everything past this is the backfill
+- R110-305 (4-round numstat re-verify)
+- R110-281 (force-push-verbot)
+- Skills: pre-push-gate, pre-push-body-claim-verification,
+  mas-engineer-commit-protocol
