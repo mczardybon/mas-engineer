@@ -1496,6 +1496,65 @@ Verification:
   pattern + `--help`-only-smoke limitation note (R110-320 closes that
   gap for the one file whose empty-findings path was a latent crash)
 
+
+## R110-321 (2026-09-03) — cov-post-r110320 documentation + line 23 collision-fix
+
+Documentation commit, not a code fix. R110-320 added 4 regression
+tests that brought `tools/dev_registry_merge.py` to 98.31%
+(58/59 stmts), with 1 missing line: `n += 1` at line 23 inside
+the ID-collision handler of `generate_id()`. R110-321 measures
+the post-R110-320 coverage impact AND adds 1 more test
+(`TestCollisionHandler::test_id_collision_uses_n2_id`) that
+exercises the `n += 1` path, bringing dev_registry_merge.py to
+**100.00% (59/59 stmts, 0 missing)**.
+
+| File | +Lines | -Lines | Note |
+|---|---|---|---|
+| `mas-engineer/tests/test_r110320_registry_merge_empty_findings.py` | +70 | -0 | 5th test: pre-seed with id='BP-CF-GENERI-001' + name mismatch → 1 finding type='Z3' → line 23 hit → ID '-002' |
+| `mas-engineer/.mase/directives/R110-321-cov-post-r110320-documentation.md` | +151 | -0 | NEW, force-added |
+| `mas-engineer/STATUS.md` | +57 | -0 | R110-321 section (this very section) |
+| **Total** | **+278** | **-0** | **2 modified, 1 new doc** |
+
+Verification:
+- 5/5 R110-320+R110-321 regression tests PASS in 3.38s
+- `tools/dev_registry_merge.py` cov: pre-R320=0%, post-R320=98.31% (58/59), post-R321=**100.00%** (59/59, 0 missing)
+- Delta vs R110-320: +1 stmt, +1.69pp (one file, 98.31% → 100.00%)
+- Line 23 is a defensive ID-collision handler; reached only when
+  existing_ids contains the candidate ID. Pre-seeded test uses
+  `name='__fake_collision_seeder__'` to bypass existing-by-name
+  match (line 50-53) so the `generate_id()` call (line 66) fires
+  with a colliding existing_ids, incrementing n from 1 to 2
+- 0 secrets in pushed content (tracked + new files scanned; commit pending)
+- 4 rounds of `git diff --numstat` + `wc -l` re-verify per
+  R110-305: test +70/-0, directive +151/-0, STATUS +57/-0,
+  total +278/-0 (stable across all 4 rounds)
+- No overlap with R110-310 (commit 3523302) — R110-310's 54 subprocess
+  smoke tests cover only `--help`; R110-321 covers the deep
+  `merge_findings()` code path including the collision branch
+
+**Refs:**
+- R110-320 (e7ef060) — the bug fix + 4 tests this R-sprint
+  documents and extends
+- R110-310 (3523302) — sitecustomize.py + COVERAGE_PROCESS_START
+  pattern that made cov-measurement-with-subprocess-tests
+  possible
+- R110-303 — CWD-anchored subprocess helper pattern
+- R110-129 — conftest.py os.chdir(REPO_ROOT) precedent
+- Skill: `pre-push-gate` — full e2e + secret scan + validator rules
+- Skill: `pre-push-body-claim-verification` (R110-174 + R110-305) —
+  4 rounds of `git diff --numstat` + `wc -l` re-verify
+- Skill: `mas-engineer-coverage-push-workflow` — same-scope
+  comparison pattern
+
+**Future R-sprint candidates** (not in R110-321):
+the 5 files with 0% coverage and ≥200 stmts are
+`dev_im_finder_scan.py` (682), `dev_workspace.py` (589),
+`dev_template_generator.py` (489), `dev_dashboard_data.py` (295),
+`dev_spec_invariant.py` (229). Each is a candidate for the
+R110-320 pattern (latent bug + 1 fix + 1-4 tests) in future
+R110-322+ sprints.
+
+
 ## R110-322 (2026-09-03) — fix top-level scalar yaml drop in dev_spec_invariant
 
 Code fix + regression tests. Item #5 on the R110-321 candidate list
