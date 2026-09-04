@@ -66,11 +66,35 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-# ─── Storage paths ───────────────────────────────────────────────
 
 # Default MQ root: <workspace>/.mase/mq.  Allows override via env
 # (used by tests to point at tmp_path without polluting .mase/).
 DEFAULT_MQ_ROOT = ".mase/mq"
+# ─── Storage paths ───────────────────────────────────────────────
+
+def _getenv_int(name: str, default: int) -> int:
+    """Read an env var as int, falling back to `default` on any parse
+    failure (missing, empty, non-numeric, overflow).  Logs a warning
+    so silent misconfigurations are visible.
+
+    R110-338: prior code used `int(os.environ.get(name, str(default)))`
+    directly, which raises ValueError on bad input and crashes the
+    module at import time (e.g. `_idempotency_index` is built at
+    module load via `int(os.environ.get("MAS_MQ_IDEMPOTENCY_MAX", ...))`).
+    This helper makes the failure mode a soft warning + default.
+    """
+    raw = os.environ.get(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        return int(raw)
+    except (ValueError, TypeError) as e:
+        print(
+            f"⚠️ {name}={raw!r} not an int, using default {default} "
+            f"({type(e).__name__}: {e})",
+            file=sys.stderr,
+        )
+        return default
 
 
 def _mq_root() -> Path:
@@ -207,7 +231,7 @@ class _IdempotencyIndex:
 
 # Module-level bounded idempotency index (F-MQ-189-7).
 _idempotency_index = _IdempotencyIndex(
-    max_size=int(os.environ.get("MAS_MQ_IDEMPOTENCY_MAX", "100000")))
+    max_size=_getenv_int("MAS_MQ_IDEMPOTENCY_MAX", 100000))
 
 
 def _make_msg(topic: str, payload: dict, *,
@@ -252,7 +276,7 @@ class _TopicLock:
         self.fd = None
 
     def __enter__(self):
-        self.fd = open(self.path, "w")
+        self.fd = open(self.path, "w", encoding="utf-8")
         fcntl.flock(self.fd, fcntl.LOCK_EX)
         return self
 
@@ -275,7 +299,7 @@ def _quarantine_corrupt_line(raw_line: str, source_file: str, err: Exception) ->
         "error": str(err),
         "raw_line": raw_line[:500],  # truncate huge lines
     }
-    with open(qpath, "a") as f:
+    with open(qpath, "a", encoding="utf-8") as f:
         fcntl.flock(f, fcntl.LOCK_EX)
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
@@ -288,7 +312,7 @@ def _read_topic(topic: str, *, include_in_flight: bool = True) -> list:
     if not path.exists():
         return []
     msgs = []
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -311,7 +335,7 @@ def _write_topic_atomic(topic: str, msgs: list) -> None:
     Safe across processes because OS guarantees rename is atomic."""
     path = _topic_path(topic)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    with open(tmp, "w") as f:
+    with open(tmp, "w", encoding="utf-8") as f:
         fcntl.flock(f, fcntl.LOCK_EX)
         for m in msgs:
             f.write(json.dumps(m, ensure_ascii=False) + "\n")
@@ -349,7 +373,7 @@ def enqueue(topic: str, payload: dict, *,
                         request_id=request_id)
         # F-MQ-189-1: bounded queue (backpressure).  Raise QueueFullError
         # when the topic would exceed MAS_MQ_MAX_DEPTH_PER_TOPIC.
-        max_depth = int(os.environ.get("MAS_MQ_MAX_DEPTH_PER_TOPIC", "100000"))
+        max_depth = _getenv_int("MAS_MQ_MAX_DEPTH_PER_TOPIC", 100000)
         existing = _read_topic(topic, include_in_flight=False)
         if len(existing) >= max_depth:
             raise QueueFullError(
@@ -365,7 +389,7 @@ def enqueue(topic: str, payload: dict, *,
             msg["status"] = "failed"
             msg["last_error"] = f"storage: {e}"
             msg["last_error_class"] = "StorageError"
-            with open(_dlq_path(), "a") as f:
+            with open(_dlq_path(), "a", encoding="utf-8") as f:
                 fcntl.flock(f, fcntl.LOCK_EX)
                 f.write(json.dumps(msg, ensure_ascii=False) + "\n")
         if idempotency_key:
@@ -426,7 +450,23 @@ def _find_msg(msg_id: str) -> Optional[tuple]:
                 for i, m in enumerate(msgs):
                     if m.get("msg_id") == msg_id:
                         return topic, (i, m, msgs)
-        except Exception:
+        except (FileNotFoundError, OSError, ValueError) as e:
+            # R110-338: narrow bare `except Exception:` to the 3 error
+            # classes _read_topic + _TopicLock can actually raise.
+            # FileNotFoundError: topic file deleted between glob and open
+            # OSError: lock-acquire / read IO failure
+            # ValueError: malformed NDJSON (already caught per-line in
+            #   _read_topic, but a corrupted header could surface as
+            #   ValueError from _migrate)
+            # Other exceptions (KeyboardInterrupt, SystemExit, bugs)
+            # now propagate so they aren't silently swallowed — a real
+            # bug in _read_topic would previously have been invisible
+            # because every topic try/except caught it.
+            print(
+                f"⚠️ _find_msg skipping topic {topic!r}: "
+                f"{type(e).__name__}: {e}",
+                file=sys.stderr,
+            )
             continue
     return None
 
@@ -452,7 +492,7 @@ def ack(msg_id: str) -> bool:
         done_msg["status"] = "done"
         done_msg["acked_at"] = _now_iso()
         comp_path = _topic_path(topic, completed=True)
-        with open(comp_path, "a") as f:
+        with open(comp_path, "a", encoding="utf-8") as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             f.write(json.dumps(done_msg, ensure_ascii=False) + "\n")
         # STEP 2: remove from live (only after archive succeeded)
@@ -504,7 +544,7 @@ def nack(msg_id: str, reason: str) -> bool:
             m["status"] = "dlq"
             m["dlq_at"] = _now_iso()
             m["original_topic"] = m.get("topic") or topic  # R110-188: per-topic DLQ counting
-            with open(_dlq_path(), "a") as f:
+            with open(_dlq_path(), "a", encoding="utf-8") as f:
                 fcntl.flock(f, fcntl.LOCK_EX)
                 f.write(json.dumps(m, ensure_ascii=False) + "\n")
             msgs.pop(idx)
@@ -513,7 +553,7 @@ def nack(msg_id: str, reason: str) -> bool:
             m["status"] = "dlq"
             m["dlq_at"] = _now_iso()
             m["original_topic"] = m.get("topic") or topic  # R110-188: per-topic DLQ counting
-            with open(_dlq_path(), "a") as f:
+            with open(_dlq_path(), "a", encoding="utf-8") as f:
                 fcntl.flock(f, fcntl.LOCK_EX)
                 f.write(json.dumps(m, ensure_ascii=False) + "\n")
             msgs.pop(idx)
@@ -539,7 +579,7 @@ def _read_completed(topic: str) -> list:
     if not path.exists():
         return []
     msgs = []
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -555,7 +595,7 @@ def _write_completed_atomic(topic: str, msgs: list) -> None:
     """Atomic write of the completed archive for a topic."""
     path = _topic_path(topic, completed=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    with open(tmp, "w") as f:
+    with open(tmp, "w", encoding="utf-8") as f:
         fcntl.flock(f, fcntl.LOCK_EX)
         for m in msgs:
             f.write(json.dumps(m, ensure_ascii=False) + "\n")
@@ -568,7 +608,7 @@ def _read_dlq_entries() -> list:
     if not p.exists():
         return []
     entries = []
-    with open(p) as f:
+    with open(p, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -584,7 +624,7 @@ def _rewrite_dlq(entries: list) -> None:
     """Atomically rewrite the DLQ file with the given entries."""
     p = _dlq_path()
     tmp = p.with_suffix(p.suffix + ".tmp")
-    with open(tmp, "w") as f:
+    with open(tmp, "w", encoding="utf-8") as f:
         fcntl.flock(f, fcntl.LOCK_EX)
         for e in entries:
             f.write(json.dumps(e, ensure_ascii=False) + "\n")
@@ -751,7 +791,7 @@ def stats() -> dict:
         if ndjson.name.endswith(".completed.ndjson"):
             base = ndjson.name.replace(".completed.ndjson", "")
             try:
-                with open(ndjson) as f:
+                with open(ndjson, encoding="utf-8") as f:
                     completed_counts[base] = sum(1 for _ in f)
             except OSError:
                 completed_counts[base] = 0
@@ -799,7 +839,12 @@ def _dlq_count() -> int:
     p = _dlq_path()
     if not p.exists():
         return 0
-    return sum(1 for _ in open(p))
+    # R110-338: read with utf-8 + close (use read+splitlines, not file-iter,
+    # to avoid ResourceWarning on unclosed file).  Was: `sum(1 for _ in open(p))`
+    # which iterates a file object (returns one per line? actually no — yields
+    # one per line for newline-terminated text files BUT leaves the file open
+    # until GC).  Splitlines is the canonical fix.
+    return len(p.read_text(encoding="utf-8").splitlines())
 
 
 def _dlq_count_for_topic(topic: str) -> int:
@@ -809,7 +854,7 @@ def _dlq_count_for_topic(topic: str) -> int:
     if not p.exists():
         return 0
     n = 0
-    with open(p) as f:
+    with open(p, encoding="utf-8") as f:
         for line in f:
             try:
                 d = json.loads(line)
@@ -901,7 +946,7 @@ def _gc_old_pending(max_age_sec: float = 86400.0) -> int:
                         f"ttl-expired: age={(now - enq).total_seconds():.0f}s")
                     m["last_error_class"] = "TTLExpired"
                     m["original_topic"] = m.get("topic") or topic
-                    with open(_dlq_path(), "a") as f:
+                    with open(_dlq_path(), "a", encoding="utf-8") as f:
                         fcntl.flock(f, fcntl.LOCK_EX)
                         f.write(json.dumps(m, ensure_ascii=False) + "\n")
                     moved += 1
@@ -944,11 +989,11 @@ def compact_completed(topic: str, *, max_lines: int = 10000,
         return False
     today = datetime.now().strftime("%Y%m%d")
     archive = _mq_root() / f"{topic}.{today}.completed.ndjson"
-    with open(archive, "w") as f:
+    with open(archive, "w", encoding="utf-8") as f:
         fcntl.flock(f, fcntl.LOCK_EX)
         f.write("\n".join(lines) + "\n")
     recent = lines[-keep_recent:]
-    with open(p, "w") as f:
+    with open(p, "w", encoding="utf-8") as f:
         fcntl.flock(f, fcntl.LOCK_EX)
         f.write("\n".join(recent) + "\n")
     return True
