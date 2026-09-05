@@ -21,6 +21,9 @@ import importlib
 from pathlib import Path
 import pytest
 
+# R110-323: eager import at module level would cause the scanner
+# to run at pytest collection time (~12min hang). The fixture
+# below still imports the module with a sandboxed CWD.
 TOOLS = Path(__file__).parent.parent / "tools"
 
 
