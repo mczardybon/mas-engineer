@@ -349,7 +349,7 @@ def write_wrapper(team, level, case):
     os.makedirs(WRAPPER_DIR, exist_ok=True)
     wrapper_path = f"{WRAPPER_DIR}/{team}-{level}.yaml"
     content = build_wrapper_recipe(team, level, case, TEAM_RECIPES[team])
-    with open(wrapper_path, "w") as f:
+    with open(wrapper_path, "w", encoding="utf-8") as f:
         f.write(content)
     return wrapper_path
 
@@ -414,7 +414,7 @@ def run_team_test(team, level, case, env):
             break
         if time.time() - last_data_time > IDLE_TIMEOUT and len(output) > 500:
             try: os.write(master, b"\x03")
-            except: pass
+            except (OSError, ValueError): pass
             break
         # Early exit if marker found AND a newline after it (final response)
         if case["marker"].encode() in output:
@@ -422,7 +422,7 @@ def run_team_test(team, level, case, env):
             if b"\n" in tail[tail.rfind(case["marker"].encode()):]:
                 time.sleep(2)
                 try: os.write(master, b"\x03")
-                except: pass
+                except (OSError, ValueError): pass
                 break
 
     try: proc.wait(timeout=3)
@@ -541,7 +541,7 @@ def main():
             section(f"TEST: {test_key}")
             result = run_team_test(team, level, case, env)
             all_results["tests"][test_key] = result
-            with open(f"{out_dir}/logs/{team}-{level}.log", "w") as f:
+            with open(f"{out_dir}/logs/{team}-{level}.log", "w", encoding="utf-8") as f:
                 f.write(f"# {test_key}\n")
                 f.write(f"# params: {case['params']}\n")
                 f.write(f"# marker: {case['marker']}\n")
@@ -560,7 +560,7 @@ def main():
     all_results["elapsed_s"] = round(time.time() - overall_start, 1)
     all_results["finished"] = datetime.now().isoformat()
 
-    with open(f"{out_dir}/raw-results.json", "w") as f:
+    with open(f"{out_dir}/raw-results.json", "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2, default=str)
 
     statuses = [t["status"] for t in all_results["tests"].values()]
