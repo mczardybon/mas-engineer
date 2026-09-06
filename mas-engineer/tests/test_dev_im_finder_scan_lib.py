@@ -34,19 +34,69 @@ REPO_ROOT = Path(__file__).parent.parent.resolve()
 SCANNER = REPO_ROOT / "tools" / "dev_im_finder_scan.py"
 
 
-def _load_scanner():
-    """Load scanner module via importlib. Module-level scan runs once."""
-    spec = importlib.util.spec_from_file_location(
-        "dev_im_finder_scan", str(SCANNER))
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+def _load_scanner(tmp_path=None):
+    """Load scanner module via importlib. Module-level scan runs once.
+
+    R110-362: When `tmp_path` is provided, the function sets up a sandboxed
+    CWD + empty SCAN_SCOPE BEFORE `exec_module`, so the module-level
+    `check_spec_drift(findings, '.')` call at L1578 short-circuits
+    (because `os.path.isdir('tests')` is False in the sandbox → early return
+    at L985). Without this, the module-level scan reads every file in
+    recipe/, tools/, docs/, .mase/ for every literal in tests/ (1500+
+    files × 50+ literals), causing 30s+ pytest-timeout errors.
+
+    The CWD + env are restored after exec_module so any subsequent
+    state-mutating helpers (e.g. spec-drift by hand) operate on the
+    real repo.
+    """
+    if tmp_path is None:
+        spec = importlib.util.spec_from_file_location(
+            "dev_im_finder_scan", str(SCANNER))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    # R110-362 sandbox: chdir + env so module-level scan is no-op
+    saved_cwd = os.getcwd()
+    saved_env = {
+        k: os.environ.get(k)
+        for k in ("SCAN_SCOPE", "SEVERITY_FILTER", "MAS_INCLUDE_EXTERNAL_RECIPES")
+    }
+    try:
+        os.chdir(tmp_path)
+        os.environ["SCAN_SCOPE"] = str(tmp_path / "no-such-dir")
+        os.environ["SEVERITY_FILTER"] = "critical,warning,info,error,medium,high,low,debug,blocker"
+        os.environ["MAS_INCLUDE_EXTERNAL_RECIPES"] = ""
+        spec = importlib.util.spec_from_file_location(
+            "dev_im_finder_scan", str(SCANNER))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+    finally:
+        os.chdir(saved_cwd)
+        for k, v in saved_env.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
     return mod
 
 
 @pytest.fixture(scope="module")
-def mod():
-    """Module-level fixture: load scanner once per test file (~14s cold)."""
-    return _load_scanner()
+def mod(tmp_path_factory):
+    """Module-level fixture: load scanner once per test file in a sandbox.
+
+    R110-362: Use tmp_path_factory to get a module-scoped tmp dir, then
+    chdir there + set SCAN_SCOPE before exec_module. Without this, the
+    module-level `check_spec_drift(findings, '.')` triggers a 30s+
+    pytest-timeout on the real repo. The test code does NOT exercise
+    check_spec_drift; the test-side-effect is purely an import-time
+    side-effect of the module's top-level code.
+
+    The original (`_load_scanner()` without tmp_path) is kept for any
+    external callers that want the real-repo module-level behavior.
+    """
+    tmp = tmp_path_factory.mktemp("r110362_scanner_sandbox")
+    return _load_scanner(tmp)
 
 
 @pytest.fixture(autouse=True)
@@ -863,12 +913,20 @@ def test_q4c_recursion_guard_does_not_skip_real_calls():
         f"incorrectly skipped by the recursion guard")
 
 
+@pytest.mark.timeout(120)
 def test_q4c_recursion_guard_scanner_output_reduced():
     """R110-277: the scanner output for dev_im_finder_scan.py itself
     must contain 0 Q4c findings (was 3 before the recursion-guard fix).
 
     This is an end-to-end integration test that proves the recursion
     guard actually works in the full scanner run, not just in isolation.
+
+    R110-362: integration test runs `python3 tools/dev_im_finder_scan.py`
+    subprocess on the real repo (cwd='.'), which takes 30+ seconds.
+    The pytest-timeout default is 30s, so the test times out before
+    the scanner finishes. Per-test timeout bump to 120s lets the
+    scanner complete (and the assertion pass). The bump is scoped to
+    this test only, so the other 73 unit tests keep the 30s default.
     """
     import subprocess, json, re
     result = subprocess.run(
@@ -1007,6 +1065,7 @@ def test_sd_test_mase_data_dirs_excluded_via_dirs_prune():
     )
 
 
+@pytest.mark.timeout(120)
 def test_sd_test_mase_integration_findings_reduced():
     """R110-278: end-to-end integration test — the scanner's total
     finding count must be ≤30 after adding .mase/ as a 4th source-anchor.
@@ -1015,6 +1074,9 @@ def test_sd_test_mase_integration_findings_reduced():
     After R110-278: 26 findings (with .mase/ searched, data-dirs skipped).
     Threshold ≤30 gives us a regression margin: if someone accidentally
     breaks the skip-list, the count could spike back to 35+.
+
+    R110-362: same as test_q4c_recursion_guard_scanner_output_reduced —
+    per-test timeout bump to 120s because the full scanner takes 30+ seconds.
     """
     import subprocess, json
     result = subprocess.run(
