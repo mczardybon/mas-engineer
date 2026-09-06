@@ -2082,8 +2082,83 @@ Verification:
 
 ### Refs
 
-- R110-358 (061d3ac) — parent (workspace coverage-push round 4 EVIDENCE)
-- R110-323 (53a6144) — started the Prio-3 coverage-push queue
+- R110-358 (workspace coverage-push round 4 EVIDENCE)
+- R110-323 (started the Prio-3 coverage-push queue)
 - Skills: pre-push-gate, pre-push-body-claim-verification, mas-engineer-commit-protocol,
   mas-engineer-pre-push-check17-flake-handling
 - Post-flight audit: `logs/e2e-evidence-gen2/post-flight-audit-R110-359.json`
+
+---
+
+## R110-360 — Evidence SOT-location cleanup (28 → 0 violations)
+
+**Commit:** e9cb330 (🔧 R110-360) + 51322c1 (📝 R110-360-EVIDENCE)
+**Branch:** origin/mas-t-tests
+**Date:** 2026-09-06
+
+### Bug
+
+R110-257 introduced `tools/dev_evidence_sot.py` to enforce evidence lives at
+`logs/e2e-evidence-gen2/` (REPO-ROOT), NOT `mas-engineer/logs/e2e-evidence-gen2/`.
+Between R110-257 and R110-360, 14 evidence files were force-added to the wrong
+path (presumably because validator ran from the `mas-engineer/` subdir where
+`git ls-files` returns paths with the `mas-engineer/` prefix). They were
+DUPLICATES of the correct-path files (verified via `diff -q` before deletion).
+
+### Fix
+
+- `git rm` 14 wrong-path files (the correct copies at `logs/e2e-evidence-gen2/...` exist)
+- 14 files deleted, 0 added, 2383 lines removed from wrong-SOT path
+- Net repo size: -2383 lines (duplicates removed)
+
+### Files Deleted (14)
+
+| File | Lines | Origin |
+|------|-------|--------|
+| `mas-engineer/logs/e2e-evidence-gen2/R110-334-EVIDENCE.md` | 208 | R110-334 |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-336-EVIDENCE.md` | 155 | R110-336 |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-338-EVIDENCE.md` | 240 | R110-338 |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-340-EVIDENCE.md` | 209 | R110-340 |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-342-EVIDENCE.md` | 154 | R110-342 |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-346-EVIDENCE.md` | 145 | R110-346 |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-348-EVIDENCE.md` | 165 | R110-348 |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-350-EVIDENCE.md` | 139 | R110-350 |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-352-EVIDENCE.md` | 146 | R110-352 |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-354-EVIDENCE.md` | 144 | R110-354 |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-356-EVIDENCE.md` | 154 | R110-356 |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-358-EVIDENCE.md` | 216 | R110-358 |
+| `mas-engineer/logs/e2e-evidence-gen2/R110-359-EVIDENCE.md` | 101 | R110-359 |
+| `mas-engineer/logs/e2e-evidence-gen2/post-flight-audit-R110-359.json` | 7 | R110-359 |
+| **Total** | **2383** | |
+
+### E2E-result
+
+- `tools/dev_evidence_sot.py --git --strict` (from REPO-ROOT): **✅ PASS — 0 violations** (was 28)
+- `pytest tests/test_dev_evidence_sot.py`: **12/12 PASS in 2.02s** (was 1 failed / 11 passed)
+- All 14 correct-path copies still accessible at `logs/e2e-evidence-gen2/...`
+
+### Pre-push-gate status
+
+- Step 0 (secret scan): OK 0 secrets
+- Step 1 (validator): NOT run (deletions only, no code to test)
+- Step 2 (pytest 12 SOT tests): OK 12/12 in 2.02s
+- Step 3 (commit msg): OK per protocol (em-dash, R-num)
+- Step 4 (push): OK — `2af9484..e9cb330 mas-t-tests` then `e9cb330..51322c1 mas-t-tests` to origin
+- Step 5 (post-flight): OK 0 broken, 100% coverage
+
+### Memory/skill updates needed
+
+- SOT-AUDIT-CWD: The validator must run from the REPO-ROOT
+  (`mas-engineer-cleanup/`, parent of `mas-engineer/`), NOT from inside
+  `mas-engineer/`. The tool's `_resolve_repo_root()` enforces this, but
+  if a future session runs from the subdir, the tool FAILS LOUDLY
+  (SystemExit). The wrong-path files were a CWD-confusion artifact.
+- Future sessions: never `git add -f` evidence to `mas-engineer/logs/...`.
+  Use the correct SOT at REPO-ROOT `logs/e2e-evidence-gen2/`.
+
+### Refs
+
+- R110-257 (introduced Check 24)
+- R110-194, R110-210, R110-214, R110-215, R110-216, R110-229, R110-230, R110-255 — original wrong-SOT violators (fixed in R110-257)
+- R110-359 (parent — first R-sprint to surface this Check 24 BLOCK in its body)
+- Skills: mas-engineer-cleanup-sprint (R110-233 pattern), pre-push-gate
