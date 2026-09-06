@@ -928,9 +928,11 @@ def _generate_agent(agent_type, name, description, emoji, workspace):
 def _validate_agent(yaml_path, agent_type):
     """Validated gegen Best Practices (MAS) oder YAML (framework)."""
     import subprocess, yaml
+    from pathlib import Path as _Path  # R110-357-BUG: accept str|Path
 
     print()
-    print(f"  🔍 Validiere {yaml_path.name}...")
+    yaml_path_p = _Path(yaml_path) if not isinstance(yaml_path, _Path) else yaml_path
+    print(f"  🔍 Validiere {yaml_path_p.name}...")
 
     if agent_type == "mas_sub":
         editor = Path(__file__).parent / "dev_editor.py"
@@ -1059,6 +1061,8 @@ def _active_project_path():
     """Give Path to the aktiven project back."""
     data = _load_projects()
     active = data.get("active_project", "dev-team")
+    if not active:  # R110-357-BUG: empty string should default to dev-team
+        active = "dev-team"
     return Path("framework") / active, active
 
 def cmd_project_list():
