@@ -2162,3 +2162,95 @@ DUPLICATES of the correct-path files (verified via `diff -q` before deletion).
 - R110-194, R110-210, R110-214, R110-215, R110-216, R110-229, R110-230, R110-255 — original wrong-SOT violators (fixed in R110-257)
 - R110-359 (parent — first R-sprint to surface this Check 24 BLOCK in its body)
 - Skills: mas-engineer-cleanup-sprint (R110-233 pattern), pre-push-gate
+
+---
+
+## R110-361 — im_finder_scan coverage-push r1: +24 tests, 22% standalone / 27% combined
+
+**Commit:** 8a824ce (🔧 R110-361)
+
+**Goal:** Prio-3 coverage-push on `tools/dev_im_finder_scan.py` (queue position 1
+after R110-360 SOT-cleanup). R110-323 inventory flagged 1660 stmts @ 30% baseline;
+actual coverage measurement shows 682 executable stmts @ 22% with existing tests.
+
+**Fix (2 files, +416 lines):**
+
+| File | Status | Lines | Purpose |
+|------|--------|-------|---------|
+| `mas-engineer/tests/test_r110361_im_finder_scan_coverage_push_r1.py` | NEW | 308 | 24 tests across 4 under-tested pure-helper regions |
+| `mas-engineer/.mase/directives/R110-361-im-finder-scan-coverage-push.md` | NEW | 108 | Plan, targets, constraints (force-added, .mase exception) |
+
+**Test coverage matrix (24 tests, all PASS in 0.15s):**
+
+| Test class | Tests | Function | Lines |
+|------------|-------|----------|-------|
+| TestCollectScopeDirs | 6 | `_collect_scope_dirs()` | L109-129 (env fallback, single, comma-split, whitespace-strip, empty-skip, dedup) |
+| TestIsPathExcluded | 5 | `_is_path_excluded()` | L160-168 (external-recipe, .bak, -ORIGINAL.yaml, normal, opt-in) |
+| TestAddFinding | 8 | `add_finding()` | L195-252 (severity-filter, append, id-increment, required-keys, json-serializable, line-args, no-db, filter-no-id) |
+| TestComputeHelpers | 5 | `compute_issue_hash` + `compute_structural_pattern` | L89-104 (stability, type-discriminator, kwargs-ignored) |
+
+**Import pattern (R110-322 + R110-347):**
+- `monkeypatch.chdir(tmp_path) + SCAN_SCOPE=tmp_path/no-such-dir` BEFORE import
+  → module-level `check_spec_drift(findings, '.')` at L1578 is a no-op (0.04s)
+- `import tools.dev_im_finder_scan` (canonical dotted name) so `--cov=tools`
+  tracks it via the .coveragerc [paths] source = tools/ rewrite rule
+- Avoids the "module was never imported" warning that `--cov=tools/dev_im_finder_scan` triggers
+
+**E2E (real-flow, 4 scenarios):**
+
+1. New test file alone → PASS 24/24 in 0.15s
+2. Coverage on dev_im_finder_scan (R110-361 alone) → 22% (152/682 stmts)
+3. Coverage combined with r110347 + r110323 → 27% (184/682 stmts, +5pp delta)
+4. Coverage with dedup subprocess test added → 27% (dedup's tiny scope doesn't exercise new lines)
+
+**R-evidence:** 0 test-failures, 0 fixes needed
+
+**Pre-push-gate (R110-361 push):**
+- Step 0 (secret scan, staged):           OK 0 secrets
+- Step 1 (SOT-audit, REPO-ROOT):          OK 0 violations
+- Step 2 (pytest, 24 tests):              OK 24/24 in 0.15s
+- Step 3 (body-claim-verification):       OK (24 tests, 2 files, numbers match)
+- Step 4 (commit msg, 🔧 R-format):       OK per protocol
+- Step 5 (push):                          OK 8a824ce on origin/mas-t-tests
+- Step 6 (post-flight audit):             OK 0 broken, 0 references missing
+
+### Honest assessment
+
+The "+20pp" target in the R110-361 directive was too optimistic. Real delta is
++5pp combined with existing tests (or 22% standalone). Two reasons:
+
+1. **R110-323 inventory was over-estimated:** 1660 stmts vs actual 682 executable.
+   The inventory used a different counting method (raw lines vs `coverage`'s
+   executable-stmts counter).
+2. **Coverage is measured per-statement, not per-line:** my 24 tests cover new
+   branches in the 4 target functions, but most of the file (L255-1144 = the YAML
+   recipe-scan loop + all detector functions) is only exercised by the
+   subprocess-based dedup test on a tiny scope. To get to 50%+ we need to
+   either:
+   - Fix the pre-existing 75 errors in `test_dev_im_finder_scan_lib.py` (R110-362)
+   - Add more subprocess-based scanner tests on larger synthetic scopes
+
+### Forward-pointer: R110-362 — pre-existing-test-fix-3-source-lockstep
+
+- 75 errors in `mas-engineer/tests/test_dev_im_finder_scan_lib.py`
+- ~16 errors in `mas-engineer/tests/test_r110309_im_finder_scan_lib.py`
+- Root cause: fixture `importlib.util.spec_from_file_location` triggers the
+  module-level `check_spec_drift(findings, '.')` side-effect with no
+  SCAN_SCOPE sandbox, causing 15s+ timeouts on the real repo
+- Fix: patch the fixture to set SCAN_SCOPE/chdir BEFORE the import
+  (same pattern as r110347/r110361)
+- Expected coverage boost: 27% → 50%+ (library tests import the canonical
+  `tools.dev_im_finder_scan` name and exercise different code paths than
+  the subprocess-based dedup test)
+
+### Refs
+
+- R110-322 (subprocess-cov fix, import pattern model)
+- R110-347 (monkeypatch-env-import pattern, R110-361 model)
+- R110-360 (SOT-cleanup predecessor)
+- R110-323 (im_finder_scan Prio-3 inventory, baseline 30%)
+- Skills: mas-engineer-coverage-push-workflow, pre-push-body-claim-verification,
+  mas-engineer-pre-existing-test-fix-3-source-lockstep
+- **New learning:** use `--cov=tools` (package) not `--cov=tools/dev_im_finder_scan`
+  (dotted-name) to avoid the "module was never imported" coverage warning
+
