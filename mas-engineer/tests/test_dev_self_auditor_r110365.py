@@ -2,6 +2,11 @@
 test_dev_self_auditor_r110365.py — coverage push for tools/dev_self_auditor.py
 (R110-365, 2026-09-07).
 
+See also: R110-366 (correction of R110-365 body-claim
+"dashboard (566 stmts)" — actual next-r1 candidate is
+tools/dev_dashboard_refresh.py at 249 stmts / 47% covered, not
+a single "dashboard" file at 566 stmts).
+
 Goal: 50-70% coverage target, expected 70-90% based on R110-361..364
 overshoot pattern. This file is the verification-theater detector
 itself (Check 9 of the pre-push-validator), so coverage here has
