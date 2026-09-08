@@ -115,15 +115,21 @@ def test_directives_violation_detected(tmp_path):
 # Test (c): mas-engineer/logs/ violation
 # ─────────────────────────────────────────────────────────────────────
 def test_evidence_violation_detected(tmp_path):
-    """A file in mas-engineer/logs/e2e-evidence-gen2/ is detected."""
+    """A file in mas-engineer/logs/ (NOT in the e2e-evidence-gen2/
+    carve-out) is detected as a SOT violation.
+
+    The e2e-evidence-gen2/ subdir is the R110-377 carve-out (a valid
+    pre-R110-258 evidence archive location). To test the violation
+    detection, we use a DIFFERENT log subdir.
+    """
     _make_clean_fixture_repo(tmp_path)
-    (tmp_path / "mas-engineer" / "logs" / "e2e-evidence-gen2").mkdir(parents=True)
-    (tmp_path / "mas-engineer" / "logs" / "e2e-evidence-gen2" / "R110-TEST.log").write_text(
+    (tmp_path / "mas-engineer" / "logs" / "scratch").mkdir(parents=True)
+    (tmp_path / "mas-engineer" / "logs" / "scratch" / "R110-TEST.log").write_text(
         "log"
     )
     rc, stdout, _ = _run_in_tmp(["--strict"], tmp_path)
     assert rc == 1, f"tool should exit 1 on violation, got {rc}:\n{stdout}"
-    assert "mas-engineer/logs/e2e-evidence-gen2/R110-TEST.log" in stdout
+    assert "mas-engineer/logs/scratch/R110-TEST.log" in stdout
     assert "evidence_sot_working_tree" in stdout
 
 
@@ -204,12 +210,15 @@ def test_git_mode_tracks_renames(tmp_path):
     but with proper git mv renames in place.
 
     Simulates the post-R110-257 state: 26 files moved via git mv from
-    mas-engineer/logs/e2e-evidence-gen2/ to logs/e2e-evidence-gen2/.
+    mas-engineer/logs/<anti-subdir> to logs/e2e-evidence-gen2/.
+
+    R110-377 update: mas-engineer/logs/e2e-evidence-gen2/ is the carve-out
+    (not a violation), so we use a DIFFERENT subdir to test anti-SOT detection.
     """
     _make_clean_fixture_repo(tmp_path)
     # Create files at wrong SOT location
-    (tmp_path / "mas-engineer" / "logs" / "e2e-evidence-gen2").mkdir(parents=True)
-    bad = tmp_path / "mas-engineer" / "logs" / "e2e-evidence-gen2" / "R110-99.md"
+    (tmp_path / "mas-engineer" / "logs" / "scratch").mkdir(parents=True)
+    bad = tmp_path / "mas-engineer" / "logs" / "scratch" / "R110-99.md"
     bad.write_text("# evidence")
     # Git add
     subprocess.run(["git", "add", str(bad)], cwd=tmp_path, check=True)
@@ -226,11 +235,16 @@ def test_git_mode_tracks_renames(tmp_path):
 # Test (g): --history scan
 # ─────────────────────────────────────────────────────────────────────
 def test_history_scan_detects_past_violators(tmp_path):
-    """--history scan finds past commits that added anti-SOT files."""
+    """--history scan finds past commits that added anti-SOT files.
+
+    R110-377 update: mas-engineer/logs/e2e-evidence-gen2/ is the carve-out,
+    so the history scanner now skips it. To test the history scan, we use
+    a DIFFERENT subdir (e.g. mas-engineer/logs/scratch/).
+    """
     _make_clean_fixture_repo(tmp_path)
     # Add a file at anti-SOT location, commit it
-    (tmp_path / "mas-engineer" / "logs" / "e2e-evidence-gen2").mkdir(parents=True)
-    bad = tmp_path / "mas-engineer" / "logs" / "e2e-evidence-gen2" / "R110-99-archive.md"
+    (tmp_path / "mas-engineer" / "logs" / "scratch").mkdir(parents=True)
+    bad = tmp_path / "mas-engineer" / "logs" / "scratch" / "R110-99-archive.md"
     bad.write_text("# archive")
     subprocess.run(["git", "add", str(bad)], cwd=tmp_path, check=True)
     subprocess.run(

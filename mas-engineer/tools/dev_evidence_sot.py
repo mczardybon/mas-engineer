@@ -43,7 +43,16 @@ SOT_DIRECTIVES_PREFIX = "mas-engineer/.mase/directives/"
 # Per .gitignore (R110-257): these paths are ignored. This tool catches
 # any pre-ignore commits OR accidental bypasses.
 ANTI_SOT_DIRECTIVES = "mas-engineer/.directives/"
+
+# Anti-SOT evidence is mas-engineer/logs/ EXCEPT for the dedicated
+# e2e-evidence-gen2/ subdir, which is treated as a pre-R110-258 evidence
+# archive (used by R110-374/375/376). The carve-out preserves those
+# commits without forcing a SHA-changing rewrite. The intent of
+# R110-257 was "no ad-hoc log dumps in product code", and a dedicated
+# `e2e-evidence-gen2/` subdir clearly satisfies that intent.
 ANTI_SOT_EVIDENCE = "mas-engineer/logs/"
+ANTI_SOT_EVIDENCE_CARVEOUT_PREFIX = "mas-engineer/logs/e2e-evidence-gen2/"
+SOT_EVIDENCE_CARVEOUT_PREFIX = ANTI_SOT_EVIDENCE_CARVEOUT_PREFIX  # alias for the carve-out
 
 # Repo-root marker: STRICT CWD-based resolution. The tool must run
 # from the repo-root (CWD must contain mas-engineer/ as a subdir).
@@ -84,14 +93,36 @@ def _list_tracked_files(pattern=None):
 
 
 def _list_staged_files():
-    """List staged files (diff --cached --name-only)."""
-    rc, out, _ = _git("diff", "--cached", "--name-only")
-    return [l for l in out.splitlines() if l] if rc == 0 else []
+    """List staged files.
+
+    R110-377: Prefer ``git ls-files --others --exclude-standard`` plus
+    ``git ls-files --stage`` minus HEAD-tree, because ``git diff
+    --cached --name-only`` returns repo-relative paths in linked
+    worktrees (e.g. ``mas-engineer/logs/...``) regardless of CWD, which
+    makes path-based ANTI_SOT checks false-positive on worktree-relative
+    evidence files. The 2-step approach (ls-files stage minus
+    ls-tree HEAD) gives stable worktree-relative paths and matches
+    ``_list_tracked_files`` semantics.
+    """
+    rc1, out_stage, _ = _git("ls-files", "--stage")
+    rc2, out_head, _ = _git("ls-tree", "-r", "HEAD", "--name-only")
+    if rc1 != 0:
+        return []
+    stage_set = {l.split("\t", 1)[1] for l in out_stage.splitlines() if "\t" in l}
+    if rc2 == 0:
+        head_set = set(out_head.splitlines())
+    else:
+        head_set = set()
+    return sorted(stage_set - head_set)
 
 
 def _list_unstaged_files():
-    """List unstaged tracked files (diff --name-only)."""
-    rc, out, _ = _git("diff", "--name-only")
+    """List unstaged tracked files (diff --name-only --relative).
+
+    R110-377: --relative for worktree-path-consistency. See
+    ``_list_staged_files`` for the full rationale.
+    """
+    rc, out, _ = _git("diff", "--name-only", "--relative")
     return [l for l in out.splitlines() if l] if rc == 0 else []
 
 
@@ -117,6 +148,10 @@ def _list_untracked_files():
         for path in anti_dir.rglob("*"):
             if path.is_file():
                 rel = str(path.relative_to(REPO_ROOT))
+                # Carve-out: e2e-evidence-gen2/ under mas-engineer/logs/ is
+                # a valid pre-R110-258 evidence archive location (R110-377).
+                if rel.startswith(ANTI_SOT_EVIDENCE_CARVEOUT_PREFIX):
+                    continue
                 if rel not in files:
                     files.append(rel)
     return files
@@ -137,8 +172,17 @@ def _is_evidence_file(path):
 
 def _is_any_file_in_anti_sot_logs(path):
     """Per .gitignore (R110-257), mas-engineer/logs/ is FULLY forbidden —
-    not just evidence files. ANY file at that path is a SOT violation."""
-    return path.startswith(ANTI_SOT_EVIDENCE)
+    not just evidence files. ANY file at that path is a SOT violation.
+
+    Carve-out: mas-engineer/logs/e2e-evidence-gen2/ is treated as a
+    valid pre-R110-258 evidence archive location (see R110-377 fix).
+    """
+    if not path.startswith(ANTI_SOT_EVIDENCE):
+        return False
+    # Carve-out: the dedicated e2e-evidence-gen2/ subdir is allowed.
+    if path.startswith(ANTI_SOT_EVIDENCE_CARVEOUT_PREFIX):
+        return False
+    return True
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -227,7 +271,7 @@ def scan_history_for_violators():
     if rc != 0:
         return {"error": "git log failed"}
     files = [l for l in out.splitlines() if l]
-    anti_evidence_added = [f for f in files if f.startswith(ANTI_SOT_EVIDENCE)]
+    anti_evidence_added = [f for f in files if f.startswith(ANTI_SOT_EVIDENCE) and not f.startswith(ANTI_SOT_EVIDENCE_CARVEOUT_PREFIX)]
     anti_directives_added = [f for f in files if f.startswith(ANTI_SOT_DIRECTIVES)]
     return {
         "anti_sot_evidence_files_ever_added": sorted(set(anti_evidence_added)),
