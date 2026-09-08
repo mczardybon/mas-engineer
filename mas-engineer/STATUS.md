@@ -2598,3 +2598,116 @@ Recommendation: `dev_dashboard_data` (banner tool, 298 stmts, biggest
 leverage) for the next r1 push. `dev_editor` r3 needs a separate
 harness sprint (git-fixture, COVERAGE_PROCESS_START) — that's its own
 R-sprint, not in R110-374.
+
+---
+
+## R110-374 — dev_observer.py coverage push r1 (0% → 91.2%)
+
+**Commits:** 8e72b14 (test file, ⚠️ empty subject — see disclosure),
+📚 R110-374 (this commit, EVIDENCE + CHANGELOG + STATUS)
+
+Picked `dev_observer` for R110-374 — the 5th-largest 0%-Lücke in
+`tools/`, MCP-ecosystem support, simpler module-level side-effect
+profile (no SCAN_SCOPE module-level calls — uses the simple import
+pattern, not the r110347 sandbox).
+
+### R110-374 r1 — dev_observer.py 0% → 91.2% (+91.2pp, +258 stmts, 41 tests)
+
+**Result:** 91.2% achieved (258/283 stmts). Real isolated-coverage
+delta is +91.2pp (from per-file coverage JSON scan + isolated
+`--cov=tools/dev_observer.py` term-report).
+
+Test design (7 classes, 41 tests, all PASS in 0.14s):
+- TestResolveAgentDir (3) — `--workspace` precedence, fallthrough, no-args
+- TestLazyLoaders (2) — `get_agent_dir()` / `get_state_dir()` caching
+- TestFileInfo (8) — yaml/yml/md/py detection, size_kb rounding, rel_path, binary
+- TestYamlDetail (10) — empty, slash, title (3 quote modes), settings, instructions, prompt
+- TestScanner (11) — init, _collect, _get_dirs, scan_full, scan_quick, scan_yaml
+- TestSaveScan (2) — writes analysis.json, creates parent dirs
+- TestMainCli (5) — `--scan`, `--quick`, `--yaml`, `--yaml-dir`, missing path
+- **Total: 41 tests, 7 function ranges, 91.2% coverage**
+
+### Why not 100%? — the 25 still-missed lines (r2 prerequisite)
+
+The 25 missed lines break into 2 categories:
+1. **argparse error paths (~15 lines)**: `main()`'s argparse
+   error-handling for missing/malformed args (L40-44, L59-65) is
+   hard to trigger without subprocess + bad args. r2 could add
+   `subprocess.run([sys.executable, "dev_observer.py", "--bogus"])`.
+2. **unreachable error-fallbacks (~10 lines)**: YamlDetail
+   corrupt-yaml fallback (L90-95) and Scanner._collect on
+   permission errors (L171-174) are defensive code that doesn't
+   fire in normal use. r2 could add `chmod 000` fixture.
+
+**R110-374 r2 prerequisite**: either subprocess-bad-arg tests or
+accept ~91% as the practical ceiling for unit-level testing of a
+pure-CLI tool.
+
+### Pre-Existing Test Status (no regression)
+
+Full suite (with r110374 test in HEAD): **3745 passed, 13 failed,
+7 skipped** in 10:59. The 13 failures are all pre-existing in:
+- `test_dev_im_finder_scan_lib.py` (6 fails)
+- `test_dev_message_queue.py` (1 fail)
+- `test_guardian_scan.py` (2 fails)
+- `test_r110262_check0_adversarial_titles.py` (1 fail)
+- `test_r110262_hardstop_copilot_regex.py` (2 fails)
+- `test_r110279_runtime_var_skip.py` (1 fail)
+
+**None of these 13 fails are in test_dev_observer_r110374.py.**
+The r110374 test imports successfully under full-suite, no
+import-time errors, no module-level side effects. The 13 fails
+are pre-existing from R110-303 (dev_im_finder), R110-347+ (mq),
+R110-262 (copilot regex), R110-279 (runtime var skip), and the
+guardian-scan integration. Background-verification run in
+`/tmp/r110374-pre-existing-verify.log`.
+
+### ⚠️  8e72b14 Empty-Subject Disclosure
+
+Commit `8e72b14` (Tue Sep 8 13:30:53 UTC) was created during the
+full-suite run with subject `[]` (empty). Per Check 1.5 (R110-78/304),
+an empty subject is a BLOCKER. Per R110-281, force-push is FORBIDDEN.
+
+**Recovery path**:
+1. Keep 8e72b14 as historical fact (test content is correct)
+2. Document gap transparently in this commit's body (R110-78 lesson)
+3. Next R-sprint (R110-375 or later) can add a
+   `📝 R110-374 — subject recovery` follow-up commit
+
+The TEST CONTENT is correct (41/41 PASS in 0.14s, 91.2% coverage);
+only the commit metadata needs a follow-up.
+
+### Cumulative R110-37x coverage progress
+
+| Round | File | Delta | Stmts covered |
+|---|---|---|---|
+| R110-371 r2 | dev_workspace.py | 71% → 80.1% (+9.1pp) | +201 |
+| R110-372 r1 | dev_editor.py | 0% → 49.87% (+49.87pp) | +192 |
+| R110-373 r2 | dev_editor.py | 49.87% → 58.18% (+8.31pp) | +32 |
+| **R110-374 r1** | **dev_observer.py** | **0% → 91.2% (+91.2pp)** | **+258** |
+| **Total** | **3 files** | combined +158.3pp | **+683 stmts** |
+
+### Pre-push-gate (R110-374 push)
+
+- Step 0 (secret scan, tracked):         OK 0 secrets
+- Step 1 (SOT-audit):                     OK 0 violations
+- Step 2 (pytest, 41 new tests):         OK 41/41 in 0.14s
+- Step 2b (full suite):                   OK 3745 pass, 13 pre-existing fail, 7 skip
+- Step 2c (coverage delta):               OK 0% → 91.2% (+91.2pp, real)
+- Step 3 (body-claim-verification):       OK (numbers match term-report)
+- Step 4 (commit msg, 📚 R-format):       ⚠️  8e72b14 had empty subject, documented
+- Step 5 (push):                          pending
+- Step 6 (post-flight audit):             pending
+
+**Refs:**
+
+- R110-373 (508ce6e) — r2 dev_editor at 58.18%, 57 tests
+- R110-372 (9b5c9bb) — r1 dev_editor at 49.87%
+- R110-371 (3764ffa) — dev_workspace at 80.1%
+- R110-367 — dev_dashboard_refresh (sibling 0% → high pattern)
+- R110-78 — verification-theater pattern (applied)
+- R110-258 — force-add evidence via `git add -f`
+- R110-281 — force-push-verbote, no-rebase rule (applied)
+- R110-304 — 3-source lockstep for commit-subject format
+- Skill: `mas-engineer-coverage-push-workflow` (Pitfall 10/11: re-derive
+  every number from term-report, not planner-estimates)
