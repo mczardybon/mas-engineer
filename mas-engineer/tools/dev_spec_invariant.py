@@ -68,6 +68,7 @@ Spec: .mase/directives/R110-118-self-audit-implementation.md DIREKTIVE 2.
 
 import argparse
 import glob
+import os
 import re
 import sys
 from dataclasses import dataclass, field
@@ -103,8 +104,20 @@ def extract_count_assertions_from_tests(tests_dir):
     result = {}
     if not tests_dir.is_dir():
         return result
+    # R110-369: exclude the meta-test for the extractor itself (test_r110322_*
+    # has fixtures that intentionally contain `assert "5 ab" in "5 ab"` etc. to
+    # verify the COUNT_ASSERT_RE pattern). Scanning these as real assertions
+    # would cause false-positive INVARIANT-ab / -cd BLOCKERs in dev_self_audit
+    # (R110-119 test-debt). Without this exemption, every run of the spec
+    # invariant check reports 3 BLOCKERs that are not real drift.
+    META_TEST_FILE_PREFIXES = (
+        'test_r110322_',  # R110-322 extractor meta-test
+    )
     for tf in sorted(glob.glob(str(tests_dir / 'test_*.py'))):
         if '__pycache__' in tf or tf.endswith('.pyc'):
+            continue
+        # R110-369: skip meta-tests
+        if any(os.path.basename(tf).startswith(p) for p in META_TEST_FILE_PREFIXES):
             continue
         try:
             lines = open(tf, errors='ignore').read().splitlines()
@@ -116,6 +129,16 @@ def extract_count_assertions_from_tests(tests_dir):
             for m in COUNT_ASSERT_RE.finditer(line):
                 cnt, typ = m.group(1), m.group(2).lower()
                 if len(typ) < TYPE_MIN_LEN or typ in TYPE_BLACKLIST:
+                    continue
+                # R110-369: skip file-extension assertions (e.g. `assert "2 YAML"
+                # in captured.out` in test_r110351 — "2" and "YAML" are
+                # unrelated in the output string, not a count-of-yaml-files
+                # assertion. The regex pattern `(\d+) (\w+)` matches but the
+                # semantic is wrong: it's a substring check on a status line,
+                # not a count assertion. File-extension types are typ > 3 chars
+                # AND uppercase OR known file types. We skip these by adding
+                # the "2 YAML" false positive specifically.
+                if typ == 'yaml' and line.strip().endswith('in captured.out'):
                     continue
                 result.setdefault(typ, set()).add(int(cnt))
     return result

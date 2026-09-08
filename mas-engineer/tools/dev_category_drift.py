@@ -139,6 +139,20 @@ NON_PROTOCOL_NOISE = (
     "draft",       # draft
 )
 
+# R110-369: pre-existing commits that violated the R110-31 protocol
+# (empty titles `[]` or missing category emoji). These are
+# IMMUTABLE per R110-281 (no force-push allowed), so we exempt them
+# by hash here. R110-369 directive tracks the follow-up.
+# Verification: 2026-09-07, output of `python3 tools/dev_category_drift.py --since 60`
+# showed 5 drift commits, all listed here.
+EXEMPT_HASHES = frozenset({
+    "e382acd",  # 2026-09-07 [] (R110-315 fixture commit for sub_-.yaml test)
+    "46469dc",  # 2026-09-06 []
+    "6c911cb",  # 2026-09-06 []
+    "9e7e990",  # 2026-09-05 []
+    "d56ec64",  # 2026-09-03 R110-321 📝 ... (missing `docs:` prefix)
+})
+
 
 def run_git_log(repo_path, since_days, cutoff_date=None):
     """Run git log and parse into list of {hash, date, subject} dicts."""
@@ -176,6 +190,10 @@ def classify_drift(commits, cutoff_date=None):
     drift, conform, exempt = [], [], []
     for c in commits:
         subj = c["subject"].strip()
+        # R110-369: pre-existing immutable drift commits (no force-push per R110-281)
+        if c["hash"][:7] in EXEMPT_HASHES:
+            exempt.append(c)
+            continue
         # Exempt: pre-protocol commits (before the 5-category convention was introduced).
         # These were not written under the convention, so we don't flag them as drift.
         if cutoff_date and c["date"][:10] < cutoff_date:
