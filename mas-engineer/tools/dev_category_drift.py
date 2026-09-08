@@ -151,6 +151,7 @@ EXEMPT_HASHES = frozenset({
     "6c911cb",  # 2026-09-06 []
     "9e7e990",  # 2026-09-05 []
     "d56ec64",  # 2026-09-03 R110-321 📝 ... (missing `docs:` prefix)
+    "aa4a975",  # 2026-09-08 [] (R110-372 — git commit -F read file as empty)
 })
 
 
