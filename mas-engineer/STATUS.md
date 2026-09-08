@@ -2512,3 +2512,89 @@ dev_session_query is done. Remaining Prio-3 candidates (0% baseline):
 
 Recommendation: `dev_dashboard_data` (banner tool, 298 stmts, biggest
 leverage). Or `dev_architect` if a smaller scope is preferred.
+
+## R110-371 + R110-372 + R110-373 — dev_workspace r2 (80.1%) + dev_editor r1+r2 (0% → 58.18%)
+
+**Commits:** 3764ffa (R110-371), aa4a975 (R110-372 work) + 9b5c9bb (R110-372 msg-recovery), 4cd31d9 (R110-373 r2)
+
+Picked the dev_workspace r2 + dev_editor paths. dev_editor was 0% / 385
+stmts (R110-323 inventory, verified 2026-09-08) with NO existing tests —
+highest leverage after the session_query win (R110-364).
+
+### R110-371 r2 — dev_workspace.py 71% → 80.1% (+9.1pp, +201 stmts)
+
+**Result:** 80.1% achieved. Target was 85%, real delta is +9.1pp (the
+remaining ~20pp is in interactive/UI code that needs `pexpect` or
+similar — out of scope for unit tests).
+
+### R110-372 r1 — dev_editor.py 0% → 49.87% (+49.87pp, 192 stmts, 54 tests)
+
+**Result:** 49.87% achieved. Original `aa4a975` commit body claimed
+"0% → 85%" — caught pre-push as verification-theater, corrected to
+49.87% in 9b5c9bb (R110-372 msg-recovery). R110-78 lesson applied.
+
+### R110-373 r2 — dev_editor.py 49.87% → 58.18% (+8.31pp, +32 stmts, 57 tests)
+
+**Result:** 58.18% achieved. The r1 plan (R110-372-EVIDENCE) promised
+50% → 80% (+30pp). Real r2 delta is +8.31pp — the remaining 161
+missing lines are blocked by:
+- importlib + subprocess.run re-entry: do_patch's real `git commit`
+  subprocess calls don't land in the parent's coverage-tracked execution
+  (needs `COVERAGE_PROCESS_START` or git-fixture harness)
+- argparse + sys.exit + json.dumps: covered by importlib re-load, but
+  the surrounding try/except counts as the missing line-block
+- 90+ CLI flag combinations in `main()`: only 7 reachable from
+  tmp_path fixtures
+
+**Cumulative R110-37x coverage gains:**
+- R110-371 r2: dev_workspace.py 71% → 80.1% (+9.1pp, +201 stmts)
+- R110-372 r1: dev_editor.py    0%  → 49.87% (+49.87pp, +192 stmts)
+- R110-373 r2: dev_editor.py    49.87% → 58.18% (+8.31pp, +32 stmts)
+- **Total: 2 files, +425 stmts, +11.6pp across files (same-scope subset)**
+
+**Pre-push-gate (R110-373 r2 push):**
+
+- Step 0 (secret scan, tracked):         OK 0 secrets
+- Step 1 (SOT-audit, REPO-ROOT):         OK 0 violations
+- Step 2 (pytest, 57 new tests):         OK 57/57 in 17.19s
+- Step 2b (combined 4 test files):       OK 161/161 in 21s
+- Step 2c (coverage delta):              OK 49.87% → 58.18% (+8.31pp, real)
+- Step 3 (body-claim-verification):      OK (numbers match term-report)
+- Step 4 (commit msg, 📚 R-format):      OK per protocol
+- Step 5 (push):                         pending
+- Step 6 (post-flight audit):            pending
+
+**Refs:**
+
+- R110-364 (dev_session_query r1 — coverage-push r1 series, immediate
+  predecessor)
+- R110-361/362/363 (the prior r1 series, same pattern)
+- R110-347 (sandbox pattern, R110-372 + R110-373 model)
+- R110-78 (verification-theater guard — applied in BOTH R110-372 r1
+  and R110-373 r2 to avoid claiming unmeasured numbers)
+- R110-281 (force-push-verbote, EXEMPT_HASHES pattern used to document
+  R110-372's `aa4a975` empty-msg parent)
+- Skill: `mas-engineer-coverage-push-workflow` (Pitfall 10/11:
+  re-derive every number from term-report, not planner-estimates)
+
+**Forward-pointer: R110-374 — what next?**
+
+dev_editor is at the practical ~58% ceiling for unit-level testing
+without a git-fixture / docker-sandbox harness (see R110-373-EVIDENCE
+§ "Why not 80%?"). The 3 categories of remaining 161 lines all need
+subprocess coverage or refactor of `do_patch` to inject the git call
+as a dependency.
+
+Remaining Prio-3 candidates (0% baseline):
+- `dev_self_auditor` (likely ~200 stmts)
+- `dev_spec_invariant` (R110-296/297 territory — has # CAT-3 constraints)
+- `dev_parallel` (test-pattern untested)
+- `dev_observer` (MCP-ecosystem support)
+- `dev_architect` (~246 stmts)
+- `dev_dashboard_refresh` (249 stmts)
+- `dev_dashboard_data` (298 stmts, the banner tool — biggest leverage)
+
+Recommendation: `dev_dashboard_data` (banner tool, 298 stmts, biggest
+leverage) for the next r1 push. `dev_editor` r3 needs a separate
+harness sprint (git-fixture, COVERAGE_PROCESS_START) — that's its own
+R-sprint, not in R110-374.
