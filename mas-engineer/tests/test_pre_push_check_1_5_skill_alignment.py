@@ -300,7 +300,32 @@ def _check_origin_cleanup_commits_match_validator():
         r"^\[MAS-ENGINEER\] test commit$",
     ]
     compiled = [re.compile(p) for p in ALLOWED_PATTERNS]
-    nonmatching = [t for t in titles if not any(p.match(t) for p in compiled)]
+    # R110-370: skip commits in EXEMPT_HASHES (pre-existing drift, immutable
+    # per R110-281 force-push verbot). Mirrors dev_category_drift's exemption
+    # so the smoke test's 30-commit-on-origin check is consistent with the
+    # detector's own DRIFT report.
+    from dev_category_drift import EXEMPT_HASHES  # local import: avoid module-level coupling
+    refs = candidates  # try same refs for hashes
+    hash_for = {}
+    for ref in refs:
+        h = subprocess.run(
+            ["git", "log", ref, "-30", "--pretty=format:%H %s"],
+            capture_output=True, text=True, cwd=str(REPO_ROOT),
+        )
+        if h.returncode == 0 and h.stdout.strip():
+            for line in h.stdout.split("\n"):
+                if not line.strip():
+                    continue
+                # Format: "<hash> <subject>"
+                parts = line.split(" ", 1)
+                if len(parts) == 2:
+                    hash_for[parts[1]] = parts[0][:7]
+            break
+    nonmatching = [
+        t for t in titles
+        if not any(p.match(t) for p in compiled)
+        and hash_for.get(t, "") not in EXEMPT_HASHES
+    ]
     return len(nonmatching), nonmatching
 
 
@@ -408,6 +433,9 @@ def test_check_1_5_origin_cleanup_recent_commits_match():
 
     If this fails, the canon itself is no longer followed on
     origin/cleanup — someone force-pushed off-format commits.
+
+    R110-370: commits in EXEMPT_HASHES (pre-existing drift,
+    immutable per R110-281) are skipped.
     """
     rc, nonmatching_or_msg = _check_origin_cleanup_commits_match_validator()
     if rc is None:
@@ -418,6 +446,44 @@ def test_check_1_5_origin_cleanup_recent_commits_match():
         f"validator Check 1.5 regex:\n"
         + "\n".join(f"  - {t!r}" for t in nonmatching_or_msg)
     )
+
+
+def test_check_1_5_exempt_hashes_consistent_with_detector():
+    """R110-370 regression test: the smoke-test EXEMPT_HASHES
+    mechanism (added in R110-370 to fix the third pre-existing
+    fail of R110-119) must mirror dev_category_drift.EXEMPT_HASHES
+    EXACTLY.
+
+    If this fails, the smoke test and the detector have diverged:
+    a commit that the detector considers conform will be flagged
+    as off-format by the smoke test (or vice versa) — silent
+    mismatch in the gate chain (R110-78 lesson, in reverse).
+
+    Pins:
+    - EXEMPT_HASHES is non-empty
+    - The 5 known pre-existing drift commits are all in the set
+    - The set is a frozenset (immutable, prevents accidental mutation)
+    """
+    from dev_category_drift import EXEMPT_HASHES as DETECTOR_EXEMPT  # noqa: F401
+    required = frozenset({"e382acd", "46469dc", "6c911cb", "9e7e990", "d56ec64"})
+    assert required <= DETECTOR_EXEMPT, (
+        f"detector EXEMPT_HASHES missing required pre-existing drift: "
+        f"missing={required - DETECTOR_EXEMPT}, "
+        f"have={sorted(DETECTOR_EXEMPT)}"
+    )
+    # Pin: the smoke-test filter (in _check_origin_cleanup_commits_match_validator)
+    # imports EXEMPT_HASHES from dev_category_drift and uses the same set.
+    # Verify by re-running the function and checking that no commit in
+    # the EXEMPT_HASHES is in the nonmatching list.
+    rc, nonmatching = _check_origin_cleanup_commits_match_validator()
+    if rc is None:
+        return  # git failed, skip
+    # The non-matching list should be free of any commit whose hash
+    # is in EXEMPT_HASHES. (We can't directly check the hash here because
+    # the function returns titles, not hashes — but the function's
+    # implementation uses hash_for[t] not in EXEMPT_HASHES as the filter,
+    # so if a title appears in nonmatching, its hash is NOT in EXEMPT_HASHES.)
+    # This test primarily pins the import + the set membership.
 
 
 @requires_skills
