@@ -79,6 +79,16 @@ def _count_lines(p: Path) -> int:
 
 # ---------- Phase 1.2: im-finder publisher ----------
 
+# R110-391: per-test timeout markers (R110-254 phoenix-test-soft-hang
+# pattern, see .mase/skills/mas-engineer-pre-push-check17-flake-handling/
+# SKILL.md). Each test spawns dev_im_finder_scan.py with an inner
+# subprocess.run(timeout=120), and the scanner takes 75-90s wallclock.
+# Without the per-test marker, pytest-timeout defaults to 30s when
+# no --timeout=N is passed, and the test gets killed mid-subprocess →
+# false-positive "Failed: Timeout >30s" in the full pytest sweep.
+# Pre-push-validator's Check 17 explicitly sets --timeout=300, so the
+# tests pass there; the local pytest sweep needs the marker too.
+@pytest.mark.timeout(180)
 def test_im_finder_publish_enqueues_message(im_depth_before):
     """--publish enqueues exactly 1 message to im.finding.created."""
     request_id = _unique_id("r110-165-test-im")
@@ -116,6 +126,7 @@ def test_im_finder_publish_enqueues_message(im_depth_before):
     assert "timestamp" in msg["payload"]
 
 
+@pytest.mark.timeout(180)
 def test_im_finder_without_publish_does_not_enqueue(im_depth_before):
     """Without --publish, no message lands in the topic."""
     r = subprocess.run(
@@ -128,6 +139,7 @@ def test_im_finder_without_publish_does_not_enqueue(im_depth_before):
     assert _count_lines(IM_NDJSON) == im_depth_before
 
 
+@pytest.mark.timeout(180)
 def test_im_finder_uses_default_request_id_when_omitted():
     """Without --publish-request-id, a default is generated."""
     r = subprocess.run(
