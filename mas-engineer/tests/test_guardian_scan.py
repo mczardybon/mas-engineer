@@ -39,11 +39,17 @@ GUARDIAN = STATE / "guardian.yaml"
 
 # ─── HELPERS ──────────────────────────────────────────────────────
 
+# R110-392: CWD-fragility fix (R110-389 pattern). Add cwd=REPO_ROOT
+# to the subprocess so it doesn't break when an earlier test does
+# os.chdir(tmp_path) and fails to restore. The full pytest sweep
+# hits many such tests; without cwd=REPO_ROOT, dev_guardian_scan
+# can't find recipe/sub/sub_mas-*.yaml and exits non-zero.
 def _run_scan(workspace=None, expect_rc=0):
     args = [sys.executable, str(TOOLS / "dev_guardian_scan.py")]
     if workspace is not None:
         args += ["--workspace", str(workspace)]
-    return subprocess.run(args, capture_output=True, text=True, timeout=60)
+    return subprocess.run(args, capture_output=True, text=True,
+                          timeout=60, cwd=str(REPO_ROOT))
 
 
 def _backup_state():
