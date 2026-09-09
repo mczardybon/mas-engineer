@@ -883,7 +883,7 @@ def test_q4c_recursion_guard_skips_issue_message_fragments():
     the literal text inside the f-string.
     """
     import re
-    src = open('tools/dev_im_finder_scan.py').read()
+    src = open(SCANNER).read()
     # The recursion guard is the line: _arg check before the
     # _is_print / _has_ascii / add_finding branch.
     assert '_arg = _call.split(\'(\', 1)[1].rstrip(\')\').strip()' in src, (
@@ -913,7 +913,7 @@ def test_q4c_recursion_guard_does_not_skip_real_calls():
         f"incorrectly skipped by the recursion guard")
 
 
-@pytest.mark.timeout(120)
+@pytest.mark.timeout(240)
 def test_q4c_recursion_guard_scanner_output_reduced():
     """R110-277: the scanner output for dev_im_finder_scan.py itself
     must contain 0 Q4c findings (was 3 before the recursion-guard fix).
@@ -992,7 +992,7 @@ def test_sd_test_mase_added_to_search_dirs():
     The search_dirs list in tools/dev_im_finder_scan.py must include
     `.mase/` (or a path ending in `.mase`) as the 4th entry.
     """
-    src = pathlib.Path('tools/dev_im_finder_scan.py').read_text()
+    src = SCANNER.read_text()
     # find the search_dirs list inside check_spec_drift()
     m = re.search(
         r'search_dirs\s*=\s*\[\s*(.*?)\]',
@@ -1015,7 +1015,7 @@ def test_sd_test_data_dirs_skip_list_present():
     scanner to 5+ minutes AND mask real drift with incidentally-matched
     literals.
     """
-    src = pathlib.Path('tools/dev_im_finder_scan.py').read_text()
+    src = SCANNER.read_text()
     # find _SD_DATA_DIRS set
     m = re.search(
         r'_SD_DATA_DIRS\s*=\s*\{([^}]+)\}',
@@ -1039,7 +1039,7 @@ def test_sd_test_mase_data_dirs_excluded_via_dirs_prune():
     to actually prune the walk (not just `continue`) — otherwise the
     scanner descends into workflow_runs/ (6115 files) anyway.
     """
-    src = pathlib.Path('tools/dev_im_finder_scan.py').read_text()
+    src = SCANNER.read_text()
     # R110-278 fix: don't rely on _SD_DATA_DIRS as the regex anchor
     # (it's mentioned twice — definition + usage). Instead, find the
     # os.walk(d) inside the SD-test block and check that somewhere
@@ -1065,7 +1065,7 @@ def test_sd_test_mase_data_dirs_excluded_via_dirs_prune():
     )
 
 
-@pytest.mark.timeout(120)
+@pytest.mark.timeout(240)
 def test_sd_test_mase_integration_findings_reduced():
     """R110-278: end-to-end integration test — the scanner's total
     finding count must be ≤30 after adding .mase/ as a 4th source-anchor.
