@@ -99,6 +99,17 @@ def test_static_source_assert_NOT_skipped(line):
 
 # ---------- 3. END-TO-END: detector finds drift when synth test is added ----------
 
+# R110-395: per-test timeout marker (R110-254 phoenix-test-soft-hang
+# pattern, see .mase/skills/mas-engineer-pre-push-check17-flake-handling/
+# SKILL.md). The test spawns dev_im_finder_scan.py with inner
+# subprocess.run(timeout=120). The scanner walks the full repo and
+# takes 60-90s wallclock in the current workspace. Without the
+# per-test marker, pytest-timeout defaults to 30s when no --timeout=N
+# is passed, and the test gets killed mid-subprocess → false-positive
+# "Failed: Timeout >30s" in the full pytest sweep. Pre-push-validator's
+# Check 17 explicitly sets --timeout=300, so the test passes there;
+# the local pytest sweep needs the marker too.
+@pytest.mark.timeout(180)
 def test_detector_finds_drift_for_synth_test(tmp_path, monkeypatch):
     """When a test file is added with an inline literal that is NOT in
     source AND is not asserted in a runtime-var context, the detector
@@ -143,6 +154,8 @@ def test_detector_finds_drift_for_synth_test(tmp_path, monkeypatch):
 
 # ---------- 4. END-TO-END: runtime-var assert is NOT flagged ----------
 
+# R110-395: same per-test timeout pattern (R110-254 mirror).
+@pytest.mark.timeout(180)
 def test_detector_does_NOT_flag_runtime_var_assert(tmp_path):
     """When a test file asserts a literal against a runtime var, the
     detector must NOT flag it (R110-279 skip-rule). This is the
