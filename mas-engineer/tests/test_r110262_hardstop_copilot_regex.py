@@ -24,7 +24,30 @@ from pathlib import Path
 import pytest
 
 
-WORKFLOW = Path("../.github/workflows/ai-pipeline-kill-switch.yml")
+# R110-394: find WORKFLOW by walking up from the test file, NOT
+# relative to CWD. The original `Path("../.github/workflows/...")`
+# was CWD-relative and broke in the full pytest sweep when an
+# earlier test changed CWD (R110-389 / R110-392 / R110-393 pattern).
+#
+# The workflow file lives at <REPO>/.github/workflows/... where
+# REPO is the parent that contains both `mas-engineer/` and
+# `.github/` as siblings. From the test file at
+# `mas-engineer/tests/test_r110262_hardstop_copilot_regex.py`,
+# that's 2 levels up (mas-engineer/tests/ → mas-engineer/ → REPO).
+# We walk up to 4 levels to find the parent that contains
+# `.github/workflows/ai-pipeline-kill-switch.yml`, then resolve.
+def _find_workflow():
+    p = Path(__file__).resolve().parent
+    for _ in range(4):
+        candidate = p / ".github" / "workflows" / "ai-pipeline-kill-switch.yml"
+        if candidate.exists():
+            return candidate
+        p = p.parent
+    # Fallback: the original CWD-relative path (works when CWD is correct)
+    return Path("../.github/workflows/ai-pipeline-kill-switch.yml").resolve()
+
+
+WORKFLOW = _find_workflow()
 
 
 def _extract_regex():
