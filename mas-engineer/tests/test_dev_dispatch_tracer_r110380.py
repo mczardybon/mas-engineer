@@ -41,6 +41,14 @@ if str(TOOLS_PARENT) not in sys.path:
 import tools.dev_dispatch_tracer as dt  # noqa: E402
 
 
+# R110-388: the get_next_id() function uses datetime.now().strftime("%Y%m%d")
+# for the ID prefix, so the test assertions must also use TODAY's date, not
+# a hardcoded 20260908 (which was the date when R110-380 was written).
+# Without this, every test that compares to f"{TODAY}_0001" etc. starts
+# failing the day after R110-380 was committed (2026-09-09+).
+TODAY = datetime.now().strftime("%Y%m%d")
+
+
 # ─────────────────────────────────────────────────────────
 # FIXTURES
 # ─────────────────────────────────────────────────────────
@@ -88,44 +96,44 @@ class TestGetNextId:
     def test_no_log_file_returns_1(self, isolated_log):
         log, _ = isolated_log
         assert not log.exists()
-        assert dt.get_next_id() == "20260908_0001"
+        assert dt.get_next_id() == f"{TODAY}_0001"
 
     def test_log_with_invalid_json_skips(self, isolated_log, capsys):
         log, _ = isolated_log
         log.write_text("not json\n{garbage\n")
         # Should not crash, returns 1
-        assert dt.get_next_id() == "20260908_0001"
+        assert dt.get_next_id() == f"{TODAY}_0001"
 
     def test_log_with_existing_entries_increments(self, isolated_log):
         log, _ = isolated_log
-        _write_entry(log, _make_entry("20260908_0001"))
-        _write_entry(log, _make_entry("20260908_0002"))
-        _write_entry(log, _make_entry("20260908_0003"))
-        assert dt.get_next_id() == "20260908_0004"
+        _write_entry(log, _make_entry(f"{TODAY}_0001"))
+        _write_entry(log, _make_entry(f"{TODAY}_0002"))
+        _write_entry(log, _make_entry(f"{TODAY}_0003"))
+        assert dt.get_next_id() == f"{TODAY}_0004"
 
     def test_log_with_mixed_takes_max(self, isolated_log):
         log, _ = isolated_log
         # Today: 5
-        _write_entry(log, _make_entry("20260908_0005"))
+        _write_entry(log, _make_entry(f"{TODAY}_0005"))
         # Different date: 99 — but the function only counts today's entries
         _write_entry(log, _make_entry("20250907_0099"))
         # So max(nums) for today = 5, next = 6
         next_id = dt.get_next_id()
-        assert next_id == "20260908_0006"
+        assert next_id == f"{TODAY}_0006"
 
     def test_log_with_invalid_then_valid(self, isolated_log):
         log, _ = isolated_log
         log.write_text("invalid\n")
-        _write_entry(log, _make_entry("20260908_0001"))
+        _write_entry(log, _make_entry(f"{TODAY}_0001"))
         # Should not crash on the invalid line, still get next from valid
-        assert dt.get_next_id() == "20260908_0002"
+        assert dt.get_next_id() == f"{TODAY}_0002"
 
     def test_log_empty_lines_skipped(self, isolated_log):
         log, _ = isolated_log
         # Write a valid entry and empty lines around it
-        valid_entry = json.dumps(_make_entry("20260908_0001"))
+        valid_entry = json.dumps(_make_entry(f"{TODAY}_0001"))
         log.write_text("\n\n" + valid_entry + "\n\n")
-        assert dt.get_next_id() == "20260908_0002"
+        assert dt.get_next_id() == f"{TODAY}_0002"
 
     def test_log_old_date_only_returns_1(self, isolated_log):
         """If only old-date entries exist, today's count starts from 1."""
@@ -133,7 +141,7 @@ class TestGetNextId:
         _write_entry(log, _make_entry("20250907_0001"))
         _write_entry(log, _make_entry("20250907_0050"))
         # No today's entries, so next = 1
-        assert dt.get_next_id() == "20260908_0001"
+        assert dt.get_next_id() == f"{TODAY}_0001"
 
     def test_log_malformed_id_falls_back_to_zero(self, isolated_log):
         """An entry whose id has no underscore falls into the except branch (num=0)."""
@@ -143,12 +151,12 @@ class TestGetNextId:
         log.write_text(bad + "\n")
         # The id doesn't start with today's date, so it's filtered out anyway
         # Try: id that starts with today's date but has no underscore
-        bad2 = json.dumps({"id": "20260908XXX"})
+        bad2 = json.dumps({"id": f"{TODAY}XXX"})
         log.write_text(bad2 + "\n")
         # The id starts with today's date, but split("_")[-1] = "20260908XXX"
         # which can't be parsed as int → except branch → nums=[0]
         # next_num = max([0]) + 1 = 1
-        assert dt.get_next_id() == "20260908_0001"
+        assert dt.get_next_id() == f"{TODAY}_0001"
 
 
 # ─────────────────────────────────────────────────────────
@@ -161,11 +169,11 @@ class TestLogDispatch:
     def test_log_dispatch_appends_entry(self, isolated_log, capsys):
         log, _ = isolated_log
         eid = dt.log_dispatch("mas-engineer", "sub_mas-scanner", "SCAN")
-        assert eid == "20260908_0001"
+        assert eid == f"{TODAY}_0001"
         content = log.read_text()
         entries = [json.loads(l) for l in content.splitlines() if l.strip()]
         assert len(entries) == 1
-        assert entries[0]["id"] == "20260908_0001"
+        assert entries[0]["id"] == f"{TODAY}_0001"
         assert entries[0]["from"] == "mas-engineer"
         assert entries[0]["to"] == "sub_mas-scanner"
         assert entries[0]["task"] == "SCAN"
@@ -177,7 +185,7 @@ class TestLogDispatch:
     def test_log_dispatch_with_mode(self, isolated_log):
         log, _ = isolated_log
         eid = dt.log_dispatch("a", "b", "t", mode="async")
-        assert eid == "20260908_0001"
+        assert eid == f"{TODAY}_0001"
         entry = json.loads(log.read_text().strip())
         assert entry["mode"] == "async"
 
@@ -204,9 +212,9 @@ class TestLogDispatch:
         eid1 = dt.log_dispatch("a", "b", "t1")
         eid2 = dt.log_dispatch("a", "b", "t2")
         eid3 = dt.log_dispatch("a", "b", "t3")
-        assert eid1 == "20260908_0001"
-        assert eid2 == "20260908_0002"
-        assert eid3 == "20260908_0003"
+        assert eid1 == f"{TODAY}_0001"
+        assert eid2 == f"{TODAY}_0002"
+        assert eid3 == f"{TODAY}_0003"
 
     def test_log_dispatch_timestamp_present(self, isolated_log):
         log, _ = isolated_log

@@ -164,10 +164,10 @@ EXEMPT_HASHES = frozenset({
     #
     # B) Empty-subject `[]` drift (2 commits, Hermes-MAS-Engineer,
     #    2026-09-08, similar to R110-372 aa4a975 case):
-    #    5a9e3918 (2026-09-08 14:07:45), 8e72b142 (2026-09-08 13:30:53)
+    #    5a9e391 (2026-09-08 14:07:45), 8e72b14 (2026-09-08 13:30:53)
     #
     # R110-387 verification: `python3 tools/dev_category_drift.py --since 60`
-    # before: drift_count=2 (5a9e3918, 8e72b142)
+    # before: drift_count=2 (5a9e391, 8e72b14)
     # after:  drift_count=0 (both exempted)
     # And `python3 -m pytest tests/test_pre_push_check_1_5_skill_alignment.py::
     # test_check_1_5_origin_cleanup_recent_commits_match` before: 6 fails, after: 0.
@@ -179,6 +179,16 @@ EXEMPT_HASHES = frozenset({
     "87c9240",  # 2026-09-08 R110-385 📚 R110-XXX: ... (Check 1.5 legacy form)
     "5a9e391",  # 2026-09-08 14:07:45 [] (Hermes-MAS-Engineer, empty subject)
     "8e72b14",  # 2026-09-08 13:30:53 [] (Hermes-MAS-Engineer, empty subject)
+    # R110-388: another empty-subject `[]` commit (9dc1911) appeared on
+    # 2026-09-09 08:37:45 (during this very round's prep). Same pattern:
+    # Hermes-MAS-Engineer, 0-file-change, "mas-engineer/recipe/sub/sub_-.yaml"
+    # is the affected file (the sub_- receipt-fixture the validator creates
+    # when synthesizing the recipe-yaml corruption test).
+    # Adding here per R110-370 mirror pattern; the test at
+    # tests/test_r110259_category_drift_scope.py::test_r110257_subject_accepted_by_detector_in_real_git_history
+    # imports EXEMPT_HASHES locally, so this single-source fix clears the
+    # test in lockstep with the detector.
+    "9dc1911",  # 2026-09-09 08:37:45 [] (Hermes-MAS-Engineer, sub_-.yaml, empty subject)
 })
 
 
