@@ -927,12 +927,20 @@ def test_q4c_recursion_guard_scanner_output_reduced():
     the scanner finishes. Per-test timeout bump to 120s lets the
     scanner complete (and the assertion pass). The bump is scoped to
     this test only, so the other 73 unit tests keep the 30s default.
+
+    R110-398: cwd=str(REPO_ROOT) + absolute SCANNER path
+    (R110-389/R110-392/R110-393/R110-394/R110-396/R110-397 mirror).
+    Original used `cwd='.'` and `tools/dev_im_finder_scan.py` (relative
+    to the test runner's CWD). When an earlier test does
+    `os.chdir(...)`, the scanner gets invoked with the wrong
+    relative path (`//tools/dev_im_finder_scan.py` → FileNotFoundError).
+    Fix: use the module-level SCANNER (absolute) and cwd=str(REPO_ROOT).
     """
     import subprocess, json, re
     result = subprocess.run(
-        ['python3', 'tools/dev_im_finder_scan.py'],
+        ['python3', str(SCANNER)],
         capture_output=True, text=True,
-        cwd='.', check=False,
+        cwd=str(REPO_ROOT), check=False,
     )
     assert result.returncode == 0, f"scanner failed: {result.stderr[:300]}"
     content = result.stdout
@@ -1077,12 +1085,20 @@ def test_sd_test_mase_integration_findings_reduced():
 
     R110-362: same as test_q4c_recursion_guard_scanner_output_reduced —
     per-test timeout bump to 120s because the full scanner takes 30+ seconds.
+
+    R110-398: cwd=str(REPO_ROOT) + absolute SCANNER path
+    (R110-389/R110-392/R110-393/R110-394/R110-396/R110-397 mirror).
+    Original used `cwd='.'` and `tools/dev_im_finder_scan.py` (relative
+    to the test runner's CWD). When an earlier test does
+    `os.chdir(...)`, the scanner gets invoked with the wrong
+    relative path (`//tools/dev_im_finder_scan.py` → FileNotFoundError).
+    Fix: use the module-level SCANNER (absolute) and cwd=str(REPO_ROOT).
     """
     import subprocess, json
     result = subprocess.run(
-        ['python3', 'tools/dev_im_finder_scan.py'],
+        ['python3', str(SCANNER)],
         capture_output=True, text=True,
-        cwd='.', check=False,
+        cwd=str(REPO_ROOT), check=False,
     )
     assert result.returncode == 0, f"scanner failed: {result.stderr[:300]}"
     content = result.stdout
