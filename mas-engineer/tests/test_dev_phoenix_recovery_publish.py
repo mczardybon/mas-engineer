@@ -91,6 +91,17 @@ def test_dev_phoenix_recovery_run_script_exists():
     assert (TOOLS_DIR / "dev_phoenix_recovery_run.py").exists()
 
 
+# R110-390: add @pytest.mark.timeout(300) to the 4 slow subprocess tests
+# (per R110-254 phoenix-test-soft-hang pattern). Each spawns
+# dev_phoenix_recovery_run.py which runs 5 phoenix levels (~75s wallclock).
+# Without per-test timeout, pytest-timeout defaults to 60s (the global
+# cap of the dev pytest invocation when no --timeout=300 is passed)
+# and the test is killed mid-subprocess → false-positive "Failed: Timeout"
+# in the full pytest sweep. The pre-push-validator's Check 17 explicitly
+# sets --timeout=300, so the tests pass there; the local pytest sweep
+# needs the marker too. See .mase/skills/mas-engineer-pre-push-check17-
+# flake-handling/SKILL.md for the full R110-254 rationale.
+@pytest.mark.timeout(300)
 def test_dev_phoenix_recovery_run_dry_run_runs_all_5_levels():
     """dry-run mode runs all 5 levels and produces a payload — no enqueue."""
     # Real wallclock ~73s for 5 levels with real dev_mq_consumer.
@@ -115,6 +126,10 @@ def test_dev_phoenix_recovery_run_dry_run_runs_all_5_levels():
     assert "skipped (dry-run)" in out.get("enqueue", "")
 
 
+# (level_subset is fast: only 2 of 5 levels run, ~30s wallclock.
+#  timeout=300 is defensive margin, not strictly required for that one.
+#  Keeping it without the marker — 30s is well under the 60s default.)
+@pytest.mark.timeout(300)
 def test_dev_phoenix_recovery_run_real_enqueues_message(clean_phoenix_topic):
     """Real run actually enqueues to the right topic with full payload."""
     depth_before = clean_phoenix_topic
@@ -159,6 +174,7 @@ def test_dev_phoenix_recovery_run_real_enqueues_message(clean_phoenix_topic):
         assert msg["payload"]["levels"][level]["ok"] is True
 
 
+@pytest.mark.timeout(300)
 def test_dev_phoenix_recovery_run_level_subset():
     """--levels=immune,defib runs only 2 levels and payload reflects that."""
     r = subprocess.run(
@@ -175,6 +191,7 @@ def test_dev_phoenix_recovery_run_level_subset():
 
 
 # ---------- tests for the task_workflow declaration ----------
+
 
 def test_wf_phoenix_recovery_publish_exists_in_workflows_yaml():
     with open(REPO_ROOT / ".mase" / "workflows.yaml") as f:
@@ -225,6 +242,7 @@ def test_dev_mq_topic_depth_returns_zero_for_nonexistent_topic():
 
 # ---------- end-to-end via workflow runner (full integration) ----------
 
+@pytest.mark.timeout(300)
 def test_wf_phoenix_recovery_publish_runs_via_runner(clean_phoenix_topic):
     """Full integration: the workflow runner actually executes the workflow
     and a message lands in the queue."""
