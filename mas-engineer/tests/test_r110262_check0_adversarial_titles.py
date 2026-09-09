@@ -149,6 +149,16 @@ KNOWN_GOOD = [
     ("feat(tools): new feature",          "conventional feat with scope"),
     ("chore: cleanup",                    "conventional chore no scope"),
     ("mas(round-5): improvement",         "MAS self-improve round form"),
+    # R110-400: R110-179 hybrid form (emoji + conventional-prefix + R-num
+    # + em-dash + desc) is now ACCEPTED by the spec since R110-399 fix.
+    # The validator's allowed_patterns was missing the hybrid form even
+    # though the drift detector (R_SPRINT_COLON_RE / R110-304), the
+    # commit-protocol (mczardybon commit style), and the alignment-test
+    # pattern list (test_pre_push_check_1_5_skill_alignment.py) all
+    # accepted it. The 2 entries that used to live in KNOWN_BAD are
+    # now correct good-titles per the post-R110-399 spec.
+    ("🔧 fix: R110-261 — title",          "R110-179 hybrid: emoji + conventional-prefix + R-num + em-dash + desc"),
+    ("🔧 fix(scope): R110-261 — title",   "R110-179 hybrid with scope (conventional + R-num + em-dash)"),
 ]
 
 
@@ -157,7 +167,12 @@ KNOWN_GOOD = [
 # ===========================================================================
 KNOWN_BAD = [
     # (title, why)
-    ("🔧 fix: R110-261 title",            "missing em-dash (R110-259 hybrid form is also missing this)"),
+    # R110-400: removed the 2 R110-179 hybrid titles (they're now in
+    # KNOWN_GOOD above). They were stale negative-space assertions
+    # that locked the validator to rejecting the hybrid form even
+    # though every other source (drift detector / commit protocol /
+    # alignment-test pattern list) accepted it. The validator was
+    # the LAGGING source per R110-78 lockstep.
     ("🔧 Fix — R110-261",                 "wrong TYPE case (Fix not FIX)"),
     ("🪤 TRAP — R110-261",                "non-allowed emoji (R36 anti-pattern)"),
     ("🛡️ PUSH — R110-261",                "non-allowed emoji (R36 anti-pattern)"),
@@ -168,7 +183,7 @@ KNOWN_BAD = [
     ("WIP: half-done work",               "WIP prefix is not allowed"),
     ("Merge branch 'feature' into main",  "merge commits are not allowed"),
     ("Update README.md",                  "non-conventional, non-R-num"),
-    ("🔧 fix: R110-261 — title",          "R110-259 hybrid form (emoji + conventional-prefix + R-num + em-dash) — CURRENTLY REJECTED by spec"),
+    ("🔧 fix: R110-261 title",            "missing em-dash (NOT the hybrid form)"),
     # False-positive traps (substring must NOT cause a match)
     ("my-copilot-fork",                   "user with 'copilot' in name (not in scope)"),
     ("depends-on-fix",                    "user with 'fix' in name (not in scope)"),
