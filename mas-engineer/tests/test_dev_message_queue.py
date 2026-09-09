@@ -465,9 +465,19 @@ def test_concurrent_process_safety_under_flock(tmp_path, monkeypatch):
     # Spawn 3 child processes that enqueue concurrently
     procs = []
     for i in range(3):
-        p = subprocess.Popen([sys.executable, "tools/dev_message_queue.py",
+        # R110-393: cwd=REPO_ROOT (R110-389/R110-392 pattern).
+        # Without explicit cwd, the relative path
+        # "tools/dev_message_queue.py" resolves against the parent's
+        # CWD, which can be wrong if an earlier test in the full
+        # pytest sweep did os.chdir(tmp_path) and never restored.
+        # The pre-fix symptom: "/usr/local/bin/python: can't open
+        # file '//tools/dev_message_queue.py': [Errno 2]" (when
+        # CWD was /, the path resolves to root-relative /tools/...).
+        p = subprocess.Popen([sys.executable,
+                              str(TOOLS / "dev_message_queue.py"),
                               "--enqueue", "t1", json.dumps({"i": i})],
-                             env={**os.environ, "MAS_MQ_ROOT": str(tmp_path)})
+                             env={**os.environ, "MAS_MQ_ROOT": str(tmp_path)},
+                             cwd=str(REPO_ROOT))
         procs.append(p)
     for p in procs:
         p.wait(timeout=10)
