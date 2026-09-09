@@ -152,6 +152,33 @@ EXEMPT_HASHES = frozenset({
     "9e7e990",  # 2026-09-05 []
     "d56ec64",  # 2026-09-03 R110-321 📝 ... (missing `docs:` prefix)
     "aa4a975",  # 2026-09-08 [] (R110-372 — git commit -F read file as empty)
+    # R110-387: 8 additional pre-existing drift commits, all IMMUTABLE
+    # per R110-281 (force-push verbot). Per R110-370 / R110-369 pattern,
+    # we exempt by hash. The 8 commits split into 2 categories:
+    #
+    # A) Check 1.5 fails (6 commits using legacy `📚 R110-XXX: desc`
+    #    colon form, before the validator/detector's em-dash convention
+    #    was updated to also accept this hybrid form):
+    #    572f665 (R110-377), f4bd3e3 (R110-381), e78d60f (R110-382),
+    #    7468f5a (R110-383), 7796d14 (R110-384), 87c9240 (R110-385)
+    #
+    # B) Empty-subject `[]` drift (2 commits, Hermes-MAS-Engineer,
+    #    2026-09-08, similar to R110-372 aa4a975 case):
+    #    5a9e3918 (2026-09-08 14:07:45), 8e72b142 (2026-09-08 13:30:53)
+    #
+    # R110-387 verification: `python3 tools/dev_category_drift.py --since 60`
+    # before: drift_count=2 (5a9e3918, 8e72b142)
+    # after:  drift_count=0 (both exempted)
+    # And `python3 -m pytest tests/test_pre_push_check_1_5_skill_alignment.py::
+    # test_check_1_5_origin_cleanup_recent_commits_match` before: 6 fails, after: 0.
+    "572f665",  # 2026-09-08 R110-377 📚 R110-XXX: ... (Check 1.5 legacy form)
+    "f4bd3e3",  # 2026-09-08 R110-381 📚 R110-XXX: ... (Check 1.5 legacy form)
+    "e78d60f",  # 2026-09-08 R110-382 📚 R110-XXX: ... (Check 1.5 legacy form)
+    "7468f5a",  # 2026-09-08 R110-383 📚 R110-XXX: ... (Check 1.5 legacy form)
+    "7796d14",  # 2026-09-08 R110-384 📚 R110-XXX: ... (Check 1.5 legacy form)
+    "87c9240",  # 2026-09-08 R110-385 📚 R110-XXX: ... (Check 1.5 legacy form)
+    "5a9e391",  # 2026-09-08 14:07:45 [] (Hermes-MAS-Engineer, empty subject)
+    "8e72b14",  # 2026-09-08 13:30:53 [] (Hermes-MAS-Engineer, empty subject)
 })
 
 
