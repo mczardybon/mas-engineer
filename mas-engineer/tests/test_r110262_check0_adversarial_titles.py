@@ -24,7 +24,16 @@ from pathlib import Path
 import pytest
 
 
-SPEC = Path("recipe/instructions/sub_mas-pre-push-validator.md")
+# R110-396: resolve SPEC from the test file's location, NOT CWD
+# (R110-394 mirror pattern). Original was `Path("recipe/instructions/...")`
+# which is CWD-relative. When an earlier test in the full pytest
+# sweep does `os.chdir(tmp_path)`, the path becomes
+# /tmp/recipe/instructions/sub_mas-pre-push-validator.md (or
+# similar) which doesn't exist → FileNotFoundError in
+# SPEC.read_text(). Fix: resolve from __file__ (the test file's
+# absolute path) to a stable absolute path.
+SPEC = (Path(__file__).resolve().parent.parent
+        / "recipe" / "instructions" / "sub_mas-pre-push-validator.md")
 ALLOWED_EMOJIS = {"🔧", "📝", "📚", "📊"}
 
 
