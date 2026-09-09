@@ -138,9 +138,19 @@ def test_detector_finds_drift_for_synth_test(tmp_path, monkeypatch):
     with open(test_path, "w") as f:
         f.write(f"def test_r110279_synth():\n{synth_line}\n")
     try:
+        # R110-397: cwd=REPO_ROOT (R110-389/R110-392/R110-393 pattern).
+        # Without explicit cwd, the detector subprocess inherits the
+        # parent's CWD, which can be wrong if an earlier test in the
+        # full pytest sweep did os.chdir(tmp_path) and never restored.
+        # The detector then walks the wrong directory tree, never sees
+        # the synth file (which IS at REPO_ROOT/tests/... because we
+        # wrote it with an absolute REPO_ROOT path), and returns
+        # "Total findings: 0" → AssertionError on "Detector should
+        # flag the synth literal".
         result = subprocess.run(
             ["python3", os.path.join(TOOLS_DIR, "dev_im_finder_scan.py")],
             capture_output=True, text=True, timeout=120,
+            cwd=str(REPO_ROOT),
         )
         # The detector must emit at least one SD-test finding for our synth
         assert L1 in result.stdout, (
@@ -170,9 +180,11 @@ def test_detector_does_NOT_flag_runtime_var_assert(tmp_path):
             '    assert "ZOMBIEXYZ_FORTY_TWO_LITERAL_NOT_IN_ANY_SOURCE_R110279B" in captured.out\n'
         )
     try:
+        # R110-397: cwd=REPO_ROOT (R110-397 mirror, same as synth test).
         result = subprocess.run(
             ["python3", os.path.join(TOOLS_DIR, "dev_im_finder_scan.py")],
             capture_output=True, text=True, timeout=120,
+            cwd=str(REPO_ROOT),
         )
         # The detector must NOT flag this literal (R110-279 skip)
         assert "ZOMBIEXYZ_FORTY_TWO_LITERAL_NOT_IN_ANY_SOURCE_R110279B" not in result.stdout, (
