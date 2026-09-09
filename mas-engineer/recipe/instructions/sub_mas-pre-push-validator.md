@@ -201,6 +201,32 @@ allowed_patterns = [
     # lesson: validator / detector / skill must agree, or the next
     # R-sprint silently re-introduces drift).
     r'^R\d+-\d+((?: (?:follow-up|phase \d+|[\w-]+))?): ',
+    # R110-399: hybrid "emoji + conventional-commit" form
+    # `🔧 fix: R<num> — ...` (R110-179 spec, accepted by the
+    # alignment test in tests/test_pre_push_check_1_5_skill_alignment.py
+    # since R110-179). The validator-doc was missing the hybrid
+    # pattern even though the smoke test, the drift detector
+    # (R_SPRINT_COLON_RE / R110-304), and the commit protocol
+    # all accept it. Pure cosmetic lockstep — 3-source
+    # (validator / detector / alignment-test) symmetry per
+    # R110-78 lesson.
+    #
+    # R110-400: tighten the hybrid pattern to require the
+    # em-dash ` — ` after the R-num (R-num + space + em-dash
+    # + desc), so that the "missing em-dash" anti-form
+    # `🔧 fix: R110-261 title` (R-num + space + desc, no
+    # em-dash) is correctly REJECTED. The 2 KNOWN_GOOD entries
+    # `🔧 fix: R110-261 — title` and `🔧 fix(scope): R110-261 — title`
+    # both contain R<num> + space + em-dash + desc, so they
+    # still match. Pure pattern-tightening; the 3-source
+    # lockstep (validator / detector / alignment-test) stays
+    # in sync — the alignment test's `^[🔧📝📚📊] (fix|feat|...):`
+    # pattern is also anchored at start with no em-dash, so
+    # the alignment test only verifies that SOME pattern
+    # starts with the conventional form, not the full
+    # grammar. The full grammar lives in the validator.
+    r'^[🔧📝📚📊] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?: R\d+-\S+ — ',
+    r'^[🔧📝📚📊] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert): R\d+-\S+ — ',
 ]
 # Conventional commits with allowed emojis (the 4 in repo history)
 for allowed in ALLOWED_EMOJIS:
@@ -215,7 +241,7 @@ ok = any(re.match(p, last_title) for p in allowed_patterns)
 if not ok:
     print(f"  ❌ Last commit title doesn't match repo convention:")
     print(f"     {last_title!r}")
-    print(f"     Allowed patterns: type(scope): desc | type: desc | 🔧|📝|📚|📊 <TYPE> — desc | 🔧|📝|📚|📊 R<round>-<num> [follow-up] — desc | 📊 EVIDENCE — R<round>-<num> — desc")
+    print(f"     Allowed patterns: type(scope): desc | type: desc | 🔧|📝|📚|📊 <TYPE> — desc | 🔧|📝|📚|📊 R<round>-<num> [follow-up] — desc | 🔧|📝|📚|📊 (fix|feat|...): desc (R110-399 hybrid) | 📊 EVIDENCE — R<round>-<num> — desc")
     print(f"     Run `git log --oneline -20` to see the dominant style.")
     exit(1)
 
