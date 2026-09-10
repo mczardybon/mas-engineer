@@ -63,7 +63,15 @@ def _extract_regex():
             f"could not extract grep -qiE regex from {WORKFLOW} "
             f"(workflow structure changed?)"
         )
-    return m.group(1)
+    regex = m.group(1)
+    # R110-407: Convert POSIX character classes (bash ERE) to Python re syntax.
+    # The workflow uses `[[:space:]]` which bash interprets as a POSIX
+    # whitespace class. Python's `re` interprets `[[:space:]]` as a nested
+    # set (outer set containing the chars `:`, `s`, `p`, `a`, `c`, `e`,
+    # `]`, `[`) and emits a FutureWarning. Replace it with the equivalent
+    # Python `\s` so the test re.search() is warning-free.
+    regex = regex.replace("[[:space:]]", r"\s")
+    return regex
 
 
 REGEX = _extract_regex()
@@ -174,4 +182,33 @@ def test_hardstop_workflow_has_pipefail_safe_pattern():
         f"Has if-branch with grep: {has_if_branch}, "
         f"has explicit exit 1: {has_explicit_exit_1}. "
         f"Workflow content:\n{text}"
+    )
+
+
+def test_extracted_regex_is_warning_free():
+    """R110-407 regression guard: REGEX must NOT trigger FutureWarning.
+
+    Without the `_extract_regex()` POSIX→Python conversion at module import
+    time, Python's re module would emit a FutureWarning about a possible
+    nested set (the `[[:space:]]` from the bash workflow file). This test
+    asserts that compiling REGEX is warning-free, so that downstream
+    re.search() calls in _matches() and the parametrized matchers don't
+    pollute the test output with a FutureWarning.
+    """
+    import warnings
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        re.compile(REGEX)  # Compile step is where FutureWarning fires
+    nested_set_warnings = [
+        w for w in caught
+        if issubclass(w.category, FutureWarning)
+        and "nested set" in str(w.message)
+    ]
+    assert not nested_set_warnings, (
+        f"REGEX from {WORKFLOW} still triggers FutureWarning about "
+        f"nested set. The fix in _extract_regex() converts [[:space:]] "
+        f"to \\s — if this test fails, that conversion was removed or "
+        f"the workflow was changed to use a different POSIX class. "
+        f"Warnings: {[str(w.message) for w in nested_set_warnings]}"
     )

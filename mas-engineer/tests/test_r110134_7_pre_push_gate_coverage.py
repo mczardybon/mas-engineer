@@ -153,3 +153,46 @@ def test_secret_scanner_present():
         "No secret-scanner tool found in tools/. R110-102 requires a scanner "
         "to prevent evidence-log secret leaks."
     )
+
+
+def test_dev_category_drift_docstring_is_warning_free():
+    """R110-407 regression guard: tools/dev_category_drift.py docstring must not
+    trigger DeprecationWarning on ast.parse().
+
+    Python 3.11+ flags backslash-paren / backslash-bracket escape sequences
+    in non-raw string contexts (including module docstrings). When this
+    test was added, the docstring at L2-16 of dev_category_drift.py
+    contained the example r'...(\\(...\\))?:' as a documentation
+    reference to the L72 raw-string. The literal `\\(` / `\\)` in the
+    docstring triggered a DeprecationWarning whenever any test called
+    `ast.parse(open('tools/dev_category_drift.py').read())` (e.g. the
+    alignment tests in this file and test_pre_push_check_1_5_skill_alignment.py).
+
+    R110-407 simplified the docstring to use a backslash-free example. This
+    test asserts that `ast.parse()` on the file is warning-free, so a
+    future docstring edit that re-introduces `\\(` / `\\)` / `\\[` / `\\]`
+    will fail loudly instead of silently re-introducing 2 warnings per
+    pytest run.
+    """
+    import ast
+    import warnings
+
+    drift_py = REPO_ROOT / "tools" / "dev_category_drift.py"
+    assert drift_py.exists(), f"{drift_py} missing"
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        ast.parse(drift_py.read_text(encoding="utf-8"))
+
+    escape_warnings = [
+        w for w in caught
+        if issubclass(w.category, (DeprecationWarning, SyntaxWarning))
+        and "invalid escape sequence" in str(w.message)
+    ]
+    assert not escape_warnings, (
+        f"{drift_py} docstring still triggers invalid-escape warnings on "
+        f"ast.parse. Remove backslash-paren / backslash-bracket examples "
+        f"from the docstring (the actual regex lives in the r'...' raw "
+        f"string below — reference that instead of duplicating it with "
+        f"escapes). Warnings: {[str(w.message) for w in escape_warnings]}"
+    )

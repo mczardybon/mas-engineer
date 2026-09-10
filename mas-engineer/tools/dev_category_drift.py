@@ -13,7 +13,10 @@ Why standalone: pre-push-validator (sub_mas-pre-push-validator.yaml) already
          2 weeks ago) is surfaced without needing a push attempt.
 
 R110-259: aligned with Check 1.5's regex (line 194 of sub_mas-pre-push-validator.md):
-   r'^(fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:'
+   r'^(fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)([^)]+)?:'
+   (See the r"..." string at L72 below for the full pattern. R110-407
+   simplified this docstring to avoid backslash-paren examples that
+   triggered Python 3.11+ DeprecationWarning on ast.parse of this file.)
    Both the validator's Check 1.5 and this detector now match the same 12
    conventional-commit types, with OR without a parenthesized scope.
 
