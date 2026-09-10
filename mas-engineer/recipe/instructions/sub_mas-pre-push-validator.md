@@ -832,36 +832,44 @@ else
     # almost never helps and can double wallclock to 1350s/22.5min);
     # success = pytest exit 0; on_failure = cleanup before retry.
     # Run pytest; use 'set -o pipefail' so $? reflects pytest's exit code, not tail's.
-    # --timeout=300 (R110-255): the 4 phoenix-recovery tests in
+    # --timeout=600 (R110-404): the 2 R110-279 synth tests
+    # (test_detector_finds_drift_for_synth_test +
+    # test_detector_does_NOT_flag_runtime_var_assert) each run a
+    # full dev_im_finder_scan.py subprocess over the test tree.
+    # At 4338 tests, each scan takes ~200s wallclock (R110-403
+    # measured 207s on the second synth test). With --timeout=300
+    # (R110-255 default), the second test is killed before the
+    # scan finishes → spurious "2 failed" on every R-sprint
+    # that pushes to mas-t-tests. With --timeout=600 the scan
+    # has 10min budget per test, comfortably above the 207s
+    # worst-case. The 4 phoenix-recovery tests in
     # tests/test_dev_phoenix_recovery_publish.py do subprocess.run(timeout=180)
     # to spawn dev_phoenix_recovery_run.py which runs 5 phoenix levels
-    # (~75s wallclock). Without --timeout=300, a slow CI runner could
-    # exceed 180s on the inner subprocess. With --timeout=300 we are
-    # defensively guarded (pytest-timeout = 5 min, 4× the worst-case
-    # 75s observed per phoenix test). Matches ci-tests.yml flag set
-    # (R110-246). --ignore=.state: state is transient run-state, not test code.
+    # (~75s wallclock). --timeout=600 is also defensively guarded for
+    # those. Matches ci-tests.yml flag set (R110-246). --ignore=.state:
+    # state is transient run-state, not test code.
     #
-    # R110-303 OUTER-CAP UPDATE: R110-270 calibrated 540s for 1965 tests
-    # on mas-t-tests (R110-269: 446s). After R110-302 added 207 new tests
-    # bringing total to 2714, single suite run grew to ~9min (539s last
-    # observed). The old 540s cap barely fits (no headroom) — bump to
-    # 720s (12 min) to restore safety margin. Bumping to 900s would be
-    # over-budget against the 15min local-budget. Revisit if/when test
-    # count crosses 3500.
+    # R110-404 OUTER-CAP UPDATE: R110-303 calibrated 720s for 2714 tests
+    # on mas-t-tests. After R110-401 added 1617 more tests (R110-78
+    # baseline was 1295, post-cleanup is 4331) the suite grew to
+    # 1422s (23:42, R110-401) and the 2 R110-279 synth tests started
+    # hitting --timeout=300 inner cap (R110-403 measured each scan
+    # at 207s × 2 + accumulator = >300s). Bump OUTER_TIMEOUT 720→1500
+    # (25 min) and --timeout=300→600 to restore safety margin.
+    # Bumping to 1800s would be over-budget against the 30min
+    # local-budget. Revisit if/when test count crosses 6000.
     # On outer timeout, fail-fast with the tail of pytest output.
     PYTEST_RC=1
     PYTEST_ATTEMPT=0
     MAX_ATTEMPTS=2   # R110-270: was 3 (caused 22.5min worst case)
-    OUTER_TIMEOUT=720 # R110-303: was 540 (R110-270). 12 min for 2714 tests.
+    OUTER_TIMEOUT=1500 # R110-404: was 720 (R110-303). 25 min for 4338 tests.
     while [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt "$MAX_ATTEMPTS" ]; do
         PYTEST_ATTEMPT=$((PYTEST_ATTEMPT + 1))
         # set -o pipefail ensures $? reflects pytest's exit code, not tail's.
-        # R110-270: SINGLE pytest invocation (was: 2 invocations per attempt
-        # in the old code, which doubled wallclock to 900s+). Now: one run
-        # with output captured to PYTEST_OUTPUT, exit code captured
-        # separately via PIPESTATUS[0].
+        # We use | tail -30 to keep the last 30 lines on success; PIPESTATUS
+        # is queried separately via PIPESTATUS[0].
         set -o pipefail
-        PYTEST_OUTPUT=$(timeout "$OUTER_TIMEOUT" python3 -m pytest tests/ -q --tb=line --color=no --timeout=300 --ignore=.state 2>&1 | tail -30)
+        PYTEST_OUTPUT=$(timeout "$OUTER_TIMEOUT" python3 -m pytest tests/ -q --tb=line --color=no --timeout=600 --ignore=.state 2>&1 | tail -30)
         PYTEST_RC=${PIPESTATUS[0]}
         set +o pipefail
         # If `timeout` killed pytest, exit code is 124. Treat as
