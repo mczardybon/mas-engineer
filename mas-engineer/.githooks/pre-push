@@ -57,6 +57,16 @@ if [ -n "$YAML_FILES" ]; then
         esac
         [ ! -f "$f" ] && continue
         YAML_CHECKED=$((YAML_CHECKED + 1))
+        # R110-403: Reject 0-byte files in recipe/ (junk files auto-recreated
+        # by IDE save hooks pass the YAML parse check because empty
+        # documents are valid YAML). Without this, junk like
+        # `recipe/sub/sub_-.yaml` slips through pre-push and pollutes
+        # the repo (last hit: a77ad55, f5f9d6d, every R110-402 round).
+        if [ ! -s "$f" ]; then
+            echo "❌ EMPTY FILE in: $f (0 bytes — likely IDE auto-save junk)"
+            YAML_ERRORS=$((YAML_ERRORS + 1))
+            continue
+        fi
         if ! python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null; then
             echo "❌ YAML PARSE ERROR in: $f"
             YAML_ERRORS=$((YAML_ERRORS + 1))
