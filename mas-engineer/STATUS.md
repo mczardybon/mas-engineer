@@ -1554,6 +1554,44 @@ the 5 files with 0% coverage and ≥200 stmts are
 R110-320 pattern (latent bug + 1 fix + 1-4 tests) in future
 R110-322+ sprints.
 
+### R110-409 update (2026-09-10) — candidate-list status
+
+3 of 5 from the R110-321 candidate list are now done:
+- `dev_template_generator.py` — R110-359 (68% → 94%, +26pp, 60 tests)
+- `dev_dashboard_data.py` — covered by R110-296 + R110-297 series
+- `dev_spec_invariant.py` — R110-322 (latent bug fix, regression tests)
+
+Remaining 2 — and the R110-266 deferral explains why both are
+still partially uncovered (NOT a coverage-push oversight, BY DESIGN):
+
+- **`dev_im_finder_scan.py`** — 682 stmts, **81% covered** as of
+  R110-361 (24 tests, 22% standalone) + R110-362 (75 errors → 0,
+  27% → 83% combined). The remaining 127 missing lines are
+  the deferred `check_*` driver functions (R110-266: touches
+  real GOOSE paths).
+
+- **`dev_workspace.py`** — 599 stmts, **94% covered** as of
+  R110-371 r2 + R110-363 r1 series (11 test files, 253 tests,
+  measured with `pytest tests/test_r110*workspace*` +
+  `coverage report --include="*dev_workspace*"`).
+  R110-266 explicitly deferred 7 `cmd_*` functions + 1
+  `__main__` block (8 `# pragma: no cover (R110-266: deferred,
+  touch real GOOSE paths)` markers in source). The 94% reflects
+  the non-deferred testable surface — the 35 missing lines are
+  the deferred CLI entry points (L1427-1474 = `if __name__`
+  dispatcher, L521 = cmd_install_mas, L1113 = cmd_add_recipe
+  shell branch, L1386 = one deferred cmd_* body).
+
+To push dev_workspace past 94% would require: (a) a real
+GOOSE install on the test runner, OR (b) comprehensive
+monkey-patching of `subprocess.run` / `Path` / `shutil` for
+every cmd_*. Neither is a quick-win — R110-266 explicitly
+classified these as deferred and the deferral remains in
+force at R110-409.
+
+(`dev_im_finder_scan.py` remains at 81% as measured above; 127
+missing lines = deferred `check_*` drivers.)
+
 
 ## R110-322 (2026-09-03) — fix top-level scalar yaml drop in dev_spec_invariant
 
