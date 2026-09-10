@@ -122,6 +122,18 @@ the cap and the validator exits with timeout before pytest finishes.
 (proven pattern from R110-399 / R110-401). Future R-sprints should
 either (a) raise the cap to 1800s, or (b) parallelize the suite.
 
+**UPDATE R110-404 + R110-405**: Workaround is now obsolete. The
+spec change in `recipe/instructions/sub_mas-pre-push-validator.md`
+bumped `OUTER_TIMEOUT=720`→`1500` and `--timeout=300`→`600`. R110-405
+verification: 4338/4338 PASS in 1371.48s (0:22:51), 28% headroom under
+the new 1500s cap. The 2 R110-279 synth tests that were spurious
+"2 failed, 4336 passed" under the old caps now pass cleanly (R110-403
+measured each scan at 207s × 2 = 414s, exceeded the old 300s inner
+cap → both got killed mid-scan). The full pre-push-validator now
+completes end-to-end without manual intervention. Future R-sprints
+should NOT need to manually run Check 17 unless the test count
+crosses 6000.
+
 ## 3-source lockstep (R110-78) — the pattern that closes 31 fails
 
 Whenever a 1-source fix is "I need to update the validator's
@@ -167,13 +179,27 @@ demonstrated the fix.
 
 ## 31→0 status — what's known-broken / known-fragile
 
-- `recipe/sub/sub_-.yaml` (0-byte file) gets re-created by the IDE
+- ~~`recipe/sub/sub_-.yaml` (0-byte file) gets re-created by the IDE
   auto-commit on save (Hermes-MAS-Engineer committer). `git rm -f`
   it every R-sprint that touches `recipe/`. R110-402+ might add
   a `pre-commit` hook that skips 0-byte files, but for now
-  it's a manual `git rm -f`.
-- The 23:42 wallclock for Check 17 means the goose pre-push-validator
-  never actually completes the full gate. Manual run is required.
+  it's a manual `git rm -f`.~~ **FIXED R110-403** —
+  `.githooks/pre-push` now has a `[ ! -s "$f" ]` check that
+  REJECTS any 0-byte YAML file in `recipe/` before the YAML
+  parse check (which would mis-accept empty files as valid
+  YAML). 7 new tests in
+  `tests/test_githooks_pre_push_empty_file_check.py`
+  cover the behavior. R110-403 (b41d6b0) deployed the fix.
+  Future R-sprints no longer need to `git rm -f` the junk
+  file — the githook blocks the push before it can reach
+  the remote.
+- ~~The 23:42 wallclock for Check 17 means the goose pre-push-validator
+  never actually completes the full gate. Manual run is required.~~
+  **FIXED R110-404 + R110-405** — see "UPDATE R110-404 +
+  R110-405" block above. `OUTER_TIMEOUT=1500` and
+  `--timeout=600` now comfortably fit the 4338-test suite
+  in 22:51 (R110-405 verification). Manual workaround is
+  obsolete.
 - The alignment test only checks that **some** pattern starts with
   the conventional form, not the full grammar. The full grammar
   lives in the validator. So a new pattern can pass the alignment
