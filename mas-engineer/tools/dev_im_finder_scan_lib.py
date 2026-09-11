@@ -1286,6 +1286,12 @@ def _is_in_code_block(lines, line_idx):
 _SD_DATA_DIRS = frozenset({
     'pipeline', 'workflow_runs', 'phoenix_logs', 'checkpoints',
     'mq', 'backups', 'coverage', 'dashboards', 'im', 'recovery',
+    # R110-419: additions to prevent O(L*F) explosion in check_spec_drift
+    # when .mase/ is walked. Without these, subdirs like mcp/node_modules
+    # (3509 files, 27MB) cause the per-literal scan to effectively hang.
+    # Keep 'directives' and 'rules' OUT — those are real source-of-truth.
+    'mcp', 'skills', 'knowledge', 'templates',
+    'pre_check_benchmark', 'config', 'commits',
 })
 
 
