@@ -32,6 +32,10 @@ import pytest
 
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 SCANNER = REPO_ROOT / "tools" / "dev_im_finder_scan.py"
+# R110-411b: the heavy detection logic was extracted to a LIB. Source-inspection
+# tests now read the LIB (where the constants and check_* function bodies live)
+# instead of the thin CLI wrapper.
+LIB = REPO_ROOT / "tools" / "dev_im_finder_scan_lib.py"
 
 
 def _load_scanner(tmp_path=None):
@@ -691,7 +695,7 @@ def test_nn1_threshold_is_8_not_5(mod):
     actual check on a real orchestrator without a 100-line fixture,
     so a source-inspection test is the most honest check.
     """
-    src = open(mod.__file__).read()
+    src = LIB.read_text()
     # The new comment should mention 8 as the threshold
     assert 'NN1 threshold raised from 5 to 8' in src
     # The old "5 role-verbs" should not be the active heuristic
@@ -709,7 +713,7 @@ def test_nn1_threshold_is_8_not_5(mod):
 
 def test_nn3_threshold_is_400_not_200(mod):
     """R110-276: NN3 threshold raised from 200 to 400 chars for descriptions."""
-    src = open(mod.__file__).read()
+    src = LIB.read_text()
     # The R110-276 comment must mention the new 400 threshold
     assert 'threshold raised from 200 to 400' in src
     # The actual len() check should compare to 400. Locate the
@@ -732,7 +736,7 @@ def test_nn3_skips_sub_recipes(mod):
     Sub-recipes legitimately have long descriptions documenting
     their multi-domain scope. The detector should skip them.
     """
-    src = open(mod.__file__).read()
+    src = LIB.read_text()
     # Look for the _is_sub_or_wf skip-block in the NN3 section
     import re
     nn3_block_match = re.search(r'# NN3:.*?(?=\n[^\s#])', src, re.DOTALL)
@@ -746,7 +750,9 @@ def test_nn3_skips_sub_recipes(mod):
 
 def test_q4c_print_only_requires_ensure_ascii(mod):
     """R110-276: Q4c for print() requires only ensure_ascii, not indent."""
-    src = open(mod.__file__).read()
+    # This code lives in the CLI's main() function (R110-271 fix-text
+    # generator), not in the LIB. Source-inspect the SCANNER wrapper.
+    src = SCANNER.read_text()
     # Look for the Q4c print branch
     assert 'for print(json.dumps' in src or 'is_print' in src
     # The print branch should mention ensure_ascii only, not indent
@@ -997,16 +1003,15 @@ import pathlib
 def test_sd_test_mase_added_to_search_dirs():
     """R110-278: '.mase/' is now a member of search_dirs in check_spec_drift().
 
-    The search_dirs list in tools/dev_im_finder_scan.py must include
-    `.mase/` (or a path ending in `.mase`) as the 4th entry.
+    R110-411b: check_spec_drift moved to the LIB. Source-inspect LIB.
     """
-    src = SCANNER.read_text()
+    src = LIB.read_text()
     # find the search_dirs list inside check_spec_drift()
     m = re.search(
         r'search_dirs\s*=\s*\[\s*(.*?)\]',
         src, re.DOTALL,
     )
-    assert m, "could not find search_dirs list in dev_im_finder_scan.py"
+    assert m, "could not find search_dirs list in dev_im_finder_scan_lib.py"
     block = m.group(1)
     # check that '.mase' is referenced (as os.path.join(.mase) or literal)
     assert '.mase' in block, (
@@ -1023,13 +1028,13 @@ def test_sd_test_data_dirs_skip_list_present():
     scanner to 5+ minutes AND mask real drift with incidentally-matched
     literals.
     """
-    src = SCANNER.read_text()
-    # find _SD_DATA_DIRS set
+    src = LIB.read_text()
+    # find _SD_DATA_DIRS set/frozenset
     m = re.search(
-        r'_SD_DATA_DIRS\s*=\s*\{([^}]+)\}',
+        r'_SD_DATA_DIRS\s*=\s*(?:frozenset\()?\{([^}]+)\}\)?',
         src, re.DOTALL,
     )
-    assert m, "_SD_DATA_DIRS set not found in dev_im_finder_scan.py"
+    assert m, "_SD_DATA_DIRS set not found in dev_im_finder_scan_lib.py"
     block = m.group(1)
     # must include the critical data-dirs
     must_include = ['pipeline', 'workflow_runs', 'backups', 'coverage',
@@ -1047,7 +1052,7 @@ def test_sd_test_mase_data_dirs_excluded_via_dirs_prune():
     to actually prune the walk (not just `continue`) — otherwise the
     scanner descends into workflow_runs/ (6115 files) anyway.
     """
-    src = SCANNER.read_text()
+    src = LIB.read_text()
     # R110-278 fix: don't rely on _SD_DATA_DIRS as the regex anchor
     # (it's mentioned twice — definition + usage). Instead, find the
     # os.walk(d) inside the SD-test block and check that somewhere
