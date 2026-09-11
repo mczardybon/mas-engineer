@@ -88,6 +88,12 @@ class TestIsPathExcludedIncludeExternal:
         """When _INCLUDE_EXTERNAL is True, /.config/goose/recipes/ should
         NOT be excluded."""
         monkeypatch.setattr(ifs, "_INCLUDE_EXTERNAL", True)
+        # R110-411b: _is_path_excluded lives in dev_im_finder_scan_lib.
+        # Patching only the CLI binding leaves the LIB's binding at False.
+        import sys as _sys
+        lib = _sys.modules.get("dev_im_finder_scan_lib")
+        if lib is not None:
+            monkeypatch.setattr(lib, "_INCLUDE_EXTERNAL", True)
         result = ifs._is_path_excluded("/home/user/.config/goose/recipes/x.yaml")
         assert result is False
 
