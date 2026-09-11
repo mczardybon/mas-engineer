@@ -860,11 +860,17 @@ else
     # (25 min) and --timeout=300→600 to restore safety margin.
     # Bumping to 1800s would be over-budget against the 30min
     # local-budget. Revisit if/when test count crosses 6000.
+    # R110-414: bumped 1500→1800 anyway. The R110-413 subprocess
+    # timeout bump (120→250, 5 tests) can extend worst-case runtime
+    # by 5×(250-120) = 650s if all hit their new cap. 1444s (R110-412
+    # run) + 650s worst-case = 2094s, so 1800s still tight; budget
+    # 30min (1800s) for the "normal" case (no subprocess hit cap).
+    # Revisit sharding when suite crosses 6000 tests.
     # On outer timeout, fail-fast with the tail of pytest output.
     PYTEST_RC=1
     PYTEST_ATTEMPT=0
     MAX_ATTEMPTS=2   # R110-270: was 3 (caused 22.5min worst case)
-    OUTER_TIMEOUT=1500 # R110-404: was 720 (R110-303). 25 min for 4338 tests.
+    OUTER_TIMEOUT=1800 # R110-414: was 1500 (R110-404). 30 min ceiling.
     while [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt "$MAX_ATTEMPTS" ]; do
         PYTEST_ATTEMPT=$((PYTEST_ATTEMPT + 1))
         # set -o pipefail ensures $? reflects pytest's exit code, not tail's.
