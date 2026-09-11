@@ -494,8 +494,8 @@ goose run --recipe recipe/sub/sub_mas-pre-push-validator.yaml
 **Baseline source:**
 - PRIMARY: last successful `e2e-results/<date>-run-N/raw-results.json` where `summary` shows 100% (or highest known)
 - FALLBACK: hardcoded known-good baseline per run-mode
-  - `quick` mode: 83/83 (as of 2026-07-22)
-  - `full` mode: 139/139 (as of 2026-07-22)
+  - `quick` mode: 134/134 (as of 2026-09-11: 126 recipe_yaml + 3 top_workflows + 5 recovery_workflows; R110-415 measured from logs/e2e-results/2026-09-11-run-1/raw-results.json)
+  - `full` mode: NOT UPDATED in R110-415 (would need a real `--full` run; the old 139/139 from 2026-07-22 is left in place and may cause spurious regression in `--full` mode; open R110-416+ to measure + update)
 
 **Block conditions (ANY of):**
 - ⛔ current pass-count < baseline pass-count (regression)
