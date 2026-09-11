@@ -113,7 +113,7 @@ requires_skills = pytest.mark.skipif(
 # 2. Canonical 4-emoji set (R110-127 lesson: the same 4 exist in
 #    validator ALLOWED_EMOJIS, detector ALLOWED_EMOJI_PREFIXES, and
 #    the skill's emoji-table)
-CANONICAL_EMOJIS = frozenset({"🔧", "📝", "📚", "📊"})
+CANONICAL_EMOJIS = frozenset({"🔧", "📝", "📚", "📊", "🧹"})
 
 # 3. The OLD 5-emoji table (pre-R110-127) used these latin words instead
 #    of the 4 unicode emoji. Any of them appearing in the skill's

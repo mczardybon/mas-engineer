@@ -103,13 +103,15 @@ def test_static_source_assert_NOT_skipped(line):
 # pattern, see .mase/skills/mas-engineer-pre-push-check17-flake-handling/
 # SKILL.md). The test spawns dev_im_finder_scan.py with inner
 # subprocess.run(timeout=120). The scanner walks the full repo and
-# takes 60-90s wallclock in the current workspace. Without the
-# per-test marker, pytest-timeout defaults to 30s when no --timeout=N
-# is passed, and the test gets killed mid-subprocess → false-positive
-# "Failed: Timeout >30s" in the full pytest sweep. Pre-push-validator's
+# takes 60-90s wallclock in the current workspace. R110-413: bumped
+# to 250s subprocess + 300s pytest-timeout marker (per .mase/pipeline/
+# pre_push_validation.yaml SOT, scanner measured 170s in this repo).
+# Without the per-test marker, pytest-timeout defaults to 30s when
+# no --timeout=N is passed, and the test gets killed mid-subprocess →
+# false-positive "Failed: Timeout >30s" in the full pytest sweep. Pre-push-validator's
 # Check 17 explicitly sets --timeout=300, so the test passes there;
 # the local pytest sweep needs the marker too.
-@pytest.mark.timeout(180)
+@pytest.mark.timeout(300)
 def test_detector_finds_drift_for_synth_test(tmp_path, monkeypatch):
     """When a test file is added with an inline literal that is NOT in
     source AND is not asserted in a runtime-var context, the detector
@@ -149,7 +151,7 @@ def test_detector_finds_drift_for_synth_test(tmp_path, monkeypatch):
         # flag the synth literal".
         result = subprocess.run(
             ["python3", os.path.join(TOOLS_DIR, "dev_im_finder_scan.py")],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, timeout=250,
             cwd=str(REPO_ROOT),
         )
         # The detector must emit at least one SD-test finding for our synth
@@ -165,7 +167,8 @@ def test_detector_finds_drift_for_synth_test(tmp_path, monkeypatch):
 # ---------- 4. END-TO-END: runtime-var assert is NOT flagged ----------
 
 # R110-395: same per-test timeout pattern (R110-254 mirror).
-@pytest.mark.timeout(180)
+# R110-413: bumped 180→300 to match scanner's 170s measured wallclock.
+@pytest.mark.timeout(300)
 def test_detector_does_NOT_flag_runtime_var_assert(tmp_path):
     """When a test file asserts a literal against a runtime var, the
     detector must NOT flag it (R110-279 skip-rule). This is the
@@ -183,7 +186,7 @@ def test_detector_does_NOT_flag_runtime_var_assert(tmp_path):
         # R110-397: cwd=REPO_ROOT (R110-397 mirror, same as synth test).
         result = subprocess.run(
             ["python3", os.path.join(TOOLS_DIR, "dev_im_finder_scan.py")],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, timeout=250,
             cwd=str(REPO_ROOT),
         )
         # The detector must NOT flag this literal (R110-279 skip)

@@ -82,7 +82,7 @@ CONVENTIONAL_COMMIT_RE = re.compile(
 # validator's Check 1.5 would still show up as DRIFT in this historical scan,
 # which is misleading. (R110-78 lesson: 3 different format definitions
 # between skill/detector/validator -- the validator is source-of-truth.)
-ALLOWED_EMOJI_PREFIXES = ("🔧", "📝", "📚", "📊")
+ALLOWED_EMOJI_PREFIXES = ("🔧", "📝", "📚", "📊", "🧹")
 
 # R-sprint round-up prefix (R110-304): the no-emoji `R<round>-<num>:
 # <topic> — desc` form. Used in R110-303 (3 commits: 627d67a, e69bfbf,

@@ -175,8 +175,10 @@ history = subprocess.run(
 # 2b. Allowed emojis (HARDCODED from repo history, NOT learned from last-50)
 # R36 lesson: if we learn allowed emojis from history, we perpetuate anti-patterns
 # (e.g. 🪤 TRAP, 🛡️ PUSH made it into history → would be allowed forever).
-# Only the 4 emojis that existed in 5eb67fe era (long before R36) are allowed.
-ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊'}
+# The 4 pre-R36 emojis (🔧,📝,📚,📊) plus 🧹 (added R110-413 for cleanup commits
+# like 926aa8a that git-rf test-pollution artifacts; semantic is
+# "tidy/junk-removal", distinct from 🔧 which is "code/config change") are allowed.
+ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊', '🧹'}
 
 # 3. Build set of historically-used emojis (for diagnostics only)
 EMOJI_RE = re.compile(r'[\U0001F000-\U0001FFFF\U00002600-\U000027BF]')

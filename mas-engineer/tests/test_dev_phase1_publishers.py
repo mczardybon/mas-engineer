@@ -83,12 +83,17 @@ def _count_lines(p: Path) -> int:
 # pattern, see .mase/skills/mas-engineer-pre-push-check17-flake-handling/
 # SKILL.md). Each test spawns dev_im_finder_scan.py with an inner
 # subprocess.run(timeout=120), and the scanner takes 75-90s wallclock.
+# R110-413: empirically measured 170s in this repo (per .mase/pipeline/
+# pre_push_validation.yaml SOT); bumped to 250s here and 300s marker.
+# (Pre-R110-413: 120s + 180s marker caused 3 false-positive fails
+# because scanner outgrew the test-budget after R110-411 added more
+# recipe/instructions/ files to walk.)
 # Without the per-test marker, pytest-timeout defaults to 30s when
 # no --timeout=N is passed, and the test gets killed mid-subprocess →
 # false-positive "Failed: Timeout >30s" in the full pytest sweep.
 # Pre-push-validator's Check 17 explicitly sets --timeout=300, so the
 # tests pass there; the local pytest sweep needs the marker too.
-@pytest.mark.timeout(180)
+@pytest.mark.timeout(300)
 def test_im_finder_publish_enqueues_message(im_depth_before):
     """--publish enqueues exactly 1 message to im.finding.created."""
     request_id = _unique_id("r110-165-test-im")
@@ -96,7 +101,7 @@ def test_im_finder_publish_enqueues_message(im_depth_before):
         [sys.executable, str(TOOLS_DIR / "dev_im_finder_scan.py"),
          "--publish", f"--publish-request-id={request_id}",
          "--scope=recipe/sub"],
-        capture_output=True, text=True, timeout=120, cwd=REPO_ROOT,
+        capture_output=True, text=True, timeout=250, cwd=REPO_ROOT,
     )
     assert r.returncode == 0, f"stderr={r.stderr[-500:]}"
     assert "[PUBLISH-OK]" in r.stderr
@@ -126,26 +131,26 @@ def test_im_finder_publish_enqueues_message(im_depth_before):
     assert "timestamp" in msg["payload"]
 
 
-@pytest.mark.timeout(180)
+@pytest.mark.timeout(300)
 def test_im_finder_without_publish_does_not_enqueue(im_depth_before):
     """Without --publish, no message lands in the topic."""
     r = subprocess.run(
         [sys.executable, str(TOOLS_DIR / "dev_im_finder_scan.py"),
          "--scope=recipe/sub"],
-        capture_output=True, text=True, timeout=120, cwd=REPO_ROOT,
+        capture_output=True, text=True, timeout=250, cwd=REPO_ROOT,
     )
     assert r.returncode == 0
     assert "[PUBLISH" not in r.stderr  # no publish-ok nor publish-error
     assert _count_lines(IM_NDJSON) == im_depth_before
 
 
-@pytest.mark.timeout(180)
+@pytest.mark.timeout(300)
 def test_im_finder_uses_default_request_id_when_omitted():
     """Without --publish-request-id, a default is generated."""
     r = subprocess.run(
         [sys.executable, str(TOOLS_DIR / "dev_im_finder_scan.py"),
          "--publish", "--scope=recipe/sub"],
-        capture_output=True, text=True, timeout=120, cwd=REPO_ROOT,
+        capture_output=True, text=True, timeout=250, cwd=REPO_ROOT,
     )
     assert r.returncode == 0
     assert "[PUBLISH-OK]" in r.stderr
