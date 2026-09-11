@@ -208,3 +208,59 @@ def test_kernel_exception_propagates_to_caller(patches_dir, mq_root, monkeypatch
     # exception and can decide what to do.
     with pytest.raises(RuntimeError, match="simulated yaml.safe_dump"):
         design.process_msg(envelope)
+
+
+def test_low_medium_priority_p2_branch(patches_dir, mq_root):
+    """(4) findings_total > 0 with NO blocker/high produces
+    patch_type='low_medium_cleanup' and priority='P2'.
+
+    Closes the only remaining uncovered branch in
+    tools/dev_im_design_patches.py lines 80-82 (the
+    `elif findings_total > 0:` arm). Brings the file
+    from 96.6% (57/59) to 100% (59/59) coverage.
+
+    Setup: 5 medium findings, 2 low findings, no blocker/high.
+    Expected: patch_type='low_medium_cleanup', priority='P2',
+              actions_count=3 (top-3 cap enforced).
+    """
+    request_id = "rq-lowmedium-004"
+    envelope = _finding_envelope(
+        request_id=request_id,
+        total=7,  # 5 medium + 2 low
+        by_sev={"blocker": 0, "high": 0, "medium": 5, "low": 2},
+        top=[
+            {"type": "yaml_typo", "severity": "medium",
+             "location": "recipe/x.yaml:1", "description": "indent"},
+            {"type": "test_gap", "severity": "medium",
+             "location": "tests/x.py:1", "description": "no test"},
+            {"type": "doc_drift", "severity": "medium",
+             "location": "docs/x.md:5", "description": "outdated"},
+            {"type": "yaml_typo", "severity": "low",
+             "location": "recipe/y.yaml:2", "description": "minor"},
+        ],
+    )
+
+    result = design.process_msg(envelope)
+
+    # 1. Returned dict has the expected branch attributes
+    assert result["patch_type"] == "low_medium_cleanup", (
+        f"expected low_medium_cleanup, got {result['patch_type']!r}"
+    )
+    assert result["priority"] == "P2", (
+        f"expected P2, got {result['priority']!r}"
+    )
+    assert result["actions_count"] == 3  # top-3 cap
+
+    # 2. The patch file exists and is well-formed
+    out = patches_dir / f"{request_id}.yaml"
+    assert out.exists(), f"patch file not written: {out}"
+    with open(out) as f:
+        body = yaml.safe_load(f)
+    assert body["request_id"] == request_id
+    assert body["findings_total"] == 7
+    assert body["findings_by_severity"] == (
+        {"blocker": 0, "high": 0, "medium": 5, "low": 2}
+    )
+    assert body["apply_status"] == "pending"
+    # Top-3 cap: only the first 3 of the 4 findings in `top` are written
+    assert len(body["actions"]) == 3
