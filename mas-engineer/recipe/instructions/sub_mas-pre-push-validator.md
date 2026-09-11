@@ -495,7 +495,7 @@ goose run --recipe recipe/sub/sub_mas-pre-push-validator.yaml
 - PRIMARY: last successful `e2e-results/<date>-run-N/raw-results.json` where `summary` shows 100% (or highest known)
 - FALLBACK: hardcoded known-good baseline per run-mode
   - `quick` mode: 134/134 (as of 2026-09-11: 126 recipe_yaml + 3 top_workflows + 5 recovery_workflows; R110-415 measured from logs/e2e-results/2026-09-11-run-1/raw-results.json)
-  - `full` mode: NOT UPDATED in R110-415 (would need a real `--full` run; the old 139/139 from 2026-07-22 is left in place and may cause spurious regression in `--full` mode; open R110-416+ to measure + update)
+  - `full` mode: 199/201 (as of 2026-09-11, R110-416 measured from logs/e2e-results/2026-09-11-run-3/raw-results.json: 126 recipe_yaml + 3 top_workflows + 5 recovery_workflows + 65/67 task_workflows; 2 pre-existing fails are `wf_git_commsg` (--msgsage typo in e2e_run_all.py line 187, SD-test synth-literal R110-78) and `wf_yaml_log` (`{msgsage}` template typo in .mase/workflows.yaml, same R110-78 pre-existing bug — NOT a regression, NOT a R110-416 scope); 5 SKIP out-of-scope (mq_consumers + recovery_defib + test_compare + yaml_clone))
 
 **Block conditions (ANY of):**
 - ⛔ current pass-count < baseline pass-count (regression)
