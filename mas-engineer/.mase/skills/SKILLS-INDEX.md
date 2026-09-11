@@ -11,7 +11,7 @@ For details on how these skills are installed, see
 
 | Skill | Category | Path |
 | --- | --- | --- |
-| `mas-engineer-commit-protocol` | mas-engineer | `.mase/skills/mas-engineer-commit-protocol/SKILL.md` |
+| `mas-engineer-commit-protocol` | mas-engineer | `.mase/skills/mas-engineer-commit-protocol/SKILL.md` | 4 canonical emoji-categories (🔧\|📝\|📚\|📊) plus 🧹 (added R110-413 for cleanup commits like 926aa8a that git-rf test-pollution artifacts; semantic is "tidy/junk-removal", distinct from 🔧 which is "code/config change"). R-sprint numbering (R<round>-<num> flat per sprint), em-dash format, 5-section body, author-identity, hook setup, push-pattern (credential-helper NOT set-url), force-push backup-tag protocol. Load BEFORE any commit. |
 | `mas-engineer-e2e-100-percent-recipe` | mas-engineer | `.mase/skills/mas-engineer-e2e-100-percent-recipe/SKILL.md` |
 | `mas-engineer-verification-theater-guard` | mas-engineer | `.mase/skills/mas-engineer-verification-theater-guard/SKILL.md` |
 | `mas-engineer-yaml-editor-workflow` | mas-engineer | `.mase/skills/mas-engineer-yaml-editor-workflow/SKILL.md` |

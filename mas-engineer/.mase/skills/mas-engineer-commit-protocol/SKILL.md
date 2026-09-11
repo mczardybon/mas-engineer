@@ -1,18 +1,18 @@
 ---
 name: mas-engineer-commit-protocol
-description: Commit + push style protocol for mas-engineer (mczardybon/mas-engineer) -- 4 emoji-categories (🔧|📝|📚|📊), R-sprint numbering (R<round>-<num>), em-dash format, 5-section body, author-identity, hook setup, push-pattern (credential-helper, NOT set-url), force-push backup-tag protocol. Load BEFORE any commit in this repo. Trigger when writing commit message, choosing emoji, picking R-number, setting up hooks in a new checkout, when validator Check 1.5 blocks push, when user says "schaue ins repo" or "commit + push kultur einhalten" or "transparenz" or "force-push" or "R110-127 update skill". Source-of-truth = validator Check 1.5 (recipe/instructions/sub_mas-pre-push-validator.md), NOT this skill — round-trip every claim through the validator.
+description: Commit + push style protocol for mas-engineer (mczardybon/mas-engineer) -- 4 canonical emoji-categories (🔧|📝|📚|📊) plus 🧹 (R110-413 cleanup), R-sprint numbering (R<round>-<num>), em-dash format, 5-section body, author-identity, hook setup, push-pattern (credential-helper, NOT set-url), force-push backup-tag protocol. Load BEFORE any commit in this repo. Trigger when writing commit message, choosing emoji, picking R-number, setting up hooks in a new checkout, when validator Check 1.5 blocks push, when user says "schaue ins repo" or "commit + push kultur einhalten" or "transparenz" or "force-push" or "R110-127 update skill". Source-of-truth = validator Check 1.5 (recipe/instructions/sub_mas-pre-push-validator.md), NOT this skill — round-trip every claim through the validator.
 category: devops
 ---
 
-## When to use
+# MAS-Engineer Commit + Push Protocol
 
-Load this skill when: Commit + push style protocol for mas-engineer (mczardybon/mas-engineer) -- 4 emoji-categories (🔧|📝|📚|📊), R-sprint numbering (R<round>-<num>), em-dash format, 5-section body, author-identity, hook setup, push-pattern (credential-helper, NOT set-url), force-push backup-tag protocol. Load BEFORE any commit in this repo. Trigger when writing commit message, choosing emoji, picking R-number, setting up hooks in a new checkout, when validator Check 1.5 blocks push, when user says "schaue ins repo" or "commit + push kultur einhalten" or "transparenz" or "force-push" or "R110-127 update skill". Source-of-truth = validator Check 1.5 (recipe/instructions/sub_mas-pre-push-validator.md), NOT this skill — round-trip every claim through the validator.
+**🚨 LOAD BEFORE EVERY R-SPRINT COMMIT. 🚨** R110-124 (5b82fab, 2026-08-04) violated 4 protocol points (wrong emoji, wrong body format, hooks inactive, no CHANGELOG) because the skill was loaded AFTER commit body was already written. R110-24 forbids amend — protocol violations are permanent log corruption, NOT correctable post-hoc. Cost: 1 corrupted commit + 1 follow-up commit (R110-125) needed to document the lesson. **Triple-format-mismatch (R110-126 lesson):** this skill pre-R110-126 said `wrench R<n>-<m> -- <title>`; the detector said `chore:/docs:/fix:/wrench:/book:`; validator Check 1.5 said `🔧 R<round>-<num> — desc`. ALL THREE were DIFFERENT, and the actual repo practice on origin/cleanup is `🔧 R110-117 — <title>` (em-dash, R-num with hyphen, NO double-dash, NO scope). Validator is source-of-truth — every claim in this skill must round-trip through `recipe/instructions/sub_mas-pre-push-validator.md` Check 1.5 before being trusted.
 
 For mas-engineer framework development, this skill provides domain-specific guidance that supersedes generic workflows.
 
+## When to use
 
-
-# MAS-Engineer Commit + Push Protocol
+Load this skill when: Commit + push style protocol for mas-engineer (mczardybon/mas-engineer) -- 4 canonical emoji-categories (🔧|📝|📚|📊) plus 🧹 (R110-413 cleanup), R-sprint numbering (R<round>-<num>), em-dash format, 5-section body, author-identity, hook setup, push-pattern (credential-helper, NOT set-url), force-push backup-tag protocol. Load BEFORE any commit in this repo. Trigger when writing commit message, choosing emoji, picking R-number, setting up hooks in a new checkout, when validator Check 1.5 blocks push, when user says "schaue ins repo" or "commit + push kultur einhalten" or "transparenz" or "force-push" or "R110-127 update skill". Source-of-truth = validator Check 1.5 (recipe/instructions/sub_mas-pre-push-validator.md), NOT this skill — round-trip every claim through the validator.
 
 **Supersedes:** scattered notes in commit-messages, implicit R-numbering, hook-less setups.
 **Source of truth (post-R110-126, force-push landed e89a0e5):** This skill was authored from the 2026-07-27 protocol doc + my own R110-78..R110-125 commits. It became stale relative to the actual repo practice. As of 2026-08-04 (R110-126 closure), this skill is the **operational extraction** of:
@@ -61,9 +61,9 @@ git config core.hooksPath mas-engineer/.githooks
 # verify: git config --get core.hooksPath
 ```
 
-## 4 emoji-categories (canonical, per validator Check 1.5 + detector R110-126)
+## 4 canonical emoji-categories plus 🧹 (per validator Check 1.5 + detector R110-413)
 
-The 4 emojis that existed in 5eb67fe era (long before R36) and are hardcoded in `recipe/instructions/sub_mas-pre-push-validator.md` Check 1.5:
+The 4 emojis that existed in 5eb67fe era (long before R36) and are hardcoded in `recipe/instructions/sub_mas-pre-push-validator.md` Check 1.5, plus 🧹 added in R110-413 for cleanup commits that git-rf test-pollution artifacts (semantic: tidy/junk-removal, distinct from 🔧 which is code/config change):
 
 | Emoji | When | Format | Example (from origin/cleanup) |
 |-------|------|--------|-------------------------------|
@@ -71,6 +71,7 @@ The 4 emojis that existed in 5eb67fe era (long before R36) and are hardcoded in 
 | 📝 | R-sprint doc-only commit | `<emoji> R<round>-<num> [follow-up] — <title>` | `📝 R110-125 — STATUS.md 3d row + CHANGELOG-2026-08-04-r110-78-final-closure (2 files + 1 new doc)` |
 | 📚 | R-sprint sprint-commit (multiple tests added) | `<emoji> R<round>-<num> — <title> (N tests)` | `📚 R110-16 — REAL EVIDENCE: 30-agent PTY rerun after R110-11..R110-15 fixes, 293s rc=0, dispatch-fix proven` |
 | 📊 | EVIDENCE summary (post-test, evidence bundle) | `<emoji> EVIDENCE — R<round>-<num> [fixup] — <one-line>` | `📊 EVIDENCE — R110-28 — team-composition live-PTY test (4/6 PASS, 2 TIMEOUT-aka-success, 12m 30s, 50KB)` |
+| 🧹 | Cleanup commit (delete test-pollution artifacts, git-rf junk) | `<emoji> R<round>-<num> — <title>` | `🧹 R110-412 — cleanup: 6 MagicMock test-pollution artifacts (IDE auto-commit leak)` |
 
 **Anti-patterns (NEVER use these — R36 lesson):** `🪤 TRAP`, `🛡️ PUSH`, `🎯 TARGET`, `🚀 LAUNCH`, `💀 DEAD`. They get BLOCKed by Check 1.5 because they're not in the precedent set.
 
