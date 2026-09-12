@@ -1,4 +1,4 @@
-# R110-493 — Resolve 2 xfail tests from R110-491 followup
+# R110-493 — Sprint plan + 3-source ⚡/📋 emoji sync closure
 
 **Status:** IN PROGRESS
 **Author:** Hermes (R110-491 followup)
@@ -7,9 +7,23 @@
 
 ## Goal
 
-Bring the test suite from 6150 PASS + 7 SKIP + 2 XFAIL (current
-R110-491 state) to 6152 PASS + 7 SKIP + 0 XFAIL by resolving the 2
-xfailed tests that R110-491 deferred.
+Two-part sprint:
+
+1. **Sprint plan for 2 xfails** (R110-491 deferred):
+   `6150 PASS + 7 SKIP + 2 XFAIL` → `6152 PASS + 7 SKIP + 0 XFAIL`
+   via Option A (remove @xfail on XPASS test) + Option B
+   (demote INVARIANT-* from BLOCKER to WARN in dev_spec_invariant).
+
+2. **3-source ⚡/📋 emoji sync closure** (R110-78 lesson, scope-creep
+   from this sprint's own commits):
+   - `88b51b1 📋 R110-493` used a non-canonical emoji
+   - `d7b24d5 ⚡ R110-491` exposed that ⚡ was missing from the test's
+     ALLOWED_PATTERNS regex even though detector + validator accepted it
+   - Pre-push-hook passed but `test_check_1_5_origin_cleanup_recent_commits_match`
+     and `test_r110257_subject_accepted_by_detector_in_real_git_history`
+     both failed — same R110-78 divergence pattern
+   - Fix: extend all 4 sources (detector, validator, test, skill) to
+     accept both ⚡ and 📋 as canonical.
 
 ## Why
 

@@ -113,7 +113,7 @@ requires_skills = pytest.mark.skipif(
 # 2. Canonical 4-emoji set (R110-127 lesson: the same 4 exist in
 #    validator ALLOWED_EMOJIS, detector ALLOWED_EMOJI_PREFIXES, and
 #    the skill's emoji-table)
-CANONICAL_EMOJIS = frozenset({"🔧", "📝", "📚", "📊", "🧹", "⚡"})
+CANONICAL_EMOJIS = frozenset({"🔧", "📝", "📚", "📊", "🧹", "⚡", "📋"})
 
 # 3. The OLD 5-emoji table (pre-R110-127) used these latin words instead
 #    of the 4 unicode emoji. Any of them appearing in the skill's
@@ -270,7 +270,7 @@ def _check_origin_cleanup_commits_match_validator():
         # (force-push forbidden), so R110-304 is the transparent
         # fix-commit.
         r"^R\d+-\d+((?: (?:follow-up|phase \d+|[\w-]+))?): ",
-        r"^[🔧📝📚📊🧹] (FIX|DOCS|STATE|TEST|FEAT|CHORE|ARCH) — ",
+        r"^[🔧📝📚📊🧹⚡📋] (FIX|DOCS|STATE|TEST|FEAT|CHORE|ARCH) — ",
         # R110-314: extend char-class to allow `/` between multiple
         # R-sprint numbers (e.g. "R110-311/R110-312 — ..."). Pre-R110-314
         # the test flagged 0d57265 as off-format despite it being a valid
@@ -279,7 +279,7 @@ def _check_origin_cleanup_commits_match_validator():
         # also accepts `R\d+-\d+:` colon form — so this regex should match
         # the slash variant too. Pure cosmetic lockstep with validator +
         # detector.
-        r"^[🔧📝📚📊🧹] R\d+-[\w/-]+( follow-up)? — ",
+        r"^[🔧📝📚📊🧹⚡📋] R\d+-[\w/-]+( follow-up)? — ",
         r"^📊 EVIDENCE — R\d+-",
         # R110-179: cover the "emoji + conventional-commit" hybrid style
         # (e.g. "📝 docs(directives): R110-177 ..."). Without these two
@@ -287,8 +287,8 @@ def _check_origin_cleanup_commits_match_validator():
         # even though the convention allowlist (detector Check 1.5) accepts
         # the hybrid form. Pure emoji legacy + pure conventional + new
         # hybrid all 3 styles must match.
-        r"^[🔧📝📚📊🧹] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:",
-        r"^[🔧📝📚📊🧹] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert):",
+        r"^[🔧📝📚📊🧹⚡] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:",
+        r"^[🔧📝📚📊🧹⚡] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert):",
         # R110-220: legacy "[MAS-ENGINEER] test commit" pattern that was
         # used pre-R110-78 before the 4-emoji + conventional-commit format
         # was enforced. R110-219 bf1bdef ("fix: R110-219 ...") was

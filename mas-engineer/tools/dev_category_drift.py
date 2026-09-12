@@ -85,7 +85,7 @@ CONVENTIONAL_COMMIT_RE = re.compile(
 # R110-491: added ⚡ (performance/optimization category) to match the
 # validator Check 1.5 allowlist. R110-491 commit 5c1f973 used ⚡ and
 # passed the validator, so the detector must also accept it.
-ALLOWED_EMOJI_PREFIXES = ("🔧", "📝", "📚", "📊", "🧹", "⚡")
+ALLOWED_EMOJI_PREFIXES = ("🔧", "📝", "📚", "📊", "🧹", "⚡", "📋")
 
 # R-sprint round-up prefix (R110-304): the no-emoji `R<round>-<num>:
 # <topic> — desc` form. Used in R110-303 (3 commits: 627d67a, e69bfbf,

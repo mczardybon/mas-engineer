@@ -182,7 +182,7 @@ history = subprocess.run(
 # speedup via _is_common_value cache). Semantic is "perf-gain/speedup" —
 # distinct from 🔧 (code/config) and 🧹 (cleanup). All 3 sources (validator
 # / detector / skill) must agree per R110-78 lesson.
-ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊', '🧹', '⚡'}
+ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊', '🧹', '⚡', '📋'}
 
 # 3. Build set of historically-used emojis (for diagnostics only)
 EMOJI_RE = re.compile(r'[\U0001F000-\U0001FFFF\U00002600-\U000027BF]')
