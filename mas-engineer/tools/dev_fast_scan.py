@@ -9,6 +9,10 @@ def scan_prompts(path):
         with open(f) as fh:
             try: d = yaml.safe_load(fh)
             except: continue
+        # R110-491: empty yaml (0-byte) returns None from safe_load;
+        # skip such files instead of crashing on d.get().
+        if not isinstance(d, dict):
+            continue
         p = d.get('prompt', '') or ''
         if not p:
             findings.append({'type':'A1','agent':os.path.basename(f),'severity':'hoch','detail':f'NO prompt in {os.path.basename(f)}'})
@@ -37,6 +41,10 @@ def scan_settings(path):
         with open(f) as fh:
             try: d = yaml.safe_load(fh)
             except: continue
+        # R110-491: empty yaml (0-byte) returns None from safe_load;
+        # skip such files instead of crashing on d.get().
+        if not isinstance(d, dict):
+            continue
         s = d.get('settings',{})
         if not s: continue
         total += 1

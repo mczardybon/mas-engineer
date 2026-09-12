@@ -178,7 +178,11 @@ history = subprocess.run(
 # The 4 pre-R36 emojis (🔧,📝,📚,📊) plus 🧹 (added R110-413 for cleanup commits
 # like 926aa8a that git-rf test-pollution artifacts; semantic is
 # "tidy/junk-removal", distinct from 🔧 which is "code/config change") are allowed.
-ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊', '🧹'}
+# R110-491: ⚡ added for performance/optimization commits (e.g. scanner 10×
+# speedup via _is_common_value cache). Semantic is "perf-gain/speedup" —
+# distinct from 🔧 (code/config) and 🧹 (cleanup). All 3 sources (validator
+# / detector / skill) must agree per R110-78 lesson.
+ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊', '🧹', '⚡'}
 
 # 3. Build set of historically-used emojis (for diagnostics only)
 EMOJI_RE = re.compile(r'[\U0001F000-\U0001FFFF\U00002600-\U000027BF]')

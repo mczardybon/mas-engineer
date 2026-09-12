@@ -72,6 +72,7 @@ The 4 emojis that existed in 5eb67fe era (long before R36) and are hardcoded in 
 | 📚 | R-sprint sprint-commit (multiple tests added) | `<emoji> R<round>-<num> — <title> (N tests)` | `📚 R110-16 — REAL EVIDENCE: 30-agent PTY rerun after R110-11..R110-15 fixes, 293s rc=0, dispatch-fix proven` |
 | 📊 | EVIDENCE summary (post-test, evidence bundle) | `<emoji> EVIDENCE — R<round>-<num> [fixup] — <one-line>` | `📊 EVIDENCE — R110-28 — team-composition live-PTY test (4/6 PASS, 2 TIMEOUT-aka-success, 12m 30s, 50KB)` |
 | 🧹 | Cleanup commit (delete test-pollution artifacts, git-rf junk) | `<emoji> R<round>-<num> — <title>` | `🧹 R110-412 — cleanup: 6 MagicMock test-pollution artifacts (IDE auto-commit leak)` |
+| ⚡ | Performance/optimization commit (speedup, cache, refactor-for-perf) | `<emoji> R<round>-<num> — <title>` | `⚡ R110-491 — scanner 10× speedup via _is_common_value cache + sd-test threshold calibration (R110-491, 6149 PASS)` |
 
 **Anti-patterns (NEVER use these — R36 lesson):** `🪤 TRAP`, `🛡️ PUSH`, `🎯 TARGET`, `🚀 LAUNCH`, `💀 DEAD`. They get BLOCKed by Check 1.5 because they're not in the precedent set.
 

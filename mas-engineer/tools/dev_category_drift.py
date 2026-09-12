@@ -82,7 +82,10 @@ CONVENTIONAL_COMMIT_RE = re.compile(
 # validator's Check 1.5 would still show up as DRIFT in this historical scan,
 # which is misleading. (R110-78 lesson: 3 different format definitions
 # between skill/detector/validator -- the validator is source-of-truth.)
-ALLOWED_EMOJI_PREFIXES = ("🔧", "📝", "📚", "📊", "🧹")
+# R110-491: added ⚡ (performance/optimization category) to match the
+# validator Check 1.5 allowlist. R110-491 commit 5c1f973 used ⚡ and
+# passed the validator, so the detector must also accept it.
+ALLOWED_EMOJI_PREFIXES = ("🔧", "📝", "📚", "📊", "🧹", "⚡")
 
 # R-sprint round-up prefix (R110-304): the no-emoji `R<round>-<num>:
 # <topic> — desc` form. Used in R110-303 (3 commits: 627d67a, e69bfbf,
@@ -205,6 +208,16 @@ EXEMPT_HASHES = frozenset({
     # itself is appended as a follow-up commit (R110-392 body) with
     # the proper fix: prefix and full body-claim verification.
     "1c1c5d7",  # 2026-09-09 13:56:32 [] (Hermes-MAS-Engineer, test_guardian_scan.py cwd=REPO_ROOT, R110-392)
+    # R110-491: 2 additional pre-existing drift commits on origin/mas-t-tests,
+    # IMMUTABLE per R110-281 (force-push verbot). Adding to EXEMPT_HASHES
+    # per the established R110-370 / R110-388 / R110-392 pattern. Both
+    # tests/test_pre_push_check_1_5_skill_alignment.py::test_check_1_5_origin_cleanup_recent_commits_match
+    # AND tests/test_r110259_category_drift_scope.py::test_r110257_subject_accepted_by_detector_in_real_git_history
+    # import EXEMPT_HASHES from here, so this single-source fix clears
+    # both tests in lockstep.
+    "67cef4a",  # 2026-09-12 [] (R110-490 — IDE auto-commit bug, R110-408/410 fix: reset+rm, but `[]` subject already on origin)
+    "ac954c8",  # 2026-09-11 test(coverage)+fix: R110-456 — yaml_generator_generic (legacy `+fix:` variant of test(coverage): pattern)
+    "776ddef",  # 2026-09-12 [] (pre-existing, found during R110-491 sweep on origin/mas-t-tests, similar R110-315/372/388/392 pattern)
 })
 
 

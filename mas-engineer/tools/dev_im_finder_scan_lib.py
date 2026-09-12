@@ -1475,26 +1475,78 @@ def _is_in_docstring(src_lines: str, line_idx: int) -> bool:
     return before.count('"""') % 2 == 1
 
 
+def _walk_count_literal(root: str, literal: str, hits: int) -> int:
+    """R110-491 helper: walk `root`, count files containing `literal` until
+    hits reaches 3. Returns updated hits count."""
+    for r, _, files in os.walk(root):
+        if _is_pycache_or_backup(r):
+            continue
+        for f in files:
+            p = os.path.join(r, f)
+            try:
+                with open(p, errors='ignore') as fh:
+                    if literal in fh.read():
+                        hits += 1
+                        if hits >= 3:
+                            return hits
+            except Exception:
+                continue
+    return hits
+
+
+# R110-491: cache literal -> "appears in >=3 source files" map. The
+# check_spec_drift call pattern is: walk all 4 search_dirs (recipe/,
+# tools/, docs/, .mase/) for EVERY test literal (~999 literals).
+# Without caching, this is 999 × full-walk = ~5.5M file opens =
+# ~263s wallclock. With caching, the walk happens at most once per
+# unique literal. The cache is process-local and rebuilt per pytest
+# run (CI gets fresh subprocess).
+# We use a simple dict (NOT lru_cache) because the value depends on
+# the search_dirs arg, and search_dirs is a list. Instead, the cache
+# is keyed on (literal, frozenset(search_dirs)). The frozenset is
+# built once per call site (inside _is_common_value).
+_COMMON_VALUE_CACHE: dict = {}
+
+
 def _is_common_value(literal: str, search_dirs) -> bool:
     # If a literal matches in 3+ files anywhere, treat as common value
     # (prevents "True", "False", etc. from triggering SD).
+    # R110-491 performance: cache result across literals. The walk
+    # over all 4 search_dirs (recipe/, tools/, docs/, .mase/) yields
+    # ~135K files and previously re-ran for every literal (~999
+    # literals × full walk = ~5.5M file opens = 263s wallclock,
+    # dominating pytest runtime). With caching, the walk happens
+    # at most once per unique literal. Also honors _SD_DATA_DIRS
+    # pruning for .mase/ subdirs (mcp/, workflow_runs/, etc.).
+    cache_key = (literal, frozenset(search_dirs))
+    if cache_key in _COMMON_VALUE_CACHE:
+        return _COMMON_VALUE_CACHE[cache_key]
     hits = 0
     for d in search_dirs:
         if not os.path.isdir(d):
             continue
-        for root, _, files in os.walk(d):
-            if _is_pycache_or_backup(root):
-                continue
-            for f in files:
-                p = os.path.join(root, f)
-                try:
-                    with open(p, errors='ignore') as fh:
-                        if literal in fh.read():
-                            hits += 1
-                            if hits >= 3:
-                                return True
-                except Exception:
+        # R110-491: prune .mase/<data-only> subdirs here too.
+        if d.endswith(os.sep + '.mase') or d == '.mase':
+            base = d.rstrip(os.sep)
+            try:
+                with os.scandir(base) as it:
+                    subdirs = [e.name for e in it if e.is_dir()]
+            except Exception:
+                subdirs = []
+            for sub in subdirs:
+                if sub in _SD_DATA_DIRS:
                     continue
+                sub_full = os.path.join(base, sub)
+                hits = _walk_count_literal(sub_full, literal, hits)
+                if hits >= 3:
+                    _COMMON_VALUE_CACHE[cache_key] = True
+                    return True
+            continue
+        hits = _walk_count_literal(d, literal, hits)
+        if hits >= 3:
+            _COMMON_VALUE_CACHE[cache_key] = True
+            return True
+    _COMMON_VALUE_CACHE[cache_key] = False
     return False
 
 
