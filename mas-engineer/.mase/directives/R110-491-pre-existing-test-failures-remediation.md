@@ -51,7 +51,7 @@ introduced, coverage on the affected tools remains ≥95%.
 | 1 | 4 Category A tests | add fixture-level `.mase/mq/*.ndjson` cleanup + tmp_path isolation | 30 min |
 | 2 | 2 Category B tests | refactor to use module-level fixtures instead of `importlib.reload` | 20 min |
 | 3 | 5 Category C tests | update detector tests to match R110-481 file paths/counts | 45 min |
-| 4 | 1 Category D test (q4c_recursion_guard_scanner_output_reduced) | investigate why inner subprocess exceeds 240s timeout on cleanup-worktree but passes on primary; likely .mase/mcp/node_modules scan bloat | 20 min |
+| 4 | 1 Category D test (`test_q4c_recursion_guard_scanner_output_reduced`) | Subprocess scan exceeded 240s pytest-timeout: `Failed: Timeout (>240.0s) from pytest-timeout` at `subprocess.run(...communicate(timeout=240))`. Likely .mase/mcp/node_modules scan bloat on cleanup-worktree (R110-419: 3509 files / 27MB). Need `_SD_DATA_DIRS += .mase/mcp` + recursion-guard config. | 20 min |
 | 5 | full-sweep verification | `pytest tests/ -q --tb=line --timeout=300 --ignore=.state` | 25 min |
 
 Total estimated: ~2.5 hours.

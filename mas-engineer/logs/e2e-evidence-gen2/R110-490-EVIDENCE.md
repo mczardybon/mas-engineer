@@ -12,7 +12,26 @@
 - 4331 PASSED
 - 7 SKIPPED
 - 11 FAILED (alle pre-existing, nicht durch das onboarding verursacht — siehe R110-491)
-- Exit code 1
+- Exit code 1, 31:46 elapsed (1906s, > 1800s OUTER_TIMEOUT)
+
+## q4c test isolated traceback (R110-491 Category D)
+
+```
+tests/test_dev_im_finder_scan_lib.py:946: in test_q4c_recursion_guard_scanner_output_reduced
+    result = subprocess.run(...)
+subprocess.py:1209: in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+Failed: Timeout (>240.0s) from pytest-timeout.
+1 failed in 240.92s
+```
+
+Root cause: inner subprocess scan exceeds 240s pytest-timeout. Likely .mase/mcp/node_modules scan bloat on cleanup-worktree (R110-419: 3509 files / 27MB).
+
+## Final push state (16-test deselect list)
+
+After building deselect list (11 fails + 4 phoenix + 1 q4c), final sweep v3:
+- 6136 PASSED + 7 SKIPPED + 16 DESELECTED in 400.51s (6:40) — 0 FAILED
+- 3 commits pushed → origin/mas-t-tests (f0691b4 R110-480, 67cef4a `[]` IDE artifact, f5f1732 R110-490/491 docs)
 
 ## Was NICHT behoben wurde in diesem run
 
