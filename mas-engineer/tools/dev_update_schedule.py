@@ -73,7 +73,8 @@ def update_schedule(workspace: str, findings_count: int, duration_sec: int):
     
     bp["last_updated"] = datetime.now().isoformat()
     bp["version"] = "1.0.0"
-    
+
+    bp_path.parent.mkdir(parents=True, exist_ok=True)
     with open(bp_path, "w") as f:
         yaml.dump(bp, f, default_flow_style=False)
     
