@@ -536,17 +536,31 @@ def test_cli_target_empty_with_mase(tmp_path):
     assert "Score: 2.5/10" in out
 
 
-def test_cli_target_no_mase_crashes(tmp_path):
-    """CLI: target without .mase/ → save_history crashes (line 85 FileNotFoundError).
+def test_cli_target_no_mase_creates_dir(tmp_path):
+    """CLI: target WITHOUT .mase/ → save_history creates dir, no crash.
 
-    This is a known bug — save_history assumes .mase/ exists.
-    Tests behavior: exit 1, error on stderr.
+    Regression test for R110-533: save_history used to crash when .mase/
+    didn't exist (line 85 `json.dump` with missing parent dir).
+    After fix: `os.makedirs(..., exist_ok=True)` creates dir on demand.
     """
     target = tmp_path / "no_mase"
     target.mkdir()
     code, out, err = _run_cli("--target", str(target))
-    assert code == 1
-    assert "health-history.json" in err or "No such file" in err
+    assert code == 0, f"CLI crashed (R110-533 regression?): {err}"
+    assert (target / ".mase" / "health-history.json").exists()
+    assert "Score:" in out
+
+
+def test_save_history_creates_mase_dir(tmp_path):
+    """save_history() must create .mase/ if missing (R110-533 fix)."""
+    target = tmp_path / "fresh"
+    target.mkdir()
+    # No .mase/ at all
+    assert not (target / ".mase").exists()
+    report = hr.calculate_score(str(target))
+    history = hr.save_history(str(target), report)
+    assert len(history) == 1
+    assert (target / ".mase" / "health-history.json").exists()
 
 
 def test_cli_writes_history_file(tmp_path):

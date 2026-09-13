@@ -82,6 +82,8 @@ def save_history(target, report):
     history.append({"timestamp": report["timestamp"], "score": report["score"]})
     # Only letzte 20 Eintraege keep
     history = history[-20:]
+    # Ensure .mase/ exists — target may not have it yet (R110-533)
+    os.makedirs(os.path.dirname(hist_path), exist_ok=True)
     json.dump(history, open(hist_path, 'w'), indent=2)
     return history
 
