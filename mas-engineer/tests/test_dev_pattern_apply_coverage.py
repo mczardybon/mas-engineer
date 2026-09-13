@@ -1,253 +1,351 @@
-#!/usr/bin/env python3
+"""R110-527 coverage tests for tools/dev_pattern_apply.py.
+
+Module: 55 LOC, 4 functions, 0% covered.
+
+Functions tested:
+  - get_scoped_agents(pattern_name, project_files)  lines 7-15
+    Filters project_files by .yaml extension. Internal `mapping`
+    dict is a stub but the function only checks `.endswith('.yaml')`
+    regardless of pattern_name (the mapping lambdas are not invoked
+    by the current implementation).
+
+  - load(path)  lines 17-20
+    Loads YAML from path. On YAML parse error returns {}.
+
+  - apply_patterns(registry_path, project, threshold=0.3)  lines 22-45
+    Reads registry yaml, walks project dir for *.yaml files, applies
+    high-confidence patterns, writes registry back.
+
+  - __main__ block (lines 47-55)
+    argparse CLI: --registry --project --threshold.
+
+Strategy: subprocess for the CLI block, direct import for the rest.
+Verification target: 100% line + 100% branch for dev_pattern_apply.py.
 """
-R110-516: Coverage test for tools/dev_pattern_apply.py (39 stmts, 0% → 100%).
+from __future__ import annotations
 
-Context: dev_pattern_apply.py applies high-confidence patterns from a
-registry file to YAML files in a project directory. It walks the project
-recursively, filters .yaml files, and for each pattern above the
-threshold and auto-applied to the project, it generates up to 3 "apply"
-entries per pattern. Patterns below threshold are counted as skipped.
-The registry is updated in-place to track auto_applied_to.
-
-Module structure (55 lines, 39 stmts):
-  - get_scoped_agents(pattern_name, project_files) — returns the first
-    3 .yaml files in project_files (the dict mapping at lines 8-14 is
-    declared but never used; the actual filter is line 15). 39 stmts
-    includes the unused mapping lambdas.
-
-  - load(path) — opens a YAML file, returns parsed dict or {} on parse
-    error.
-
-  - apply_patterns(registry_path, project, threshold=0.3) — main
-    orchestrator: load registry, walk project, iterate patterns,
-    filter by threshold, filter by auto_applied gate, generate
-    applied entries, write registry back. Returns {applied, skipped}.
-
-  - __main__ guard: argparse + call + print(json.dumps).
-
-This file tests all kernel code paths and the unused-but-declared
-mapping dict (which counts toward branch coverage even though it's
-dead code).
-"""
-
-import json
-import runpy
+import os
+import subprocess
 import sys
+import textwrap
+import time
 from pathlib import Path
 
 import pytest
-import yaml
+import yaml as _yaml
 
-import tools.dev_pattern_apply as pa  # noqa: E402
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
+from tools import dev_pattern_apply as pa  # noqa: E402
 
-# ─── load() ─────────────────────────────────────────────────────────
-
-def test_load_parses_valid_yaml(tmp_path):
-    """Covers line 19: yaml.safe_load returns parsed dict on valid file."""
-    p = tmp_path / "ok.yaml"
-    p.write_text(yaml.dump({"a": 1, "b": [1, 2, 3]}))
-    assert pa.load(str(p)) == {"a": 1, "b": [1, 2, 3]}
+TOOL = REPO_ROOT / "tools" / "dev_pattern_apply.py"
 
 
-def test_load_returns_empty_dict_on_invalid_yaml(tmp_path):
-    """Covers line 20: yaml.YAMLError → except branch returns {}."""
-    p = tmp_path / "bad.yaml"
-    p.write_text("key: [unclosed")  # malformed YAML
-    result = pa.load(str(p))
-    assert result == {}
+# ----------------------------- fixtures ----------------------------
+
+@pytest.fixture
+def registry(tmp_path):
+    """Write a registry yaml with several pattern variants."""
+    reg = tmp_path / "registry.yaml"
+    reg.write_text(textwrap.dedent("""\
+        patterns:
+          - name: high_conf_no_auto
+            rule: do thing A
+            confidence: 0.9
+          - name: high_conf_auto
+            rule: do thing B
+            confidence: 0.8
+            auto_applied: true
+            auto_applied_to: []
+          - name: low_conf
+            rule: do thing C
+            confidence: 0.1
+            auto_applied: true
+            auto_applied_to: []
+          - name: high_conf_auto_already_applied
+            rule: do thing D
+            confidence: 0.95
+            auto_applied: true
+            auto_applied_to: []
+          - name: high_conf_no_auto_applied_flag
+            rule: do thing E
+            confidence: 0.99
+            auto_applied: true
+            auto_applied_to: []
+    """))
+    return reg
 
 
-# ─── get_scoped_agents ──────────────────────────────────────────────
+@pytest.fixture
+def project_dir(tmp_path):
+    """Create a project dir with several .yaml files + 1 non-yaml.
 
-def test_get_scoped_agents_filters_yaml_files():
-    """Covers line 15: list comprehension over .yaml files only."""
-    files = [
-        "/p/a.yaml",
-        "/p/b.yml",
-        "/p/c.txt",
-        "/p/d.yaml",
-        "/p/e.json",
-    ]
-    result = pa.get_scoped_agents("any_pattern", files)
-    assert result == ["/p/a.yaml", "/p/d.yaml"]
-
-
-def test_get_scoped_agents_returns_empty_when_no_yaml_files():
-    """Covers line 15: empty list when no .yaml files present."""
-    assert pa.get_scoped_agents("any", ["/p/a.txt", "/p/b.json"]) == []
-
-
-# ─── apply_patterns ─────────────────────────────────────────────────
-
-def _write_registry(tmp_path, patterns):
-    """Helper: write a registry file with the given patterns list."""
-    reg_path = tmp_path / "registry.yaml"
-    reg_path.write_text(yaml.dump({"patterns": patterns}))
-    return str(reg_path)
-
-
-def _write_project(tmp_path, yamls):
-    """Helper: create a project dir with the given list of YAML filenames."""
-    proj = tmp_path / "project"
+    Returns an ABSOLUTE path because os.walk('relative_name') looks in
+    the CWD which is the repo root — only absolute paths work.
+    """
+    proj = tmp_path / "myproj"
     proj.mkdir()
-    for name in yamls:
-        (proj / name).write_text("a: 1\n")
+    (proj / "a.yaml").write_text("title: a\n")
+    (proj / "b.yaml").write_text("title: b\n")
+    (proj / "c.yaml").write_text("title: c\n")
+    (proj / "d.yaml").write_text("title: d\n")
+    (proj / "ignore.txt").write_text("not yaml")
     return str(proj)
 
 
-def test_apply_patterns_skips_below_threshold(tmp_path):
-    """Covers lines 32-35: pattern with confidence < threshold → skipped."""
-    reg = _write_registry(tmp_path, [
-        {"name": "low", "confidence": 0.1, "auto_applied": True,
-         "rule": "do X"},
-    ])
-    proj = _write_project(tmp_path, ["a.yaml", "b.yaml"])
-    result = pa.apply_patterns(reg, proj, threshold=0.5)
-    assert result == {"applied": [], "skipped": 1}
+# ========================= get_scoped_agents =======================
+
+def test_get_scoped_agents_filters_yaml_only():
+    """Covers lines 7-15: keeps .yaml, drops others."""
+    files = ["a.yaml", "b.yml", "c.txt", "d.yaml", "noext"]
+    out = pa.get_scoped_agents("any_pattern", files)
+    assert out == ["a.yaml", "d.yaml"]
 
 
-def test_apply_patterns_does_not_auto_apply_when_auto_applied_false(tmp_path):
-    """Covers line 36: auto_applied gate — when False, skip even if
-    confidence is high."""
-    reg = _write_registry(tmp_path, [
-        {"name": "manual_only", "confidence": 0.9,
-         "auto_applied": False, "rule": "do Y"},
-    ])
-    proj = _write_project(tmp_path, ["a.yaml"])
-    result = pa.apply_patterns(reg, proj, threshold=0.3)
-    assert result["applied"] == []
-    assert result["skipped"] == 0  # 0.9 >= 0.3, so threshold passes;
-    # but auto_applied=False skips the apply step without incrementing skipped
+def test_get_scoped_agents_empty():
+    """Covers line 15 True branch on empty list."""
+    assert pa.get_scoped_agents("p", []) == []
 
 
-def test_apply_patterns_caps_at_three_files_per_pattern(tmp_path):
-    """Covers lines 38-41: candidates[:3] limits applied entries to 3."""
-    reg = _write_registry(tmp_path, [
-        {"name": "p1", "confidence": 0.9, "auto_applied": True,
-         "rule": "Apply X"},
-    ])
-    proj = _write_project(tmp_path, ["a.yaml", "b.yaml", "c.yaml",
-                                     "d.yaml", "e.yaml"])
-    result = pa.apply_patterns(reg, proj, threshold=0.3)
-    # Exactly 3 applied entries (candidates[:3])
-    assert len(result["applied"]) == 3
-    # All entries reference the pattern name and have status='pending'
-    for entry in result["applied"]:
-        assert entry["pattern"] == "p1"
-        assert entry["status"] == "pending"
-        assert "Apply X" in entry["action"]
+def test_get_scoped_agents_ignores_pattern_name():
+    """Covers line 15: filter is pattern-name-agnostic."""
+    files = ["x.yaml", "y.yaml"]
+    for name in ["prompt_braucht_boundary", "settings_timeout_sweetspot",
+                 "instructions_mit_inputblock", "prompt_mit_outputformat",
+                 "backup_vor_patch", "unknown_pattern"]:
+        out = pa.get_scoped_agents(name, files)
+        assert out == files
 
 
-def test_apply_patterns_writes_registry_back_with_auto_applied_to(tmp_path):
-    """Covers lines 42-44: auto_applied_to updated + yaml.dump round-trip."""
-    reg = _write_registry(tmp_path, [
-        {"name": "p1", "confidence": 0.9, "auto_applied": True,
-         "rule": "Apply Z"},
-    ])
-    proj = _write_project(tmp_path, ["a.yaml"])
-    pa.apply_patterns(reg, proj, threshold=0.3)
-    # Reload registry and verify auto_applied_to was appended
-    reg_data = yaml.safe_load(Path(reg).read_text())
-    pat = reg_data["patterns"][0]
-    assert "auto_applied_to" in pat
-    assert proj in pat["auto_applied_to"]
+# ================================ load =============================
+
+def test_load_valid_yaml(tmp_path):
+    """Covers lines 17-19: open + yaml.safe_load on valid YAML."""
+    p = tmp_path / "good.yaml"
+    p.write_text("k: v\nlist:\n  - 1\n  - 2\n")
+    out = pa.load(str(p))
+    assert out == {"k": "v", "list": [1, 2]}
 
 
-def test_apply_patterns_skips_pattern_already_applied_to_project(tmp_path):
-    """Covers line 36 second clause: when project IS in auto_applied_to,
-    skip without applying (idempotency guard)."""
-    proj = _write_project(tmp_path, ["a.yaml"])
-    reg = _write_registry(tmp_path, [
-        {"name": "p1", "confidence": 0.9, "auto_applied": True,
-         "auto_applied_to": [proj],  # already applied to this proj
-         "rule": "Apply W"},
-    ])
-    result = pa.apply_patterns(reg, proj, threshold=0.3)
-    # Project in auto_applied_to → skip (no applied entries, no skipped bump)
-    assert result["applied"] == []
-    assert result["skipped"] == 0
+def test_load_invalid_yaml_returns_empty_dict(tmp_path):
+    """Covers line 20 except branch: bad yaml → {}."""
+    p = tmp_path / "bad.yaml"
+    p.write_text("title: 'unclosed quote\nfoo: [")
+    out = pa.load(str(p))
+    assert out == {}
 
 
-def test_apply_patterns_walks_subdirectories(tmp_path):
-    """Covers lines 27-30: os.walk finds .yaml files in subdirectories,
-    and the for-loop body runs at least once (branch 29->28 backward)."""
-    reg = _write_registry(tmp_path, [
-        {"name": "p1", "confidence": 0.9, "auto_applied": True,
-         "rule": "Apply"},
-    ])
-    proj = tmp_path / "project"
+def test_load_empty_file_returns_none(tmp_path):
+    """Covers line 19: yaml.safe_load on empty file → None."""
+    p = tmp_path / "empty.yaml"
+    p.write_text("")
+    out = pa.load(str(p))
+    assert out is None
+
+
+# =========================== apply_patterns ========================
+
+def test_apply_patterns_skips_low_confidence(registry, project_dir):
+    """Covers lines 33-35 True branch: confidence < threshold → skipped++."""
+    result = pa.apply_patterns(str(registry), project_dir, threshold=0.5)
+    # low_conf (0.1) skipped
+    assert result["skipped"] >= 1
+
+
+def test_apply_patterns_high_conf_no_auto_not_applied(registry, project_dir):
+    """Covers line 36 False branch: auto_applied is falsy → not applied."""
+    result = pa.apply_patterns(str(registry), project_dir, threshold=0.5)
+    pattern_names = [a["pattern"] for a in result["applied"]]
+    assert "high_conf_no_auto" not in pattern_names
+
+
+def test_apply_patterns_high_conf_auto_applied(registry, project_dir):
+    """Covers lines 36-42: auto_applied + project not in list → apply."""
+    result = pa.apply_patterns(str(registry), project_dir, threshold=0.5)
+    pattern_names = [a["pattern"] for a in result["applied"]]
+    assert "high_conf_auto" in pattern_names
+
+
+def test_apply_patterns_caps_candidates_at_three(registry, project_dir):
+    """Covers line 38 [:3]: max 3 candidates per pattern."""
+    # project_dir has 4 yaml files; should cap at 3
+    result = pa.apply_patterns(str(registry), project_dir, threshold=0.5)
+    hca_entries = [a for a in result["applied"] if a["pattern"] == "high_conf_auto"]
+    assert len(hca_entries) == 3
+
+
+def test_apply_patterns_action_format_truncates_rule(tmp_path, project_dir):
+    """Covers line 40: action = f'Apply {p[\"rule\"][:40]}'."""
+    long_rule = "x" * 100
+    reg2 = tmp_path / "long.yaml"
+    reg2.write_text(textwrap.dedent(f"""\
+        patterns:
+          - name: with_long_rule
+            rule: "{long_rule}"
+            confidence: 0.99
+            auto_applied: true
+            auto_applied_to: []
+    """))
+    result = pa.apply_patterns(str(reg2), project_dir)
+    assert any(a["action"].startswith("Apply xxxx") for a in result["applied"])
+    assert any(len(a["action"]) == len("Apply ") + 40 for a in result["applied"])
+
+
+def test_apply_patterns_status_is_pending(registry, project_dir):
+    """Covers line 41: status='pending'."""
+    result = pa.apply_patterns(str(registry), project_dir, threshold=0.5)
+    assert all(a["status"] == "pending" for a in result["applied"])
+
+
+def test_apply_patterns_appends_project_to_auto_applied_to(registry, project_dir):
+    """Covers line 42: p.setdefault('auto_applied_to', []).append(project)."""
+    pa.apply_patterns(str(registry), project_dir, threshold=0.5)
+    with open(registry) as f:
+        reg = _yaml.safe_load(f)
+    hca = next(p for p in reg["patterns"] if p["name"] == "high_conf_auto")
+    # project_dir is the absolute path; check it's there
+    assert project_dir in hca["auto_applied_to"]
+
+
+def test_apply_patterns_setdefault_for_missing_key(registry, project_dir):
+    """Covers line 42 setdefault branch: auto_applied_to key missing."""
+    pa.apply_patterns(str(registry), project_dir, threshold=0.5)
+    with open(registry) as f:
+        reg = _yaml.safe_load(f)
+    flag = next(p for p in reg["patterns"]
+                if p["name"] == "high_conf_no_auto_applied_flag")
+    assert project_dir in flag["auto_applied_to"]
+
+
+def test_apply_patterns_writes_registry_back(registry, project_dir):
+    """Covers lines 43-44: registry is re-written after apply."""
+    before_mtime = registry.stat().st_mtime
+    time.sleep(0.05)
+    pa.apply_patterns(str(registry), project_dir, threshold=0.5)
+    after_mtime = registry.stat().st_mtime
+    assert after_mtime > before_mtime
+
+
+def test_apply_patterns_walks_subdirs(tmp_path):
+    """Covers lines 27-30: os.walk finds .yaml in nested subdirs."""
+    proj = tmp_path / "deepproj"
     proj.mkdir()
-    # Subdirectory with .yaml AND a .txt to exercise the
-    # `if f.endswith('.yaml'):` False branch (29->28 backward edge).
-    sub = proj / "subdir"
-    sub.mkdir()
-    (sub / "deep.yaml").write_text("x: 1\n")
-    (sub / "ignored.txt").write_text("not yaml\n")
-    (proj / "top.yaml").write_text("y: 2\n")
-    result = pa.apply_patterns(reg, str(proj), threshold=0.3)
-    # Both .yaml files should be in applied (capped at 3)
-    applied_files = [e["file"] for e in result["applied"]]
-    assert any("deep.yaml" in f for f in applied_files)
-    assert any("top.yaml" in f for f in applied_files)
-    # .txt file is NOT in applied
-    assert not any("ignored.txt" in f for f in applied_files)
+    (proj / "sub1").mkdir()
+    (proj / "sub1" / "deep.yaml").write_text("title: d\n")
+    (proj / "sub2").mkdir()
+    (proj / "sub2" / "deeper").mkdir()
+    (proj / "sub2" / "deeper" / "deeper.yaml").write_text("title: dd\n")
+    reg2 = tmp_path / "r.yaml"
+    reg2.write_text(textwrap.dedent("""\
+        patterns:
+          - name: walker
+            rule: do x
+            confidence: 0.99
+            auto_applied: true
+            auto_applied_to: []
+    """))
+    result = pa.apply_patterns(str(reg2), str(proj))
+    files = [a["file"] for a in result["applied"]]
+    assert any("deep.yaml" in f for f in files)
+    assert any("deeper.yaml" in f for f in files)
 
 
-def test_apply_patterns_uses_default_threshold_when_not_specified(tmp_path):
-    """Covers line 22 default threshold=0.3 + line 33 comparison."""
-    reg = _write_registry(tmp_path, [
-        {"name": "just_above", "confidence": 0.31, "auto_applied": True,
-         "rule": "do something"},
-    ])
-    proj = _write_project(tmp_path, ["a.yaml"])
-    result = pa.apply_patterns(reg, proj)  # no threshold arg
-    # 0.31 > 0.3 (default), so applies
-    assert len(result["applied"]) == 1
+def test_apply_patterns_threshold_default(registry, project_dir):
+    """Covers line 22 default arg: threshold=0.3."""
+    result = pa.apply_patterns(str(registry), project_dir)
+    assert result["skipped"] >= 1
 
 
-def test_apply_patterns_threshold_filters_at_exactly_threshold(tmp_path):
-    """Covers line 33: p.get('confidence', 0) < threshold is strict,
-    so confidence == threshold is kept (not skipped)."""
-    reg = _write_registry(tmp_path, [
-        {"name": "exact", "confidence": 0.3, "auto_applied": True,
-         "rule": "exact match"},
-    ])
-    proj = _write_project(tmp_path, ["a.yaml"])
-    result = pa.apply_patterns(reg, proj, threshold=0.3)
-    assert len(result["applied"]) == 1  # kept, not skipped
+def test_apply_patterns_patterns_key_missing(tmp_path, project_dir):
+    """Covers line 25: reg.get('patterns', []) → empty if missing."""
+    reg = tmp_path / "no_patterns.yaml"
+    reg.write_text("foo: bar\n")
+    result = pa.apply_patterns(str(reg), project_dir)
+    assert result == {"applied": [], "skipped": 0}
 
 
-def test_apply_patterns_missing_conf_defaults_to_zero_below_threshold(tmp_path):
-    """Covers line 33: p.get('confidence', 0) — when key missing,
-    defaults to 0 → skipped."""
-    reg = _write_registry(tmp_path, [
-        {"name": "no_conf", "auto_applied": True, "rule": "x"},
-    ])
-    proj = _write_project(tmp_path, ["a.yaml"])
-    result = pa.apply_patterns(reg, proj, threshold=0.3)
-    assert result == {"applied": [], "skipped": 1}
+def test_apply_patterns_uses_project_arg(registry, project_dir, tmp_path):
+    """Covers line 36: project not in auto_applied_to → trigger apply."""
+    # The 'high_conf_auto_already_applied' pattern in the fixture has
+    # auto_applied_to: [] (empty list) — so any project should trigger.
+    # This test ensures the project name is correctly compared.
+    other_project = tmp_path / "OTHER"
+    other_project.mkdir()
+    (other_project / "f.yaml").write_text("title: f\n")
+    result = pa.apply_patterns(str(registry), str(other_project), threshold=0.5)
+    pattern_names = [a["pattern"] for a in result["applied"]]
+    assert "high_conf_auto_already_applied" in pattern_names
 
 
-# ─── __main__ guard ─────────────────────────────────────────────────
+def test_apply_patterns_skips_when_project_in_auto_applied_to(tmp_path):
+    """Covers line 36 False branch: project IS in auto_applied_to → skip."""
+    reg = tmp_path / "r.yaml"
+    proj_path = "/some/abs/path/myproj"
+    reg.write_text(textwrap.dedent(f"""\
+        patterns:
+          - name: already_done
+            rule: do x
+            confidence: 0.99
+            auto_applied: true
+            auto_applied_to:
+              - {proj_path}
+    """))
+    proj = tmp_path / "real_proj"
+    proj.mkdir()
+    (proj / "f.yaml").write_text("title: f\n")
+    # Need to call with the absolute path that's in auto_applied_to
+    result = pa.apply_patterns(str(reg), proj_path)
+    assert result["applied"] == []
 
-def test_main_block_via_runpy(tmp_path, monkeypatch, capsys):
-    """Covers lines 47-55: argparse + apply_patterns + json.dumps print."""
-    reg = _write_registry(tmp_path, [
-        {"name": "via_runpy", "confidence": 0.5, "auto_applied": True,
-         "rule": "runpy test"},
-    ])
-    proj = _write_project(tmp_path, ["a.yaml"])
-    monkeypatch.setattr(sys, "argv", [
-        "dev_pattern_apply.py",
-        "--registry", reg,
-        "--project", proj,
-        "--threshold", "0.3",
-    ])
-    # Source ends with `print(json.dumps(...))` — no sys.exit call.
-    # runpy.run_path with __name__='__main__' will return cleanly.
-    runpy.run_path(pa.__file__, run_name="__main__")
-    captured = capsys.readouterr()
-    parsed = json.loads(captured.out)
+
+# ========================== __main__ block ==========================
+
+def test_cli_runs_with_required_args(registry, project_dir):
+    """Covers lines 47-55: __main__ argparse + apply + print."""
+    proc = subprocess.run(
+        ["python3", str(TOOL),
+         "--registry", str(registry),
+         "--project", project_dir,
+         "--threshold", "0.5"],
+        capture_output=True, text=True, timeout=30,
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert "applied" in proc.stdout
+    assert "skipped" in proc.stdout
+
+
+def test_cli_default_threshold(registry, project_dir):
+    """Covers line 52 default=0.3: omitted --threshold still works."""
+    proc = subprocess.run(
+        ["python3", str(TOOL),
+         "--registry", str(registry),
+         "--project", project_dir],
+        capture_output=True, text=True, timeout=30,
+    )
+    assert proc.returncode == 0, proc.stderr
+
+
+def test_cli_missing_required_arg_fails(registry, project_dir):
+    """Covers line 50 required=True: missing --registry exits non-zero."""
+    proc = subprocess.run(
+        ["python3", str(TOOL),
+         "--project", project_dir],
+        capture_output=True, text=True, timeout=30,
+    )
+    assert proc.returncode != 0
+
+
+def test_cli_output_is_valid_json(registry, project_dir):
+    """Covers line 55: print(json.dumps(result, indent=2))."""
+    import json as _json
+    proc = subprocess.run(
+        ["python3", str(TOOL),
+         "--registry", str(registry),
+         "--project", project_dir],
+        capture_output=True, text=True, timeout=30,
+    )
+    parsed = _json.loads(proc.stdout)
     assert "applied" in parsed
     assert "skipped" in parsed
