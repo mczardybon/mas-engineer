@@ -20,10 +20,12 @@ import dev_self_auditor as sa
 
 
 def test_has_honest_scope_marker_recognizes_markers():
-    """Covers line 135: returns True for content containing honest-scope
-    markers like 'preliminary' or 'todo'."""
-    assert sa.has_honest_scope_marker("This is a TODO document") is True
-    assert sa.has_honest_scope_marker("preliminary results") is True
+    """Covers line 135: returns True for content containing HONEST_SCOPE_MARKERS
+    like 'honest scope' or 'NOT verified'."""
+    # True cases — exact regex match required (whitespace boundaries)
+    assert sa.has_honest_scope_marker("This document is honest scope, not absolute.") is True
+    assert sa.has_honest_scope_marker("This is NOT verified, preliminary only.") is True
+    # False case — no marker
     assert sa.has_honest_scope_marker("Final report, 100% verified") is False
 
 
