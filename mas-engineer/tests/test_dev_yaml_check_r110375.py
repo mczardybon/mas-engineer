@@ -16,10 +16,8 @@ from pathlib import Path
 
 import pytest
 
-# Make tools/ importable as a package namespace
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
-
-import dev_yaml_check as mod  # noqa: E402
+# Import as tools.dev_yaml_check so pytest-cov tracks it under tools.X
+import tools.dev_yaml_check as mod  # noqa: E402
 
 
 # ═══════════════════════════════════════════════════════
