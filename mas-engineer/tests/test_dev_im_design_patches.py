@@ -32,11 +32,10 @@ import yaml
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 TOOLS = REPO_ROOT / "tools"
 
-sys.path.insert(0, str(TOOLS))
-sys.path.insert(0, str(TOOLS.parent))
-
-import dev_im_design_patches as design  # noqa: E402
-import dev_message_queue as mq           # noqa: E402
+# Import as tools.X so pytest-cov tracks coverage under the correct
+# module name (the file lives at tools/dev_im_design_patches.py).
+import tools.dev_im_design_patches as design  # noqa: E402
+import tools.dev_message_queue as mq          # noqa: E402
 
 
 # ─── Per-test isolated MAS_PATCHES_DIR + MAS_MQ_ROOT ─────────────
@@ -264,3 +263,96 @@ def test_low_medium_priority_p2_branch(patches_dir, mq_root):
     assert body["apply_status"] == "pending"
     # Top-3 cap: only the first 3 of the 4 findings in `top` are written
     assert len(body["actions"]) == 3
+
+
+# ─── R110-513 coverage tests (target: lines 46, 148-150, 155-158) ────
+
+def test_patches_dir_uses_default_when_no_env_var(tmp_path, monkeypatch):
+    """Covers line 46: _patches_dir() falls back to DEFAULT_PATCHES_DIR
+    when MAS_PATCHES_DIR is unset.
+
+    The default points at <repo>/.mase/im/patches (resolved at module
+    import time via Path(__file__).resolve().parent.parent).  We just
+    verify that _patches_dir() returns the default directory (without
+    writing any actual file).
+    """
+    monkeypatch.delenv("MAS_PATCHES_DIR", raising=False)
+    d = design._patches_dir()
+    assert d == design.DEFAULT_PATCHES_DIR
+    # And that calling it again is idempotent (mkdir exists_ok=True).
+    assert d.exists()
+
+
+def test_suggest_action_yaml_type():
+    """Covers line 141 (yaml branch in _suggest_action)."""
+    assert design._suggest_action({"type": "yaml_typo"}) == "fix_yaml_syntax"
+    assert design._suggest_action({"type": "YAML_SYNTAX_ERROR"}) == "fix_yaml_syntax"
+
+
+def test_suggest_action_secret_and_drift_and_test_and_doc():
+    """Covers lines 142-149: secret/leak, drift, test, doc branches."""
+    # secret / leak
+    assert design._suggest_action({"type": "secret_leak"}) == \
+        "rotate_secret_and_remove_from_history"
+    assert design._suggest_action({"type": "leak"}) == \
+        "rotate_secret_and_remove_from_history"
+    # drift
+    assert design._suggest_action({"type": "category_drift"}) == \
+        "align_with_pre_push_validator"
+    assert design._suggest_action({"type": "DRIFT"}) == \
+        "align_with_pre_push_validator"
+    # test
+    assert design._suggest_action({"type": "test_gap"}) == "add_or_fix_test"
+    # doc
+    assert design._suggest_action({"type": "doc_missing"}) == \
+        "update_documentation"
+
+
+def test_suggest_action_default_branch():
+    """Covers line 150: the default `review_and_manually_fix` branch."""
+    assert design._suggest_action({"type": "unknown"}) == \
+        "review_and_manually_fix"
+    assert design._suggest_action({}) == "review_and_manually_fix"
+
+
+def test_main_block_via_runpy(monkeypatch, capsys):
+    """Covers lines 155-158: `if __name__ == '__main__':` block via runpy.
+
+    runpy.run_path(__name__='__main__') loads the module with
+    __name__ == '__main__' so the guard fires under the test process
+    where pytest-cov IS tracking.  We feed it a JSON msg on stdin
+    via monkeypatch.setattr(sys, "stdin", io.StringIO(json)).
+    """
+    import io
+    import json
+    import runpy
+    # Stub stdin with a valid im.finding.created envelope
+    msg = {
+        "msg_id": "msg-runpy-001",
+        "topic": "im.finding.created",
+        "status": "in_flight",
+        "payload": {
+            "request_id": "rq-runpy-001",
+            "source": "test",
+            "timestamp": "2026-09-12T00:00:00Z",
+            "findings_total": 1,
+            "findings_by_severity": {"high": 1},
+            "findings_by_type": {"yaml_typo": 1},
+            "findings_top": [
+                {"type": "yaml_typo", "severity": "high",
+                 "location": "x.yaml:1", "description": "test"}
+            ],
+        },
+    }
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(msg)))
+    # Set MAS_PATCHES_DIR to a tmp dir so the runpy-executed process_msg
+    # writes there (not the real repo .mase/im/patches).
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        monkeypatch.setenv("MAS_PATCHES_DIR", tmp)
+        runpy.run_path(design.__file__, run_name="__main__")
+    captured = capsys.readouterr()
+    # The main() body prints json.dumps(result, indent=2).  Verify the
+    # output contains patch_type and patch_written.
+    assert "patch_type" in captured.out
+    assert "patch_written" in captured.out

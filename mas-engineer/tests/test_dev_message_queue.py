@@ -35,9 +35,10 @@ import pytest
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 TOOLS = REPO_ROOT / "tools"
 
-sys.path.insert(0, str(TOOLS))
-import dev_message_queue as mq  # noqa: E402
-from dev_message_queue import QueueFullError  # noqa: E402 (F-MQ-189-1)
+# Import as tools.X so pytest-cov tracks coverage under the correct
+# module name (the file lives at tools/dev_message_queue.py).
+import tools.dev_message_queue as mq  # noqa: E402
+from tools.dev_message_queue import QueueFullError  # noqa: E402 (F-MQ-189-1)
 
 
 # ─── Per-test MQ root (isolated from .mase/mq) ───────────────────

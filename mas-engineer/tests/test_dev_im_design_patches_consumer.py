@@ -43,11 +43,10 @@ import yaml
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 TOOLS = REPO_ROOT / "tools"
 
-sys.path.insert(0, str(TOOLS))
-sys.path.insert(0, str(TOOLS.parent))
-
-import dev_im_design_patches as design  # noqa: E402
-import dev_message_queue as mq           # noqa: E402
+# Import as tools.X so pytest-cov tracks coverage under the correct
+# module name (the file lives at tools/dev_im_design_patches.py).
+import tools.dev_im_design_patches as design  # noqa: E402
+import tools.dev_message_queue as mq          # noqa: E402
 
 
 # ─── Per-test isolated MAS_PATCHES_DIR + MAS_MQ_ROOT ─────────────
