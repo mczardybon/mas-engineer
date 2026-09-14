@@ -168,3 +168,22 @@ def test_no_tracked_timestamped_bak_leaked():
     lines = out.stdout.splitlines()
     bak_files = [l for l in lines if ".bak." in l and l.split(".bak.")[-1][:8].isdigit()]
     assert len(bak_files) == 0, f".bak.YYYYMMDD leaked into tracked: {bak_files}"
+
+
+def test_no_tracked_llm_backup_r89_leaked():
+    """R110-550: pre-existing .llm-backup-r89 files (R110-135/R110-195)
+    should be removed from tracking via `git rm --cached` since they
+    match the new R110-549 ignore pattern. They remain in git history
+    (R110-281 forbids force-push), but should not be in current HEAD's
+    tracked-file list."""
+    out = subprocess.run(
+        ["git", "ls-files"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    lines = out.stdout.splitlines()
+    leaked = [l for l in lines if ".llm-backup-r89" in l]
+    assert len(leaked) == 0, (
+        f".llm-backup-r89 files still tracked (should be `git rm --cached`): {leaked}"
+    )

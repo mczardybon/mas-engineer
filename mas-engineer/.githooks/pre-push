@@ -98,4 +98,40 @@ print(','.join(missing))
     fi
 fi
 
+# === 3. R110-550: defense-in-depth — block .gitignore-pattern junk files ===
+# The .gitignore patterns added in R110-549 (**/*.llm-backup-*, **/*.bak.[0-9]*,
+# **/*.yaml.orig, **/*.yaml.rej, **/*~) prevent NEW IDE auto-save junk from
+# being tracked via `git add`, but a determined contributor can bypass with
+# `git add -f`. Once force-added, the file is tracked and `git check-ignore`
+# returns "not ignored" for it (gitignore patterns only apply to NEW untracked
+# files). So we use a hard-coded pattern match against file paths to catch ANY
+# commit that includes these patterns, regardless of whether they were tracked
+# before.
+#
+# R110-281 forbids force-push, so we only flag files in NEW commits
+# (--diff-filter=A), not pre-existing tracked files in older commits.
+#
+# Pattern syntax note: outer `(...)` group is required so the `$` anchor
+# applies to ALL alternatives, not just the last one.
+JUNK_PATTERN='(\.bak\.[0-9_]+|\.yaml\.orig|\.yaml\.rej|\.llm-backup-.*|~)$'
+
+NEW_FILES="$(git diff --diff-filter=A --name-only "${UPSTREAM}..HEAD" 2>/dev/null || true)"
+JUNK_NEW="$(echo "$NEW_FILES" | grep -E "$JUNK_PATTERN" || true)"
+
+if [ -n "$JUNK_NEW" ]; then
+    echo ""
+    echo "🚨 R110-550: New commit(s) contain .gitignore-pattern junk files."
+    echo "  These filenames match R110-549 ignore patterns and should never"
+    echo "  have been force-added. They are almost always IDE auto-save junk."
+    echo "----------------------------------------"
+    echo "$JUNK_NEW"
+    echo "----------------------------------------"
+    echo "Push blocked. Revert the offending file(s) via:"
+    echo "  git rm --cached <file>"
+    echo "  git commit --amend --no-edit"
+    echo ""
+    echo "If legitimate: the pattern list is in .gitignore lines 124-129."
+    exit 1
+fi
+
 exit 0
