@@ -354,3 +354,90 @@ def test_cli_passes_findings_and_duration(tmp_path):
     bp = _read_schedule(workspace)
     assert bp["history"][0]["findings_count"] == 42
     assert bp["history"][0]["duration_sec"] == 300
+
+# ====================== CLI direct-call (R110-553 fix) ============
+# R110-534's _run_cli() approach uses subprocess which is silently
+# broken by /usr/local/lib/python3.11/site-packages/a1_coverage.pth
+# (slug="pth" doesn't combine subprocess .coverage.* into in-process
+# data file). Replace subprocess calls with in-process direct calls.
+
+
+def _call_main(argv):
+    """Execute dev_update_schedule's __name__=='__main__' guard in-process.
+
+    The trap: import + run_module(run_name='__main__') doesn't execute
+    the __name__ guard, because the import already ran it with
+    __name__='tools.dev_update_schedule' (the real name). To re-execute
+    it as if it were a fresh interpreter run we must exec the source
+    code in a fresh namespace where __name__=='__main__'. Then ALL
+    guards + module-level code runs again.
+    """
+    import io as _io
+    source_path = REPO_ROOT / "tools" / "dev_update_schedule.py"
+    source = source_path.read_text()
+
+    saved_argv = sys.argv
+    try:
+        sys.argv = ['dev_update_schedule.py'] + list(argv)
+        namespace = {
+            "__name__": "__main__",
+            "__file__": str(source_path),
+            "__builtins__": __builtins__,
+        }
+        # Stop at the __name__=='__main__' guard by raising SystemExit
+        # AFTER the guard fires. The guard is a 5-line block
+        # (if len(argv) < 4: print; exit; update_schedule()).
+        # We capture exit via exec by catching SystemExit via exec
+        # running in a single statement; OR we set up signal-trap.
+        # Simplest: use redirect_stdout to capture print, then let
+        # the guard raise SystemExit normally.
+        captured_stdout = _io.StringIO()
+        import contextlib
+        try:
+            with contextlib.redirect_stdout(captured_stdout):
+                with contextlib.redirect_stderr(captured_stdout):
+                    exec(compile(source, str(source_path), 'exec'), namespace)
+        except SystemExit as ei:
+            code = ei.code if isinstance(ei.code, int) else 1
+            return code, captured_stdout.getvalue()
+        # No SystemExit → script ran but didn't call sys.exit.
+        # Check stdout for "Round 1 saved" or "Usage:" markers.
+        return 0, captured_stdout.getvalue()
+    finally:
+        sys.argv = saved_argv
+
+
+def test_cli_direct_no_args():
+    """CLI: 0 args → exit 1 (lines 87-89).
+
+    `if len(sys.argv) < 4` triggers Usage print + sys.exit(1).
+    """
+    code, out = _call_main([])  # len(argv) is just sys.argv[0] + 0 = 1
+    assert code == 1
+    assert "Usage: dev_update_schedule.py" in out
+
+
+def test_cli_direct_partial_args():
+    """CLI: 2 args → argv length 3 < 4 → exit 1.
+
+    Covers same block as no-args but with realistic partial argv
+    (2 user args + the script name = 3 total < 4).
+    """
+    code, out = _call_main(['ws', '5'])  # 2 args → argv len 3 → < 4
+    assert code == 1
+
+
+def test_cli_direct_full_args(tmp_path):
+    """CLI: 4 args → exit 0 (lines 86-91 entirely).
+
+    Covers line 87 (condition False) + line 91 (call update_schedule).
+    """
+    workspace = _make_workspace(tmp_path)
+    code, out = _call_main([str(workspace), '5', '100'])
+    assert code == 0
+    assert 'Round 1 saved' in out
+    bp = _read_schedule(workspace)
+    assert len(bp['history']) == 1
+    assert bp['history'][0]['findings_count'] == 5
+    assert bp['history'][0]['duration_sec'] == 100
+
