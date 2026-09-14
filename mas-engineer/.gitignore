@@ -107,3 +107,23 @@ recipe/sub/sub_test-agent.yaml
 # a spurious mas-engineer/.git/ directory at the worktree root). Git never
 # re-creates this on its own — only phantom commit tools write here.
 mas-engineer/.git/
+
+# R110-549: IDE auto-save backup patterns. The repo already had `recipe/sub/*.bak`
+# and `recipe/sub/*.yaml.bak` from R110-233, but 2026-09-14 inspection found 2
+# additional IDE-junk patterns leaking into origin:
+#   - `*.llm-backup-r89` (LLM-editor hybrid autosave, recipe/sub/)
+#   - `*.bak.YYYYMMDD_HHMMSS` (editor timestamped backups, e.g. .bak.20260819_052053)
+# These are inert backups that an IDE/editor auto-saves next to the real file.
+# Without these patterns, R110-408/410 (single-junk fix) and R110-546/547 (multi-
+# junk recovery via EXEMPT_HASHES) are symptoms — root-cause is the IDE/editor not
+# honoring the existing .gitignore for adjacent files. Adding the patterns here
+# makes the IDE/editor write stay untracked from the moment of creation, so no
+# future `[]` subject commit can ever leak these files.
+# Note: the 2 pre-existing `.llm-backup-r89` files in origin (R110-549 sweep)
+# are IMMUTABLE per R110-281 (force-push verbot) — see EXEMPT_HASHES follow-up
+# in R110-550 if remediation needed.
+**/*.llm-backup-*
+**/*.bak.[0-9]*
+**/*.yaml.orig
+**/*.yaml.rej
+**/*~
