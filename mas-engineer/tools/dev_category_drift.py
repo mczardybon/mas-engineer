@@ -241,6 +241,21 @@ EXEMPT_HASHES = frozenset({
     "336720b",  # 2026-09-13 14:12:27 🧪 R110-510 — coverage-push sprint #10: 58 tests for tools/dev_workflow_runner.py (0% → 87%)
     "bbbf96a",  # 2026-09-13 14:07:02 🧪 R110-509 — coverage-push sprint #10: 61 tests for tools/dev_goose_manager.py (0% → 98%)
     "27c1bfa",  # 2026-09-13 13:43:48 🧪 R110-506/507/508 — coverage-push sprint #9: 3 test-files für große low-coverage tools (R110-501 follow-up)
+    # R110-546: 2 additional pre-existing IDE auto-commit drift commits
+    # found on origin/mas-t-tests during the post-rebuild sweep
+    # (2026-09-14). Both IMMUTABLE per R110-281 (force-push verbot).
+    # Same root-cause as R110-490 (67cef4a): Hermes-MAS-Engineer author,
+    # empty `[]` subject, single-file IDE auto-commit pattern (R110-408/410).
+    # 875cb21 = 4120-line agent_schema.yaml whitespace-refactor + restore
+    # 2c0a78e = 0-byte recipe/sub/sub_-.yaml (R110-410 pre-push-hook
+    #           would have rejected this with "EMPTY FILE" error)
+    # Per the R110-491 / R110-370 / R110-388 / R110-392 / R110-490
+    # exempt pattern: hash-only exemption in this single-source-of-truth
+    # list, which both tests import locally (single-source-of-truth fix).
+    # Follow-up R110-547 will investigate whether the `recipe/sub/` dir
+    # itself can be .gitignored entirely (recipe stub directory).
+    "875cb21",  # 2026-09-14 11:42:57 [] (Hermes-MAS-Engineer, agent_schema.yaml 4120 +/- lines, R110-490 mirror, R110-408/410 IDE auto-commit bug)
+    "2c0a78e",  # 2026-09-14 12:11:29 [] (Hermes-MAS-Engineer, recipe/sub/sub_-.yaml 0 bytes, pre-push-hook would have rejected with "EMPTY FILE")
 })
 
 
