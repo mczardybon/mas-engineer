@@ -256,6 +256,25 @@ EXEMPT_HASHES = frozenset({
     # itself can be .gitignored entirely (recipe stub directory).
     "875cb21",  # 2026-09-14 11:42:57 [] (Hermes-MAS-Engineer, agent_schema.yaml 4120 +/- lines, R110-490 mirror, R110-408/410 IDE auto-commit bug)
     "2c0a78e",  # 2026-09-14 12:11:29 [] (Hermes-MAS-Engineer, recipe/sub/sub_-.yaml 0 bytes, pre-push-hook would have rejected with "EMPTY FILE")
+    # R110-557: 2 additional pre-existing drift commits on origin/mas-t-tests,
+    # IMMUTABLE per R110-281 (force-push verbot). Both surfaced in the
+    # post-R110-545 rebuild sweep (2026-09-14). Per the R110-491 / R110-545 /
+    # R110-370 / R110-388 / R110-392 mirror pattern: hash-only exemption in
+    # this single-source-of-truth list. Both
+    # tests/test_pre_push_check_1_5_skill_alignment.py::test_check_1_5_origin_cleanup_recent_commits_match
+    # AND tests/test_r110259_category_drift_scope.py::test_r110257_subject_accepted_by_detector_in_real_git_history
+    # import EXEMPT_HASHES locally, so this single-source fix clears both
+    # tests in lockstep (the 3-source-lockstep contract per R110-545).
+    # Split:
+    #   - 0f6c0f0 (R110-550) = 🛡️ pre-push defense-in-depth for .gitignore-bypass.
+    #     Subject uses 🛡️ emoji, which is NOT in the validator's hardcoded
+    #     7-emoji ALLOWED set (R110-545 lockstep). Detector sees it as drift
+    #     because the legacy category regex doesn't accept 🛡️. Pre-existing.
+    #   - 5dabcd1 (R110-552) = threshold 80→95 push (validator/detector
+    #     threshold tightening). Subject is empty `[]` (R110-408/410 IDE
+    #     auto-commit pattern re-surfaced during the literal-synth sweep).
+    "0f6c0f0",  # 2026-09-14 13:50:42 🛡️ R110-550 — pre-push defense-in-depth against .gitignore-bypass junk (🛡️ not in 7 canonical emojis, R110-545)
+    "5dabcd1",  # 2026-09-14 17:46:41 [] (R110-552 — threshold 80→95 push, empty subject from R110-408/410 IDE auto-commit pattern)
 })
 
 
