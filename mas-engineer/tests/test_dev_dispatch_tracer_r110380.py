@@ -721,7 +721,7 @@ DISPATCH_LOG = _dt.DISPATCH_LOG
 STATUS_FILE = _dt.STATUS_FILE
 """
         with mock.patch("builtins.print"):  # suppress output
-            exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard,                                        "sys": sys, "print": print, "json": json})
+            exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard, "cli_main": dt.cli_main,                                        "sys": sys, "print": print, "json": json})
         # The log file should have an entry
         assert log.exists()
         entry = json.loads(log.read_text().strip().splitlines()[-1])
@@ -744,7 +744,7 @@ DISPATCH_LOG = _dt.DISPATCH_LOG
 STATUS_FILE = _dt.STATUS_FILE
 """
         with mock.patch("builtins.print"):
-            exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard,                                        "sys": sys, "print": print, "json": json})
+            exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard, "cli_main": dt.cli_main,                                        "sys": sys, "print": print, "json": json})
         entry = json.loads(log.read_text().strip().splitlines()[-1])
         assert entry["mode"] == "async"
         assert entry["parent_id"] == "parent_007"
@@ -766,7 +766,7 @@ DISPATCH_LOG = _dt.DISPATCH_LOG
 STATUS_FILE = _dt.STATUS_FILE
 """
         with mock.patch("builtins.print"):
-            exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard,                                        "sys": sys, "print": print, "json": json})
+            exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard, "cli_main": dt.cli_main,                                        "sys": sys, "print": print, "json": json})
         entry = json.loads(log.read_text().strip().splitlines()[-1])
         assert entry["status"] == "completed"
         assert entry["duration_ms"] == 250
@@ -787,7 +787,7 @@ DISPATCH_LOG = _dt.DISPATCH_LOG
 STATUS_FILE = _dt.STATUS_FILE
 """
         with mock.patch("builtins.print"):
-            exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard,                                        "sys": sys, "print": print, "json": json})
+            exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard, "cli_main": dt.cli_main,                                        "sys": sys, "print": print, "json": json})
         entry = json.loads(log.read_text().strip().splitlines()[-1])
         assert entry["status"] == "failed"
 
@@ -806,7 +806,7 @@ _dt.STATUS_FILE = '/tmp/x'
 DISPATCH_LOG = _dt.DISPATCH_LOG
 STATUS_FILE = _dt.STATUS_FILE
 """
-        exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard,                                        "sys": sys, "print": print, "json": json})
+        exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard, "cli_main": dt.cli_main,                                        "sys": sys, "print": print, "json": json})
         out = capsys.readouterr().out
         assert "DISPATCH-STATUS" in out
 
@@ -825,7 +825,7 @@ _dt.STATUS_FILE = '/tmp/x'
 DISPATCH_LOG = _dt.DISPATCH_LOG
 STATUS_FILE = _dt.STATUS_FILE
 """
-        exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard,                                        "sys": sys, "print": print, "json": json})
+        exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard, "cli_main": dt.cli_main,                                        "sys": sys, "print": print, "json": json})
         out = capsys.readouterr().out
         # JSON output of tree
         assert "e1" in out
@@ -845,7 +845,7 @@ _dt.STATUS_FILE = '/tmp/x'
 DISPATCH_LOG = _dt.DISPATCH_LOG
 STATUS_FILE = _dt.STATUS_FILE
 """
-        exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard,                                        "sys": sys, "print": print, "json": json})
+        exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard, "cli_main": dt.cli_main,                                        "sys": sys, "print": print, "json": json})
         out = capsys.readouterr().out
         assert "e1" in out
 
@@ -864,7 +864,7 @@ _dt.STATUS_FILE = '/tmp/nonexistent-{datetime.now().isoformat()}.json'
 DISPATCH_LOG = _dt.DISPATCH_LOG
 STATUS_FILE = _dt.STATUS_FILE
 """
-        exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard,                                        "sys": sys, "print": print, "json": json})
+        exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard, "cli_main": dt.cli_main,                                        "sys": sys, "print": print, "json": json})
         out = capsys.readouterr().out
         assert "No Dashboard" in out
 
@@ -882,7 +882,7 @@ _dt.STATUS_FILE = '/tmp/x'
 DISPATCH_LOG = _dt.DISPATCH_LOG
 STATUS_FILE = _dt.STATUS_FILE
 """
-        exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard,                                        "sys": sys, "print": print, "json": json})
+        exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard, "cli_main": dt.cli_main,                                        "sys": sys, "print": print, "json": json})
         out = capsys.readouterr().out
         assert "Unbekannter Command" in out
         assert "Available" in out
@@ -901,7 +901,7 @@ _dt.STATUS_FILE = '/tmp/x'
 DISPATCH_LOG = _dt.DISPATCH_LOG
 STATUS_FILE = _dt.STATUS_FILE
 """
-        exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard,                                        "sys": sys, "print": print, "json": json})
+        exec(prelude + main_block, {"__name__": "__main__", "__builtins__": __builtins__, "log_dispatch": dt.log_dispatch, "complete_dispatch": dt.complete_dispatch, "show_status": dt.show_status, "build_tree": dt.build_tree, "update_dashboard": dt.update_dashboard, "cli_main": dt.cli_main,                                        "sys": sys, "print": print, "json": json})
         out = capsys.readouterr().out
         # Falls through to else, prints "Unbekannter Command"
         assert "Unbekannter Command" in out
