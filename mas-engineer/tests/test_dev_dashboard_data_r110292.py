@@ -705,6 +705,26 @@ class TestSendNotification:
                             lambda p: str(candidate_root / p.replace("~/", "")))
         (candidate_root / "mas-engineer" / ".mase" / "dashboards").mkdir(
             parents=True)
+        # R110-551: also patch os.path.isdir to ignore .mase dirs OUTSIDE
+        # the test sandbox. This prevents /tmp/.mase left over by other
+        # tests (e.g. MQ tests via dev_dispatch_tracker) from making the
+        # walk-up find a "real" .mase in /tmp and bypassing the fallback.
+        _real_isdir = os.path.isdir
+        def _sandbox_isdir(p):
+            # Only return True for dirs INSIDE tmp_path or the candidate_root.
+            # Stricter: if path is "/tmp/.mase" exactly, lie and say False.
+            try:
+                pp = os.path.abspath(str(p))
+            except Exception:
+                return _real_isdir(p)
+            if pp.startswith(str(tmp_path)) or pp.startswith(str(candidate_root)):
+                return _real_isdir(p)
+            # Allow real_path to be detected only if it's not a "leaked"
+            # /tmp/.mase from previous test runs.
+            if pp in ("/tmp/.mase", "/tmp/.mase/dashboards"):
+                return False
+            return _real_isdir(p)
+        monkeypatch.setattr("os.path.isdir", _sandbox_isdir)
         ddd.send_dashboard_notification()
         assert (candidate_root / "mas-engineer" / ".mase" / "dashboards" /
                 ".updated").exists()
