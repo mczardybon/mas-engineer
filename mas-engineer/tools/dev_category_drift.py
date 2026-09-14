@@ -85,7 +85,9 @@ CONVENTIONAL_COMMIT_RE = re.compile(
 # R110-491: added ⚡ (performance/optimization category) to match the
 # validator Check 1.5 allowlist. R110-491 commit 5c1f973 used ⚡ and
 # passed the validator, so the detector must also accept it.
-ALLOWED_EMOJI_PREFIXES = ("🔧", "📝", "📚", "📊", "🧹", "⚡", "📋")
+# R110-545: 🧪 added for test-coverage sprints (R110-506/507/508/509/510)
+# — must mirror validator's ALLOWED_EMOJIS set below.
+ALLOWED_EMOJI_PREFIXES = ("🔧", "📝", "📚", "📊", "🧹", "⚡", "📋", "🧪")
 
 # R-sprint round-up prefix (R110-304): the no-emoji `R<round>-<num>:
 # <topic> — desc` form. Used in R110-303 (3 commits: 627d67a, e69bfbf,
@@ -218,6 +220,27 @@ EXEMPT_HASHES = frozenset({
     "67cef4a",  # 2026-09-12 [] (R110-490 — IDE auto-commit bug, R110-408/410 fix: reset+rm, but `[]` subject already on origin)
     "ac954c8",  # 2026-09-11 test(coverage)+fix: R110-456 — yaml_generator_generic (legacy `+fix:` variant of test(coverage): pattern)
     "776ddef",  # 2026-09-12 [] (pre-existing, found during R110-491 sweep on origin/mas-t-tests, similar R110-315/372/388/392 pattern)
+    # R110-545: 6 additional pre-existing drift commits found during the
+    # post-rebuild sweep on origin/mas-t-tests (2026-09-14). All IMMUTABLE
+    # per R110-281 (force-push verbot). Per the R110-491 / R110-370 / R110-388
+    # / R110-392 pattern, we exempt by hash here. Split into 3 categories:
+    #   - 1x `[]` (IDE auto-commit pattern, R110-408/410 fix already in
+    #     place but the `[]` subject is already on origin)
+    #   - 2x `restore ... coverage tests for ...` (legacy pre-R110-491
+    #     pattern from R110-516 / R110-520 sprints)
+    #   - 3x `🧪 R110-...` (test-tube emoji NOT in the validator's
+    #     hardcoded ALLOWED_EMOJIS set of 7; introduced before the
+    #     emoji-lockstep rule (R110-78) was enforced). The emoji will be
+    #     added to ALLOWED_EMOJI_PREFIXES below for future commits.
+    # NOTE: bb079b7 (Hermes-MAS-Engineer [] agent_schema rewrite) was reset
+    # out via `git reset --soft HEAD~1` per R110-408/410 fix, so it is no
+    # longer in HEAD's ancestry and no exemption is needed.
+    "ed1e718",  # 2026-09-13 05:35:07 [] (pre-existing, similar R110-372/388/392 pattern)
+    "9e7d4f9",  # 2026-09-13 21:58:18 restore R110-516 coverage tests for dev_pattern_apply.py
+    "3be246e",  # 2026-09-13 20:26:28 restore R110-520 coverage tests for dev_yaml_generator_core.py
+    "336720b",  # 2026-09-13 14:12:27 🧪 R110-510 — coverage-push sprint #10: 58 tests for tools/dev_workflow_runner.py (0% → 87%)
+    "bbbf96a",  # 2026-09-13 14:07:02 🧪 R110-509 — coverage-push sprint #10: 61 tests for tools/dev_goose_manager.py (0% → 98%)
+    "27c1bfa",  # 2026-09-13 13:43:48 🧪 R110-506/507/508 — coverage-push sprint #9: 3 test-files für große low-coverage tools (R110-501 follow-up)
 })
 
 

@@ -435,9 +435,13 @@ class TestMain:
         (tmp_path / "a.txt").write_text("a")
         subprocess.run(["git", "add", "a.txt"], cwd=tmp_path, check=True,
                        capture_output=True)
+        # Use a recent date well INSIDE the --since=30 day window to
+        # avoid off-by-one day-boundary flakes. Earlier commit-date
+        # 2026-08-15 was exactly 30 days before "today" (2026-09-14)
+        # and git log --since=YYYY-MM-DD filtered it out at midnight.
         env = {"PATH": "/usr/bin:/bin",
-               "GIT_COMMITTER_DATE": "2026-08-15T00:00:00+00:00",
-               "GIT_AUTHOR_DATE": "2026-08-15T00:00:00+00:00"}
+               "GIT_COMMITTER_DATE": "2026-09-10T12:00:00+00:00",
+               "GIT_AUTHOR_DATE": "2026-09-10T12:00:00+00:00"}
         subprocess.run(["git", "commit", "-m", "no category drift subject"],
                        cwd=tmp_path, check=True, capture_output=True, env=env)
         monkeypatch.setattr(sys, "argv",
