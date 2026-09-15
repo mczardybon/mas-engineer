@@ -409,56 +409,79 @@ def test_scan_structure_score_capped_at_zero():
 # ─── __main__ ────────────────────────────────────────────────────
 
 def test_main_no_arg_uses_cwd():
-    """Covers line 81 True branch: len(sys.argv)==1 → use os.getcwd()."""
+    """Covers line 81 True branch: len(sys.argv)==1 → use os.getcwd().
+
+    R110-566 fix: explicitly `os.chdir(tmp)` so the scan reads from tmp,
+    NOT from whatever cwd some other test left behind via monkeypatch.chdir.
+    Also pop the module from sys.modules before re-running via runpy to
+    silence the RuntimeWarning + prevent stale-module state pollution.
+    """
     import runpy
+    import io
+    from contextlib import redirect_stdout
     with tempfile.TemporaryDirectory() as tmp:
         _write(Path(tmp) / "x.yaml",
                "version: 1\ninstructions: y\nprompt: '© (v1.0.0) NUR do the test task here'\nsettings: {timeout: 600, max_turns: 100}\n")
+        old_cwd = os.getcwd()
         old_argv = sys.argv
+        old_modules = sys.modules.pop("tools.dev_fast_scan", None)
         try:
+            os.chdir(tmp)
             sys.argv = ["dev_fast_scan.py"]  # len==1
-            import io
-            from contextlib import redirect_stdout
             buf = io.StringIO()
             with redirect_stdout(buf):
                 runpy.run_module("tools.dev_fast_scan", run_name="__main__")
             data = json.loads(buf.getvalue())
         finally:
             sys.argv = old_argv
+            os.chdir(old_cwd)
+            if old_modules is not None:
+                sys.modules["tools.dev_fast_scan"] = old_modules
     assert "findings" in data
     assert "scores" in data
 
 
 def test_main_with_path_arg():
-    """Covers line 81 False branch: sys.argv[1] used as path."""
+    """Covers line 81 False branch: sys.argv[1] used as path.
+
+    R110-566-extra: pop sys.modules entry before runpy to silence
+    RuntimeWarning ('module found in sys.modules after import').
+    """
     import runpy
+    import io
+    from contextlib import redirect_stdout
     with tempfile.TemporaryDirectory() as tmp:
         _write(Path(tmp) / "x.yaml",
                "version: 1\ninstructions: y\nprompt: '© (v1.0.0) NUR do the test task here'\nsettings: {timeout: 600, max_turns: 100}\n")
         old_argv = sys.argv
+        old_modules = sys.modules.pop("tools.dev_fast_scan", None)
         try:
             sys.argv = ["dev_fast_scan.py", tmp]
-            import io
-            from contextlib import redirect_stdout
             buf = io.StringIO()
             with redirect_stdout(buf):
                 runpy.run_module("tools.dev_fast_scan", run_name="__main__")
             data = json.loads(buf.getvalue())
         finally:
             sys.argv = old_argv
+            if old_modules is not None:
+                sys.modules["tools.dev_fast_scan"] = old_modules
     assert data["agents_scanned"] == 1
 
 
 def test_main_with_validate_flag():
-    """Covers line 82-84: --validate → sys.exit(0) with valid+score."""
+    """Covers line 82-84: --validate → sys.exit(0) with valid+score.
+
+    R110-566-extra: pop sys.modules entry before runpy.
+    """
     import runpy
+    import io
+    from contextlib import redirect_stdout
     with tempfile.TemporaryDirectory() as tmp:
         _write(Path(tmp) / "x.yaml", "version: 1\ninstructions: y\n")
         old_argv = sys.argv
+        old_modules = sys.modules.pop("tools.dev_fast_scan", None)
         try:
             sys.argv = ["dev_fast_scan.py", tmp, "--validate"]
-            import io
-            from contextlib import redirect_stdout
             buf = io.StringIO()
             with redirect_stdout(buf):
                 with pytest.raises(SystemExit) as exc:
@@ -467,6 +490,8 @@ def test_main_with_validate_flag():
             data = json.loads(buf.getvalue())
         finally:
             sys.argv = old_argv
+            if old_modules is not None:
+                sys.modules["tools.dev_fast_scan"] = old_modules
     assert "valid" in data
     assert "score" in data
     assert data["valid"] is True
@@ -474,23 +499,29 @@ def test_main_with_validate_flag():
 
 
 def test_main_aggregate_scores():
-    """Covers line 86-88: aggregate JSON with structure_score, scan_duration."""
+    """Covers line 86-88: aggregate JSON with structure_score, scan_duration.
+
+    R110-566-extra: pop sys.modules entry before runpy.
+    """
     import runpy
+    import io
+    from contextlib import redirect_stdout
     with tempfile.TemporaryDirectory() as tmp:
         _write(Path(tmp) / "a.yaml",
                "version: 1\ninstructions: y\nprompt: '© (v1.0.0) NUR do the test task here'\nsettings: {timeout: 600, max_turns: 100}\n")
         _write(Path(tmp) / "b.yaml", "version: 1\ninstructions: y\n")  # no prompt
         old_argv = sys.argv
+        old_modules = sys.modules.pop("tools.dev_fast_scan", None)
         try:
             sys.argv = ["dev_fast_scan.py", tmp]
-            import io
-            from contextlib import redirect_stdout
             buf = io.StringIO()
             with redirect_stdout(buf):
                 runpy.run_module("tools.dev_fast_scan", run_name="__main__")
             data = json.loads(buf.getvalue())
         finally:
             sys.argv = old_argv
+            if old_modules is not None:
+                sys.modules["tools.dev_fast_scan"] = old_modules
     assert "structure_score" in data
     assert "scan_duration" in data
     # structure_score = avg of (10, 10, 10) = 10
