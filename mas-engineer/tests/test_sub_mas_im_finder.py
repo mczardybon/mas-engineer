@@ -87,14 +87,6 @@ def test_im_finder_mentions_feature_types():
         "im-finder must mention feature-type coverage (R36+)"
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="R110-493: 10 legitimate INVARIANT drifts in recipe/instructions "
-           "(agenten, german, task_workflows, violations, workflows etc.). "
-           "Pre-existing R110-119 issue — these BLOCKER findings are real "
-           "spec-drifts between tests and recipe, not scanner bugs. "
-           "Tracked separately in R110-493 followup sprint."
-)
 def test_step_0_6_self_audit_attaches_mm9_ext():
     """R110-120: STEP 0.6 wires sub_mas-self-audit as MM9-EXT findings."""
     # 1. Run self-audit
