@@ -3268,3 +3268,88 @@ file run the installer only once, so they keep their 30s budget.
 - R110-78, R110-174, R110-281, R110-296/297 — same verification patterns
 - Skill: `pre-push-body-claim-verification` (re-run targeted vs. suite)
 
+
+---
+
+## R110-559 — close directive: fix pre-existing synth-test flake in test_r110279_runtime_var_skip (2026-09-15)
+
+### R110-559 (b895205) 🔧 — fix `test_detector_finds_drift_for_synth_test` synth-file race
+
+**Bug:** The 2 subtests in `tests/test_r110279_runtime_var_skip.py` both write a synth
+file under `tests/` (`test_zz_r110279_synth.py` and `test_zz_r110279_runtime.py`) and
+call the detector subprocess with `cwd=REPO_ROOT`. The `conftest.py::pytest_sessionstart`
+(R110-318) deletes `tests/test_zz_*.py` ONCE at session start — NOT between tests.
+So if the runtime subtest crashed/timeout'd before its `finally: os.unlink`, its
+synth file leaked into the next subtest. Even when unlink did succeed, pytest fixture
+teardown could remove our freshly-written synth file MID-detector-run (the detector
+takes 60-170s), causing it to return 83 findings instead of 84. The secondary
+`FileNotFoundError` on the `finally: os.unlink` then masked the primary assertion.
+
+**Fix (3 parts in commit b895205, 09-15 05:42 UTC):**
+1. Autouse fixture `_r110559_synth_cleanup` removes BOTH stale synth files BEFORE
+   and AFTER each subtest, with `FileNotFoundError` tolerated.
+2. Atomic write via `os.open(O_CREAT|O_EXCL|O_WRONLY, 0o644)` with plain-write
+   fallback on `FileExistsError` (defense in depth).
+3. The `finally: os.unlink(test_path)` block uses try/except `FileNotFoundError`
+   so a missing file is harmless — eliminates the secondary error that masked
+   the primary assertion.
+
+**Sibling fix:** No new test code; the 2 subtests in this file just got more
+defense. The fix landed in b895205, but no STATUS.md entry was written at the
+time (R110-252 lesson 4 was missed). R110-559-post-flight (cb70e0d) closes
+that audit-trail gap.
+
+| File | Change | +/− |
+|------|--------|-----|
+| `tests/test_r110279_runtime_var_skip.py` | autouse cleanup fixture + atomic write + try/except unlink | +98/-13 |
+
+### R110-559-post-flight (cb70e0d) 📝 — close directive (was OPEN since 09-14)
+
+**Mangel:** R110-559 directive (14df65b, 09-14 01:36) was OPEN with no
+follow-up status docs after the b895205 fix landed. The previous
+R110-565/R110-566/R110-567/568 sprints in this session never mentioned it.
+Plus phantom-commit c5dbf3e (IDE auto-commit junk empty `sub_-.yaml`,
+R110-546/558 pattern) had been injected on top of the R110-559 fix.
+
+**Fix:**
+- `.mase/directives/R110-559-...md`: status OPEN → CLOSED + verification
+  block (5x isolation, 3927 suite PASS, phantom-commit reverted).
+- `logs/e2e-evidence-gen2/post-flight-audit-R110-559.json`: NEW audit
+  JSON with sub-agent count (116, was 117 — explained by phantom-revert
+  cleanup of empty `sub_-.yaml`).
+- phantom-commit c5dbf3e reverted locally via `git reset --soft` +
+  `git restore --staged` + `rm`.
+
+| File | Change | +/− |
+|------|--------|-----|
+| `.mase/directives/R110-559-fix-r110279-synth-test-flake.md` | status: OPEN → CLOSED | +9 |
+| `logs/e2e-evidence-gen2/post-flight-audit-R110-559.json` | NEW audit (116/116, 77/77, 100.0%) | +14 |
+
+### Combined result
+
+**Before (R110-559 directive baseline 09-14):**
+- 1 FAILED + 3916 PASSED in 503.63s (test_r110279 flake)
+
+**After (R110-559 fix + post-flight closure):**
+- isolation 5x:        18/18 PASS × 5 in 103-108s (deterministic)
+- full r110*.py sweep: 3927 PASSED + 6 skipped + 1 xfailed + 6 warnings + 0 FAILED in 265.62s
+- sub_recipe audit:    116/116 agents, 77/77 refs, 100.0% (was 117, -1 garbage file from phantom revert)
+- directive status:    OPEN → CLOSED
+
+### Pre-push-gate
+
+- Step 0 (secret scan):          OK 0 secrets
+- Step 1 (validator):            SKIPPED (DeepSeek 401, key ok)
+- Step 2 (targeted pytest):      OK 18/18×5 isolation + 65/65 r110542+r110553 + 3927/3927 suite
+- Step 3 (commit msg, 📝):       OK per protocol
+- Step 4 (push):                 OK via credential-helper (0590594..cb70e0d)
+- Step 5 (post-flight audit):    OK 116/116, 77/77, 100.0%
+
+### Refs
+
+- R110-559 — directive (14df65b) + code fix (b895205)
+- R110-559-post-flight (cb70e0d) — this status block + audit JSON
+- R110-252 lesson 4 — STATUS.md + CHANGELOG + post-flight JSON mandatory
+- R110-546/558 — IDE auto-commit revert pattern (c5dbf3e cleanup)
+- R110-78, R110-174, R110-281, R110-296/297 — verification-theater family
+- Skill: `pre-push-body-claim-verification`
