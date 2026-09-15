@@ -166,7 +166,11 @@ After R110-559 fix + verification:
 
 ## Status
 
-OPEN — to be picked up as next sprint or in-prompt if user requests.
+CLOSED 2026-09-15 (commit b895205). Verification:
+- isolation 5x: 18/18 PASS × 5 in 103-108s (deterministic)
+- suite `tests/test_r110*.py`: 3927 PASSED + 6 skipped + 1 xfailed + 0 FAILED in 265.62s
+- phantom-commit c5dbf3e (IDE auto-commit junk empty sub_-.yaml, R110-546/558 pattern): REVERTED
+- R-evidence: logs/e2e-evidence-gen2/post-flight-audit-R110-559.json
 
 ## Refs
 
