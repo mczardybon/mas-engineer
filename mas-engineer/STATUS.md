@@ -3106,3 +3106,91 @@ now reports `RESULT: ✅ PASS` (was 6 violations before).
 - R110-281 — force-push-verbote
 - R110-257 — SOT evidence/directive SOT
 - Skill: `mas-engineer-coverage-push-workflow`
+
+---
+
+## R110-562..564 — perf-fix + im_finder call-site repair + author-disclosure (2026-09-15)
+
+### R110-562 (93cbaa6) ⚡ — PERF: O(N²) docstring check + per-file idx rebuild
+
+| File | Delta | Tests |
+|------|-------|-------|
+| `tools/dev_spec_invariant.py` | `_is_docstring_or_comment` O(N²)→mask O(1) | 6.4s → 0.08s |
+| `tools/dev_self_audit.py` | `_build_repo_literal_index` called ONCE (was per-file) | 45s → 1.5s |
+| `tools/dev_self_audit.py` | Added `index[rel_path]` for unquoted YAML | (semantic) |
+| `tools/dev_self_audit.py` | Removed `exclude_path` (mask-based exclusion semantics) | (semantic) |
+
+**Tests:** 162/162 PASS in 9.4s (was 117s pre-fix, ~12× speedup overall).
+**Validator:** SKIPPED (DeepSeek 401, key ok — known blocker, documented).
+**Post-flight:** 116/116 sub_agents, 77/77 sub_recipe_refs resolve, 100% coverage.
+
+### R110-563 (ccd3e8e) 🔧 — fix `tools/dev_im_finder_scan_lib` call-site broken by R110-562
+
+**Bug:** R110-562 changed `_build_repo_literal_index(repo_root)` (1 arg) and
+`_scan_pattern_b(lines, rel, idx, stem, current_file_literals)` (5 args), but
+the only external call site at `tools/dev_im_finder_scan_lib.py:check_stale_literal`
+still passed the OLD 2-arg / 4-arg signatures. Every file-scan raised `TypeError`
+→ caught silently → 0 STALE-LITERAL findings emitted.
+
+**Fix:**
+- `tools/dev_im_finder_scan_lib.py`: pass 1 arg to `_build_repo_literal_index`
+- `tools/dev_im_finder_scan_lib.py`: compute `current_file_literals` via
+  `_extract_load_bearing_literals(lines)`, pass as 5th arg to `_scan_pattern_b`
+- Update the explanatory comment block (old `exclude_path` path no longer exists)
+
+| File | Change | +/− |
+|------|--------|-----|
+| `tools/dev_im_finder_scan_lib.py` | 1-arg call + extracted literals + 5-arg call | +13/−12 |
+| `tools/dev_category_drift.py` | 2 hashes (d6c50ce, dd70846) added to EXEMPT_HASHES per R110-491/545/557 mirror pattern | +25/−0 |
+
+**Tests:**
+- 242/242 im_finder tests PASS (was 240/242 before fix)
+- 20/20 lockstep tests PASS (r110259 + check_1_5)
+- 13/13 sub_mas_im_finder tests PASS
+- 436 PASSED + 1 xfail + 1 xpass in 117.40s (full critical suite, 1 retry)
+- 2 isolated flakes pre-existing, unrelated to this commit:
+  * `test_main_no_arg_uses_cwd` (RuntimeWarning, passes 10/10 in isolation)
+  * `test_skills_install_is_idempotent` (passes 10/10 in isolation)
+
+### R110-564 (f3a375e) 📝 — post-flight evidence + author-identity transparenz-disclosure
+
+**MANGEL:** R110-563 author was `Hermes Agent <hermes@nous.local>` instead
+of the canonical `Hermes-MAS-Engineer <Hermes@mas-engineer.local>`. Root
+cause: `git config user.email` was set to the old IDE-session value; I fixed
+the config AFTER `git commit`, not before. Per R110-24 + R110-174 amend-is-verboten,
+and R110-281 force-push-verbot, both recovery paths are user-rule violations.
+Correct recovery: transparenz-follow-up commit (this one) that adds the
+post-flight evidence file + documents the MANGEL.
+
+| File | Change |
+|------|--------|
+| `logs/e2e-evidence-gen2/post-flight-audit-R110-563.json` | NEW (force-added per R110-258 .gitignore contract) |
+
+**E2E result (final, post-R110-564):** 116/116 sub_agents, 77/77 sub_recipe_refs,
+100.0% coverage. No `--amend`, no `--force-push`, no `set-url PAT`. Commit log
+preserves the original (wrong) author as audit trail.
+
+### Pre-push-gate (R110-563/564 push)
+
+- Step 0 (secret scan, tracked):         OK 0 secrets (only `***` placeholders + test-fixture fakes)
+- Step 1 (validator, goose CLI):          SKIPPED — DeepSeek 401 (key ok, same blocker as R110-562/561)
+- Step 2 (e2e + pytest):
+    - target test:                        OK PASS in 0.13s
+    - lockstep 20/20:                     OK in 0.90s
+    - full critical suite:                OK 436 PASS + 1 xfail + 1 xpass in 117.40s (1 retry on pre-existing flake)
+- Step 3 (commit msg, 🔧/📝 R-format):   OK per protocol (em-dash, R-num, 5-section body)
+- Step 4 (push):                          OK via credential-helper (no `set-url` PAT-leak)
+- Step 5 (post-flight audit):             OK 116/116, 77/77, 100.0% coverage
+- Step 6 (author-identity):               MANGEL on R110-563 → disclosed in R110-564
+
+**Refs:**
+- R110-562 (93cbaa6) — perf-refactor that broke the call-site
+- R110-561 (45513b0) — earlier 🔧 fix for dev_spec_invariant regex
+- R110-78 — verification-theater pattern (the 4th self-catch via target-test re-run)
+- R110-174 — body-claim-verification (242/242 + 20/20 + 436 numbers all re-verified)
+- R110-281 — force-push-verbot (recovery via transparenz, not amend/force)
+- R110-258 — .gitignore + force-add evidence pattern
+- R110-545 — 3-source-lockstep validator+detector+test
+- Skill: `mas-engineer-commit-protocol` (5-section body template)
+- Skill: `pre-push-gate` (full Step 0-5 procedure)
+
