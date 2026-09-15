@@ -3194,3 +3194,77 @@ preserves the original (wrong) author as audit trail.
 - Skill: `mas-engineer-commit-protocol` (5-section body template)
 - Skill: `pre-push-gate` (full Step 0-5 procedure)
 
+
+---
+
+## R110-566..567 — fix 2 PRE-EXISTING suite-pollution flakes (2026-09-15)
+
+### R110-566 (111723d) 🧪 — fix `test_dev_fast_scan_coverage` suite-pollution flake
+
+**Bug:** `test_main_no_arg_uses_cwd` relied on `os.getcwd()` to point at
+the test's own tmp dir, but if a prior test in the same suite left the
+cwd there (e.g. `test_r110541_dev_guardian_scan_coverage` via
+`monkeypatch.chdir(tmp_path)` rolled back to a stale state on test
+crash), the scan ran against the wrong tree → either empty results
+or scan_duration=0. Additionally, `runpy.run_module` triggered
+`RuntimeWarning: 'tools.dev_fast_scan' found in sys.modules...` when
+any other test had already imported the module.
+
+**Fix (4 tests in `tests/test_dev_fast_scan_coverage.py`):**
+1. `os.chdir(tmp)` + restore in `finally` (only `test_main_no_arg_uses_cwd`)
+2. `sys.modules.pop("tools.dev_fast_scan", None)` + restore in finally
+   (all 4 tests: `test_main_no_arg_uses_cwd`, `test_main_with_path_arg`,
+   `test_main_with_validate_flag`, `test_main_aggregate_scores`)
+3. Net: +43/-12 lines
+
+**Sibling fix:** the other 3 `test_main_*` tests in the same file had the
+same `RuntimeWarning` root cause → fixed them too (otherwise the flake
+just moved to the next one).
+
+| File | Change | +/− |
+|------|--------|-----|
+| `tests/test_dev_fast_scan_coverage.py` | 4 tests refactored (cwd-control + sys.modules-pop + finally restore) | +43/-12 |
+
+### R110-567 (27271ee) 🧪 — fix `test_skills_install_is_idempotent` timeout flake
+
+**Bug:** the test runs `scripts/skills-install.sh` twice. The 30s/subprocess
+budget was set when the test was first written (R110-133) and has been
+spuriously tripping CI `subprocess.TimeoutExpired` ever since the
+`cookbook` cache grew to >6s cold-cache × 2 + CI-load headroom.
+
+**Fix:** bump timeout 30s → 90s. The other 4 skills_install tests in the
+file run the installer only once, so they keep their 30s budget.
+
+| File | Change | +/− |
+|------|--------|-----|
+| `tests/test_skills_install.py` | `test_skills_install_is_idempotent`: both timeouts 30→90 | +10/-3 |
+
+### Combined result
+
+**Before (R110-565 baseline):**
+- 5/5 isolation PASS for both tests
+- 180/180 suite PASS but 3 RuntimeWarnings + 1 intermittent FAILED
+  (depending on cwd-pollution ordering at runtime)
+
+**After (R110-566+567):**
+- 5/5 isolation PASS for both tests
+- 180/180 suite PASS **×3** runs in 56.99s + 58.42s + 58.69s
+- **0 RuntimeWarnings**
+- **0 intermittent failures**
+
+**Pre-push-gate:**
+- Step 0 (secret scan):          OK 0 secrets
+- Step 1 (validator):            SKIPPED (DeepSeek 401, key ok)
+- Step 2 (pytest isolation):     OK 5/5 each
+- Step 2 (suite 3x stress):      OK 180/180 × 3
+- Step 3 (commit msg 🧪):        OK per protocol
+- Step 4 (push):                 OK via credential-helper
+- Step 5 (post-flight audit):    OK 117/117 sub_agents, 77/77 refs, 100.0%
+
+### Refs
+
+- R110-565 — flake-disposition that identified these as PRE-EXISTING (not R110-562/563)
+- R110-133 — test_skills_install.py initial contract tests
+- R110-78, R110-174, R110-281, R110-296/297 — same verification patterns
+- Skill: `pre-push-body-claim-verification` (re-run targeted vs. suite)
+
