@@ -22,18 +22,13 @@ documented/spec'd).
   human verification). With goose, the validator can run in CI
   context automatically.
 
-## Status: ALREADY COMPLETE (this session, 2026-08-04)
+## Status
 
-Discovered during T5e (acceptance test for Check 17):
-  - `/root/.local/bin/goose` exists
-  - Size: 301,772,304 bytes (~288 MB)
-  - Version: `goose 1.45.0` (from `goose --version`)
-  - Path setup: `which goose` returns empty (not on default PATH);
-    full path is `/root/.local/bin/goose`
+CLOSED 2026-09-15. Goose 1.45.0 already installed at /root/.local/bin/goose since 2026-08-04 (recorded in this directive's Status block). Verification command in spec ran successfully at discovery time. PATH-persistence in ~/.bashrc is noted as optional cosmetic future-work (R110-NR).
 
-**Note for future sessions:** The `~/.bashrc` PATH-update to make
-`goose` discoverable via `which` was NOT done. Future work: add
-`export PATH=$PATH:/root/.local/bin` to `~/.bashrc` for cleaner UX.
+Evidence: ls -la /root/.local/bin/goose → 301,772,304 bytes (~288 MB); /root/.local/bin/goose --version → 1.45.0
+
+Sibling fixes: N/A (was always already-done; just discovery record)
 
 ## Scope
 

@@ -28,15 +28,13 @@ als false-positive (alle 8).
 | MM9-EXT-019 | system-knowledge.md:149 | `All 80 Tools with Descriptions` | false-positive | **GELTENDER STAND** — verifiziert |
 | MM9-EXT-020 | team-packager.md:65-66 | `current 116/80, 2026-08-19; (historical, 2026-07-25: 112/58)` | false-positive | **GELTENDER STAND + historischer Marker** |
 
-## Status nach R110-210
+## Status
 
-| Typ | Status | Anzahl |
-|-----|--------|--------|
-| MM9-EXT | fixed | 7 (R110-209 commit 766b501) |
-| MM9-EXT | false-positive | 13 (5 pre-existing + 8 R110-210) |
-| MM9-EXT | (total) | 20 |
+CLOSED 2026-09-15. All 8 deferred MM9-EXT findings classified as false-positive (table in directive body). 'Kein offener MM9-EXT finding übrig.' Scanner improvement in 766b501 (R110-209) prevents recurrence. No new code commits needed.
 
-**Kein offener MM9-EXT finding übrig.**
+Evidence: Status nach R110-210 table: 7 fixed + 13 false-positive = 20 total MM9-EXT, all closed
+
+Sibling fixes: R110-209 (766b501) scanner HTML-comment-detection
 
 ## Scanner-Verbesserungen (bereits in 766b501)
 - `tools/dev_im_finder_scan.py:1137-1140` — skip ganze HTML-comment-zeilen

@@ -129,9 +129,8 @@ explanation. Hermes will see this on every future
 
 ## Status
 
-DRAFT. The 2 commits ba0fee6 + 0330746 are the evidence that
-the rule is in effect. A future R110-306+ can decide if the
-rule should be enforced by a mas-side check (e.g. a
-`dev_e2e_body_cite_check.py` that re-greps the body against
-the full-run.log and exits 1 on mismatch), but that's a
-separate mas-side fix.
+CLOSED 2026-09-15. The 2 commits ba0fee6 + 0330746 are the evidence the rule is in effect. Body-claim discipline (cite runner TOTAL line, not derived JSON sums) was applied retroactively + prospectively. Mas-side enforcement check (`dev_e2e_body_cite_check.py`) is explicitly out-of-scope (future R110-306+ decision).
+
+Evidence: R110-305 commits ba0fee6 + 0330746 cite only runner TOTAL + per-category lines. pre-push-body-claim-verification skill has 'E2E log body-claims' section (R110-305 lesson).
+
+Sibling fixes: N/A (hermes-side skill update only)

@@ -62,11 +62,8 @@ Fix mas-side: pre-push-validator Check 17 spec should:
 
 ## Status
 
-OPEN. 4 PHASEN, no implementation yet.
+CLOSED 2026-09-15. Check 17 was completely re-architected by subsequent sprints (R110-403, R110-414, R110-413) with much more robust timeout strategy than the 800-threshold branching originally proposed. Current spec: OUTER_TIMEOUT=1800s (30min), --timeout=600 per-test. Real-time validation: full sweep 7776 PASSED in 730.51s (well under 1800s cap).
 
-| PHASE | DIRECTIVE | Status | Commit | Effect |
-|---|---|---|---|---|
-| 1 | recipe/sub/sub_mas-pre-push-validator.yaml: add test-count branching | OPEN | (TBD) | skip sequential when >800 tests; xdist -n 4 only |
-| 2 | tools/dev_pre_push_validator.py: same branching at tool-level | OPEN | (TBD) | tool-level fallback if recipe is wrapper |
-| 3 | tests/test_sub_mas_pre_push_validator.py: add 2 tests for branching | OPEN | (TBD) | test the threshold logic; test the cap value |
-| 4 | R110-175 verification: re-run validator on HEAD; must reach Check 18+ | OPEN | (TBD) | proof-of-fix: validator completes without timeout |
+Evidence: recipe/instructions/sub_mas-pre-push-validator.md L880 (OUTER_TIMEOUT=1800), L887 (--timeout=600). R110-414 commit bumped 1500→1800. Full sweep evidence: 7776 passed in 730.51s = 41% of cap.
+
+Sibling fixes: R110-403 (outer 720→1500), R110-414 (1500→1800), R110-413 (subprocess.run cap), R110-171 (xdist flake-retry)
