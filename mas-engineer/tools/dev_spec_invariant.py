@@ -75,7 +75,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 COUNT_ASSERT_RE = re.compile(
-    r'''assert\s+["'](\d+)\s+(\w[\w-]*)["']\s+in\s+''')
+    r'''assert\s+["'](\d+)\s+(\w[\w-]*)["']\s+in\s+(["'])''')
 COUNT_DECLARE_RE = re.compile(r'(\d+)\s+(\w[\w-]*)')
 
 TYPE_MIN_LEN = 2

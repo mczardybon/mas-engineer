@@ -2,7 +2,7 @@
 
 Covers the 13% coverage of dev_analyst.py (196 stmts, ~170 missed).
 Strategy: build a minimal FakeScanner + FakeYaml/FakeFile class so we
-can exercise all 7 check functions + main(). The scanner is mocked
+can exercise all 7 analyst-functions + main(). The scanner is mocked
 because dev_analyst only touches scanner.files (no real I/O).
 """
 import sys

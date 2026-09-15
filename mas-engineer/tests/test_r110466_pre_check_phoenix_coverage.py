@@ -21,8 +21,8 @@ Targets:
   - found → passed=True "found"
   - missing → passed=False "missing"
 
-- run(workspace): 7 checks, returns {title, passed, failed,
-  duration_s, checks}
+- run(workspace): returns {title, passed, failed,
+  duration_s, checks} — the 7 phoenix T1-T7 sub-checks are listed above
 """
 
 import sys

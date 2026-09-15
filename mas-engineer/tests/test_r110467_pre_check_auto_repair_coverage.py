@@ -13,7 +13,7 @@ Targets:
 - _check_all_have_cmd_or_action(wfs): T8 — non-empty cmd/action
 - _check_no_placeholders(wfs): T9 — not echo-only
 - _check_recipe_restore_ref(wfs): T10 — 'restore' in cmd+action
-- run(workspace): 7 checks, plus yaml-error fallback
+- run(workspace): 7 auto-repair T1+T4-T10 sub-checks (yaml-error fallback also covered)
 """
 
 import sys

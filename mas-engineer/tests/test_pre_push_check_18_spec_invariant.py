@@ -51,9 +51,16 @@ def _fake_assertion(count, typ):
     The 'assert' keyword is assembled at runtime so this source file
     itself never contains the assert-quote pattern — keeping the
     real-repo SD/spec-invariant scans free of fixture noise.
+
+    R110-561: the RHS is QUOTED ('content') rather than a bareword, so
+    the spec-invariant regex (which requires a literal-string after the
+    'in' keyword) recognises this as a count-declaration rather than a
+    runtime output-string assert (e.g. `assert "2 recovery" in
+    r["detail"]`).  This preserves the R110-118 contract: bareword RHS
+    = output assertion, literal RHS = count declaration.
     """
     kw = "assert"
-    return f'{kw} "{count} {typ}" in content\n'
+    return f'{kw} "{count} {typ}" in "content"\n'
 
 
 def test_check18_match_passes(tmp_path):
@@ -105,3 +112,101 @@ def test_check18_empty_recipe_excluded(tmp_path):
     # empty file itself contributed nothing
     assert all(f.code == "INVARIANT-checks" for f in findings)
     assert all(f.severity == "BLOCKER" for f in findings)
+
+
+# ---------------------------------------------------------------------------
+# R110-561 — runtime-output asserts vs spec-declaration asserts
+# ---------------------------------------------------------------------------
+#
+# Bug pre-R110-561: regex was `assert "N type" in <anything>`, which made
+# runtime output-asserts like `assert "2 recovery" in r["detail"]` look
+# like spec count-declarations of "2 recovery". With 13 such false-positives
+# in the test tree, the spec-invariant tool was blocking all pushes with
+# stale R110-466/467-era drifts.
+#
+# R110-561 contract:
+#   - assert "N type" in "literal-string"   → spec count-declaration
+#   - assert "N type" in <bareword|r["x"]>  → runtime output-assert, IGNORED
+# ---------------------------------------------------------------------------
+
+def _bareword_assertion(count, typ):
+    """Runtime-style fixture: `assert "N type" in content` (no quotes on RHS).
+
+    These do NOT count as spec-declarations.  Used to verify that the
+    R110-561 regex ignores them.
+    """
+    kw = "assert"
+    return f'{kw} "{count} {typ}" in captured\n'
+
+
+def _dict_access_assertion(count, typ):
+    """Runtime-style fixture: `assert "N type" in r["detail"]` (subscript).
+
+    Also a runtime output-assert — must be ignored by R110-561 regex.
+    """
+    kw = "assert"
+    return f'{kw} "{count} {typ}" in r["detail"]\n'
+
+
+def test_check18_bareword_rhs_is_not_count_declaration(tmp_path):
+    """R110-561: bareword RHS like `in captured` is a runtime-assert, NOT a
+    spec-declaration. No BLOCKER should fire even when the bareword RHS
+    does not match any recipe literal.
+    """
+    fake_test = _bareword_assertion(2, "recovery")
+    fake_recipe = "# no declarations here\n"
+    repo = _write_fixture(tmp_path, fake_recipe, fake_test)
+
+    ta = extract_count_assertions_from_tests(repo / "tests")
+    # the bareword assertion is NOT extracted as a spec-declaration
+    assert "recovery" not in ta or ta["recovery"] == set()
+
+
+def test_check18_dict_access_rhs_is_not_count_declaration(tmp_path):
+    """R110-561: dict-access RHS like `in r["detail"]` is a runtime-assert."""
+    fake_test = _dict_access_assertion(2, "recovery")
+    fake_recipe = "# no declarations here\n"
+    repo = _write_fixture(tmp_path, fake_recipe, fake_test)
+
+    ta = extract_count_assertions_from_tests(repo / "tests")
+    assert "recovery" not in ta or ta["recovery"] == set()
+
+
+def test_check18_quoted_rhs_is_count_declaration(tmp_path):
+    """R110-561: literal-string RHS like `in "content"` IS a spec-declaration.
+
+    With no matching recipe declaration, it should emit an INVARIANT-recovery
+    BLOCKER (regression test: the fix didn't accidentally suppress ALL
+    assertions).
+    """
+    fake_test = _fake_assertion(2, "recovery")
+    fake_recipe = "# no declarations here\n"
+    repo = _write_fixture(tmp_path, fake_recipe, fake_test)
+
+    ta = extract_count_assertions_from_tests(repo / "tests")
+    assert ta == {"recovery": {2}}, ta
+
+    res = run_spec_invariant_check(repo)
+    findings = res.to_findings()
+    assert any(f.code == "INVARIANT-recovery" and f.severity == "BLOCKER"
+               for f in findings), findings
+
+
+def test_check18_mixed_runtime_and_spec_in_same_file(tmp_path):
+    """R110-561: a fixture mixing both styles picks up only the spec one."""
+    mixed = (
+        _bareword_assertion(5, "recovery") +
+        _dict_access_assertion(2, "steps") +
+        _fake_assertion(7, "checks")  # spec-declaration
+    )
+    fake_recipe = "description: 'runs all 7 checks in order'\n"
+    repo = _write_fixture(tmp_path, fake_recipe, mixed)
+
+    ta = extract_count_assertions_from_tests(repo / "tests")
+    # only the quoted RHS "checks" was extracted; barewords ignored
+    assert ta == {"checks": {7}}, ta
+
+    res = run_spec_invariant_check(repo)
+    findings = res.to_findings()
+    # no drift — the spec-declaration matches the recipe
+    assert findings == [], findings
