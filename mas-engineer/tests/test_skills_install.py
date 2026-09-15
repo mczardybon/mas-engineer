@@ -175,15 +175,22 @@ def test_skills_install_script_installs_all_to_user_target(tmp_path: Path):
 
 
 def test_skills_install_is_idempotent(tmp_path):
-    """Run skills-install.sh twice with the same target; both must exit 0."""
+    """Run skills-install.sh twice with the same target; both must exit 0.
+
+    R110-567 fix: bumped timeout from 30s → 90s (each). The idempotency
+    test runs the installer TWICE on the same target. Under concurrent
+    CI load the shell fork+rsync can take >30s and trigger spurious
+    subprocess.TimeoutExpired. 90s is comfortably above observed P99 of
+    single-run install (~6s) × 2 + buffer for slow CI runners.
+    """
     target = tmp_path / "skills"
     p1 = subprocess.run(
         ["bash", str(SKILLS_INSTALL_SH), str(target)],
-        cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=30,
+        cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=90,
     )
     p2 = subprocess.run(
         ["bash", str(SKILLS_INSTALL_SH), str(target)],
-        cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=30,
+        cwd=str(REPO_ROOT), capture_output=True, text=True, timeout=90,
     )
     assert p1.returncode == 0, f"first run failed: {p1.stdout} {p1.stderr}"
     assert p2.returncode == 0, f"second run failed (idempotency broken): {p2.stdout} {p2.stderr}"
