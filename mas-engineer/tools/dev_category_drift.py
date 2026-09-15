@@ -275,6 +275,31 @@ EXEMPT_HASHES = frozenset({
     #     auto-commit pattern re-surfaced during the literal-synth sweep).
     "0f6c0f0",  # 2026-09-14 13:50:42 🛡️ R110-550 — pre-push defense-in-depth against .gitignore-bypass junk (🛡️ not in 7 canonical emojis, R110-545)
     "5dabcd1",  # 2026-09-14 17:46:41 [] (R110-552 — threshold 80→95 push, empty subject from R110-408/410 IDE auto-commit pattern)
+    # R110-563: 2 additional pre-existing IDE auto-commit drift commits
+    # found on origin/mas-t-tests during the post-R110-562 rebuild sweep
+    # (2026-09-15). Both IMMUTABLE per R110-281 (force-push verbot).
+    # Same root-cause as R110-490 / R110-545 / R110-557: Hermes-MAS-Engineer
+    # author, empty `[]` subject (R110-408/410 IDE auto-commit bug).
+    #   - d6c50ce (2026-09-15 19:00:46): 0-byte `recipe/sub/sub_-.yaml`
+    #     (R110-410 pre-push-hook would have rejected this with "EMPTY
+    #     FILE" error — the hook fired AFTER this junk already landed
+    #     on origin).
+    #   - dd70846 (2026-09-15 18:47:25): sed-edit + IDE auto-commit race
+    #     in tools/dev_im_finder_scan_lib.py — Hermes sed-edited the
+    #     file while the IDE auto-committed an earlier revision of the
+    #     25 +/- lines + 70 lines of mas-engineer/.mase/pipeline/
+    #     self_audit.yaml. The cwd=REPO_ROOT patch (R110-563 cargo
+    #     cult: see R110-408/410 mirror) was reapplied as a follow-up
+    #     in d6c50ce (the empty-file commit) — proper fix is in
+    #     commit 93cbaa6 (R110-562).
+    # Per the R110-491 / R110-545 / R110-557 / R110-370 / R110-388 /
+    # R110-392 exempt pattern: hash-only exemption here. The test
+    # tests/test_r110259_category_drift_scope.py::test_r110257_subject_accepted_by_detector_in_real_git_history
+    # imports EXEMPT_HASHES from this single-source-of-truth, so this
+    # fix clears that test in lockstep (the 3-source-lockstep contract
+    # per R110-545).
+    "d6c50ce",  # 2026-09-15 19:00:46 [] (R110-563 — R110-410 pre-push-hook would reject "EMPTY FILE", but already on origin)
+    "dd70846",  # 2026-09-15 18:47:25 [] (R110-563 — sed+IDE auto-commit race, fix in 93cbaa6 R110-562)
 })
 
 

@@ -933,19 +933,20 @@ def check_stale_literal(findings, repo_root='.'):
                 continue
             file_stem = Path(fp).stem
             per_file_idx[rel] = 0
-            # Index excludes THIS file (dev_self_audit.run_self_audit
-            # semantics). R110-124-ADAPTATION (R110-116 honest): the
-            # directive draft passed the scope DIRECTORY as exclude_path,
-            # but _build_repo_literal_index compares file-abspaths against
-            # the exclude-abspath — a file never equals the dir, so
-            # nothing was excluded and every literal self-indexed (Pattern
-            # B became a silent no-op). Per-file exclusion restores the
-            # producer semantics.
-            repo_index = _mod._build_repo_literal_index(
-                Path(repo_root), Path(fp))
-            # Use dev_self_audit._scan_pattern_b directly
+            # R110-562: "exclude THIS file" semantics (originally passed as
+            # exclude_path) now happens inside _scan_pattern_b via the
+            # current_file_literals count comparison (see dev_self_audit.py
+            # R110-562 docstring on _scan_pattern_b).
+            # R110-562: _build_repo_literal_index no longer takes exclude_path
+            # (the "exclude this file" semantics moved into _scan_pattern_b via
+            # current_file_literals count comparison — a literal counts as
+            # "found elsewhere" iff repo_index count > current_file_count).
+            repo_index = _mod._build_repo_literal_index(Path(repo_root))
+            # Compute current_file_literals here so we can pass it to _scan_pattern_b
+            # (its 5th arg, added in R110-562 alongside the mask-based exclusion).
+            current_file_literals = _mod._extract_load_bearing_literals(lines)
             for f in _mod._scan_pattern_b(
-                    lines, rel, repo_index, file_stem):
+                    lines, rel, repo_index, file_stem, current_file_literals):
                 per_file_idx[rel] += 1
                 add_finding(
                     f'STALE-LITERAL-{per_file_idx[rel]:03d}',
