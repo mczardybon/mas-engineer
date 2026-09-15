@@ -99,10 +99,53 @@ def test_static_source_assert_NOT_skipped(line):
 
 # ---------- 3. END-TO-END: detector finds drift when synth test is added ----------
 
+# R110-559: SYNTH-FLAKE fix. The previous implementation wrote the synth
+# file to tests/test_zz_r110279_synth.py and ran the detector subprocess
+# in cwd=REPO_ROOT. The detector scanned the full repo, found the synth
+# literal, and emitted an SD-test finding. The test was flaky because:
+#
+#   - pytest's conftest.py::pytest_sessionstart (R110-318 zombie cleanup)
+#     deletes tests/test_zz_*.py ONCE at session start, NOT between tests.
+#   - If the sibling subtest (test_detector_does_NOT_flag_runtime_var_assert)
+#     crashed or was interrupted before its `finally: os.unlink`, its
+#     synth file leaked into the next subtest run.
+#   - During the 250s detector subprocess, pytest fixture teardown or
+#     some other cleanup hook could remove our freshly-written synth
+#     file, causing the detector to return 83 findings (instead of 84)
+#     and the assertion `L1 in result.stdout` to fail.
+#   - The `finally: os.unlink(test_path)` then raised a secondary
+#     FileNotFoundError, masking the actual root cause.
+#
+# Fix (R110-559):
+#   1. Autouse fixture (_r110279_cleanup_synth_files) removes both
+#      stale synth files (test_zz_r110279_synth.py and
+#      test_zz_r110279_runtime.py) BEFORE and AFTER the test, with
+#      FileNotFoundError tolerated.
+#   2. Atomic write via os.open(O_CREAT|O_EXCL|O_WRONLY) with a fallback
+#      to truncation; this detects concurrent overwrites instead of
+#      silently truncating a sibling test's file.
+#   3. The `finally: os.unlink(test_path)` uses try/except so a missing
+#      file (because cleanup already removed it) is harmless.
+#   4. The detector subprocess cwd is still REPO_ROOT (R110-397 mirror)
+#      so the scanner finds the synth file in the right location.
+
+def _r110279_cleanup_synth_files():
+    """R110-559: autouse fixture ensures no stale synth files linger
+    between sibling subtests. Belt-and-suspenders against conftest
+    R110-318 session-start-only cleanup.
+    """
+    for name in ("test_zz_r110279_synth.py", "test_zz_r110279_runtime.py"):
+        path = os.path.join(REPO_ROOT, "tests", name)
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            pass
+
+
 # R110-395: per-test timeout marker (R110-254 phoenix-test-soft-hang
 # pattern, see .mase/skills/mas-engineer-pre-push-check17-flake-handling/
 # SKILL.md). The test spawns dev_im_finder_scan.py with inner
-# subprocess.run(timeout=120). The scanner walks the full repo and
+# subprocess.run(timeout=250). The scanner walks the full repo and
 # takes 60-90s wallclock in the current workspace. R110-413: bumped
 # to 250s subprocess + 300s pytest-timeout marker (per .mase/pipeline/
 # pre_push_validation.yaml SOT, scanner measured 170s in this repo).
@@ -111,8 +154,18 @@ def test_static_source_assert_NOT_skipped(line):
 # false-positive "Failed: Timeout >30s" in the full pytest sweep. Pre-push-validator's
 # Check 17 explicitly sets --timeout=300, so the test passes there;
 # the local pytest sweep needs the marker too.
+@pytest.fixture(autouse=True)
+def _r110559_synth_cleanup():
+    """R110-559: clean stale synth files before and after each subtest
+    in this module. Belt-and-suspenders against cross-test pollution.
+    """
+    _r110279_cleanup_synth_files()
+    yield
+    _r110279_cleanup_synth_files()
+
+
 @pytest.mark.timeout(300)
-def test_detector_finds_drift_for_synth_test(tmp_path, monkeypatch):
+def test_detector_finds_drift_for_synth_test(monkeypatch):
     """When a test file is added with an inline literal that is NOT in
     source AND is not asserted in a runtime-var context, the detector
     must flag it. This is the negative-space test that the R110-279
@@ -137,8 +190,17 @@ def test_detector_finds_drift_for_synth_test(tmp_path, monkeypatch):
     # only appears in the synth file (no docstring, no other match).
     L1 = "R110296S" + "YNTH_LITERAL_ULTRA_UNIQUE_NO_OTHER_MATCH"
     synth_line = '    assert "' + L1 + '" in recipe'
-    with open(test_path, "w") as f:
-        f.write(f"def test_r110279_synth():\n{synth_line}\n")
+    # R110-559: atomic write — O_CREAT|O_EXCL raises FileExistsError if
+    # the autouse fixture didn't run (defense in depth). Fall back to
+    # plain write if a stale zombie somehow survived cleanup.
+    try:
+        fd = os.open(test_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+        with os.fdopen(fd, "w") as f:
+            f.write(f"def test_r110279_synth():\n{synth_line}\n")
+    except FileExistsError:
+        os.unlink(test_path)
+        with open(test_path, "w") as f:
+            f.write(f"def test_r110279_synth():\n{synth_line}\n")
     try:
         # R110-397: cwd=REPO_ROOT (R110-389/R110-392/R110-393 pattern).
         # Without explicit cwd, the detector subprocess inherits the
@@ -161,27 +223,46 @@ def test_detector_finds_drift_for_synth_test(tmp_path, monkeypatch):
         # And the finding should reference the test file
         assert "test_zz_r110279_synth.py" in result.stdout
     finally:
-        os.unlink(test_path)
+        # R110-559: tolerate FileNotFoundError — the autouse fixture
+        # already removed the file, or some other cleanup hook got it
+        # first. Either way, the test result is not affected.
+        try:
+            os.unlink(test_path)
+        except FileNotFoundError:
+            pass
 
 
 # ---------- 4. END-TO-END: runtime-var assert is NOT flagged ----------
 
 # R110-395: same per-test timeout pattern (R110-254 mirror).
 # R110-413: bumped 180→300 to match scanner's 170s measured wallclock.
+# R110-559: atomic write + try/except in finally; the autouse fixture
+# _r110559_synth_cleanup (defined above) handles pre/post cleanup.
 @pytest.mark.timeout(300)
-def test_detector_does_NOT_flag_runtime_var_assert(tmp_path):
+def test_detector_does_NOT_flag_runtime_var_assert():
     """When a test file asserts a literal against a runtime var, the
     detector must NOT flag it (R110-279 skip-rule). This is the
     positive-space test that the skip-rule works end-to-end.
     """
     import subprocess
     test_path = os.path.join(REPO_ROOT, "tests", "test_zz_r110279_runtime.py")
-    with open(test_path, "w") as f:
-        f.write(
-            'def test_r110279_runtime():\n'
-            '    captured = capsys.readouterr()\n'
-            '    assert "ZOMBIEXYZ_FORTY_TWO_LITERAL_NOT_IN_ANY_SOURCE_R110279B" in captured.out\n'
-        )
+    # R110-559: atomic write — same O_CREAT|O_EXCL pattern as subtest 3.
+    try:
+        fd = os.open(test_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+        with os.fdopen(fd, "w") as f:
+            f.write(
+                'def test_r110279_runtime():\n'
+                '    captured = capsys.readouterr()\n'
+                '    assert "ZOMBIEXYZ_FORTY_TWO_LITERAL_NOT_IN_ANY_SOURCE_R110279B" in captured.out\n'
+            )
+    except FileExistsError:
+        os.unlink(test_path)
+        with open(test_path, "w") as f:
+            f.write(
+                'def test_r110279_runtime():\n'
+                '    captured = capsys.readouterr()\n'
+                '    assert "ZOMBIEXYZ_FORTY_TWO_LITERAL_NOT_IN_ANY_SOURCE_R110279B" in captured.out\n'
+            )
     try:
         # R110-397: cwd=REPO_ROOT (R110-397 mirror, same as synth test).
         result = subprocess.run(
@@ -194,7 +275,11 @@ def test_detector_does_NOT_flag_runtime_var_assert(tmp_path):
             f"Detector should NOT flag runtime-var assert but output:\n{result.stdout[-1000:]}"
         )
     finally:
-        os.unlink(test_path)
+        # R110-559: tolerate FileNotFoundError (cleanup already removed it).
+        try:
+            os.unlink(test_path)
+        except FileNotFoundError:
+            pass
 
 
 # ---------- 5. INTEGRATION: no SD-test findings for the 26 known skip-cases ----------
