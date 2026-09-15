@@ -86,6 +86,11 @@ TYPE_BLACKLIST = {
 
 # Heuristic: a line inside a docstring (""" ... """) or comment.
 def _is_docstring_or_comment(lines, idx):
+    """DEPRECATED (R110-562): use _docstring_or_comment_mask for O(1) lookup.
+    Kept for any external callers; this implementation is O(N²) per call,
+    which made extract_count_assertions_from_tests take 6.4s on 388 files.
+    New callers should build the mask once per file via the helper below.
+    """
     stripped = lines[idx].lstrip()
     if stripped.startswith('#'):
         return True
@@ -96,6 +101,28 @@ def _is_docstring_or_comment(lines, idx):
         if s.startswith('"""') or '"""' in s:
             open_quotes += 1
     return open_quotes % 2 == 1
+
+
+def _docstring_or_comment_mask(lines):
+    '''R110-562: precompute per-line mask matching _is_docstring_or_comment
+    semantics but in O(N) time per file instead of O(N**2). For each line:
+    True if it is a comment (hash-prefixed) OR lies inside a triple-quoted
+    string region (count of lines containing triple-quote tokens up to and
+    including this index is odd). The odd-count rule is the same heuristic
+    the old per-line function used, so output is bit-for-bit identical.
+    '''
+    n = len(lines)
+    mask = [False] * n
+    quote_count = 0
+    for i in range(n):
+        s = lines[i].strip()
+        if s.startswith('#'):
+            mask[i] = True
+            continue
+        if s.startswith('"""') or '"""' in s:
+            quote_count += 1
+        mask[i] = (quote_count % 2 == 1)
+    return mask
 
 
 def extract_count_assertions_from_tests(tests_dir):
@@ -123,8 +150,12 @@ def extract_count_assertions_from_tests(tests_dir):
             lines = open(tf, errors='ignore').read().splitlines()
         except Exception:
             continue
+        # R110-562 perf fix: precompute docstring/comment mask once per
+        # file (was O(N²) via _is_docstring_or_comment per line, taking
+        # 6.4s across 388 files).
+        mask = _docstring_or_comment_mask(lines)
         for idx, line in enumerate(lines):
-            if _is_docstring_or_comment(lines, idx):
+            if mask[idx]:
                 continue
             for m in COUNT_ASSERT_RE.finditer(line):
                 cnt, typ = m.group(1), m.group(2).lower()

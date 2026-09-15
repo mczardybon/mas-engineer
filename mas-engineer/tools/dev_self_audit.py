@@ -139,8 +139,23 @@ def _scan_pattern_a(lines, rel_path):
 
 
 # --- Pattern B -----------------------------------------------------------
-def _build_repo_literal_index(repo_root, exclude_path):
-    """Index quoted literals + count anchors present in recipe/tools/docs/tests."""
+def _build_repo_literal_index(repo_root):
+    """Index quoted literals + count anchors present in recipe/tools/docs/tests.
+
+    R110-562 performance fix: previously called per-instruction-file
+    (N md files × 724 glob files = 95 × 724 = ~69k file reads), now
+    called once per audit. The "exclude this file" semantics moved
+    into _scan_pattern_b, which compares the per-file literal count
+    against the repo-wide count.
+
+    R110-562: also indexes file-paths of every discovered file so that
+    a literal like 'recipe/sub/sub_mas-dev-director.yaml' is treated as
+    "found elsewhere" if such a file actually exists in the repo (the
+    literal might appear in instruction prose without quotes around
+    the path, and the YAML file itself uses unquoted `key: value`
+    syntax — neither matches PATTERN_B_STRING_IN_RE / _B_PATH_LIKE_RE
+    inside text content).
+    """
     index = {}
     for base in ('recipe', 'tools', 'docs', 'tests'):
         for f in glob.glob(str(repo_root / base / '**' / '*'), recursive=True):
@@ -148,12 +163,11 @@ def _build_repo_literal_index(repo_root, exclude_path):
                 continue
             if '__pycache__' in f or f.endswith('.pyc') or '/.backups/' in f:
                 continue
-            if os.path.abspath(f) == os.path.abspath(exclude_path):
-                continue
             try:
                 text = open(f, errors='ignore').read()
             except Exception:
                 continue
+            stem = Path(f).stem
             for m in PATTERN_B_STRING_IN_RE.finditer(text):
                 index[m.group(1)] = index.get(m.group(1), 0) + 1
             for m in _B_COUNT_PHRASE_RE.finditer(text):
@@ -163,13 +177,55 @@ def _build_repo_literal_index(repo_root, exclude_path):
                 index[m.group(0)] = index.get(m.group(0), 0) + 1
             for m in _B_YAML_BARE_NAME_RE.finditer(text):
                 name = m.group(1)
-                if Path(f).stem == name:
+                if stem == name:
                     # The file that IS the definition: its own `name:`
                     # field is a self-reference, not evidence (R110-121
                     # DIREKTIVE 2 exclusion).
                     continue
                 index[name] = index.get(name, 0) + 1
+            # R110-562: also index the file's own path (relative to
+            # repo_root) so that path literals in instruction prose
+            # resolve as "found" when the file actually exists, even
+            # if no quoted/path/bare-name regex matches its content.
+            try:
+                rel = str(Path(f).relative_to(repo_root))
+                index[rel] = index.get(rel, 0) + 1
+            except ValueError:
+                pass
     return index
+
+
+def _extract_load_bearing_literals(lines):
+    """Extract load-bearing literal candidates from a list of lines.
+
+    Mirrors the same filters as _scan_pattern_b (skip fences, headings,
+    tables; strip inline code; require word-like; require PATH or COUNT
+    phrase). Returns a dict {literal: count} so _scan_pattern_b can
+    decide whether a literal's occurrences are spread beyond the current
+    file (R110-562: a literal that only appears in the file being
+    scanned is still flagged as stale).
+    """
+    counts = {}
+    for idx, line in enumerate(lines):
+        if _is_in_fence(lines, idx):
+            continue
+        if line.lstrip().startswith('#'):
+            continue
+        if '|' in line:
+            continue
+        line = _strip_inline_code(line)
+        for m in PATTERN_B_STRING_IN_RE.finditer(line):
+            lit = m.group(1)
+            if len(lit) < 4 or len(lit) > 80:
+                continue
+            if PATTERN_B_URL_RE.search(lit) or PATTERN_B_WS_ONLY_RE.match(lit):
+                continue
+            if _B_PUNCT.match(lit) or not _B_WORD_LIKE_RE.match(lit):
+                continue
+            if not (_B_PATH_LIKE_RE.match(lit) or _B_COUNT_PHRASE_RE.match(lit)):
+                continue
+            counts[lit] = counts.get(lit, 0) + 1
+    return counts
 
 
 def _is_in_fence(lines, line_idx):
@@ -190,11 +246,16 @@ def _strip_inline_code(line):
 _B_WORD_LIKE_RE = re.compile(r'^[\w][\w .\-/:,_]*$')
 
 
-def _scan_pattern_b(lines, rel_path, repo_index, file_stem):
+def _scan_pattern_b(lines, rel_path, repo_index, file_stem, current_file_literals):
     """Stale literals: instructions claim values not found in the repo.
 
     Mirrors check_spec_drift filters: skip code blocks, inline code,
     URLs, whitespace-only, punctuation-only; require word-like literals.
+    R110-562: receives `current_file_literals` (the load-bearing literals
+    extracted from the file being scanned) so a literal that appears
+    ONLY in the current file is still flagged as stale, matching the
+    original semantics (file being scanned is excluded from the repo
+    index, so a literal that only occurs there is "nowhere else").
     """
     findings = []
     for idx, line in enumerate(lines):
@@ -219,7 +280,15 @@ def _scan_pattern_b(lines, rel_path, repo_index, file_stem):
             if file_stem in _B_SELF_FILES:
                 continue
             if lit in repo_index:
-                continue
+                # R110-562: literal is in the repo index. It might still be
+                # stale if ALL of its occurrences are in the current file
+                # (i.e. the only place that uses it is the file being
+                # scanned — the original "exclude this file" semantic).
+                repo_count = repo_index[lit]
+                if repo_count > current_file_literals.get(lit, 0):
+                    continue
+                # All occurrences of `lit` are within the current file:
+                # fall through to flag it as stale.
             findings.append(Finding(
                 code="STALE-LITERAL",
                 severity="WARN",
@@ -265,15 +334,22 @@ def run_self_audit(scope: Path, repo_root: Path) -> SelfAuditResult:
 
     md_files = sorted(scope.glob('*.md'))
 
+    # R110-562 performance fix: build the repo-wide literal index ONCE,
+    # not once per instruction file (was 95 × 724 = ~69k file reads,
+    # causing test_sub_mas_self_auditor::test_pattern_b_stale_literal_detected
+    # to timeout after 30s and the whole audit to take ~45s). The
+    # "exclude this file" semantic moved into _scan_pattern_b via
+    # current_file_literals count comparison.
+    repo_index = _build_repo_literal_index(repo_root)
+
     for md in md_files:
         rel = md.relative_to(repo_root)
         stem = md.name
         lines = md.read_text(errors='ignore').splitlines()
         result.findings += _scan_pattern_a(lines, rel)
-        # Fresh index per file: excludes THIS file, so a literal that only
-        # occurs in the file being scanned is not counted as "found".
-        repo_index = _build_repo_literal_index(repo_root, md)
-        result.findings += _scan_pattern_b(lines, rel, repo_index, stem)
+        current_file_literals = _extract_load_bearing_literals(lines)
+        result.findings += _scan_pattern_b(
+            lines, rel, repo_index, stem, current_file_literals)
     result.files_scanned = len(md_files)
 
     # Pattern C: delegated spec-invariant (test vs recipe counts)
