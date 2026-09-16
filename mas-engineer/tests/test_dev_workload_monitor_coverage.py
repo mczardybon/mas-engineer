@@ -566,6 +566,7 @@ def test_main_runpy_invokes_main(monkeypatch, capsys):
     # Invoke the module via runpy so the __main__ block runs.
     with mock.patch.object(wm, "scan_sessions", return_value=[]):
         monkeypatch.setattr(sys, "argv", ["dev_workload_monitor.py"])
+        sys.modules.pop("tools.dev_workload_monitor", None)
         runpy.run_module("tools.dev_workload_monitor", run_name="__main__")
     captured = capsys.readouterr()
     assert "No Session-Data" in captured.out

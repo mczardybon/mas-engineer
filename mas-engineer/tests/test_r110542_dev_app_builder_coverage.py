@@ -824,6 +824,7 @@ def test_main_default_prints_summary(fake_workspace, monkeypatch, capsys):
         # Simulate by exec the __main__ block via a direct call
         import importlib
         import runpy
+        sys.modules.pop("tools.dev_app_builder", None)
         runpy.run_module("tools.dev_app_builder", run_name="__main__")
     captured = capsys.readouterr()
     assert "Dashboard:" in captured.out
@@ -836,6 +837,7 @@ def test_main_with_workspace_arg(fake_workspace, monkeypatch, capsys):
     monkeypatch.setattr(sys, "argv",
                         ["dev_app_builder.py", str(fake_workspace)])
     import runpy
+    sys.modules.pop("tools.dev_app_builder", None)
     runpy.run_module("tools.dev_app_builder", run_name="__main__")
     captured = capsys.readouterr()
     assert "Dashboard:" in captured.out
@@ -847,6 +849,7 @@ def test_main_with_workspace_flag(fake_workspace, monkeypatch, capsys):
                         ["dev_app_builder.py", "--workspace",
                          str(fake_workspace)])
     import runpy
+    sys.modules.pop("tools.dev_app_builder", None)
     runpy.run_module("tools.dev_app_builder", run_name="__main__")
     captured = capsys.readouterr()
     assert "Dashboard:" in captured.out
@@ -858,6 +861,7 @@ def test_main_generate_flag(fake_workspace, monkeypatch, capsys):
                         ["dev_app_builder.py", "--workspace",
                          str(fake_workspace), "--generate"])
     import runpy
+    sys.modules.pop("tools.dev_app_builder", None)
     runpy.run_module("tools.dev_app_builder", run_name="__main__")
     captured = capsys.readouterr()
     data = json.loads(captured.out.strip())
@@ -874,6 +878,7 @@ def test_main_init_flag(fake_workspace, monkeypatch, capsys):
                         ["dev_app_builder.py", "--workspace",
                          str(fake_workspace), "--init"])
     import runpy
+    sys.modules.pop("tools.dev_app_builder", None)
     runpy.run_module("tools.dev_app_builder", run_name="__main__")
     captured = capsys.readouterr()
     assert "Initialisiert" in captured.out

@@ -236,7 +236,16 @@ def _run_main_via_runpy(args, monkeypatch, *, registry=None):
     """
     argv = ["dev_template_engine.py"] + list(args)
     monkeypatch.setattr(sys, "argv", argv)
-    return runpy.run_module("tools.dev_template_engine", run_name="__main__")
+    sys.modules.pop("tools.dev_template_engine", None)
+    try:
+        return runpy.run_module("tools.dev_template_engine", run_name="__main__")
+    finally:
+        # Re-import so subsequent tests that do `import tools.dev_template_engine`
+        # (e.g. test_main_dunder_name_guard) find it in sys.modules.
+        # Without this, runpy leaves only __main__ in sys.modules and the
+        # original module name is gone until something else imports it.
+        if "tools.dev_template_engine" not in sys.modules:
+            import tools.dev_template_engine  # noqa: F401
 
 
 def test_main_no_args_exits_via_parser(monkeypatch, capsys):
@@ -267,7 +276,12 @@ def test_main_with_required_args_writes_file(monkeypatch, capsys):
             "--workspace", tmp,
             "--mode", "mas",
         ])
-        runpy.run_module("tools.dev_template_engine", run_name="__main__")
+        sys.modules.pop("tools.dev_template_engine", None)
+        try:
+            runpy.run_module("tools.dev_template_engine", run_name="__main__")
+        finally:
+            if "tools.dev_template_engine" not in sys.modules:
+                import tools.dev_template_engine  # noqa: F401
         captured = capsys.readouterr()
         assert "Agent creates: sub_mas-myagent" in captured.out
         assert "file: " + out in captured.out
@@ -288,7 +302,12 @@ def test_main_with_json_output(monkeypatch, capsys):
             "--mode", "generic",
             "--json",
         ])
-        runpy.run_module("tools.dev_template_engine", run_name="__main__")
+        sys.modules.pop("tools.dev_template_engine", None)
+        try:
+            runpy.run_module("tools.dev_template_engine", run_name="__main__")
+        finally:
+            if "tools.dev_template_engine" not in sys.modules:
+                import tools.dev_template_engine  # noqa: F401
         captured = capsys.readouterr()
         # Should be valid JSON
         data = json.loads(captured.out)
@@ -314,7 +333,12 @@ def test_main_with_registry_calls_merge_tool(monkeypatch, capsys, tmp_path):
             "--workspace", tmp,
             "--registry", reg,
         ])
-        runpy.run_module("tools.dev_template_engine", run_name="__main__")
+        sys.modules.pop("tools.dev_template_engine", None)
+        try:
+            runpy.run_module("tools.dev_template_engine", run_name="__main__")
+        finally:
+            if "tools.dev_template_engine" not in sys.modules:
+                import tools.dev_template_engine  # noqa: F401
         # If we get here without error, the --registry branch executed.
         captured = capsys.readouterr()
         assert "Agent creates: sub_mas-regagent" in captured.out
@@ -329,6 +353,11 @@ def test_main_dunder_name_guard(tmp_path, monkeypatch):
     """
     # The False branch is covered by `import tools.dev_template_engine`
     # at module top — verify by re-importing.
+    # R110-571: after the previous tests popped/re-imported tools.dev_template_engine,
+    # the module object referenced by `tpl` (from the top-of-file import) may differ
+    # from the one currently in sys.modules. Reload from sys.modules directly so we
+    # exercise the live module that `import tools.dev_template_engine` would resolve to.
+    tpl = sys.modules["tools.dev_template_engine"]
     import importlib
     importlib.reload(tpl)
     assert hasattr(tpl, "main")
@@ -349,7 +378,12 @@ def test_main_auto_commit_flag(monkeypatch, capsys):
             "--mode", "mas",
             "--auto-commit",
         ])
-        runpy.run_module("tools.dev_template_engine", run_name="__main__")
+        sys.modules.pop("tools.dev_template_engine", None)
+        try:
+            runpy.run_module("tools.dev_template_engine", run_name="__main__")
+        finally:
+            if "tools.dev_template_engine" not in sys.modules:
+                import tools.dev_template_engine  # noqa: F401
         with open(out) as f:
             import yaml as _y
             data = _y.safe_load(f)

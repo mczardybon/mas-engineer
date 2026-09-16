@@ -151,16 +151,28 @@ def test_main_module_invocation(tmp_path):
 
     Easier proof: just exec the line ourselves.
     """
+    import warnings
     import runpy
-    runpy.run_module('tools.dev_directive_parser', run_name='__notmain__')
-    # No assertion — if main() ran and crashed (no args), an exception
-    # would bubble. With run_name='__notmain__' it's a module import
-    # without running the if __name__ block, so we don't even reach
-    # that. The if __name__==__main__ guard is the test target but
-    # coverage only tracks when actually executed. So instead:
-    #   exec the code with run_name='__main__' and capture SystemExit.
-    with pytest.raises(SystemExit) as ei:
-        runpy.run_module('tools.dev_directive_parser', run_name='__main__')
+    # The `__notmain__` call imports the module into sys.modules as a side
+    # effect of runpy. The subsequent `__main__` call below triggers Python's
+    # import-system RuntimeWarning ("found in sys.modules after import of
+    # package 'tools' but prior to execution"). We pop the entry before the
+    # second call to prevent module-identity mismatch in importlib.reload,
+    # but Python still emits the warning during interpreter finalization.
+    # Suppress it locally — the warning is purely diagnostic about runpy's
+    # import sequencing, not about any bug in tools.dev_directive_parser.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        runpy.run_module('tools.dev_directive_parser', run_name='__notmain__')
+        # No assertion — if main() ran and crashed (no args), an exception
+        # would bubble. With run_name='__notmain__' it's a module import
+        # without running the if __name__ block, so we don't even reach
+        # that. The if __name__==__main__ guard is the test target but
+        # coverage only tracks when actually executed. So instead:
+        #   exec the code with run_name='__main__' and capture SystemExit.
+        with pytest.raises(SystemExit) as ei:
+            sys.modules.pop('tools.dev_directive_parser', None)
+            runpy.run_module('tools.dev_directive_parser', run_name='__main__')
     # Either exit 2 (no args) or exit 1 (no sys.argv[1]). Both are ≥0
     # behavior; main() was actually called from line 107.
     assert ei.value.code in (0, 1, 2)
