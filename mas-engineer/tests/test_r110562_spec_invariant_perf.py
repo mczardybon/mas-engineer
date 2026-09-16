@@ -112,6 +112,121 @@ class TestMaskParity:
                 f"first diff at idx {next(i for i,(o,n) in enumerate(zip(old,new)) if o != n)}")
 
 
+class TestR110578CommentTripleQuoteParity:
+    """R110-578: a triple-quote token that lives INSIDE a `#` comment must
+    NOT advance the docstring-region counter in EITHER the old per-line
+    helper OR the new precomputed mask. Before the fix, the OLD function
+    counted a triple-quote inside a comment (opening a phantom docstring
+    region), while the NEW mask correctly skipped comments — so the
+    parity test silently broke when the validator's random sample
+    happened to include tests/test_dev_im_finder_scan_lib.py (whose
+    line 203 contains a triple-quote token inside a `#` comment).
+
+    These tests pin the correct behaviour so neither function regresses.
+    """
+
+    def _helper(self):
+        sys.path.insert(0, str(TOOLS))
+        import dev_spec_invariant  # noqa: WPS433
+        return dev_spec_invariant
+
+    def test_comment_with_triple_quote_in_middle_does_not_open_region(self):
+        """The validator-F-2 scenario: a real test file with a `#`
+        comment that contains a triple-quote literal.
+
+        Asserts:
+        1. OLD and NEW agree on every line (parity holds).
+        2. The comment line itself (idx 203) is masked True (because it
+           is a `#` comment, regardless of the docstring-region rule).
+        3. The first divergence that the OLD logic had — at idx 204, a
+           real `assert` statement — must NOT be introduced by the
+           comment's triple-quote token. Concretely: if we strip the
+           triple-quote token from the comment text, the mask at idx 204
+           must be unchanged. Before the fix, the OLD function counted
+           the triple-quote in the comment (advancing the counter),
+           so removing it would have FLIPPED the mask. After the fix,
+           the comment is skipped entirely, so removing it has no
+           effect."""
+        dev_spec_invariant = self._helper()
+        from pathlib import Path
+        target = TESTS_DIR / "test_dev_im_finder_scan_lib.py"
+        if not target.exists():
+            pytest.skip(f"{target} not present in this checkout")
+        lines = target.read_text(errors="ignore").splitlines()
+        # OLD and NEW must agree on every line.
+        old = [dev_spec_invariant._is_docstring_or_comment(lines, i)
+               for i in range(len(lines))]
+        new = dev_spec_invariant._docstring_or_comment_mask(lines)
+        assert old == new, (
+            f"Parity broken on {target.name}"
+        )
+        # Line 203 is a `#` comment → masked True.
+        assert new[203] is True, (
+            f"Line 203 is a `#` comment, must be masked True. "
+            f"Got {new[203]}"
+        )
+
+        # Stronger invariant: rebuild the file with the `"""` token
+        # REMOVED from the comment, and verify new[204] is unchanged.
+        # Before the fix, the OLD function counted `"""` in the comment
+        # (advancing the counter by 1), so removing the token would
+        # decrement the count by 1, FLIPPING new[204] from True to
+        # False. After the fix, the comment is skipped entirely, so
+        # removing the token has no effect on new[204].
+        tq = chr(34) * 3
+        assert tq in lines[203], "Test premise: idx 203 must contain triple-quote"
+        lines_stripped = list(lines)
+        lines_stripped[203] = lines_stripped[203].replace(tq, "")
+        new_stripped = dev_spec_invariant._docstring_or_comment_mask(lines_stripped)
+        assert new_stripped[204] == new[204], (
+            f"Stripping triple-quote from idx 203 changed mask at idx 204 "
+            f"({new[204]} → {new_stripped[204]}). The comment must not "
+            f"influence the docstring-region counter."
+        )
+
+    def test_handcrafted_comment_with_triple_quote(self):
+        """Construct a minimal snippet where a comment line in the middle
+        contains a triple-quote token, and verify both OLD and NEW treat
+        it correctly."""
+        dev_spec_invariant = self._helper()
+        lines = [
+            "x = 1\n",
+            '    # literal tq marker here\n',  # placeholder; we splice below
+            "y = 2\n",
+        ]
+        # Splice in a real triple-quote inside the comment.
+        tq = chr(34) * 3
+        lines[1] = '    # count of ' + tq + ' before is 0 (even)\n'
+        old = [dev_spec_invariant._is_docstring_or_comment(lines, i)
+               for i in range(len(lines))]
+        new = dev_spec_invariant._docstring_or_comment_mask(lines)
+        assert old == new
+        assert old == [False, True, False], (
+            f"Expected [False, True, False], got old={old} new={new}"
+        )
+
+    def test_real_docstring_open_still_detected(self):
+        """Sanity: a single-line triple-quoted docstring token toggles the
+        counter to odd, and BOTH functions agree on the resulting mask.
+
+        Note: the OLD counter is a coarse line-count heuristic (one
+        triple-quote token per line toggles once), so a docstring whose
+        opening and closing triple-quote sit on the same line yields
+        mask=[True, True] for both lines. That is the existing
+        convention used by all parity tests in this file, so the new
+        test must respect it to assert parity."""
+        dev_spec_invariant = self._helper()
+        lines = [
+            '"""docstring"""\n',
+            "x = 1\n",
+        ]
+        old = [dev_spec_invariant._is_docstring_or_comment(lines, i)
+               for i in range(len(lines))]
+        new = dev_spec_invariant._docstring_or_comment_mask(lines)
+        assert old == [True, True]
+        assert new == [True, True]
+
+
 class TestExtractPerf:
     """extract_count_assertions_from_tests must finish well under 6.4s."""
 

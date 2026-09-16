@@ -94,11 +94,17 @@ def _is_docstring_or_comment(lines, idx):
     stripped = lines[idx].lstrip()
     if stripped.startswith('#'):
         return True
-    # crude docstring region detection: count triple-quotes up to idx
+    # R110-578: a triple-quote token that lives inside a `#` comment must
+    # NOT advance the docstring-region counter (it is part of the comment,
+    # not a docstring delimiter). We therefore count `"""` only in the
+    # code-position portion of the line (before any `#` introducer).
     open_quotes = 0
     for i in range(idx + 1):
         s = lines[i].strip()
-        if s.startswith('"""') or '"""' in s:
+        if s.startswith('#'):
+            continue
+        code_part = s.split('#', 1)[0]
+        if code_part.startswith('"""') or '"""' in code_part:
             open_quotes += 1
     return open_quotes % 2 == 1
 
