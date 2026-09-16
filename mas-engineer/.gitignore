@@ -127,3 +127,17 @@ mas-engineer/.git/
 **/*.yaml.orig
 **/*.yaml.rej
 **/*~
+
+
+# R110-570: cleanup-branch swept 3 worktree-runtime artifacts that re-leaked
+# from R110-302 era (2026-08-29). None should ever be tracked:
+#   - .pytest_cache/ — pytest runtime cache (regenerated every pytest run)
+#   - tests/_r110302_dwf_tmp/ — R110-302 worktree test stub (empty)
+#   - ws/ — R110-302 worktree schedule state (ws/mas-engineer/.mase/schedule.yaml)
+# Adding these patterns prevents the IDE/editor + worktree-spawner from
+# re-introducing them on every checkout. Same root-cause-fix pattern as
+# R110-549 (IDE .bak / .llm-backup-r89) — make the runtime artifact
+# invisible to git from creation, no per-R-sprint fixup loop needed.
+.pytest_cache/
+tests/_r110302_dwf_tmp/
+ws/
