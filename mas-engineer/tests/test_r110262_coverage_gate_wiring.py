@@ -29,16 +29,34 @@ WORKFLOW = Path("../.github/workflows/ci-tests.yml")
 
 
 def _extract_coverage_step():
-    """Extract the 'Run pytest with coverage' step from the workflow."""
+    """Extract the 'Run pytest with coverage' step from the workflow.
+
+    The step heading `      - name: Run pytest with coverage` starts
+    with 6 spaces (matrix-job step indentation) followed by `- name:`.
+    A bare word match of "Run pytest with coverage" first hits
+    COMMENT references (e.g. R110-579 diagnostic comment) before the
+    real step heading, so we anchor on the indentation + `- name:`
+    prefix to disambiguate. Without this, the regex extracted the
+    matrix block + python-version list and ALL 3 follow-up tests
+    (pipefail / threshold / tee) falsely reported the step missing
+    the wiring.
+
+    This bug surfaced in R110-579 after a diagnostic comment was
+    added containing the literal string "Run pytest with coverage"
+    (as a reference, not a step heading).
+    """
     text = WORKFLOW.read_text(encoding="utf-8")
+    # Anchor on the FULL step heading pattern: "      - name: Run
+    # pytest with coverage" — the 6-space indent + "- name:" is
+    # unique to step headings and never appears in comments.
     m = re.search(
-        r"Run pytest with coverage(.*?)(?=\n      - name:|\Z)",
+        r"^      - name: Run pytest with coverage(.*?)(?=\n      - name:|\Z)",
         text,
-        re.DOTALL,
+        re.MULTILINE | re.DOTALL,
     )
     if not m:
         raise RuntimeError(
-            f"could not find 'Run pytest with coverage' step in {WORKFLOW}"
+            f"could not find 'Run pytest with coverage' step heading in {WORKFLOW}"
         )
     return m.group(1)
 
