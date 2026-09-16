@@ -17,6 +17,7 @@ Called from recipes via `bash` extension as:
 Output: JSON to stdout (machine-readable). Exit: 0=OK, 1=ISSUES_FOUND, 2=ERROR.
 """
 import json
+import logging
 import os
 import re
 import subprocess
@@ -24,6 +25,10 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+
+# R110-581: surface silent-swallowed exceptions so workflow-crossref
+# failures are visible to operators instead of silently dropped.
+logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -259,8 +264,14 @@ def _validate_crossref(patch: str) -> dict:
                 if wf_key not in str(wf):
                     findings.append({"level": "INFO", "code": "CROSSREF-WORKFLOW",
                                     "detail": f"{ref} not in workflows.yaml ({wf_key})"})
-        except Exception:
-            pass
+        except Exception as exc:
+            # R110-581: surface workflows.yaml read/parse failures — silently
+            # swallowing here would mask a broken workflows.yaml so crossref
+            # checks return no findings on a misconfigured repo.
+            logger.warning(
+                "crossref workflows.yaml read/parse failed (workflows=%s): %s",
+                workflows, exc,
+            )
 
     ok = not any(f["level"] == "ERROR" for f in findings)
     return {

@@ -41,10 +41,17 @@ Call (unchanged):
 """
 import datetime
 import json
+import logging
 import os
 import subprocess
 import sys
 import tempfile
+
+# R110-581: surface silent-swallowed exceptions as WARNING logs so dispatch
+# tracker corruption / MQ-enqueue failures are visible to operators instead
+# of silently dropping entries (which previously made NDJSON-incomplete
+# dispatches look successful from the caller's POV).
+logger = logging.getLogger(__name__)
 
 LEGACY_LOG = os.environ.get(
     "MAS_DISPATCH_LOG",
@@ -80,8 +87,11 @@ def _read_all():
             if line:
                 try:
                     entries.append(json.loads(line))
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning(
+                        "skipping malformed dispatch NDJSON line: %s (line=%r)",
+                        exc, line[:200],
+                    )
     return entries
 
 
@@ -130,8 +140,14 @@ def add(ts, entry_id, parent_id, from_agent, to_agent, task,
                 retry_policy={"max": 3, "backoff": [1, 2, 4]},
                 request_id=entry_id,
             )
-        except Exception:
-            pass  # MQ is best-effort
+        except Exception as exc:
+            # R110-581: surface MQ-enqueue failures (previously silently
+            # swallowed — dispatch looked committed in NDJSON but never
+            # propagated to MQ consumers).
+            logger.warning(
+                "MQ-enqueue for dispatch_start failed (NDJSON-write OK, "
+                "MQ-side drop): id=%s exc=%s", entry_id, exc,
+            )
     return entry
 
 
@@ -175,8 +191,12 @@ def done(entry_id, duration_ms, turns, result_summary, errors=None):
                     retry_policy={"max": 3, "backoff": [1, 2, 4]},
                     request_id=entry_id,
                 )
-            except Exception:
-                pass
+            except Exception as exc:
+                # R110-581: surface MQ-enqueue failures (see add() comment).
+                logger.warning(
+                    "MQ-enqueue for dispatch_done failed (NDJSON-write OK, "
+                    "MQ-side drop): id=%s exc=%s", entry_id, exc,
+                )
     return entries
 
 
