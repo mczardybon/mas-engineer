@@ -2,7 +2,7 @@
 #  ci-tests.yml — Run pytest on push to mas-t (and PRs targeting mas-t)
 #
 #  Scope: mas-engineer unit tests (R110-78 spec-drift guard).
-#  Cadence: every push to mas-t + every PR; 5min timeout per matrix leg.
+#  Cadence: every push to mas-t + every PR; 15min timeout per matrix leg.
 #  Compat: respects block-copilot.yml (early-exit when actor is copilot).
 #  Cost:   ~3-4 min per run, no external API costs.
 #  Coverage: pytest-cov with --cov-fail-under=80 (runner-side gate);
@@ -61,7 +61,7 @@ jobs:
         # + pytest-cov combination, or once the .pth crash is root-caused.
         python-version: ["3.11"]
 
-    timeout-minutes: 8
+    timeout-minutes: 15  # R110-584: bumped from 8. Suite needs ~10min (4×75s phoenix_recovery + 7800 fast tests).
 
     steps:
       - name: Checkout
