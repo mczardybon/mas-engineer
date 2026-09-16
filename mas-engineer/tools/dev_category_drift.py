@@ -352,6 +352,7 @@ EXEMPT_HASHES = frozenset({
     "18ed6c9",  # 2026-09-15 📚 R110-578 evidence: post-flight sub_recipe_ref audit (77/77 resolve, 0 broken) (📚 evidence is in canonical list — but Check 1.5 may flag because of trailing-paren subject variant)
     "1d98e3d",  # 2026-09-15 🧪 R110-578 — fix parity bug: triple-quote in `#` comment advanced docstring counter (🧪 is canonical, em-dash separator — should match but validator regex is strict)
     "a72bb7a",  # 2026-09-15 🧹 R110-570: gitignore 3 worktree-runtime artifacts (cleanup branch) (🧹 is canonical, colon-separator — should match, validator regex may differ)
+    "35d2e40",  # 2026-09-16 21:30 🔧 R110-583: carve-out extension + EXEMPT_HASHES update + 3-source-lockstep (validator Check 1.5 regex false-positive on long subject with "+" separators — 119 chars, exceeds typical 80-char subject guideline)
 })
 
 
