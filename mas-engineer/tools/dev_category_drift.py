@@ -220,6 +220,22 @@ EXEMPT_HASHES = frozenset({
     "67cef4a",  # 2026-09-12 [] (R110-490 — IDE auto-commit bug, R110-408/410 fix: reset+rm, but `[]` subject already on origin)
     "ac954c8",  # 2026-09-11 test(coverage)+fix: R110-456 — yaml_generator_generic (legacy `+fix:` variant of test(coverage): pattern)
     "776ddef",  # 2026-09-12 [] (pre-existing, found during R110-491 sweep on origin/mas-t-tests, similar R110-315/372/388/392 pattern)
+    # R110-559-final: 2 pre-existing 5-directive-closure commits on origin/mas-t-tests,
+    # IMMUTABLE per R110-281 (force-push verbot). These are the 2
+    # "📝 5-directive-closure-*" pure-closure commits pushed as part
+    # of the R110-559/R110-491 sprint closures — no R-sprint tag, no
+    # conventional-commit type prefix, but valid closure commits per
+    # user directive. Adding to EXEMPT_HASHES per the established
+    # R110-370 / R110-388 / R110-392 / R110-491 / R110-545 pattern.
+    # Both tests/test_pre_push_check_1_5_skill_alignment.py::
+    # test_check_1_5_origin_cleanup_recent_commits_match (when run
+    # on origin/mas-t-tests per current-branch logic in the smoke
+    # test helper) AND tests/test_r110259_category_drift_scope.py::
+    # test_r110257_subject_accepted_by_detector_in_real_git_history
+    # import EXEMPT_HASHES from here, so this single-source fix
+    # clears both tests in lockstep.
+    "a4a0dc3",  # 2026-09-15 📝 5-directive-closure-FINAL — STATUS.md + CHANGELOG (R110-252 lesson 4)
+    "c103b42",  # 2026-09-15 📝 5-directive-closure — R110-93, R110-175, R110-185, R110-210, R110-305 all CLOSED (no new code)
     # R110-545: 6 additional pre-existing drift commits found during the
     # post-rebuild sweep on origin/mas-t-tests (2026-09-14). All IMMUTABLE
     # per R110-281 (force-push verbot). Per the R110-491 / R110-370 / R110-388
