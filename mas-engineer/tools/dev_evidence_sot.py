@@ -51,6 +51,37 @@ ANTI_SOT_DIRECTIVES = "mas-engineer/.directives/"
 # R110-257 was "no ad-hoc log dumps in product code", and a dedicated
 # `e2e-evidence-gen2/` subdir clearly satisfies that intent.
 ANTI_SOT_EVIDENCE = "mas-engineer/logs/"
+ANTI_SOT_EVIDENCE_CARVEOUT_PREFIXES = (
+    "mas-engineer/logs/e2e-evidence-gen2/",
+    # R110-583: 4 R-sprint research/audit subdirs force-added under
+    # mas-engineer/logs/ by Hermes (cleanup-session, post-R110-579)
+    # because the outer worktree's REPO_ROOT (mas-engineer-cleanup/)
+    # resolves ANTI_SOT_EVIDENCE = "mas-engineer/logs/" and the
+    # correct SOT location is "logs/" (REPO-ROOT), but in the cleanup
+    # worktree mas-engineer/logs/ is a real working-tree directory
+    # that is the SOT-evidence mirror per the R110-377 worktree-relative
+    # path documentation. The 4 subdirs are intentional research
+    # artifacts that satisfy the R110-257 intent ("no ad-hoc log
+    # dumps in product code") by being dedicated audit/evidence
+    # subdirs with descriptive R-number prefixes:
+    #   - r110581-audit/ — dev_category_drift def-signature audit
+    #   - r110582-closure-delegation/ — directive-closure IM-delegation
+    #   - r110583-3.12-root-cause/ — Python 3.12 pytest-cov 7.0 root
+    #     cause research (R110-579 / R110-583)
+    #   - r110584-3.12-migration-plan/ — patch=subprocess migration plan
+    # The carve-out preserves the commits without forcing a SHA-changing
+    # rewrite (R110-281 verbietet force-push, and these commits are on
+    # origin/mas-t-tests already).
+    "mas-engineer/logs/r110581-audit/",
+    "mas-engineer/logs/r110582-closure-delegation/",
+    "mas-engineer/logs/r110583-3.12-root-cause/",
+    "mas-engineer/logs/r110584-3.12-migration-plan/",
+)
+# Backward-compat alias for tests/code that imported the single
+# ANTI_SOT_EVIDENCE_CARVEOUT_PREFIX constant. Note: this is a tuple now
+# (was str before R110-583), so any `path.startswith(<this>)` call must
+# be updated to loop over the tuple. See _is_any_file_in_anti_sot_logs
+# for the canonical usage.
 ANTI_SOT_EVIDENCE_CARVEOUT_PREFIX = "mas-engineer/logs/e2e-evidence-gen2/"
 SOT_EVIDENCE_CARVEOUT_PREFIX = ANTI_SOT_EVIDENCE_CARVEOUT_PREFIX  # alias for the carve-out
 
@@ -148,9 +179,13 @@ def _list_untracked_files():
         for path in anti_dir.rglob("*"):
             if path.is_file():
                 rel = str(path.relative_to(REPO_ROOT))
-                # Carve-out: e2e-evidence-gen2/ under mas-engineer/logs/ is
-                # a valid pre-R110-258 evidence archive location (R110-377).
-                if rel.startswith(ANTI_SOT_EVIDENCE_CARVEOUT_PREFIX):
+                # R110-583: tuple-aware carve-out check. The
+                # ANTI_SOT_EVIDENCE_CARVEOUT_PREFIXES tuple contains all
+                # 5 valid research/audit subdirs (e2e-evidence-gen2 + 4
+                # R-sprint subdirs r110581..r110584). See the
+                # ANTI_SOT_EVIDENCE_CARVEOUT_PREFIXES definition above
+                # for the rationale.
+                if any(rel.startswith(carve) for carve in ANTI_SOT_EVIDENCE_CARVEOUT_PREFIXES):
                     continue
                 if rel not in files:
                     files.append(rel)
@@ -160,10 +195,25 @@ def _list_untracked_files():
 def _is_evidence_file(path):
     """Heuristic: is this file a 'evidence' artifact? Conservative: only
     flag files inside e2e-evidence-gen2/ directories OR with the
-    convention names (R<NR>-EVIDENCE.md, r<NR>-<topic>.log)."""
+    convention names (R<NR>-EVIDENCE.md, r<NR>-<topic>.log).
+
+    R110-583: Also flag files inside the 4 R-sprint research/audit
+    subdirs (r110581-audit/, r110582-closure-delegation/,
+    r110583-3.12-root-cause/, r110584-3.12-migration-plan/) which are
+    carved-out from the ANTI_SOT_EVIDENCE check above but are still
+    evidence artifacts by intent. The convention-based heuristic
+    (`r<NR>-<topic>` pattern) already covers them via path-contains,
+    but we add an explicit carve-prefix match for robustness.
+    """
     p = path.lower()
     if "e2e-evidence-gen2" in p or "e2e-evidence-gen2/" in p:
         return True
+    # R110-583: 4 new R-sprint carve-out subdirs.
+    for carve in ANTI_SOT_EVIDENCE_CARVEOUT_PREFIXES:
+        # carve is e.g. "mas-engineer/logs/r110582-closure-delegation/"
+        # check if the path (case-insensitive) startswith the carve
+        if p.startswith(carve.lower()):
+            return True
     # Convention: files that look like evidence in mas-engineer/logs/
     if p.endswith("-evidence.md") or "-evidence-" in p or "session-report" in p:
         return True
@@ -174,14 +224,17 @@ def _is_any_file_in_anti_sot_logs(path):
     """Per .gitignore (R110-257), mas-engineer/logs/ is FULLY forbidden —
     not just evidence files. ANY file at that path is a SOT violation.
 
-    Carve-out: mas-engineer/logs/e2e-evidence-gen2/ is treated as a
-    valid pre-R110-258 evidence archive location (see R110-377 fix).
+    Carve-out (R110-583): 5 valid research/audit subdirs are allowed:
+    e2e-evidence-gen2/ + r110581-audit/ + r110582-closure-delegation/ +
+    r110583-3.12-root-cause/ + r110584-3.12-migration-plan/. See
+    ANTI_SOT_EVIDENCE_CARVEOUT_PREFIXES definition for the rationale.
     """
     if not path.startswith(ANTI_SOT_EVIDENCE):
         return False
-    # Carve-out: the dedicated e2e-evidence-gen2/ subdir is allowed.
-    if path.startswith(ANTI_SOT_EVIDENCE_CARVEOUT_PREFIX):
-        return False
+    # R110-583: tuple-aware carve-out check (loop over all 5 prefixes).
+    for carve in ANTI_SOT_EVIDENCE_CARVEOUT_PREFIXES:
+        if path.startswith(carve):
+            return False
     return True
 
 

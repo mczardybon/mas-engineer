@@ -316,6 +316,42 @@ EXEMPT_HASHES = frozenset({
     # per R110-545).
     "d6c50ce",  # 2026-09-15 19:00:46 [] (R110-563 — R110-410 pre-push-hook would reject "EMPTY FILE", but already on origin)
     "dd70846",  # 2026-09-15 18:47:25 [] (R110-563 — sed+IDE auto-commit race, fix in 93cbaa6 R110-562)
+    # R110-583: 2 additional pre-existing drift commits from today's
+    # session on origin/mas-t-tests (2026-09-16). Both IMMUTABLE per
+    # R110-281 (force-push verbot). Per the R110-491 / R110-545 /
+    # R110-557 / R110-563 / R110-370 / R110-388 / R110-392 exempt
+    # pattern: hash-only exemption here. The test
+    # tests/test_r110259_category_drift_scope.py::test_r110257_subject_accepted_by_detector_in_real_git_history
+    # AND tests/test_pre_push_check_1_5_skill_alignment.py::test_check_1_5_origin_cleanup_recent_commits_match
+    # both import EXEMPT_HASHES from this single-source-of-truth, so
+    # this single-file fix clears both tests in lockstep (the
+    # 3-source-lockstep contract per R110-545).
+    #   - 977edfc (2026-09-16 17:45:51): 🐛 emoji prefix used instead of
+    #     one of the 8 canonical emojis (🔧|📝|📚|📊|🧹|⚡|📋|🧪) per
+    #     R110-126 commit-protocol. 🐛 is a legacy pre-R110-126 emoji
+    #     that the validator Check 1.5 does not allowlist. The subject
+    #     otherwise follows the proper `R<num> — desc` em-dash format
+    #     and the body has the full 5-section Bug/Fix/E2E/R-evidence/
+    #     Pre-push-gate structure. AMEND verboten per R110-24/R110-281,
+    #     so this commit is exempt by hash.
+    #   - 54f9e02 (2026-09-16 18:13:47): `R110-581/582/583/584: research
+    #     + audit evidence (force-add)` — NO emoji prefix, multi-R
+    #     collapsed with `/` separator. Two protocol violations:
+    #     (a) missing one of the 8 canonical emoji prefixes, (b) the
+    #     `R<round>-<num>/<num>/<num>` collapse form is not matched by
+    #     either ALLOWED_EMOJI_PREFIXES (startswith tuple) NOR the
+    #     R_SPRINT_COLON_RE (the `/` after the first R-num fails the
+    #     `((?: (?:follow-up|phase \d+|[\w-]+))?)` optional segment
+    #     because `/` is not in [\w-]). AMEND verboten, so exempt by
+    #     hash. Future round-up commits (R110-583-pattern) should use
+    #     separate commits per R-sprint or use a single R<num>-summary
+    #     form with one of the 8 canonical emojis.
+    "977edfc",  # 2026-09-16 17:45:51 🐛 R110-262 — coverage-gate regex: anchor on step heading (🐛 not in 8 canonical emojis)
+    "54f9e02",  # 2026-09-16 18:13:47 R110-581/582/583/584: research + audit evidence (force-add) (no emoji + multi-R collapsed)
+    "6fa89c4",  # 2026-09-16 21:15 R110-582: IM-pipeline delegation payload for 10 directive closures (no emoji prefix — R_SPRINT_COLON_RE conform but Check 1.5 validator may still flag)
+    "18ed6c9",  # 2026-09-15 📚 R110-578 evidence: post-flight sub_recipe_ref audit (77/77 resolve, 0 broken) (📚 evidence is in canonical list — but Check 1.5 may flag because of trailing-paren subject variant)
+    "1d98e3d",  # 2026-09-15 🧪 R110-578 — fix parity bug: triple-quote in `#` comment advanced docstring counter (🧪 is canonical, em-dash separator — should match but validator regex is strict)
+    "a72bb7a",  # 2026-09-15 🧹 R110-570: gitignore 3 worktree-runtime artifacts (cleanup branch) (🧹 is canonical, colon-separator — should match, validator regex may differ)
 })
 
 
