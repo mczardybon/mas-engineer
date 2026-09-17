@@ -1,4 +1,4 @@
-"""R110-323 regression tests: latent-bug fixes in dev_im_finder_scan.
+r"""R110-323 regression tests: latent-bug fixes in dev_im_finder_scan.
 
 R110-323 takes candidate #1 from the R110-321 cov-push queue
 (dev_im_finder_scan.py, 1660 stmts, 0% cov) and probes it for
@@ -199,7 +199,7 @@ class TestR110323Bug1HistoricalRef:
             f'Historical ref with N tests (no AFTER) wrongly flagged: {sd}')
 
     def test_load_bearing_anchor_still_fires(self, tmp_path):
-        """No-regression: a REAL count-anchor (no R\d+-\d+ commit ref)
+        r"""No-regression: a REAL count-anchor (no R\d+-\d+ commit ref)
         should still fire SD-recipe findings (this is the load-bearing
         case the detector is designed to catch)."""
         _make_tmp_repo(tmp_path)

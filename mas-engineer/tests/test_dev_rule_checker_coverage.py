@@ -52,7 +52,7 @@ def tmp_mase(tmp_path, monkeypatch):
 # ─────────────────────────────────────────────────────────
 
 def test_load_rules_missing_file(tmp_mase):
-    """Covers lines 30-31: file doesn't exist → return [\]."""
+    r"""Covers lines 30-31: file doesn't exist → return [\]."""
     path = str(tmp_mase[2] / "nonexistent.yaml")
     assert rc.load_rules(path) == []
 

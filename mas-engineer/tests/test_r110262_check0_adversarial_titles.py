@@ -38,7 +38,7 @@ ALLOWED_EMOJIS = {"🔧", "📝", "📚", "📊"}
 
 
 def _extract_allowed_patterns():
-    """Parse the validator spec to extract the allowed_patterns list.
+    r"""Parse the validator spec to extract the allowed_patterns list.
 
     The spec has TWO kinds of allowed patterns:
       1. Initial 2 raw strings inside `allowed_patterns = [ ... ]`

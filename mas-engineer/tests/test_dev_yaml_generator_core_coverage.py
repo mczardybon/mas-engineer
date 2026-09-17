@@ -194,7 +194,7 @@ def test_generate_skips_empty_r01_r09_tags():
 
 
 def test_generate_escapes_backslash_and_doublequote_in_instructions():
-    """Covers line 39: \ → \\ and " → \" escaping."""
+    r"""Covers line 39: \ → \\ and " → \" escaping."""
     out = core.generate_agent_yaml("foo", {
         "instructions": 'has "quotes" and \\backslash',
     }, MIN_SCHEMA)

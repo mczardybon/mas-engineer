@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 dev_spec_invariant.py — R110-118 DIREKTIVE 2: test-count vs recipe-count invariant.
 
 Detects spec-drift (R110-78) between what tests ASSERT and what recipes DECLARE:

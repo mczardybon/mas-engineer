@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Doc-link check — e2e-test.sh [5/10] (R110-253).
+r"""Doc-link check — e2e-test.sh [5/10] (R110-253).
 
 Scans markdown files for non-http markdown links, and reports any
 whose target does not exist on disk. Used as a single source of
