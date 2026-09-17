@@ -168,11 +168,20 @@ jobs:
           # (run 32923318609) when nothing had actually changed. GHA
           # runners have ~10-15% noise on slow tests, so 30% is the
           # floor that catches real regressions without false alarms.
+          #
+          # R110-583: --threshold-pct 50 — bumped from 30% after CI run
+          # 35203283384 (commit 8651600) where the 30% threshold fired
+          # on environmental CI slowness (R110-260 contract was 10-15%
+          # noise; observed today was +124% on
+          # test_im_finder_uses_default_request_id_when_omitted with no
+          # production code changed). 50% still catches real regressions
+          # (which usually show up as 2x+ slowdowns) without false
+          # alarms from GHA runners under transient load.
           python scripts/check_durations.py \
             --current pytest-output.log \
             --baseline tests/durations-baseline.json \
             --top-n 20 \
-            --threshold-pct 30
+            --threshold-pct 50
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.11'
