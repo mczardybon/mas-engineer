@@ -45,6 +45,7 @@ import tools.dev_phoenix_log_persister as plp  # noqa: E402
 # ─────────────────────────────────────────────────────────────────────
 
 # R110-583: absolute tool path to avoid cwd-fragility on CI.
+REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL = Path(__file__).resolve().parents[1] / "tools/dev_phoenix_log_persister.py"
 
 class TestLogDir:
@@ -337,7 +338,7 @@ class TestMain:
         r = subprocess.run(
             ['python3', str(TOOL)],
             input="", capture_output=True, text=True,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 0
         data = json.loads(r.stdout)
         assert "log_written" in data
@@ -357,7 +358,7 @@ class TestMain:
             ['python3', str(TOOL)],
             input=json.dumps(msg),
             capture_output=True, text=True,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 0
         data = json.loads(r.stdout)
         assert data["final_status"] == "ok"

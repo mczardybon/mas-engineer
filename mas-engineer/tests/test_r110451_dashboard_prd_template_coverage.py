@@ -34,6 +34,7 @@ import tools.dashboard_prd_template as dpt  # noqa: E402
 # ─────────────────────────────────────────────────────────────────────
 
 # R110-583: absolute tool path to avoid cwd-fragility on CI.
+REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL = Path(__file__).resolve().parents[1] / "tools/dashboard_prd_template.py"
 
 class TestResolveWorkspace:
@@ -252,7 +253,7 @@ class TestMain:
         r = subprocess.run(
             ['python3', str(TOOL)],
             capture_output=True, text=True,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 1
         assert "ERROR" in r.stdout
 
@@ -262,7 +263,7 @@ class TestMain:
         r = subprocess.run(
             ['python3', str(TOOL)],
             capture_output=True, text=True,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 1
         assert "ERROR" in r.stdout
 
@@ -272,7 +273,7 @@ class TestMain:
         r = subprocess.run(
             ['python3', str(TOOL)],
             capture_output=True, text=True,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 0
         assert "MAS-FRAMEWORK-HUB" in r.stdout
         # PRD was written to dashboard_prd_current.txt

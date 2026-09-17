@@ -37,6 +37,7 @@ import tools.dev_write_filter as wf  # noqa: E402
 # 'tools/dev_write_filter.py' cannot be resolved (e.g. when tmp_path
 # leaks into cwd or pytest is invoked from a different rootdir).
 # Using an absolute path eliminates the cwd dependency entirely.
+REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL = Path(__file__).resolve().parents[1] / "tools" / "dev_write_filter.py"
 
 
@@ -189,7 +190,7 @@ class TestMain:
         r = subprocess.run(
             ['python3', str(TOOL)],
             capture_output=True, text=True, timeout=10,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 1
         assert "call:" in r.stdout
 
@@ -198,7 +199,7 @@ class TestMain:
             ['python3', str(TOOL),
              '--content', 'x'],
             capture_output=True, text=True, timeout=10,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 1
         assert "--file required" in r.stdout
 
@@ -208,7 +209,7 @@ class TestMain:
             ['python3', str(TOOL),
              '--file', target],
             capture_output=True, text=True, timeout=10,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 1
         assert "--content oder --stdin" in r.stdout
 
@@ -219,7 +220,7 @@ class TestMain:
              '--file', target,
              '--content', 'foo: bar'],
             capture_output=True, text=True, timeout=10,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 0
         assert "OK" in r.stdout
 
@@ -231,7 +232,7 @@ class TestMain:
              '--stdin'],
             input="foo: bar",
             capture_output=True, text=True, timeout=10,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 0
         assert "OK" in r.stdout
 
@@ -242,7 +243,7 @@ class TestMain:
              '--file', target,
              '--content', 'foo: bar'],
             capture_output=True, text=True, timeout=10,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 1
         assert "Target-Path" in r.stdout
 
@@ -253,7 +254,7 @@ class TestMain:
              '--file', target,
              '--content', 'foo: bar\n  bad: - x'],
             capture_output=True, text=True, timeout=10,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 1
         assert "YAML" in r.stdout
 
@@ -265,7 +266,7 @@ class TestMain:
              '--content', 'this is not yaml {{{}',
              '--skip-yaml'],
             capture_output=True, text=True, timeout=10,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 0
 
     def test_skip_yaml_non_yaml_file(self):
@@ -276,7 +277,7 @@ class TestMain:
              '--file', target,
              '--content', 'anything'],
             capture_output=True, text=True, timeout=10,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 0
 
     def test_duplicate_yaml(self):
@@ -287,7 +288,7 @@ class TestMain:
              '--file', target,
              '--content', content],
             capture_output=True, text=True, timeout=10,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 1
         assert "Duplikat" in r.stdout
 
@@ -300,7 +301,7 @@ class TestMain:
              '--file', target,
              '--content', 'foo:', 'bar', '--skip-yaml'],
             capture_output=True, text=True, timeout=10,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         # Either ok (skip-yaml branch) or fail (yaml parse error on
         # combined "foo: bar"). Both cover the multi-arg concat path.
         # We expect OK because --skip-yaml is parsed.

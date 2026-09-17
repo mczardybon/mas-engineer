@@ -40,6 +40,7 @@ import tools.mcp_dashboard_server as ds  # noqa: E402
 # ─────────────────────────────────────────────────────────────────────
 
 # R110-583: absolute tool path to avoid cwd-fragility on CI.
+REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL = Path(__file__).resolve().parents[1] / "tools/mcp_dashboard_server.py"
 
 class TestInit:
@@ -206,7 +207,7 @@ class TestMain:
         r = subprocess.run(
             ['python3', str(TOOL), str(tmp_path)],
             capture_output=True, text=True,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 0
         data = json.loads(r.stdout)
         assert data == {"hello": "world"}
@@ -217,7 +218,7 @@ class TestMain:
         r = subprocess.run(
             ['python3', str(TOOL)],
             capture_output=True, text=True,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 0
         # Either fresh generator succeeded, or import-error fallback
         data = json.loads(r.stdout)

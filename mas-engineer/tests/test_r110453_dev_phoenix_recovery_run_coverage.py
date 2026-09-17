@@ -42,6 +42,7 @@ import tools.dev_phoenix_recovery_run as prr  # noqa: E402
 # ─────────────────────────────────────────────────────────────────────
 
 # R110-583: absolute tool path to avoid cwd-fragility on CI.
+REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL = Path(__file__).resolve().parents[1] / "tools/dev_phoenix_recovery_run.py"
 
 class TestConstants:
@@ -309,7 +310,7 @@ class TestMainCli:
         r = subprocess.run(
             ['python3', str(TOOL), '--help'],
             capture_output=True, text=True, timeout=10,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         assert r.returncode == 0
         assert "--request_id" in r.stdout
         assert "--dry-run" in r.stdout

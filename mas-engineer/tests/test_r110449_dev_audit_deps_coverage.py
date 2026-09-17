@@ -39,6 +39,7 @@ import tools.dev_audit_deps as ad  # noqa: E402
 # ─────────────────────────────────────────────────────────────────────
 
 # R110-583: absolute tool path to avoid cwd-fragility on CI.
+REPO_ROOT = Path(__file__).resolve().parents[1]
 TOOL = Path(__file__).resolve().parents[1] / "tools/dev_audit_deps.py"
 
 class TestConstants:
@@ -208,7 +209,7 @@ class TestMainExec:
         result = subprocess.run(
             ['python3', str(TOOL)] + list(args),
             capture_output=True, text=True,
-            cwd=os.getcwd())
+            cwd=str(REPO_ROOT))
         return result.returncode, result.stdout, result.stderr
 
     def test_no_target_exits_1(self):
