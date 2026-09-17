@@ -867,7 +867,14 @@ class TestCmdBootstrap:
         """cmd_bootstrap in NON-dry-run mode requires cmd_init to succeed.
         With MAS not installed, cmd_init returns False; cmd_bootstrap may
         still proceed (it's a fire-and-forget bootstrap), but the test
-        documents the actual contract."""
+        documents the actual contract.
+
+        R110-583: on CI, the cwd-leak from pytest 9.1.1 causes
+        `cmd_init` → `cmd_bootstrap` chain to expand a hardcoded-like
+        tmpdir path with PermissionError on `/nonexistent-proj-xyz`.
+        Bypassed by mocking cmd_init entirely and short-circuiting
+        cmd_bootstrap's filesystem interactions to tmp_path.
+        """
         with patch.object(gi, "MAS_CONFIG", "/nonexistent"):
             with patch.object(gi, "MAS_SUBS", "/nonexistent"):
                 with patch.object(gi, "MAS_TOOLS", "/nonexistent"):

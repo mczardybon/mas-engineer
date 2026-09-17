@@ -563,8 +563,15 @@ class TestAnalyze:
         assert result["filter_level"] in ("working_dir", "fallback")
 
     def test_no_sessions_status(self, monkeypatch, empty_db, ws_no_goosehints):
-        """DB exists but 0 sessions → status='no_sessions'."""
+        """DB exists but 0 sessions → status='no_sessions'.
+
+        R110-583: on CI, get_copy_path() uses tempfile.gettempdir() with a
+        timestamped filename. Two tests running in the same second can race
+        on the same copy path, mutating each other's data. Monkeypatch
+        get_copy_path to return the fixture DB directly so there's no race.
+        """
         monkeypatch.setenv("GOOSE_DB", str(empty_db))
+        monkeypatch.setattr(dsq, "get_copy_path", lambda: str(empty_db))
         result = dsq.analyze(ws_no_goosehints, limit=20, include_messages=False)
         assert result["status"] == "no_sessions"
 
@@ -585,8 +592,13 @@ class TestAnalyze:
             assert isinstance(result["stale"], list)
 
     def test_include_messages_true(self, monkeypatch, fake_db_with_messages, ws_with_goosehints):
-        """include_messages=True → result['messages'] populated."""
+        """include_messages=True → result['messages'] populated.
+
+        R110-583: same get_copy_path race fix as test_no_sessions_status —
+        bypass the timestamped copy path and read the fixture DB directly.
+        """
         monkeypatch.setenv("GOOSE_DB", str(fake_db_with_messages))
+        monkeypatch.setattr(dsq, "get_copy_path", lambda: str(fake_db_with_messages))
         result = dsq.analyze(ws_with_goosehints, limit=20, include_messages=True)
         if result["status"] == "success":
             assert "messages" in result
@@ -607,8 +619,12 @@ class TestShowDbInfo:
         assert info["session_count"] == 0
 
     def test_with_existing_db(self, monkeypatch, fake_db):
-        """DB exists → returns full metadata."""
+        """DB exists → returns full metadata.
+
+        R110-583: bypass get_copy_path's timestamped copy (CI race).
+        """
         monkeypatch.setenv("GOOSE_DB", str(fake_db))
+        monkeypatch.setattr(dsq, "get_copy_path", lambda: str(fake_db))
         info = dsq.show_db_info()
         assert info["exists"] is True
         assert info["size_bytes"] > 0
@@ -617,8 +633,12 @@ class TestShowDbInfo:
         assert "mtime" in info
 
     def test_with_messages_table(self, monkeypatch, fake_db_with_messages):
-        """DB with messages table → has_messages_table=True."""
+        """DB with messages table → has_messages_table=True.
+
+        R110-583: bypass get_copy_path's timestamped copy (CI race).
+        """
         monkeypatch.setenv("GOOSE_DB", str(fake_db_with_messages))
+        monkeypatch.setattr(dsq, "get_copy_path", lambda: str(fake_db_with_messages))
         info = dsq.show_db_info()
         assert info["has_messages_table"] is True
 
