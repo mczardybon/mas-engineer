@@ -161,7 +161,7 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
         target = IM_TOP_N * IM_MULT
         # Hardcoded to mas-engineer-src (R55 fix)
         MAS_ROOT = Path("/workspace/mas-engineer-src/mas-engineer")
-        counter_path = MAS_ROOT / ".state" / "pipeline" / "r55_session_count.yaml"
+        counter_path = MAS_ROOT / ".mase" / "pipeline" / "r55_session_count.yaml"
         counter_path.parent.mkdir(parents=True, exist_ok=True)
         session_count = 0
         if counter_path.exists():
@@ -284,7 +284,7 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
         if IM_TOP_N < 1: IM_TOP_N = 100
         if IM_TOP_N > 500: IM_TOP_N = 500
         MAS_ROOT = Path("/workspace/mas-engineer-src/mas-engineer")
-        counter_path = MAS_ROOT / ".state" / "pipeline" / "r55_session_count.yaml"
+        counter_path = MAS_ROOT / ".mase" / "pipeline" / "r55_session_count.yaml"
         counter_path.parent.mkdir(parents=True, exist_ok=True)
         cd = {}
         if counter_path.exists():
@@ -339,7 +339,7 @@ def do_patch(rel_path: str, von: str, nach: str, grund: str,
 def load_best_practices(bp_path=None):
     """Loads best-practices.yaml. Givet emptys Dict bei Error."""
     if bp_path is None:
-        bp_path = Path(__file__).parent.parent / ".state" / "best-practices.yaml"
+        bp_path = Path(__file__).parent.parent / ".mase" / "best-practices.yaml"
     bp_path = Path(bp_path)
     if not bp_path.exists():
         return {}

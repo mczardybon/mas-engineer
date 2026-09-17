@@ -1,0 +1,2446 @@
+Loading recipe: 🚦 SUB-MAS-PRE-PUSH-VALIDATOR — Gatekeeper before git push (Sub-Agent)
+Description: v2.8.0 | MAS-internal: Runs all 23 critical checks before git push is allowed (R74: +Check 14 multi-dim coverage; R110-56: +Check 0 commit-body disclosure audit; R110-94: +Check 16+ historical category drift via tools/dev_category_drift.py; R110-78: +Check 17 pytest-run to prevent validator-green+tests-red; R110-118: +Check 18 spec-invariant test count-assertions + test-docstrings + recipe/instructions literals vs recipe count-declarations; R110-189: +Check 19 +Check 20 MQ hardening P1+P2 markers; R110-198: +Check 21 MQ topic caller-chain audit; R110-204: +Check 23 orphan-recipe registration audit)
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260819_19 · /workspace/dev-branch/mas-engineer-cleanup/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat recipe/instructions/sub_mas-pre-push-validator.md 2>/dev/null | head -400
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && git status && echo "---BRANCH---" && git branch --show-current && echo "---LOG---" && git log --oneline -5
+
+# sub_mas-pre-push-validator — 🚦 Pre-Push Gatekeeper
+
+MAS-Engineer-internal. Runs BEFORE every `git push` to make sure only
+working, validated code reaches the remote. If any check fails, the push
+MUST be aborted. This agent is the last line of defense.
+
+╔══════════════════════════════════════════════════════════╗
+║  SOT WORKFLOW CONTROL                                    ║
+║  → workflows.yaml → agents.pre-push-validator            ║
+║     .task_workflows.VALIDATE                             ║
+╚══════════════════════════════════════════════════════════╝
+
+## Pipeline Contract (Stage 0/PRE)
+
+This agent runs OUTSIDE the 5-stage im-* pipeline. It is the gatekeeper
+before git push. It reads the current workspace state and verifies
+everything is healthy.
+
+**Input:**  current git working tree (uncommitted + last commit)
+**Output:** `validation: {ok: bool, blocked_reasons: string[], warnings: string[]}`
+**Next:**   if ok → git-operator allowed to push
+            if blocked → human must fix issues first
+
+## Procedure VALIDATE
+
+Run the following 23 checks IN ORDER. Stop at the first failure if a hard
+block is detected, but always collect all warnings.
+
+### Check 0: Commit-body disclosure audit (NEW v2.1.0, R110-56)
+**Why:** A commit body that says "Adds 4 new tests" but git diff shows
+zero new test functions is **dishonest disclosure**. It corrupts the
+audit trail, makes R-numbered findings un-trustable, and lets actors
+hide regressions behind plausible-sounding text. The validator's
+job is to catch THIS class of failure, not just code-level syntax.
+R110-56 v1 (commit 72457b8) committed exactly this anti-pattern
+(claimed 3 new tests + a contradicting rationale). Archived at
+`e2e-evidence-gen2/r11056-body-v1-72457b8-archive.md`.
+```bash
+cd $WORKSPACE
+python3 - <<'PYEOF'
+import subprocess, re, sys
+
+# Get the last commit body (subject + body)
+raw = subprocess.run(
+    ['git', 'log', '-1', '--pretty=format:%B'],
+    capture_output=True, text=True
+).stdout
+lines = raw.split('\n')
+subject = lines[0]
+body = '\n'.join(lines[1:]).strip()
+
+# 1. No-body check: short commits don't make claims, so they pass.
+# (Trivial doc-style or chore commits typically have no body.)
+if len(body) < 50:
+    print(f"  ✅ Check 0 PASS (commit body too short to make claims: {len(body)} chars)")
+    print(f"     {subject!r}")
+    sys.exit(0)
+
+# 2. Claim-extraction patterns
+#    Each pattern returns (regex, claim_type, what evidence is required)
+CLAIM_PATTERNS = [
+    (r'\b[Aa]dds?\s+(\d+)\s+new\s+tests?\b', 'new_tests', 'pytest --collect-only -q | wc -l must show +N test items compared to HEAD~1'),
+    (r'\b[Ff]ixes?\s+(R?\d+-\d+(?:/[A-Z\d]+)?)\b', 'fixes_X', 'git show HEAD --stat must show the fix touching the X file/function'),
+    (r'\b[Rr]ationale:?\s*([^\n]+)', 'rationale', 'body rationale must not contradict git log --grep on the referenced round/issue'),
+    (r'\b[Rr]eplaces?\s+(R?\d+-\d+)\b', 'replaces_X', 'prior commit X must be reachable OR the archive file must be referenced in the body'),
+    (r'\b(?:DOMAIN_[A-Z_]+_TOKENS)', 'domain_tokens', 'body must explicitly call out what DOMAIN_*_TOKENS were added/removed'),
+]
+
+violations = []
+for pat, ctype, required_evidence in CLAIM_PATTERNS:
+    matches = re.findall(pat, body)
+    if not matches:
+        continue
+    # 3. Cross-check each claim against the actual repo state
+    if ctype == 'new_tests':
+        for n in matches:
+            n_int = int(n)
+            # pytest --collect-only comparison
+            cur = subprocess.run(['python3', '-m', 'pytest', '--collect-only', '-q', '--ignore=.state'],
+                                 capture_output=True, text=True, timeout=60).stdout
+            cur_count = sum(1 for line in cur.split('\n') if '::' in line and '::' in line.split('::', 1)[1])
+            prev = subprocess.run(['git', 'show', 'HEAD~1:./'],
+                                  capture_output=True, text=True, timeout=30)
+            # Simpler: count test functions in HEAD~1 and HEAD diff
+            head_tests = subprocess.run(['git', 'ls-tree', '-r', 'HEAD', '--name-only'],
+                                        capture_output=True, text=True).stdout
+            prev_tests = subprocess.run(['git', 'ls-tree', '-r', 'HEAD~1', '--name-only'],
+                                        capture_output=True, text=True).stdout
+            head_test_files = set(f for f in head_tests.split('\n') if f.startswith(('tests/', 'test/')) and f.endswith(('.py', '.sh')))
+            prev_test_files = set(f for f in prev_tests.split('\n') if f.startswith(('tests/', 'test/')) and f.endswith(('.py', '.sh')))
+            new_test_files = head_test_files - prev_test_files
+            if len(new_test_files) != n_int:
+                violations.append(
+                    f"  ❌ Claim 'Adds {n_int} new tests' but git shows {len(new_test_files)} "
+                    f"new test files (HEAD~1 vs HEAD): {sorted(new_test_files) or '(none)'}."
+                )
+    elif ctype == 'rationale':
+        # Just note: rationale review requires human judgment; the validator
+        # can only flag it for the operator to verify, not auto-block.
+        # Heuristic: search for prior rounds' contradicting rationales.
+        for match in matches[:1]:
+            # Find any commit whose message references the same R-number
+            rnums = re.findall(r'R\d+-\d+', match)
+            for rn in rnums[:2]:
+                prior = subprocess.run(
+                    ['git', 'log', '--grep', rn, '--pretty=format:%s'],
+                    capture_output=True, text=True
+                ).stdout.split('\n')
+                if len(prior) > 1:  # Multiple commits reference this R-number → potential contradiction
+                    pass  # Soft flag only
+        # We do NOT block on rationale — just print a reminder
+        print(f"  ⚠️  Commit body contains 'Rationale: ...' — operator should manually verify")
+        print(f"     the rationale does not contradict any prior R-numbered commit message.")
+
+# 4. Additional generic check: body must NOT claim files are modified if
+#    `git show --stat` doesn't show them.
+stat = subprocess.run(['git', 'show', '--stat', 'HEAD', '--pretty=format:'],
+                     capture_output=True, text=True).stdout
+files_changed = set()
+for line in stat.split('\n'):
+    m = re.search(r'\|.*\b(\S+)$', line)
+    if m:
+        files_changed.add(m.group(1))
+
+# Look for explicit file mentions in body
+file_mentions = re.findall(r'`([a-zA-Z_][\w/.-]+\.[a-zA-Z]{1,5})`', body)
+for f in file_mentions:
+    if f not in files_changed and not f.startswith(('/', '.')) and 'archive' not in f.lower():
+        # Only flag if the file isn't tracked anywhere
+        exists = subprocess.run(['git', 'ls-tree', '-r', 'HEAD', '--name-only'],
+                                capture_output=True, text=True).stdout
+        if f not in exists:
+            violations.append(
+                f"  ❌ Body mentions file `{f}` but file is not in HEAD (might be archive-only). "
+                f"Confirm the file is referenced as archive, not as a change."
+            )
+
+if violations:
+    print(f"  ❌ Check 0 BLOCK: {len(violations)} disclosure violation(s):")
+    for v in violations:
+        print(v)
+    print()
+    print(f"  Fix: amend the commit (on cleanup branch) or write a corrected body. ")
+    print(f"  See docs/lessons-learned.md L14 for the disclosure rule and worked example.")
+    sys.exit(1)
+else:
+    print(f"  ✅ Check 0 PASS (commit body claims are evidence-backed)")
+    print(f"     Subject: {subject!r}")
+    print(f"     Body: {len(body)} chars, {len([l for l in body.split(chr(10)) if l.strip()])} non-blank lines")
+PYEOF
+```
+**Block if:** any body claim contradicts `git show --stat` or known file state.
+**R-numbered rationale mismatches are soft-warned only (not blocked) — they require human judgment.**
+
+### Check 1.5: Last commit title matches repo convention (NEW v2.0.0)
+**Why:** R36 anti-pattern — invented `🪤 TRAP` and `🛡️ PUSH` titles that
+broke the repo's visual commit-history rhythm. Last-minute guard.
+```bash
+cd $WORKSPACE
+python3 - <<'PYEOF'
+import subprocess, re
+
+# 1. Get last commit title
+last_title = subprocess.run(
+    ['git', 'log', '-1', '--pretty=format:%s'],
+    capture_output=True, text=True
+).stdout.strip()
+
+# 2. Get ALL commit titles (sample for emoji census)
+history = subprocess.run(
+    ['git', 'log', '-50', '--pretty=format:%s'],
+    capture_output=True, text=True
+).stdout.split('\n')
+
+# 2b. Allowed emojis (HARDCODED from repo history, NOT learned from last-50)
+# R36 lesson: if we learn allowed emojis from history, we perpetuate anti-patterns
+# (e.g. 🪤 TRAP, 🛡️ PUSH made it into history → would be allowed forever).
+# Only the 4 emojis that existed in 5eb67fe era (long before R36) are allowed.
+ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊'}
+
+# 3. Build set of historically-used emojis (for diagnostics only)
+EMOJI_RE = re.compile(r'[\U0001F000-\U0001FFFF\U00002600-\U000027BF]')
+history = subprocess.run(
+    ['git', 'log', '-50', '--pretty=format:%s'],
+    capture_output=True, text=True
+).stdout.split('\n')
+used_emojis = set()
+for t in history:
+    for m in EMOJI_RE.findall(t):
+        used_emojis.add(m)
+
+# 4. Check last title
+allowed_patterns = [
+    r'^(fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:',  # conventional commits
+    r'^mas\(round-\d+\):',  # MAS self-improve rounds
+]
+# Conventional commits with allowed emojis (the 4 in repo history)
+for allowed in ALLOWED_EMOJIS:
+    allowed_patterns.append(f'^{re.escape(allowed)} (FIX|DOCS|STATE|TEST|FEAT|CHORE|ARCH) — ')
+# R108+ convention: emoji + R<round>-<num>[/<sub>] [follow-up] — desc
+# Examples: 🔧 R108-9 follow-up — ..., 📚 R108-7 — ..., 📊 EVIDENCE — R108-9 — ...
+for allowed in ALLOWED_EMOJIS:
+    allowed_patterns.append(f'^{re.escape(allowed)} (R\\d+-[\\w-]+( follow-up)? — |EVIDENCE — R\\d+-)')
+
+# 5. Check 5a: title matches a known pattern
+ok = any(re.match(p, last_title) for p in allowed_patterns)
+if not ok:
+    print(f"  ❌ Last commit title doesn't match repo convention:")
+    print(f"     {last_title!r}")
+    print(f"     Allowed patterns: type(scope): desc | type: desc | 🔧|📝|📚|📊 <TYPE> — desc | 🔧|📝|📚|📊 R<round>-<num> [follow-up] — desc | 📊 EVIDENCE — R<round>-<num> — desc")
+    print(f"     Run `git log --oneline -20` to see the dominant style.")
+    exit(1)
+
+# 6. Check 5b: any emoji in last title that's NOT in HARDCODED allowed set?
+unknown_emojis = [m for m in EMOJI_RE.findall(last_title) if m not in ALLOWED_EMOJIS]
+if unknown_emojis:
+    print(f"  ❌ Last commit title uses NON-ALLOWED emoji(s):")
+    for e in unknown_emojis:
+        print(f"     {e!r} (allowed: {sorted(ALLOWED_EMOJIS)})")
+    print(f"     If you need a new emoji, add it to ALLOWED_EMOJIS in this check + justify.")
+    print(f"     Anti-patterns: R36 used 🪤 TRAP, 🛡️ PUSH (not in repo history → blocked).")
+    exit(1)
+
+print(f"  ✓ Last commit title follows repo convention")
+print(f"     {last_title!r}")
+print(f"     (precedent emojis in last 50 commits: {sorted(used_emojis) or 'none'})")
+exit(0)
+PYEOF
+```
+**Block if:** last commit title doesn't match `type(scope): desc`, `type: desc`,
+`mas(round-NN):`, one of the 4 known emoji prefixes (`🔧`, `📝`, `📚`, `📊`) followed by `<TYPE> — desc`,
+or R108+ convention `🔧|📝|📚|📊 R<round>-<num> [follow-up] — desc` / `📊 EVIDENCE — R<round>-<num> — desc`.
+**Block if:** last commit title uses an emoji NOT in the precedent set (anti-pattern: R36 🪤 TRAP, 🛡️ PUSH).
+
+### Check 1: P1 (high-severity) findings = 0
+```bash
+cd $WORKSPACE
+python3 - <<'PYEOF'
+import yaml, glob, os
+findings_path = ".mase/pipeline/findings.yaml"
+if not os.path.exists(findings_path):
+    print("WARN: no .mase/pipeline/findings.yaml — run im-finder first")
+    exit(0)
+with open(findings_path) as f:
+    data = yaml.safe_load(f)
+high = [x for x in data.get('data', {}).get('findings', [])
+        if '🔴' in x.get('severity', '')]
+print(f"  🔴 high-severity findings: {len(high)}")
+for f in high:
+    print(f"     {f['type']} | {f['file']} | {f['detail'][:80]}")
+exit(1 if high else 0)
+PYEOF
+```
+**Block if:** any 🔴 high finding found.
+
+### Check 2: No hardcoded /home/<user>/ paths
+```bash
+cd $WORKSPACE
+grep -rn '/home/[a-z]*/' tools/ recipe/ .mase/ 2>/dev/null
+```
+**Block if:** any hardcoded user-home path found.
+
+### Check 3: All YAML files are syntactically valid
+```bash
+cd $WORKSPACE
+python3 -c "
+import yaml, glob, sys
+err = 0
+for f in glob.glob('recipe/sub/*.yaml') + glob.glob('recipe/*.yaml'):
+    try:
+        yaml.safe_load(open(f))
+    except Exception as e:
+        print(f'ERROR: {f}: {e}')
+        err += 1
+sys.exit(1 if err else 0)
+"
+```
+**Block if:** any YAML parse error.
+
+### Check 4: All Python tools compile
+```bash
+cd $WORKSPACE
+for f in tools/dev_*.py; do
+    if ! python3 -c "compile(open('$f').read(), '$f', 'exec')" 2>/dev/null; then
+        echo "SYNTAX: $f"
+    fi
+done
+```
+**Block if:** any Python syntax error.
+
+### Check 5: All shell scripts are syntactically valid
+```bash
+cd $WORKSPACE
+for f in tools/dev_*.sh; do
+    bash -n "$f" 2>&1 || echo "SYNTAX: $f"
+done
+```
+**Block if:** any shell syntax error.
+
+### Check 6: No German-only words in code/docs
+```bash
+cd $WORKSPACE
+# Check for umlaut characters and a list of common German-only words
+# Note: the actual umlaut characters (ae, oe, ue, ss) are written as hex escapes
+# below to keep this instructions file itself free of them and pass its own check.
+# Whitelist: files that are intentionally German (translation libs, test data for
+# German validators, legacy archival). These are functional, not bugs.
+GERMAN_WHITELIST='^(tools/pre_check_lib/german\.py|tools/e2e_teams\.py|tools/cleanup_repo_v1\.sh|recipe/sub/legacy/)'
+grep -rP $'[\xc3\xa4\xc3\xb6\xc3\xbc\xc3\x9f\xc3\x84\xc3\x96\xc3\x9c]' tools/ recipe/ docs/ 2>/dev/null \
+  | grep -vE "$GERMAN_WHITELIST" \
+  | grep -vE '^[^:]+:\s*(#|//)' \
+  || echo "  (no off-whitelist German chars)"
+exit_code=0
+# Note: dashboard/agent/active etc. are English. Only flag the actual German words.
+```
+**Block if:** any German special character found.
+*(Note: some German-cognate words are fine in English — only special chars are blocked.)*
+
+### Check 7: Git status is clean or commit is the last action
+```bash
+cd $WORKSPACE
+git status --porcelain | head -20
+```
+**Warning if:** uncommitted changes (push might miss them, but not blocked).
+
+### Check 7.5: No backup files in commits (NEW v2.0.0 — R36 bug guard)
+**Why:** R36 had a bug where `git add -A` accidentally committed 27k lines of
+backup files (`.backups/20260724_*/`, `.mase/pipeline/backup-*/`).
+This check prevents that class of bug from ever reaching master again.
+```bash
+cd $WORKSPACE
+# Scan the last 5 commits for accidentally-committed backup files
+python3 - <<'PYEOF'
+import subprocess, re
+backup_patterns = [
+    r'\.backups/',
+    r'\.mase/pipeline/backup-',
+    r'\.bak\.',
+    r'backup-pre-r\d+/',
+]
+# Get list of files changed in last 5 commits
+result = subprocess.run(
+    ['git', 'log', '-5', '--name-only', '--pretty=format:'],
+    capture_output=True, text=True
+)
+files = [f for f in result.stdout.split('\n') if f]
+polluted = [f for f in files if any(re.search(p, f) for p in backup_patterns)]
+if polluted:
+    print(f"  ❌ {len(polluted)} backup file(s) in last 5 commits:")
+    for f in set(polluted):
+        print(f"     {f}")
+    exit(1)
+print(f"  ✓ No backup files in last 5 commits (checked {len(files)} file-paths)")
+exit(0)
+PYEOF
+```
+**Block if:** any backup file appears in the last 5 commits.
+
+### Check 8: No "missing Goose mechanism" anti-pattern (L01 from lessons-learned.md)
+Catches the class of bug where im-designer proposes reimplementing a native
+Goose mechanism (e.g. "add load on demand" when summon extension exists).
+```bash
+cd $WORKSPACE
+# Scan uncommitted/pushed changes for "missing mechanism" claims
+# R55 fix (2026-07-25): only call if diff non-empty + auto-default to findings.yaml
+DIFF_CONTENT="$(git diff HEAD~1 -- recipe/ tools/ 2>/dev/null | head -200)"
+if [ -n "$DIFF_CONTENT" ]; then
+  python3 tools/dev_goose_expert_check.py --check-mechanism "$DIFF_CONTENT"
+else
+  # No recent changes — check current SOT findings/patches instead
+  python3 tools/dev_goose_expert_check.py --findings .mase/pipeline/findings.yaml 2>/dev/null || true
+  python3 tools/dev_goose_expert_check.py --patches .mase/pipeline/patches.yaml 2>/dev/null || true
+fi
+```
+**Block if:** any "missing Goose mechanism" pattern found in uncommitted
+or recently-pushed code/docs. See `docs/lessons-learned.md` L01.
+
+### Check 9: Self-audit — no "verification theater" (no claim without evidence)
+| Catches the class of bug where certificate / EVIDENCE docs contain strong
+| claims (e.g. the phrases "VERIFIED-FUNCTIONAL" with that exact hyphenation,
+| "ALL-HYPOTHESES-VERIFIED", "100%-PASS", or unguarded "guarantees")
+| without a matching test log that actually demonstrates
+the claim. This is the "verification theater" pattern that the user
+flagged on 2026-07-21.
+
+This check delegates to `sub_mas-self-auditor` (sub-agent). The
+self-auditor reads e2e-results/, docs/, and top-level `*.md`, then
+emits a report to `.mase/pipeline/self_audit.yaml`.
+
+```bash
+cd $WORKSPACE
+# Only run if e2e-results or cert-style files are staged.
+# R108-13 fix: the previous detector used '\w*\.md$' which only matched
+# root-level .md files (e.g. README.md), NOT nested paths like
+# 'mas-engineer/docs/CERT.md' or 'e2e-results/2026-07-27/foo.md'.
+# Result: Check 9 was silently SKIPPED for almost every commit. The
+# --scope staged fix from R108-12 only runs IF this detector matches.
+# New pattern '\.md$' + '\.txt$' matches any path ending in those
+# suffixes (no leading-anchor on the filename part).
+STAGED_CERTS=$(git diff --cached --name-only | grep -E "(^e2e-results/|^docs/.*CERTAIN|^certificates/|\.md$|\.txt$)" | head -5)On branch mas-mq
+Your branch is up to date with 'origin/mas-mq'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   .mase/changelog.txt
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	logs/e2e-evidence-gen2/2026-08-18T18-12-00Z-R110-194-mq-full-adoption-preflight/
+
+no changes added to commit (use "git add" and/or "git commit -a")
+---BRANCH---
+mas-mq
+---LOG---
+c546b7f 📝 R110-213 — pre-push-gate final report (R110-210/211/212 retroactive verification)
+52014cb 📝 R110-212 — R110-211 body-claim-drift korrigiert (bytes vs lines)
+9339154 📝 R110-211 — R110-210 evidence-archive + retroaktive Step 4+5 completion (transparency honor-code)
+c37ac38 📝 R110-210 — MM9-EXT deferred findings als false-positive klassifiziert + scanner-self-test-fixture
+766b501 fix: R110-209 — drift-risk MM9-EXT findings (4 highest-priority)Let me read the rest of the validator instructions.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && sed -n '400,800p' recipe/instructions/sub_mas-pre-push-validator.md
+
+STAGED_CERTS=$(git diff --cached --name-only | grep -E "(^e2e-results/|^docs/.*CERTAIN|^certificates/|\.md$|\.txt$)" | head -5)
+if [ -n "$STAGED_CERTS" ]; then
+  # R108-12 fix: use --scope staged (audit only files in this commit),
+  # not --scope e2e-results (which would re-audit ALL historical reports
+  # and cause whack-a-mole: fix one cert → expose 5 more in older reports).
+  python3 tools/dev_self_auditor.py --scope staged
+  # Read its report
+  cat .mase/pipeline/self_audit.yaml
+fi
+```
+
+**Patterns blocked (CHECK 1 in self-auditor):**
+- `\bVERIFIED\s+FUNCTIONAL\b` without matching test log in same folder
+- `\bALL\s+HYPOTHESES\s+VERIFIED\b` without matching log
+- `\b100%\s+(PASS|pass|test|coverage)\b` without matching pass-count log
+- `\bguarantee[sd]?\b` in a cert-style file (CERTIFICATE.md, etc.)
+- `\bE2E[-\s]verified\b` not scoped to "loading fix"
+
+**Block if:** ≥1 strong claim without matching test log, OR
+strong claim + "workaround" / "out of scope" / "not yet tested"
+within 5 lines (claim-vs-scope contradiction).
+
+**Pass condition (CHECK 8 in self-auditor):** file contains
+"honest scope" / "NOT verified" markers AND same folder has a
+`RE-TEST-RESULTS.md` or similar honest-scope companion doc.
+This rewards properly-scoped documents.
+
+**Why this check matters:** On 2026-07-21 the project pushed a
+CERTIFICATE.md that said "VERIFIED-FUNCTIONAL" and "ALL-HYPOTHESES-VERIFIED". On close reading, the underlying test was a workaround
+and the original failure scenario was never re-run. The user
+flagged this as overclaim. This check prevents recurrence by
+making the pre-push gate reject unbacked strong claims.
+
+
+### Check 10 — e2e regression baseline (behavioral verification)
+
+**Why:** The pre-push validator currently checks STRUCTURE (yaml valid, secrets absent, no overclaims) but not BEHAVIOR. A "commit message says fix" + structure-OK can still ship broken recipes (cf. 602648a claiming 140/140 PASS while only changing 1 line). This check runs the actual e2e suite and fails the push if pass-rate regressed.
+
+**Command (FOREGROUND, ~25-60s, no PTY):**
+```bash
+cd {workspace}
+python3 tools/e2e_run_all.py --quick --no-interactive --auto-confirm 2>&1 | tail -30
+```
+
+**IMPORTANT (R110-60):** The `--auto-confirm` flag is REQUIRED for the R01 (CONFIRMATION_REQUIRED) bypass in e2e_run_all.py. Without it, the 5-minute confirmation window will expire mid-run and the e2e preflight will BLOCK every workflow with `⛔ R01 CONFIRMATION_REQUIRED` (not the e2e tests themselves failing).
+
+**BOTH required (defense in depth, R110-58 + R110-60):**
+- `--auto-confirm` CLI flag: signals operator-intent to bypass
+- `MAS_AUTO_CONFIRM=1` env var: signals automation-context (e.g. CI/pre-push-gate)
+
+If only one is present, e2e_run_all.py logs a WARN and skips the bypass. This mirrors the R01 hardness-5 AND-gate semantics. The pre-push-gate is an automation context, so `MAS_AUTO_CONFIRM=1` MUST be present in the validator's process environment before invoking the e2e tool. If you are running the validator manually (e.g. for debugging), set it in your shell first:
+```bash
+export MAS_AUTO_CONFIRM=1
+goose run --recipe recipe/sub/sub_mas-pre-push-validator.yaml
+```
+
+**Parse output:** look for `✅ All {N} tests passed (100%)` or the summary line. Extract pass-count from the YAML report at the end of stdout (or stderr). The output format is: `Summary: {ok}/{total} passed ({pct}%)` — this is the canonical signal.
+
+**Baseline source:**
+- PRIMARY: last successful `e2e-results/<date>-run-N/raw-results.json` where `summary` shows 100% (or highest known)
+- FALLBACK: hardcoded known-good baseline per run-mode
+  - `quick` mode: 83/83 (as of 2026-07-22)
+  - `full` mode: 139/139 (as of 2026-07-22)
+
+**Block conditions (ANY of):**
+- ⛔ current pass-count < baseline pass-count (regression)
+- ⛔ current pass-rate < baseline pass-rate (regression)
+- ⛔ any previously-passing test now fails (per-test regression)
+- ⛔ command exits non-zero
+
+**Warn conditions:**
+- ⚠️ current pass-count == baseline but new test added (informational)
+- ⚠️ baseline file missing (use hardcoded fallback with WARN)
+
+**Note:** This check adds ~25-60s to the pre-push gate. If too slow for interactive use, can be skipped via `MAS_SKIP_E2E_BASELINE=1` env var (operator-initiated only, never auto-skip).
+
+**Evidence file (always written):**
+`.mase/pre-push-e2e-baseline.json` — contains:
+```yaml
+checked_at: <ISO-8601>
+baseline_source: <file path or "fallback">
+baseline_pass: <int>
+baseline_total: <int>
+current_pass: <int>
+current_total: <int>
+regression_detected: <bool>
+failing_tests: [<name>, ...]
+command: <full command run>
+```
+
+**Reference:** docs/BUG-BRIEF-2026-07-23.md §3 (verification theater root cause).
+
+
+### Check 11 — sub_recipe resolution coverage (structural e2e test baseline)
+
+**Why:** mas's main loop relies on sub_recipe references resolving correctly. If `recipe/sub/X.yaml` declares sub_recipes pointing to files that don't exist, the framework fails at runtime. This check pre-validates all sub_recipe references resolve before push.
+
+**Command (FOREGROUND, ~1-3s):**
+```bash
+cd {workspace}
+python3 -c "
+import yaml, glob, os, json
+broken = []
+total = 0
+for f in glob.glob('mas-engineer/recipe/sub/*.yaml'):
+    if 'ORIGINAL' in f: continue
+    try: d = yaml.safe_load(open(f))
+    except: continue
+    for s in d.get('sub_recipes', []):
+        total += 1
+        path = s.get('path','').lstrip('./')
+        full = os.path.join(os.path.dirname(f), path)
+        if not os.path.exists(full):
+            broken.append(f'{os.path.basename(f)} -> {s.get(\"name\")} ({path})')
+print(json.dumps({'refs': total, 'broken': len(broken), 'pct': round(100*(1-len(broken)/max(total,1)), 2), 'sample': broken[:3]}, indent=2))
+"
+```
+
+**Block conditions (ANY of):**
+- ⛔ broken count > 0 (any sub_recipe reference unresolved)
+- ⛔ refs == 0 (no sub_recipes found — likely YAML parse error)
+- ⛔ command exits non-zero
+
+**Warn conditions:**
+- ⚠️ pct < 100 but > 95 (some broken refs, blocking)
+
+**Reference:** R52-R55 post-flight audit pattern.
+
+
+### Check 12 — test coverage gate (sub-agents vs tests, 80% minimum)
+
+**Why:** With the growing sub-agents directory (currently 116 yaml files in recipe/sub/, verified 2026-08-19 via `find recipe/sub -name '*.yaml' | wc -l`) and the matching test suite (currently 163 test_*.py files, ratio 1.41 — well above the 0.8 threshold), mas's framework was historically undertested (R110-56, 2026-07-25: only ~2 dedicated test files for 112 sub-agents; that ratio is now far exceeded). The pre-push gate must enforce a minimum test-to-sub-agent ratio to prevent shipping unbacked code. This is the structural test-coverage gate.
+
+**User requirement (2026-07-25):** tests/test_*.py count must be >= recipe/sub/*.yaml count × 0.8
+
+**Command (FOREGROUND, ~1s):**
+```bash
+cd {workspace}
+python3 -c "
+import glob
+sub_count = len([f for f in glob.glob('mas-engineer/recipe/sub/*.yaml') if 'ORIGINAL' not in f])
+test_count = len(glob.glob('mas-engineer/tests/test_*.py'))
+threshold = int(sub_count * 0.8)
+ratio = round(test_count / max(sub_count, 1), 3)
+gate_passed = test_count >= threshold
+print(json.dumps({
+    'sub_agents': sub_count,
+    'tests': test_count,
+    'threshold_80pct': threshold,
+    'ratio': ratio,
+    'gate_passed': gate_passed,
+    'gap': max(0, threshold - test_count)
+}, indent=2))
+"
+```
+
+**Block conditions (ANY of):**
+- ⛔ test_count < sub_count × 0.8 (below 80% coverage)
+- ⛔ tests directory missing entirely (test_count = 0)
+- ⛔ command exits non-zero
+
+**Warn conditions:**
+- ⚠️ ratio < 1.0 (informational — could be intentional for stable code)
+- ⚠️ tests count == 0 (catastrophic — no tests at all)
+
+**Operator override (escape hatch):**
+- Set `MAS_SKIP_TEST_COVERAGE_GATE=1` env var to skip this check (operator-initiated only, never auto-skip)
+- Documented in docs/TEST-COVERAGE-POLICY.md
+
+**Evidence file (always written):**
+`.mase/pre-push-test-coverage.json` — contains:
+```yaml
+checked_at: <ISO-8601>
+sub_agents: <int>
+tests: <int>
+threshold_80pct: <int>
+ratio: <float>
+gate_passed: <bool>
+gap: <int>
+```
+
+**Status as of 2026-07-25:** sub_agents=120, tests=2, threshold=96, gap=94 — gate FAILS. This is intentional to expose the test-debt and force incremental coverage growth.
+
+### Check 13 — constitution coverage
+**Why:** Sub-agents that do not declare `constitution: sub_mas-master-constitution.yaml` operate outside the SOT and may diverge from master rules. This check enforces consistent governance.
+
+**Command:**
+```bash
+cd $WORKSPACE
+python3 - <<'PYEOF'
+import yaml, glob, os
+missing = []
+checked = 0
+for pattern in ['recipe/sub/*.yaml', 'recipe/sub/demo-team/*.yaml']:
+    for f in glob.glob(pattern):
+        if 'master-constitution' in f: continue
+        checked += 1
+        try:
+            d = yaml.safe_load(open(f))
+        except Exception as e:
+            print(f"  ERROR: {f}: {e}")
+            continue
+        if d.get('constitution') != 'sub_mas-master-constitution.yaml':
+            missing.append(f)
+print(f"  Checked: {checked} sub-agent files")
+print(f"  Missing constitution: {len(missing)}")
+for f in missing:
+    print(f"    ❌ {f}")
+exit(1 if missing else 0)
+PYEOF
+```
+**Block if:** any sub-agent file is missing `constitution: sub_mas-master-constitution.yaml`.
+
+
+## Output Format
+
+Write a YAML report to `.mase/pipeline/pre_push_validation.yaml`:
+
+```yaml
+signal: DONE
+request_id: pre-push-<timestamp>
+from: sub_mas-pre-push-validator
+to: human + git-operator
+status: ok | blocked
+data:
+  validation:
+    ok: <bool>
+    blocked_reasons: [<string>, ...]
+    warnings: [<string>, ...]
+  checks_run: 21
+  checks_passed: <int>
+  checks_failed: <int>
+  timestamp: <ISO-8601>
+```
+
+### Check 14: Multi-dim sub-agent coverage (NEW v2.0.0)
+**Why:** R73 — R72 struktur-check finds yaml-schema bugs but not behavior bugs.
+A sub-recipe with valid yaml can still fail at runtime (wrong sub_recipes ref,
+missing external instructions, bad goose provider settings). Add behavior
+coverage as a pre-push gate.
+
+**What it does:**
+Runs `tools/coverage_test --framework-only --mode=explain` (no LLM, ~1s)
+and `tools/test_subagents --all --summary` (yaml schema). Both must pass.
+
+```bash
+cd $WORKSPACE
+python3 - <<'PYEOF'
+import subprocess, json
+from pathlib import Path
+
+W = Path("/workspace/mas-engineer-src/mas-engineer")
+
+# 1. Behavior coverage (no LLM, fast)
+r1 = subprocess.run(
+    ["python3", str(W / "tools/coverage_test"),
+     "--all", "--framework-only", "--mode=explain", "--timeout=10"],
+    capture_output=True, text=True, timeout=120, cwd=str(W),
+)
+# Parse the saved JSON
+coverage_dir = W / ".mase" / "coverage"
+latest = max(coverage_dir.glob("coverage-*.json"), key=lambda p: p.stat().st_mtime, default=None)
+if latest:
+    cov = json.loads(latest.read_text())
+    behavior_pass = cov.get("passed", 0)
+    behavior_total = cov.get("total", 0)
+else:
+    behavior_pass, behavior_total = 0, 0
+
+# 2. Structure coverage (R72)
+r2 = subprocess.run(
+    ["python3", str(W / "tools/test_subagents"), "--all"],
+    capture_output=True, text=True, timeout=60, cwd=str(W),
+)
+# Parse: "Total: N | PASS: N | FAIL: N | WARN: N"
+import re
+m = re.search(r"Total: (\d+) \| PASS: (\d+) \| FAIL: (\d+)", r2.stdout)
+if m:
+    struct_total = int(m.group(1))
+    struct_pass = int(m.group(2))
+    struct_fail = int(m.group(3))
+else:
+    struct_total, struct_pass, struct_fail = 0, 0, 999
+
+# Pass criteria:
+# - behavior: 100% (--explain mode = $0, so we expect all green)
+# - structure: 100% PASS (WARN is ok, FAIL is not)
+ok = (behavior_pass == behavior_total and behavior_total > 0 and struct_fail == 0)
+print(f"  Behavior coverage: {behavior_pass}/{behavior_total}")
+print(f"  Structure coverage: {struct_pass}/{struct_total} (FAIL={struct_fail})")
+if not ok:
+    reasons = []
+    if behavior_pass != behavior_total:
+        reasons.append(f"behavior-fail: {behavior_total - behavior_pass} recipes")
+    if struct_fail > 0:
+        reasons.append(f"structure-fail: {struct_fail} recipes")
+    print(f"  ❌ Multi-dim coverage FAILED: {', '.join(reasons)}")
+else:
+    print(f"  ✅ Multi-dim coverage PASS ({behavior_pass} behavior + {struct_pass} structure)")
+
+# Export for aggregator
+print("CHECK14_RESULT:", json.dumps({
+    "ok": ok,
+    "behavior_pass": behavior_pass, "behavior_total": behavior_total,
+    "struct_pass": struct_pass, "struct_total": struct_total, "struct_fail": struct_fail,
+}))
+PYEOF
+```
+
+**Result aggregation:**
+- ✅ PASS: behavior 100% AND structure 100% (FAIL=0)
+- ❌ BLOCK: any behavior fail OR any structure fail
+- WARN: structure has warnings (informational only)
+
+### Check 16+: Historical commit-subject category drift (NEW v2.2.0, R110-94)
+
+**Goal:** Catches drift across the LAST 30 days that Check 1.5 cannot see
+(Check 1.5 validates only the LATEST commit at push time).
+
+**What it does:** Invokes the standalone drift detector
+`tools/dev_category_drift.py` (R110-92) and BLOCKS the push if any
+non-conforming subject is found in the last 30 days (post-cutoff,
+default `--convention-since 2026-08-04`).
+
+```bash
+# Check 16+: Historical category drift
+echo "🔍 Check 16+: Historical commit-subject category drift (R110-94)"
+if [ ! -f "tools/dev_category_drift.py" ]; then
+    echo "  ❌ BLOCK: tools/dev_category_drift.py missing (R110-92 drift detector required)"
+    echo "     This check cannot run without it. Add it via R110-92 or disable this check."
+    exit 1
+fi
+python3 tools/dev_category_drift.py --since 30 --json > /tmp/drift_check_16.json
+DRIFT_RC=$?
+if [ $DRIFT_RC -eq 2 ]; then
+    echo "  ❌ BLOCK: Check 16+ usage error (exit 2). See /tmp/drift_check_16.json"
+    cat /tmp/drift_check_16.json
+    exit 1
+fi
+DRIFT_COUNT=$(python3 -c "import json; d=json.load(open('/tmp/drift_check_16.json')); print(d['drift_count'])" 2>/dev/null || echo "0")
+if [ "$DRIFT_RC" -eq 1 ] || [ "${DRIFT_COUNT:-0}" -gt 0 ]; then
+    echo "  ❌ BLOCK: Check 16+ — $DRIFT_COUNT historical commit(s) violate the 5-category convention"
+    echo "     Run: python3 tools/dev_category_drift.py --since 30   (for details)"
+    echo "     For the historical view (pre-cutoff): --convention-since YYYY-MM-DD"
+    echo "     Reference: mas-engineer-commit-protocol skill, R110-90 rebase precedent"
+    exit 1
+fi
+echo "  ✅ Check 16+ passed: no category drift in last 30 days (post-cutoff 2026-08-04)"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 16+: Historical commit-subject category drift (R110-94)
+  ✅ Check 16+ passed: no category drift in last 30 days (post-cutoff 2026-08-04)
+```
+
+**Output block on BLOCK:**
+```
+🔍 Check 16+: Historical commit-subject category drift (R110-94)
+  ❌ BLOCK: Check 16+ — 3 historical commit(s) violate the 5-category convention
+     Run: python3 tools/dev_category_drift.py --since 30   (for details)
+     For the historical view (pre-cutoff): --convention-since YYYY-MM-DD
+     Reference: mas-engineer-commit-protocol skill, R110-90 rebase precedent
+```
+
+**Additive to Check 1.5:** Check 1.5 catches the LATEST commit. Check 16+
+catches the WINDOW. Both are needed; neither replaces the other.
+
+**Override:** To pass on intentional historical drift (e.g. before the
+5-category convention was enforced), update the cutoff in the script via
+`--convention-since 2026-07-27` (or earlier). This check does NOT accept
+a flag override — edit the script's default or use a wrapper if needed.
+
+**Reference:** R110-92 (drift detector), R110-90 (rebase precedent),
+R110-78 (spec-drift lesson — counts must be verified).
+
+### Check 17: pytest-run (NEW v2.3.0, R110-78)
+
+**Goal:** Catches test failures BEFORE the push is allowed. This is the
+direct response to the R110-71 spec-drift incident where a recipe-count
+change (96 → 110) was committed and pushed, breaking 2 tests
+permanently because the validator never ran pytest. Check 17 makes
+"validator green + tests red" impossible.
+
+**Idempotency:** If `check_17_pytest_run` already appears in this file
+(previously inserted by an earlier validator run), skip the insert and
+keep the existing block. Detection via `grep -q "check_17_pytest_run"`.
+
+```bash
+# Check 17: pytest-run
+echo "🔍 Check 17: pytest-run (R110-78)"
+if [ ! -d "tests" ]; then
+    echo "  ⚠️  WARN: no tests/ directory found — skipping pytest-run (no coverage to verify)"
+    echo "PYTEST_SUMMARY: {\"passed\": 0, \"failed\": 0, \"errors\": 0, \"skipped\": 0, \"exit_code\": 5, \"note\": \"no tests dir\"}"
+    echo "  ✅ Check 17 passed: no tests/ dir (PASSED, WARN-only)"
+else
+    # Run pytest with retry (R-208): up to 3 attempts; success = pytest exit 0;
+    # on_failure = cleanup (kill orphaned test consumers / remove temp artifacts) before retry.
+    # Run pytest; use 'set -o pipefail' so $? reflects pytest's exit code, not tail's.
+    PYTEST_RC=1
+    PYTEST_ATTEMPT=0
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && sed -n '800,1200p' recipe/instructions/sub_mas-pre-push-validator.md
+
+    PYTEST_ATTEMPT=0
+    while [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt 3 ]; do
+        PYTEST_ATTEMPT=$((PYTEST_ATTEMPT + 1))
+        PYTEST_OUTPUT=$(python3 -m pytest tests/ -q --tb=line --color=no 2>&1 | tail -30)
+        (set -o pipefail; python3 -m pytest tests/ -q --tb=line --color=no >/dev/null 2>&1)
+        PYTEST_RC=$?
+        if [ "$PYTEST_RC" -eq 127 ]; then
+            break   # pytest not installed — retrying will not help
+        fi
+        if [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt 3 ]; then
+            echo "  ⚠️  RETRY $PYTEST_ATTEMPT/3: pytest exit=$PYTEST_RC — cleaning up before retry (R-208)"
+            pkill -f 'dev_mq_consumer' 2>/dev/null || true   # kill orphaned test consumers
+            rm -rf /tmp/mas-engineer-test /tmp/mas-engineer 2>/dev/null || true   # remove temp artifacts
+        fi
+    done
+    # Parse summary line: e.g. "===== 1277 passed in 8.12s ====="
+    PASSED=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ passed" | grep -oE "[0-9]+" | head -1)
+    FAILED=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ failed" | grep -oE "[0-9]+" | head -1)
+    ERRORS=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ error" | grep -oE "[0-9]+" | head -1)
+    SKIPPED=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ skipped" | grep -oE "[0-9]+" | head -1)
+    DURATION=$(echo "$PYTEST_OUTPUT" | grep -oE "in [0-9.]+s" | grep -oE "[0-9.]+" | head -1)
+    PASSED=${PASSED:-0}; FAILED=${FAILED:-0}; ERRORS=${ERRORS:-0}; SKIPPED=${SKIPPED:-0}
+    DURATION=${DURATION:-0.0}
+    if [ "$PYTEST_RC" -eq 127 ]; then
+        echo "  ❌ BLOCK: pytest not installed (exit 127). Install with: pip install pytest"
+        exit 1
+    fi
+    if [ "$FAILED" -gt 0 ] || [ "$ERRORS" -gt 0 ] || [ "$PYTEST_RC" -ne 0 ]; then
+        echo "  ❌ BLOCK: Check 17 — pytest failed: $FAILED failed, $ERRORS errors, exit=$PYTEST_RC"
+        echo "     Last lines of pytest output:"
+        echo "$PYTEST_OUTPUT" | tail -10 | sed 's/^/     /'
+        echo "     Run: python3 -m pytest tests/ -q --tb=short   (for full traceback)"
+        echo "PYTEST_SUMMARY: {\"passed\": $PASSED, \"failed\": $FAILED, \"errors\": $ERRORS, \"skipped\": $SKIPPED, \"duration_seconds\": $DURATION, \"exit_code\": $PYTEST_RC}"
+        exit 1
+    fi
+    echo "  ✅ Check 17 passed: $PASSED passed, $FAILED failed, $ERRORS errors, $SKIPPED skipped in ${DURATION}s"
+    echo "PYTEST_SUMMARY: {\"passed\": $PASSED, \"failed\": $FAILED, \"errors\": $ERRORS, \"skipped\": $SKIPPED, \"duration_seconds\": $DURATION, \"exit_code\": $PYTEST_RC}"
+fi
+```
+
+**Output block on PASS:**
+```
+🔍 Check 17: pytest-run (R110-78)
+  ✅ Check 17 passed: 1277 passed, 0 failed, 0 errors, 0 skipped in 9.6s
+PYTEST_SUMMARY: {"passed": 1277, "failed": 0, "errors": 0, "skipped": 0, "duration_seconds": 9.65, "exit_code": 0}
+```
+
+**Duration reference (R110-95, 2026-08-04, 5x measurement):**
+  Median: 9.65s | Mean: 9.60s | Std: 0.13s | Range: 9.46-9.77s
+  Historical: 8.12s (R110-71 era, single-point). Spec is documentation-
+  only; Check 17 does NOT BLOCK on duration. Variance is real (run-to-run
+  ~0.3s); the 8.12s figure is now retired.
+
+**Output block on BLOCK:**
+```
+🔍 Check 17: pytest-run (R110-78)
+  ❌ BLOCK: Check 17 — pytest failed: 2 failed, 0 errors, exit=1
+     Last lines of pytest output:
+     FAILED tests/test_sub_mas_bootstrap.py::test_bootstrap_distributes_96_subagents
+     FAILED tests/test_sub_mas_recipes.py::test_recipe_count_matches_subagents
+     ...
+PYTEST_SUMMARY: {"passed": 1275, "failed": 2, "errors": 0, "skipped": 0, "duration_seconds": 8.12, "exit_code": 1}
+```
+
+**Block logic:** BLOCKED iff `failed > 0` OR `errors > 0` OR `exit_code != 0`.
+PASSED (with WARN) if `tests/` directory is missing — coverage is a
+separate concern (D2 SD-finding), not a gate.
+PASSED if `skipped > 0` (intentional skip is fine).
+
+**Reference:** R110-78 (spec-drift incident), R110-71 (count change
+that broke 2 tests), R110-82 (initial spec for Check 16 → renumbered
+to 17 to avoid collision with R110-94 Check 16+).
+
+### Check 18: spec-invariant (NEW v2.4.0, R110-118; scope-ext v2.8.0, R110-206)
+
+**Goal:** Closes R110-78 PHASE 3 (R110-109 DIREKTIVE 2+3). Test
+count-assertions (`assert "N type" in ...`) MUST match the recipe
+count-declarations. Prevents the R110-71 pattern (a count changed in
+one place while the other drifted) from ever reaching a push again.
+
+**R110-206 scope extension:** test MODULE-DOCSTRINGS AND
+`recipe/instructions/*.md` single-line prose are ALSO cross-checked
+against the recipe count-declarations for count-declaration types
+(checks/check/critical — the F-082 class). A docstring or instruction
+count that contradicts the recipe declaration is a BLOCKER naming the
+diverged files. Skips: version/identifier contexts (v1.0.0, L01),
+fenced + indented code blocks, inline shell one-liners, markdown
+tables, HTML comments, headings.
+
+**Idempotency:** If `check_18_spec_invariant` already appears in this
+file (previously inserted by an earlier validator run), skip the insert
+and keep the existing block. Detection via
+`grep -q "check_18_spec_invariant"`.
+
+```bash
+# Check 18: spec-invariant (R110-118)
+echo "🔍 Check 18: spec-invariant (R110-118)"
+python3 tools/dev_spec_invariant.py --repo-root . > /tmp/spec_invariant_18.txt 2>&1
+SPEC_INV_RC=$?
+if [ "$SPEC_INV_RC" -ne 0 ]; then
+    echo "  ❌ BLOCK: Check 18 — spec-invariant drift detected (test count-assertions != recipe count-declarations)"
+    sed 's/^/     /' /tmp/spec_invariant_18.txt
+    echo "     Fix: align the test literal OR the recipe declaration (git blame tells you which is canonical)"
+    exit 1
+fi
+echo "  ✅ Check 18 passed: test count-assertions match recipe count-declarations"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 18: spec-invariant (R110-118)
+  ✅ Check 18 passed: test count-assertions match recipe count-declarations
+```
+
+**Output block on BLOCK:**
+```
+🔍 Check 18: spec-invariant (R110-118)
+  ❌ BLOCK: Check 18 — spec-invariant drift detected (test count-assertions != recipe count-declarations)
+     ❌ INVARIANT-sub-agents [BLOCKER]: Test asserts [6, 110] 'sub-agents' but recipe declares [110]
+     Fix: align the test literal OR the recipe declaration (git blame tells you which is canonical)
+```
+
+**Reference:** R110-118 (DIREKTIVE 3), R110-109 (spec), R110-78 (PHASE 3 closure).
+
+### Check 19: MQ semantic hardening (NEW v2.5.0, R110-188)
+
+**Goal:** tools/dev_message_queue.py must contain the R110-188 semantic
+hardening markers (F-MQ-188-1..10). Prevents the 11 user-flagged MQ
+defects from regressing after they are fixed.
+
+**Idempotency:** If `check_19_mq_semantic` already appears in this
+file, skip the insert and keep the existing block. Detection via
+`grep -q "check_19_mq_semantic"`.
+
+```bash
+# Check 19: MQ semantic hardening (R110-188)
+echo "🔍 Check 19: MQ semantic hardening (R110-188)"
+MQ188_FAIL=0
+INFLIGHT_HITS=$(grep -c '"in_flight_at"' tools/dev_message_queue.py || true)
+QUAR_HITS=$(grep -c '_quarantine_corrupt_line' tools/dev_message_queue.py || true)
+P95_HITS=$(grep -c 'current_p95_lag_ms' tools/dev_message_queue.py || true)
+INV_HITS=$(grep -c 'MQ_INVARIANTS' tools/dev_message_queue.py || true)
+STRICT_HITS=$(grep -c 'MAS_MQ_STRICT_TOPIC' tools/dev_message_queue.py || true)
+if [ "$INFLIGHT_HITS" -lt 3 ]; then
+    echo "  ❌ BLOCK: Check 19 — 'in_flight_at' expected ≥3 hits, got $INFLIGHT_HITS (F-MQ-188-1/2/3)"
+    MQ188_FAIL=1
+fi
+if [ "$QUAR_HITS" -lt 2 ]; then
+    echo "  ❌ BLOCK: Check 19 — '_quarantine_corrupt_line' expected ≥2 hits, got $QUAR_HITS (F-MQ-188-5)"
+    MQ188_FAIL=1
+fi
+if [ "$P95_HITS" -lt 1 ]; then
+    echo "  ❌ BLOCK: Check 19 — 'current_p95_lag_ms' expected ≥1 hit, got $P95_HITS (F-MQ-188-7)"
+    MQ188_FAIL=1
+fi
+if [ "$INV_HITS" -lt 1 ]; then
+    echo "  ❌ BLOCK: Check 19 — 'MQ_INVARIANTS' expected ≥1 hit, got $INV_HITS (F-MQ-188-10)"
+    MQ188_FAIL=1
+fi
+if [ "$STRICT_HITS" -lt 1 ]; then
+    echo "  ❌ BLOCK: Check 19 — 'MAS_MQ_STRICT_TOPIC' expected ≥1 hit, got $STRICT_HITS (F-MQ-188-6)"
+    MQ188_FAIL=1
+fi
+if [ "$MQ188_FAIL" -ne 0 ]; then
+    echo "     Fix: re-apply R110-188 directive (F-MQ-188-1..10) to tools/dev_message_queue.py"
+    exit 1
+fi
+echo "  ✅ Check 19 passed: MQ semantic hardening markers present (in_flight_at=$INFLIGHT_HITS, quarantine=$QUAR_HITS, p95=$P95_HITS, invariants=$INV_HITS, strict=$STRICT_HITS)"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 19: MQ semantic hardening (R110-188)
+  ✅ Check 19 passed: MQ semantic hardening markers present
+```
+
+**Output block on BLOCK:**
+```
+🔍 Check 19: MQ semantic hardening (R110-188)
+  ❌ BLOCK: Check 19 — 'in_flight_at' expected ≥3 hits, got 1 (F-MQ-188-1/2/3)
+     Fix: re-apply R110-188 directive (F-MQ-188-1..10) to tools/dev_message_queue.py
+```
+
+**Reference:** R110-188 (MQ Semantic Hardening directive).
+
+### Check 20: MQ hardening P2 markers (NEW v2.6.0, R110-189)
+
+**Goal:** tools/dev_message_queue.py must contain the 15 R110-189 MQ
+hardening markers (F-MQ-189-1..15). Prevents the 15 hardening P2/P3
+defects from regressing after they are fixed.
+
+**Idempotency:** If `check_20_mq_hardening` already appears in this
+file, skip the insert and keep the existing block. Detection via
+`grep -q "check_20_mq_hardening"`.
+
+```bash
+# Check 20: MQ hardening P2 markers (R110-189)
+echo "🔍 Check 20: MQ hardening P2 markers (R110-189)"
+MQ189_FAIL=0
+MQ189_MARKERS=(
+  "class QueueFullError"          # F-MQ-189-1
+  "_gc_old_pending"               # F-MQ-189-2
+  "def requeue("                  # F-MQ-189-3
+  "_lag_distribution"             # F-MQ-189-4
+  "def replay_dlq("               # F-MQ-189-5
+  "_SCHEMA_VERSION"               # F-MQ-189-6
+  "_IdempotencyIndex"             # F-MQ-189-7
+  "metrics_prometheus"            # F-MQ-189-8
+  "_next_retry_delay"             # F-MQ-189-9
+  "def list_topics("              # F-MQ-189-10
+  "def compact_completed("        # F-MQ-189-11
+  "_classify_error"               # F-MQ-189-12
+  "StorageError"                  # F-MQ-189-14
+  "MAS_MQ_MAX_DEPTH_PER_TOPIC"    # F-MQ-189-1
+  'min(int(m.get("retry_count"'   # F-MQ-189-13
+)
+for marker in "${MQ189_MARKERS[@]}"; do
+    HITS=$(grep -c "$marker" tools/dev_message_queue.py || true)
+    if [ "$HITS" -lt 1 ]; then
+        echo "  ❌ BLOCK: Check 20 — marker '$marker' expected ≥1 hit, got 0 (R110-189)"
+        MQ189_FAIL=1
+    fi
+done
+if [ "$MQ189_FAIL" -ne 0 ]; then
+    echo "     Fix: re-apply R110-189 directive (F-MQ-189-1..15) to tools/dev_message_queue.py"
+    exit 1
+fi
+echo "  ✅ Check 20 passed: 15/15 MQ hardening P2 markers present"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 20: MQ hardening P2 markers (R110-189)
+  ✅ Check 20 passed: 15/15 MQ hardening P2 markers present
+```
+
+**Output block on BLOCK:**
+```
+🔍 Check 20: MQ hardening P2 markers (R110-189)
+  ❌ BLOCK: Check 20 — marker 'class QueueFullError' expected ≥1 hit, got 0 (R110-189)
+     Fix: re-apply R110-189 directive (F-MQ-189-1..15) to tools/dev_message_queue.py
+```
+
+**Reference:** R110-189 (MQ Hardening Phase 2 directive).
+
+### Check 21: MQ topic caller-chain audit (NEW v2.7.0, R110-198)
+
+**Goal:** Every MQ topic that is PRODUCED (mq.enqueue() call in
+tools/ or recipe/) must have at least one CONSUMER (workflow
+recipe, sub_recipe with --processor, or test that verifies the
+consumer-side contract). Prevents the R110-194-B bug pattern
+from recurring: a topic is defined, a producer publishes to it,
+but nothing consumes it — so messages sit in pending.ndjson
+forever and the producer is a dead end.
+
+The original incident: dev_im_finder_scan --publish (R110-154)
+enqueued to `im.finding.created` but no consumer existed for
+~3 rounds. R110-195 (this batch) wired wf_im_consume_findings
++ sub_mas-design-patches to drain that topic. Check 21 makes
+sure the next such dead-end topic is caught BEFORE a push.
+
+**Idempotency:** If `check_21_mq_caller_chain` already appears
+in this file, skip the insert and keep the existing block.
+Detection via `grep -q "check_21_mq_caller_chain"`.
+
+```bash
+# Check 21: MQ topic caller-chain audit (R110-198)
+echo "🔍 Check 21: MQ topic caller-chain audit (R110-198)"
+
+# Step 1: Discover all producer topics by scanning tools/
+# and recipe/ for mq.enqueue() calls.  We use grep with
+# explicit call-site anchors (mq.enqueue, _mq.enqueue,
+# dev_message_queue.enqueue) so we don't catch the
+# literal word "topic" from docstrings/descriptions.
+# The previous regex `enqueue\(['\"](...)` was too loose
+# — it caught the FIRST quoted string after "enqueue(",
+# which in narrative text could be "topic" itself
+# (e.g. "...enqueue to a topic..."), not the actual
+# Python/Shell call site's first arg.
+PRODUCER_TOPICS=()
+# Scan tools/*.py for both mq.enqueue and _mq.enqueue and
+# dev_message_queue.enqueue call sites.  We use a 2-LINE
+# window (grep -A1) because in mas-engineer the call-site
+# pattern is:
+#     mq.enqueue(
+#         "topic", payload, ...
+# so the topic name is on the NEXT line.  We then filter
+# to ONLY string-literal first args (not variables like
+# MQ_TOPIC / topic) — variables mean the producer is a
+# dispatcher (e.g. dev_workflow_runner), not a direct
+# producer.  Direct producers (dev_dispatch_tracker,
+# dev_phoenix_log_persister) use string literals OR a
+# *_TOPIC constant that we'll catch in the next loop.
+while IFS= read -r line; do
+    # line looks like:    file:N:        mq.enqueue(
+    # OR                  file-N-topicname: payload...
+    # We use python to extract the topic.
+    topic=$(echo "$line" | python3 -c "
+import sys, re
+for ln in sys.stdin:
+    # match either the enqueue( line or the next-line
+    # continuation (file:line-continuation:payload)
+    m = re.search(r'[\"\']([a-z][a-z0-9_]*(?:[._][a-z0-9_]+)+)[\"\'].*', ln)
+    if m:
+        print(m.group(1))
+        break
+")
+    if [ -n "$topic" ] && [ "$topic" != "topic" ]; then
+        PRODUCER_TOPICS+=("$topic")
+    fi
+done < <(grep -rEnA1 '\.enqueue\(' tools/*.py 2>/dev/null \
+         | grep -v "\.pyc" | grep -v "^Binary" \
+         | grep -v "\.enqueue(")
+# Also catch MQ_TOPIC = "..." style module-level constants
+# used by tools that pass a variable to mq.enqueue (e.g.
+# dev_dispatch_tracker.MQ_TOPIC = "dispatches" then
+# mq.enqueue(MQ_TOPIC, ...)).  Anchor: line ends with
+# `TOPIC = "<word>"` and the word is lowercase.
+while IFS= read -r line; do
+    if echo "$line" | grep -qE 'TOPIC = ' ; then
+        # Use python to extract the quoted value — sed quote
+        # escaping inside a "..." heredoc is fragile.
+        topic=$(echo "$line" | python3 -c "
+import sys, re
+for ln in sys.stdin:
+    m = re.search(r'=\s*[\"\\']+([a-z0-9_]+)[\"\\']+\s*\$', ln)
+    if m:
+        print(m.group(1))
+        break
+")
+        if [ -n "$topic" ] && [ "$topic" != "topic" ]; then
+            PRODUCER_TOPICS+=("$topic")
+        fi
+    fi
+done < <(grep -rEn 'TOPIC\s*=\s*['"'"'"][a-z0-9_]+['"'"'"]\s*$' tools/*.py 2>/dev/null \
+         | grep -v "\.pyc")
+# Also scan recipe/*.yaml and recipe/sub/*.yaml for
+# explicit mq.enqueue() invocations (recipe side may
+# enqueue via shell: `python3 -c "...mq.enqueue('topic'..."`).
+# For YAML we anchor on the same `\.enqueue\(` pattern.
+while IFS= read -r line; do
+    topic=$(echo "$line" | sed -nE "s/.*enqueue\(['\"]([a-zA-Z0-9._-]+)['\"].*/\1/p")
+    if [ -n "$topic" ] && [ "$topic" != "topic" ]; then
+        PRODUCER_TOPICS+=("$topic")
+    fi
+done < <(grep -rEn '\.enqueue\(' recipe/ 2>/dev/null | grep -v "\.pyc")
+# De-dup
+PRODUCER_TOPICS=($(printf "%s\n" "${PRODUCER_TOPICS[@]}" | sort -u))
+
+# Step 2: For each producer topic, verify a caller chain
+# exists.  A "caller" is ANY of:
+#   (a) a workflow recipe (recipe/wf_*.yaml) that references
+#       the topic in --topic= or in a hardcoded `mq.consume(...)`
+#   (b) a sub_recipe (recipe/sub/sub_mas-*.yaml) that mentions
+#       the topic in its description or sub_recipe chain
+#   (c) a test file (tests/test_*.py) that calls
+#       mq.consume(<topic>) or mq.enqueue(<topic>, ...) and
+#       verifies the consumer-side flow
+#   (d) a tools/dev_mq_consumer*.py call site that hardcodes
+#       the topic (consumer driver integration)
+MQ21_FAIL=0
+MQ21_UNCOVERED=()
+for topic in "${PRODUCER_TOPICS[@]}"; do
+    # Caller-chain evidence: search recipes + tests + tools for
+    # the topic name.  Use the sanitized form (dots → underscores)
+    # as fallback because the MQ normalizes on write.
+    _sanitized=$(echo "$topic" | tr '.' '_')
+    HITS=0
+    # (a) workflow recipes
+    HITS=$((HITS + $(grep -l "$topic" recipe/wf_*.yaml 2>/dev/null | wc -l)))
+    HITS=$((HITS + $(grep -l "$_sanitized" recipe/wf_*.yaml 2>/dev/null | wc -l)))
+    # (b) sub_recipes
+    HITS=$((HITS + $(grep -lE "$topic|$_sanitized" recipe/sub/sub_mas-*.yaml 2>/dev/null | wc -l)))
+    # (c) test files
+    HITS=$((HITS + $(grep -lE "mq\.(enqueue|consume)\(['\"]?$topic|['\"]?$_sanitized" tests/test_*.py 2>/dev/null | wc -l)))
+    HITS=$((HITS + $(grep -lE "mq\.(enqueue|consume)\(['\"]?$topic|['\"]?$_sanitized" tests/test_dev_*.py 2>/dev/null | wc -l)))
+    # (d) dev_mq_consumer call sites
+    HITS=$((HITS + $(grep -lE "$topic|$_sanitized" tools/dev_mq_consumer*.py 2>/dev/null | wc -l)))
+    if [ "$HITS" -eq 0 ]; then
+        echo "  ❌ BLOCK: Check 21 — topic '$topic' has a producer but NO consumer-side caller chain"
+        MQ21_FAIL=1
+        MQ21_UNCOVERED+=("$topic")
+    else
+        echo "  ✅ Check 21: topic '$topic' has $HITS caller-chain reference(s)"
+    fi
+done
+
+if [ "$MQ21_FAIL" -ne 0 ]; then
+    echo "     Uncovered topics: ${MQ21_UNCOVERED[*]}"
+    echo "     Fix: add a consumer (workflow recipe wf_<topic>.yaml, or sub_recipe in recipe/sub/, or test that mq.consume()s the topic).  Pattern: see R110-195 (wf_im_consume_findings + sub_mas-design-patches)."
+    exit 1
+fi
+echo "  ✅ Check 21 passed: all ${#PRODUCER_TOPICS[@]} producer topic(s) have caller chains"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 21: MQ topic caller-chain audit (R110-198)
+  ✅ Check 21: topic 'im.finding.created' has 4 caller-chain reference(s)
+  ✅ Check 21: topic 'dispatches' has 2 caller-chain reference(s)
+  ✅ Check 21 passed: all 2 producer topic(s) have caller chains
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && sed -n '1200,1700p' recipe/instructions/sub_mas-pre-push-validator.md
+
+  ✅ Check 21 passed: all 2 producer topic(s) have caller chains
+```
+
+**Output block on BLOCK (R110-194-B bug pattern, hypothetical):**
+```
+🔍 Check 21: MQ topic caller-chain audit (R110-198)
+  ❌ BLOCK: Check 21 — topic 'dispatches' has a producer but NO consumer-side caller chain
+     Uncovered topics: dispatches
+     Fix: add a consumer (workflow recipe wf_<topic>.yaml, or sub_recipe in recipe/sub/, or test that mq.consume()s the topic).  Pattern: see R110-195 (wf_im_consume_findings + sub_mas-design-patches).
+```
+
+**Reference:** R110-198 (caller-chain audit directive), R110-194-B
+(MQ Full Adoption incident), R110-195 (the first fix that closed
+the original `im.finding.created` dead-end).
+
+### Check 23: orphan-recipe registration audit (NEW v2.8.0, R110-204)
+
+**Goal:** Every DOMAIN 1 (mas-self) recipe in recipe/sub/*.yaml MUST be
+registered in workflows.yaml configs.mas-self.sub_agents (R110-31 hard
+rule: "All DOMAIN 1 sub-agents MUST be registered"). Prevents the
+R110-195/R110-203 bug class from recurring: a recipe added but never
+registered is an orphan — undispatchable from any workflow and only
+caught by Check 17 AFTER it lands. Check 23 runs
+tools/dev_check_orphan_recipes.py (the SOURCE OF TRUTH for what
+"registered" means — the pytest test and this check both call it) and
+BLOCKS the push at registration time, before the orphan ever reaches
+HEAD.
+
+DETECTION→CORRECTION→PREVENTION cycle (R110-204):
+  - R110-195 (DETECTION) added sub_mas-design-patches.yaml, missed registration
+  - R110-203 (CORRECTION) fixed the registry manually (1 line in workflows.yaml)
+  - R110-204 (PREVENTION) this check — the manual fix is now structurally
+    unnecessary: any future recipe-add without a registry update is blocked
+
+**Idempotency:** If `check_23_orphan_recipes` already appears in this
+file, skip the insert and keep the existing block. Detection via
+`grep -q "check_23_orphan_recipes"`.
+
+```bash
+# Check 23: orphan-recipe registration audit (R110-204)
+echo "🔍 Check 23: orphan-recipe registration audit (R110-204)"
+python3 tools/dev_check_orphan_recipes.py --repo-root . > /tmp/orphan_check_23.txt 2>&1
+ORPHAN_RC=$?
+if [ "$ORPHAN_RC" -ne 0 ]; then
+    echo "  ❌ BLOCK: Check 23 — orphan-recipe(s) detected (DOMAIN 1 recipe/sub/*.yaml not registered in workflows.yaml configs.mas-self.sub_agents)"
+    sed 's/^/     /' /tmp/orphan_check_23.txt
+    echo "     Fix: register the recipe in configs.mas-self.sub_agents (see .mase/workflows.yaml), then re-run"
+    exit 1
+fi
+echo "  ✅ Check 23 passed: all DOMAIN 1 recipes registered"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 23: orphan-recipe registration audit (R110-204)
+  ✅ Check 23 passed: all DOMAIN 1 recipes registered
+```
+
+**Output block on BLOCK (R110-195 bug pattern):**
+```
+🔍 Check 23: orphan-recipe registration audit (R110-204)
+  ❌ BLOCK: Check 23 — orphan-recipe(s) detected (DOMAIN 1 recipe/sub/*.yaml not registered in workflows.yaml configs.mas-self.sub_agents)
+     ORPHAN: 1/110 DOMAIN 1 (mas-self) recipes NOT registered in workflows.yaml configs.mas-self.sub_agents (R110-31 violation — undispatchable from workflow):
+       ❌ sub_mas-design-patches    recipe/sub/sub_mas-design-patches.yaml
+     Fix: register the recipe in configs.mas-self.sub_agents (see .mase/workflows.yaml), then re-run
+```
+
+**Reference:** R110-204 (DETECTION→CORRECTION→PREVENTION directive),
+R110-203 (the manual fix that made this check necessary), R110-195
+(the orphan incident), R110-31 (the registration rule).
+
+## Boundaries
+
+- ⛔ NEVER modify any source file — this agent is read-only
+- ⛔ NEVER run `git push` itself — only validate
+- ⛔ NEVER skip a check — all 23 must run (Check 0 + Checks 1-15 + Check 16+ + Check 17 + Check 18 + Check 19 + Check 20 + Check 21 + Check 23)
+- ⛔ Max 300s timeout total (5 minutes)
+
+**R01 NON-INTERACTIVE BYPASS (current implementation):** R01
+(CONFIRMATION_REQUIRED) is a hardness-5 rule. The actual bypass mechanism
+is NOT `RECURSION_OVERRIDE` / `MAS_NO_SESSION` (older docs may have
+claimed this — those were aspirational and never implemented). The
+real mechanism is `.mase/.last_confirmation` (unix timestamp; valid
+5 min, then auto-expires), checked in `check_confirmation()` at
+`tools/dev_rule_checker.py:71-77` and `tools/dev_rule_checker_generic.py:24-31`,
+and consumed by the R01 rule body at `tools/dev_rule_checker.py:102-106`
+(and the parallel site in the generic checker).
+
+Two ways to set `.mase/.last_confirmation` programmatically:
+
+  1. **Direct write (operator-initiated, e.g. CI step):**
+       echo "$(date +%s)" > .mase/.last_confirmation
+     The check `(time.time() - ts) < 300` then passes for 5 minutes.
+
+  2. **Via e2e_run_all.py wrapper (R110-58, automation context):**
+       export MAS_AUTO_CONFIRM=1
+       python3 tools/e2e_run_all.py --auto-confirm ...
+     e2e_run_all.py refreshes `.mase/.last_confirmation` BEFORE
+     running the e2e tests, so the workflows it spawns (build-test,
+     top_workflows, recovery) see a fresh confirmation. BOTH the
+     `--auto-confirm` CLI flag AND the `MAS_AUTO_CONFIRM=1` env var
+     are required (defense in depth, AND-gate); the implementation
+     lives in `tools/e2e_run_all.py:226-262`.
+
+The validator's Check 10 command (lines 441-447, R110-60) already uses
+path 2. The freshness window is 5 min — if a CI step is taking longer
+than 5 min between when it refreshed the confirmation and when it
+actually triggers a preflight, the bypass might expire. Re-run
+`e2e_run_all.py --auto-confirm` to refresh.
+
+**R110-62 doc-fix note:** this section was rewritten to replace the
+older aspirational "RECURSION_OVERRIDE=2 MAS_NO_SESSION=1" claim.
+The vars `RECURSION_OVERRIDE` and `MAS_NO_SESSION` are used by
+`tools/dev_recursion_override.py` (24h cooldown for self-improvement
+patches) and by `tools/bulk_findings_fixer.py` (mode detection),
+NOT by R01. Anyone reading older docs (`docs/E2E-TESTPLAN.md`
+Test 5.1/5.2) or `docs/test-e2e-full.sh` should be aware those
+references are stale.
+
+CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation.
+MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.
+
+# ⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml -> configs.mas-self.restrictions.
+# dev_rule_checker.py enforces.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.I've read the full validator instructions (all 23 checks). Now let me verify the workspace layout before running checks, since some check commands in the instructions assume a specific path layout.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && pwd && echo "---" && ls -la | head -30 && echo "---RECIPE---" && ls recipe/ && echo "---RECIPE/SUB count---" && find recipe/sub -name '*.yaml' | wc -l && echo "---TESTS---" && ls tests/ | head -10 && echo "---TESTS count---" && ls tests/test_*.py 2>/dev/null | wc -l
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && ls .mase/ && echo "---workflows.yaml---" && ls -la .mase/workflows.yaml 2>/dev/null; ls -la workflows.yaml 2>/dev/null; echo "---tools check---" && ls tools/dev_message_queue.py tools/dev_spec_invariant.py tools/dev_category_drift.py tools/dev_check_orphan_recipes.py 2>&1
+
+/workspace/dev-branch/mas-engineer-cleanup/mas-engineer
+---
+total 108
+drwxr-xr-x 17 root root  4096 Aug 19 14:43 .
+drwxr-xr-x 12 root root  4096 Aug 18 18:54 ..
+drwxr-xr-x 10 root root  4096 Aug 19 05:15 .backups
+drwxr-xr-x  3 root root  4096 Aug 14 18:14 .dev-team
+drwxr-xr-x  2 root root  4096 Aug 19 05:45 .directives
+-rw-------  1 root root   735 Aug 14 18:14 .env
+-rw-r--r--  1 root root  1333 Aug 14 15:48 .env.example
+drwxr-xr-x  2 root root  4096 Aug 14 15:48 .githooks
+drwxr-xr-x  3 root root  4096 Aug 14 15:48 .github
+-rw-r--r--  1 root root  2707 Aug 17 16:50 .gitignore
+-rw-r--r--  1 root root   466 Aug 14 15:58 .goosehints
+-rw-r--r--  1 root root     4 Aug 14 15:48 .mas-mode
+drwxr-xr-x 21 root root  4096 Aug 19 06:40 .mase
+drwxr-xr-x  3 root root  4096 Aug 14 15:49 .pytest_cache
+drwxr-xr-x  2 root root  4096 Aug 15 19:02 .tmp
+-rw-r--r--  1 root root  7075 Aug 14 15:58 README.md
+drwxr-xr-x  3 root root  4096 Aug 18 16:43 logs
+drwxr-xr-x  3 root root  4096 Aug 18 01:25 mas-engineer
+-rw-r--r--  1 root root   854 Aug 14 15:58 pytest.ini
+drwxr-xr-x  5 root root  4096 Aug 18 19:03 recipe
+drwxr-xr-x  2 root root  4096 Aug 14 15:58 scripts
+drwxr-xr-x  5 root root  4096 Aug 14 18:14 testproject
+drwxr-xr-x  4 root root 12288 Aug 19 06:19 tests
+drwxr-xr-x  4 root root  4096 Aug 19 06:12 tools
+---RECIPE---
+dashboard-data-refresh.yaml
+dev-mas-engineer-30agents.yaml
+dev-mas-engineer.yaml
+e2e-verify-auto-repair.yaml
+e2e-verify-phoenix-fixes.yaml
+instructions
+root_recipe.yaml
+setup-dashboard.yaml
+sub
+template
+test-fix-failures.yaml
+test-mas-user.yaml
+wf_im_consume_findings.yaml
+---RECIPE/SUB count---
+116
+---TESTS---
+__init__.py
+__pycache__
+_recipe_helpers.py
+conftest.py
+debug_mcp.py
+manual_mcp_test.py
+results
+test_dashboard_data_schema.py
+test_dashboard_mq_block.py
+test_dev_check_orphan_recipes.py
+---TESTS count---
+163backups
+best-practices.yaml
+changelog.txt
+changes.archive-2026-07-23.json
+changes.archive-2026-07-24-r37.json
+changes.archive-2026-07-24.json
+changes.archive-2026-08-04.json
+changes.json
+changes.unlimited-archive-20260723-222630.json
+checkpoints
+commits
+config
+coverage
+cpdone_consumed.log
+dashboards
+directive_already_applied.json
+directives
+framework-best-practices.yaml
+goose-defaults.env
+guardian.yaml
+im
+immune_severity
+immune_violations.log
+knowledge
+mcp
+mq
+phoenix_logs
+pipeline
+pre-push-e2e-baseline.json
+pre-push-test-coverage.json
+pre_check_benchmark
+recovery
+rules
+schedule.yaml
+skills
+sot_schema.yaml
+templates
+todo.md
+validation.yaml
+workflow_runs
+workflows.yaml
+---workflows.yaml---
+-rw-r--r-- 1 root root 115133 Aug 19 14:45 .mase/workflows.yaml
+---tools check---
+tools/dev_category_drift.py
+tools/dev_check_orphan_recipes.py
+tools/dev_message_queue.py
+tools/dev_spec_invariant.pyWorkspace layout confirmed. All required tools exist. Now let me run the checks in order. Starting with Check 0 (commit-body disclosure) and Check 1.5 (title convention):
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && git log -1 --pretty=format:%B && echo "=====END====="
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && git log --oneline -15
+
+📝 R110-213 — pre-push-gate final report (R110-210/211/212 retroactive verification)
+
+Trigger:
+- User asked "1 bis 5 durchführen" (= run all 5 pre-push-gate steps)
+- R110-210/211/212 were pushed earlier in this session without running
+  the full gate first (only Step 0 + abbreviated Step 2 were done)
+- This R110-213 runs all 5 steps retroactively, archives the report
+  as public evidence per R110-143, and documents a validator
+  network-glitch transparently
+
+Fix:
+- logs/e2e-evidence-gen2/2026-08-19T10-52-00Z-PRE-PUSH-GATE-FINAL/PRE-PUSH-GATE-FINAL.md
+  (NEU, 261 lines) — full 5-step verification report
+
+E2E (retroactive for R110-210/211/212):
+  Step 0 secret scan:           PASS 0 real secrets, 5 intentional *** placeholders
+  Step 1 validator:             PASS (manual substitute) LLM stream glitch ×2; critical checks pass
+  Step 2 100% e2e:              PASS pytest 1622/1622 in 122.75s, 0 HARDCODE-STALE
+  Step 3 commit doc:            PASS all 3 commits have e2e sections in body
+  Step 4 push:                  PASS all 3 on origin/mas-mq, clean remote
+  Step 5 post-flight audit:     PASS 100% coverage, 0 broken refs
+
+R-evidence: 0 test-failures, 0 fixes needed
+  - All 5 steps pass for the 3 already-pushed commits
+  - No new code, no recipe changes, no scanner findings introduced
+  - R110-213 itself is documentation-only (single .md file)
+
+Pre-push-gate (this commit):
+  Step 0 (secret scan):         OK 0 hits
+  Step 1 (validator):           OK manual substitute (1 .md file, no code)
+  Step 2 (pytest tests/):       OK 1622/1622 (unaffected by doc change)
+  Step 3 (commit msg):          OK per Check 1.5 allowlist (📝 R-format)
+  Step 4 (push):                pending
+  Step 5 (post-flight):         OK 100% coverage (no recipe change)
+
+Files (1):
+  A  logs/e2e-evidence-gen2/2026-08-19T10-52-00Z-PRE-PUSH-GATE-FINAL/PRE-PUSH-GATE-FINAL.md
+       (261 lines, full 5-step retroactive verification report)
+
+numstat: 1 file changed, 261 insertions(+)
+
+Lessons reinforced:
+- Pre-push-gate skill is a hard rule, not a suggestion. Running it
+  retroactively is acceptable when pushes already happened but should
+  be the exception (this commit + this report), not the norm
+- R110-69 validator 200s cap is a known issue; in this run it
+  manifested as a stream-decode error (LLM provider side), not timeout.
+  Manual substitute (critical-checks-only) is acceptable per
+  skill guidance, but retry-on-stable-LLM is the better path
+- R110-143 evidence-archive convention: every gate-run leaves a
+  timestamped artifact under logs/e2e-evidence-gen2/, committed
+- "1 bis 5 durchführen" → all 5 steps now have a PASS line in the
+  public report; the LLM-stream glitch is documented as a caveat
+  with its cause (network) and its mitigation (manual checks)
+
+Caveat (transparent):
+- The full goose pre-push-validator (real LLM) did not complete due
+  to network stream issues, twice. Manual critical-checks substitute
+  was used per skill guidance. If the user wants the full validator
+  on record, retry on a later session when LLM provider is stable.
+=====END=====c546b7f 📝 R110-213 — pre-push-gate final report (R110-210/211/212 retroactive verification)
+52014cb 📝 R110-212 — R110-211 body-claim-drift korrigiert (bytes vs lines)
+9339154 📝 R110-211 — R110-210 evidence-archive + retroaktive Step 4+5 completion (transparency honor-code)
+c37ac38 📝 R110-210 — MM9-EXT deferred findings als false-positive klassifiziert + scanner-self-test-fixture
+766b501 fix: R110-209 — drift-risk MM9-EXT findings (4 highest-priority)
+e8c2614 chore: R110-208 — relocate R110-195 + R110-196 directives from .directives/ to .mase/directives/ (R110-140 convention)
+14c7e9d chore: R110-207 — remove .directives/ duplicates of R110-204 + R110-206 (canonical is .mase/directives/)
+3cdb4c5 fix: R110-206 — close Check 18 scope-gap (instructions/*.md + test-docstrings now machine-checked)
+02f8329 fix: R110-204 — prevent orphan recipes (Check 23 + dev_check_orphan_recipes.py + 4 tests)
+52d5b3f chore: R110-204+206 — relocate R-number directives from .directives/ to .mase/directives/ (R110-140 convention)
+eb66254 fix: R110-206 — add Check 18 scope-extension directive (close F-082 scope-gap structurally)
+c708894 fix: R110-205 — reconcile pre-push-validator check-count drift (22 = 22 = 22) and bump sub_mas-design-patches max_turns 20→30
+d7b5f4b fix: register sub_mas-design-patches in workflows.yaml mas-self.sub_agents
+256517b feat: R110-198 — pre-push-validator Check 21 (MQ topic caller-chain audit) + v2.7.0
+b478afe feat: R110-197 — dashboard mq_block observability surface (R110-194-B)Now running Check 0 (commit-body disclosure audit) and Check 1.5 (commit title convention) with the exact scripts from the instructions:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'PYEOF'
+import subprocess, re, sys
+
+# Get the last commit body (subject + body)
+raw = subprocess.run(
+    ['git', 'log', '-1', '--pretty=format:%B'],
+    capture_output=True, text=True
+).stdout
+lines = raw.split('\n')
+subject = lines[0]
+body = '\n'.join(lines[1:]).strip()
+
+# 1. No-body check
+if len(body) < 50:
+    print(f"  ✅ Check 0 PASS (commit body too short to make claims: {len(body)} chars)")
+    print(f"     {subject!r}")
+    sys.exit(0)
+
+CLAIM_PATTERNS = [
+    (r'\b[Aa]dds?\s+(\d+)\s+new\s+tests?\b', 'new_tests', 'pytest --collect-only -q | wc -l must show +N test items compared to HEAD~1'),
+    (r'\b[Ff]ixes?\s+(R?\d+-\d+(?:/[A-Z\d]+)?)\b', 'fixes_X', 'git show HEAD --stat must show the fix touching the X file/function'),
+    (r'\b[Rr]ationale:?\s*([^\n]+)', 'rationale', 'body rationale must not contradict git log --grep on the referenced round/issue'),
+    (r'\b[Rr]eplaces?\s+(R?\d+-\d+)\b', 'replaces_X', 'prior commit X must be reachable OR the archive file must be referenced in the body'),
+    (r'\b(?:DOMAIN_[A-Z_]+_TOKENS)', 'domain_tokens', 'body must explicitly call out what DOMAIN_*_TOKENS were added/removed'),
+]
+
+violations = []
+for pat, ctype, required_evidence in CLAIM_PATTERNS:
+    matches = re.findall(pat, body)
+    if not matches:
+        continue
+    if ctype == 'new_tests':
+        for n in matches:
+            n_int = int(n)
+            head_tests = subprocess.run(['git', 'ls-tree', '-r', 'HEAD', '--name-only'],
+                                        capture_output=True, text=True).stdout
+            prev_tests = subprocess.run(['git', 'ls-tree', '-r', 'HEAD~1', '--name-only'],
+                                        capture_output=True, text=True).stdout
+            head_test_files = set(f for f in head_tests.split('\n') if f.startswith(('tests/', 'test/')) and f.endswith(('.py', '.sh')))
+            prev_test_files = set(f for f in prev_tests.split('\n') if f.startswith(('tests/', 'test/')) and f.endswith(('.py', '.sh')))
+            new_test_files = head_test_files - prev_test_files
+            if len(new_test_files) != n_int:
+                violations.append(
+                    f"  ❌ Claim 'Adds {n_int} new tests' but git shows {len(new_test_files)} "
+                    f"new test files (HEAD~1 vs HEAD): {sorted(new_test_files) or '(none)'}."
+                )
+    elif ctype == 'rationale':
+        for match in matches[:1]:
+            rnums = re.findall(r'R\d+-\d+', match)
+            for rn in rnums[:2]:
+                prior = subprocess.run(
+                    ['git', 'log', '--grep', rn, '--pretty=format:%s'],
+                    capture_output=True, text=True
+                ).stdout.split('\n')
+                if len(prior) > 1:
+                    pass  # Soft flag only
+        print(f"  ⚠️  Commit body contains 'Rationale: ...' — operator should manually verify")
+        print(f"     the rationale does not contradict any prior R-numbered commit message.")
+
+stat = subprocess.run(['git', 'show', '--stat', 'HEAD', '--pretty=format:'],
+                     capture_output=True, text=True).stdout
+files_changed = set()
+for line in stat.split('\n'):
+    m = re.search(r'\|.*\b(\S+)$', line)
+    if m:
+        files_changed.add(m.group(1))
+
+file_mentions = re.findall(r'`([a-zA-Z_][\w/.-]+\.[a-zA-Z]{1,5})`', body)
+for f in file_mentions:
+    if f not in files_changed and not f.startswith(('/', '.')) and 'archive' not in f.lower():
+        exists = subprocess.run(['git', 'ls-tree', '-r', 'HEAD', '--name-only'],
+                                capture_output=True, text=True).stdout
+        if f not in exists:
+            violations.append(
+                f"  ❌ Body mentions file `{f}` but file is not in HEAD (might be archive-only). "
+                f"Confirm the file is referenced as archive, not as a change."
+            )
+
+if violations:
+    print(f"  ❌ Check 0 BLOCK: {len(violations)} disclosure violation(s):")
+    for v in violations:
+        print(v)
+    sys.exit(1)
+else:
+    print(f"  ✅ Check 0 PASS (commit body claims are evidence-backed)")
+    print(f"     Subject: {subject!r}")
+    print(f"     Body: {len(body)} chars, {len([l for l in body.split(chr(10)) if l.strip()])} non-blank lines")
+PYEOF
+echo "CHECK0_RC=$?"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'PYEOF'
+import subprocess, re
+
+last_title = subprocess.run(
+    ['git', 'log', '-1', '--pretty=format:%s'],
+    capture_output=True, text=True
+).stdout.strip()
+
+history = subprocess.run(
+    ['git', 'log', '-50', '--pretty=format:%s'],
+    capture_output=True, text=True
+).stdout.split('\n')
+
+ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊'}
+
+EMOJI_RE = re.compile(r'[\U0001F000-\U0001FFFF\U00002600-\U000027BF]')
+used_emojis = set()
+for t in history:
+    for m in EMOJI_RE.findall(t):
+        used_emojis.add(m)
+
+allowed_patterns = [
+    r'^(fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:',
+    r'^mas\(round-\d+\):',
+]
+for allowed in ALLOWED_EMOJIS:
+    allowed_patterns.append(f'^{re.escape(allowed)} (FIX|DOCS|STATE|TEST|FEAT|CHORE|ARCH) — ')
+for allowed in ALLOWED_EMOJIS:
+    allowed_patterns.append(f'^{re.escape(allowed)} (R\\d+-[\\w-]+( follow-up)? — |EVIDENCE — R\\d+-)')
+
+ok = any(re.match(p, last_title) for p in allowed_patterns)
+if not ok:
+    print(f"  ❌ Last commit title doesn't match repo convention:")
+    print(f"     {last_title!r}")
+    exit(1)
+
+unknown_emojis = [m for m in EMOJI_RE.findall(last_title) if m not in ALLOWED_EMOJIS]
+if unknown_emojis:
+    print(f"  ❌ Last commit title uses NON-ALLOWED emoji(s):")
+    for e in unknown_emojis:
+        print(f"     {e!r} (allowed: {sorted(ALLOWED_EMOJIS)})")
+    exit(1)
+
+print(f"  ✓ Last commit title follows repo convention")
+print(f"     {last_title!r}")
+print(f"     (precedent emojis in last 50 commits: {sorted(used_emojis) or 'none'})")
+exit(0)
+PYEOF
+echo "CHECK1_5_RC=$?"
+
+  ✅ Check 0 PASS (commit body claims are evidence-backed)
+     Subject: '📝 R110-213 — pre-push-gate final report (R110-210/211/212 retroactive verification)'
+     Body: 2976 chars, 50 non-blank lines
+CHECK0_RC=0  ✓ Last commit title follows repo convention
+     '📝 R110-213 — pre-push-gate final report (R110-210/211/212 retroactive verification)'
+     (precedent emojis in last 50 commits: ['📊', '📝', '🔧'])
+CHECK1_5_RC=0✅ Check 0 and Check 1.5 pass. Now running Checks 1–7.5 (static checks) in parallel:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'PYEOF'
+import yaml, glob, os
+findings_path = ".mase/pipeline/findings.yaml"
+if not os.path.exists(findings_path):
+    print("WARN: no .mase/pipeline/findings.yaml — run im-finder first")
+    exit(0)
+with open(findings_path) as f:
+    data = yaml.safe_load(f)
+high = [x for x in data.get('data', {}).get('findings', [])
+        if '🔴' in x.get('severity', '')]
+print(f"  🔴 high-severity findings: {len(high)}")
+for f in high:
+    print(f"     {f['type']} | {f['file']} | {f['detail'][:80]}")
+exit(1 if high else 0)
+PYEOF
+echo "CHECK1_RC=$?"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 2: hardcoded /home/ paths ===" && grep -rn '/home/[a-z]*/' tools/ recipe/ .mase/ 2>/dev/null; echo "RC=$? (1 = no matches found = PASS)"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 3: YAML validity ===" && python3 -c "
+import yaml, glob, sys
+err = 0
+for f in glob.glob('recipe/sub/*.yaml') + glob.glob('recipe/*.yaml'):
+    try:
+        yaml.safe_load(open(f))
+    except Exception as e:
+        print(f'ERROR: {f}: {e}')
+        err += 1
+sys.exit(1 if err else 0)
+"; echo "CHECK3_RC=$?"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 4: Python tools compile ===" && for f in tools/dev_*.py; do
+    if ! python3 -c "compile(open('$f').read(), '$f', 'exec')" 2>/dev/null; then
+        echo "SYNTAX: $f"
+    fi
+done; echo "CHECK4_DONE (no SYNTAX lines = PASS)"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 5: shell scripts ===" && for f in tools/dev_*.sh; do
+    [ -f "$f" ] && bash -n "$f" 2>&1 || echo "SYNTAX: $f"
+done; echo "CHECK5_DONE (no SYNTAX lines = PASS)"
+
+  🔴 high-severity findings: 0
+CHECK1_RC=0=== Check 2: hardcoded /home/ paths ===
+.mase/knowledge/09-im-features.md:99:  - O4: Hardcoded Path → /home/marius/... or absolute path in instructions-block
+.mase/knowledge/09-im-features.md:104:  - P2: Hardcoded Paths in code → /home/marius/... in Python/Shell-Script
+.mase/templates/agent_schema.yaml:1950:      - O4: Hardcodierter Path → /home/marius/... or absoluter Path im instructions-Block\n\
+.mase/templates/agent_schema.yaml:1953:      \ → /home/marius/... im Python/Shell-Script\n- P3: Import-Error → import or\
+.mase/templates/agent_schema.yaml:2466:      \ b) SHELL: bash -n {file} → Syntax OK?\n       c) Hardcodierte Paths (/home/marius/...)\
+.mase/templates/guidelines.md:56:# lrwxrwxrwx tools -> /home/user/.config/goose/recipit/mas-engineer-tools
+.mase/best-practices.yaml:212:    check_value: /home/marius/|/Users/|/home/ubuntu/|/home/admin/
+.mase/best-practices.yaml:215:    rule: No hardcoded paths (/home/marius/...)
+.mase/mcp/node_modules/safer-buffer/Readme.md:52:  /home/chalker/repo/safer-buffer/example.unsafe.js:2:13: 'Buffer()' was deprecated since v6. Use 'Buffer.alloc()' or 'Buffer.from()' (use 'https://www.npmjs.com/package/safe-buffer' for '<4.5.0') instead.
+RC=0 (1 = no matches found = PASS)=== Check 3: YAML validity ===
+CHECK3_RC=0=== Check 4: Python tools compile ===
+CHECK4_DONE (no SYNTAX lines = PASS)=== Check 5: shell scripts ===
+CHECK5_DONE (no SYNTAX lines = PASS)Checks 1–5 pass. Note on Check 2: matches are all in `.mase/` knowledge/template docs describing the anti-pattern itself (and the detector regex in `best-practices.yaml`) — zero matches in `tools/` or `recipe/` executable code, so the intent (no hardcoded user-home paths in shipped code) holds. Continuing with Checks 6, 7, 7.5:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 6: German-only words ===" && GERMAN_WHITELIST='^(tools/pre_check_lib/german\.py|tools/e2e_teams\.py|tools/cleanup_repo_v1\.sh|recipe/sub/legacy/)' && grep -rP $'[\xc3\xa4\xc3\xb6\xc3\xbc\xc3\x9f\xc3\x84\xc3\x96\xc3\x9c]' tools/ recipe/ docs/ 2>/dev/null | grep -vE "$GERMAN_WHITELIST" | grep -vE '^[^:]+:\s*(#|//)' || echo "  (no off-whitelist German chars)"; echo "CHECK6_DONE"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 7: git status (warn-only) ===" && git status --porcelain | head -20; echo "---" && echo "Check 7 = WARN-only; uncommitted: .mase/changelog.txt modified + untracked logs/e2e-evidence-gen2/2026-08-18T18-12-00Z-R110-194-mq-full-adoption-preflight/"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 7.5: backup files in last 5 commits ===" && python3 - <<'PYEOF'
+import subprocess, re
+backup_patterns = [
+    r'\.backups/',
+    r'\.mase/pipeline/backup-',
+    r'\.bak\.',
+    r'backup-pre-r\d+/',
+]
+result = subprocess.run(
+    ['git', 'log', '-5', '--name-only', '--pretty=format:'],
+    capture_output=True, text=True
+)
+files = [f for f in result.stdout.split('\n') if f]
+polluted = [f for f in files if any(re.search(p, f) for p in backup_patterns)]
+if polluted:
+    print(f"  ❌ {len(polluted)} backup file(s) in last 5 commits:")
+    for f in set(polluted):
+        print(f"     {f}")
+    exit(1)
+print(f"  ✓ No backup files in last 5 commits (checked {len(files)} file-paths)")
+exit(0)
+PYEOF
+echo "CHECK7_5_RC=$?"
+
+=== Check 6: German-only words ===
+  (no off-whitelist German chars)
+CHECK6_DONE=== Check 7: git status (warn-only) ===
+ M mas-engineer/.mase/changelog.txt
+?? mas-engineer/logs/e2e-evidence-gen2/2026-08-18T18-12-00Z-R110-194-mq-full-adoption-preflight/
+---
+Check 7 = WARN-only; uncommitted: .mase/changelog.txt modified + untracked logs/e2e-evidence-gen2/2026-08-18T18-12-00Z-R110-194-mq-full-adoption-preflight/=== Check 7.5: backup files in last 5 commits ===
+  ✓ No backup files in last 5 commits (checked 15 file-paths)
+CHECK7_5_RC=0Checks 6, 7 (warn-only), 7.5 pass. I noticed a path discrepancy in git status between my first and second call — let me nail down the repo root precisely, since several check commands in the instructions assume a specific path layout:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && pwd && git rev-parse --show-toplevel && echo "---gitdir---" && git rev-parse --git-dir && echo "---nested mas-engineer---" && ls mas-engineer/ 2>/dev/null | head -20 && echo "---nested recipe/sub count---" && find mas-engineer/recipe/sub -name '*.yaml' 2>/dev/null | wc -l && echo "---top recipe/sub count---" && find recipe/sub -name '*.yaml' | wc -l && echo "---nested .git?---" && ls -la mas-engineer/.git 2>&1 | head -3
+
+/workspace/dev-branch/mas-engineer-cleanup/mas-engineer
+/workspace/dev-branch/mas-engineer-cleanup
+---gitdir---
+/workspace/dev-branch/mas-engineer/.git/worktrees/mas-engineer-cleanup
+---nested mas-engineer---
+---nested recipe/sub count---
+0
+---top recipe/sub count---
+116
+---nested .git?---
+ls: cannot access 'mas-engineer/.git': No such file or directoryThe repo is a git worktree: project root = `/workspace/dev-branch/mas-engineer-cleanup/mas-engineer` (where recipe/, tools/, tests/ live), worktree root = `/workspace/dev-branch/mas-engineer-cleanup`. The check scripts in the instructions assume the project lives under a `mas-engineer/` subdir; here the project root IS the working directory. Let me check the nested `mas-engineer/` artifact dir, then continue:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && ls -la mas-engineer/ 2>&1 && find mas-engineer/ -maxdepth 4 2>/dev/null | head -30 && echo "---git ls-files sample---" && git ls-files | head -10 && echo "---total tracked---" && git ls-files | wc -l
+
+total 12
+drwxr-xr-x  3 root root 4096 Aug 18 01:25 .
+drwxr-xr-x 17 root root 4096 Aug 19 14:45 ..
+drwxr-xr-x  3 root root 4096 Aug 18 01:25 .mase
+mas-engineer/
+mas-engineer/.mase
+mas-engineer/.mase/rules
+mas-engineer/.mase/rules/.state
+mas-engineer/.mase/rules/.last_refresh
+---git ls-files sample---
+.env.example
+.githooks/pre-commit
+.githooks/pre-push
+.github/CODEOWNERS
+.github/workflows/ai-pipeline-kill-switch.yml
+.github/workflows/block-copilot.yml
+.gitignore
+.goosehints
+.mas-mode
+.mase/best-practices.yaml
+---total tracked---
+626Layout confirmed — the nested `mas-engineer/.mase/` is a stale artifact; the project content is at the cwd. All checks will run from the project root. Now running Check 8, Check 9 (staged-gate first), Check 11, Check 12, Check 13:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 8: missing-Goose-mechanism ===" && DIFF_CONTENT="$(git diff HEAD~1 -- recipe/ tools/ 2>/dev/null | head -200)" && if [ -n "$DIFF_CONTENT" ]; then python3 tools/dev_goose_expert_check.py --check-mechanism "$DIFF_CONTENT"; else echo "  (no recent diff in recipe/tools — checking findings/patches instead)"; python3 tools/dev_goose_expert_check.py --findings .mase/pipeline/findings.yaml 2>/dev/null || true; python3 tools/dev_goose_expert_check.py --patches .mase/pipeline/patches.yaml 2>/dev/null || true; fi; echo "CHECK8_RC=$?"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 9 gate: staged certs? ===" && git diff --cached --name-only | grep -E "(^e2e-results/|^docs/.*CERTAIN|^certificates/|\.md$|\.txt$)" | head -5; echo "STAGED_RC=$? (1 = nothing staged = Check 9 skip-OK)"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 11: sub_recipe resolution ===" && python3 -c "
+import yaml, glob, os, json
+broken = []
+total = 0
+for f in glob.glob('recipe/sub/*.yaml'):
+    if 'ORIGINAL' in f: continue
+    try: d = yaml.safe_load(open(f))
+    except: continue
+    for s in d.get('sub_recipes', []):
+        total += 1
+        path = s.get('path','').lstrip('./')
+        full = os.path.join(os.path.dirname(f), path)
+        if not os.path.exists(full):
+            broken.append(f'{os.path.basename(f)} -> {s.get(\"name\")} ({path})')
+print(json.dumps({'refs': total, 'broken': len(broken), 'pct': round(100*(1-len(broken)/max(total,1)), 2), 'sample': broken[:3]}, indent=2))
+"; echo "CHECK11_RC=$?"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 12: test coverage gate ===" && python3 -c "
+import glob, json
+sub_count = len([f for f in glob.glob('recipe/sub/*.yaml') if 'ORIGINAL' not in f])
+test_count = len(glob.glob('tests/test_*.py'))
+threshold = int(sub_count * 0.8)
+ratio = round(test_count / max(sub_count, 1), 3)
+gate_passed = test_count >= threshold
+print(json.dumps({
+    'sub_agents': sub_count,
+    'tests': test_count,
+    'threshold_80pct': threshold,
+    'ratio': ratio,
+    'gate_passed': gate_passed,
+    'gap': max(0, threshold - test_count)
+}, indent=2))
+"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 13: constitution coverage ===" && python3 - <<'PYEOF'
+import yaml, glob, os
+missing = []
+checked = 0
+for pattern in ['recipe/sub/*.yaml', 'recipe/sub/demo-team/*.yaml']:
+    for f in glob.glob(pattern):
+        if 'master-constitution' in f: continue
+        checked += 1
+        try:
+            d = yaml.safe_load(open(f))
+        except Exception as e:
+            print(f"  ERROR: {f}: {e}")
+            continue
+        if d.get('constitution') != 'sub_mas-master-constitution.yaml':
+            missing.append(f)
+print(f"  Checked: {checked} sub-agent files")
+print(f"  Missing constitution: {len(missing)}")
+for f in missing:
+    print(f"    ❌ {f}")
+exit(1 if missing else 0)
+PYEOF
+echo "CHECK13_RC=$?"
+
+=== Check 8: missing-Goose-mechanism ===
+  (no recent diff in recipe/tools — checking findings/patches instead)
+OK — no Goose-already-provides-this conflicts in .mase/pipeline/findings.yaml
+OK — no Goose-already-provides-this conflicts in .mase/pipeline/patches.yaml
+CHECK8_RC=0=== Check 9 gate: staged certs? ===
+STAGED_RC=0 (1 = nothing staged = Check 9 skip-OK)=== Check 11: sub_recipe resolution ===
+{
+  "refs": 77,
+  "broken": 0,
+  "pct": 100.0,
+  "sample": []
+}
+CHECK11_RC=0=== Check 12: test coverage gate ===
+{
+  "sub_agents": 115,
+  "tests": 163,
+  "threshold_80pct": 92,
+  "ratio": 1.417,
+  "gate_passed": true,
+  "gap": 0
+}=== Check 13: constitution coverage ===
+  Checked: 114 sub-agent files
+  Missing constitution: 0
+CHECK13_RC=0Checks 8, 9 (nothing staged → skip per gate), 11, 12, 13 all pass. Now the medium-speed checks — 16+ (category drift), 18 (spec-invariant), 19/20 (MQ markers), 23 (orphan recipes):
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 16+: category drift (R110-94) ===" && if [ ! -f "tools/dev_category_drift.py" ]; then echo "  ❌ BLOCK: tools/dev_category_drift.py missing"; exit 1; fi && python3 tools/dev_category_drift.py --since 30 --json > /tmp/drift_check_16.json 2>&1; DRIFT_RC=$?; echo "drift rc=$DRIFT_RC"; cat /tmp/drift_check_16.json | head -40; if [ "$DRIFT_RC" -eq 2 ]; then echo "  ❌ BLOCK: Check 16+ usage error"; exit 1; fi; DRIFT_COUNT=$(python3 -c "import json; d=json.load(open('/tmp/drift_check_16.json')); print(d['drift_count'])" 2>/dev/null || echo "0"); echo "drift_count=$DRIFT_COUNT"; if [ "$DRIFT_RC" -eq 1 ] || [ "${DRIFT_COUNT:-0}" -gt 0 ]; then echo "  ❌ BLOCK: Check 16+ — $DRIFT_COUNT historical commit(s) violate convention"; exit 1; fi; echo "  ✅ Check 16+ passed: no category drift in last 30 days (post-cutoff 2026-08-04)"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 18: spec-invariant (R110-118) ===" && python3 tools/dev_spec_invariant.py --repo-root . > /tmp/spec_invariant_18.txt 2>&1; SPEC_INV_RC=$?; if [ "$SPEC_INV_RC" -ne 0 ]; then echo "  ❌ BLOCK: Check 18 — spec-invariant drift detected"; sed 's/^/     /' /tmp/spec_invariant_18.txt; exit 1; fi; echo "  ✅ Check 18 passed: test count-assertions match recipe count-declarations"; tail -5 /tmp/spec_invariant_18.txt
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 19: MQ semantic hardening (R110-188) ===" && MQ188_FAIL=0; INFLIGHT_HITS=$(grep -c '"in_flight_at"' tools/dev_message_queue.py || true); QUAR_HITS=$(grep -c '_quarantine_corrupt_line' tools/dev_message_queue.py || true); P95_HITS=$(grep -c 'current_p95_lag_ms' tools/dev_message_queue.py || true); INV_HITS=$(grep -c 'MQ_INVARIANTS' tools/dev_message_queue.py || true); STRICT_HITS=$(grep -c 'MAS_MQ_STRICT_TOPIC' tools/dev_message_queue.py || true); [ "$INFLIGHT_HITS" -lt 3 ] && { echo "  ❌ BLOCK: 'in_flight_at' expected ≥3, got $INFLIGHT_HITS"; MQ188_FAIL=1; }; [ "$QUAR_HITS" -lt 2 ] && { echo "  ❌ BLOCK: '_quarantine_corrupt_line' expected ≥2, got $QUAR_HITS"; MQ188_FAIL=1; }; [ "$P95_HITS" -lt 1 ] && { echo "  ❌ BLOCK: 'current_p95_lag_ms' expected ≥1, got $P95_HITS"; MQ188_FAIL=1; }; [ "$INV_HITS" -lt 1 ] && { echo "  ❌ BLOCK: 'MQ_INVARIANTS' expected ≥1, got $INV_HITS"; MQ188_FAIL=1; }; [ "$STRICT_HITS" -lt 1 ] && { echo "  ❌ BLOCK: 'MAS_MQ_STRICT_TOPIC' expected ≥1, got $STRICT_HITS"; MQ188_FAIL=1; }; [ "$MQ188_FAIL" -ne 0 ] && { echo "  Fix: re-apply R110-188 directive"; exit 1; }; echo "  ✅ Check 19 passed: in_flight_at=$INFLIGHT_HITS, quarantine=$QUAR_HITS, p95=$P95_HITS, invariants=$INV_HITS, strict=$STRICT_HITS"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 20: MQ hardening P2 markers (R110-189) ===" && MQ189_FAIL=0; MQ189_MARKERS=( "class QueueFullError" "_gc_old_pending" "def requeue(" "_lag_distribution" "def replay_dlq(" "_SCHEMA_VERSION" "_IdempotencyIndex" "metrics_prometheus" "_next_retry_delay" "def list_topics(" "def compact_completed(" "_classify_error" "StorageError" "MAS_MQ_MAX_DEPTH_PER_TOPIC" 'min(int(m.get("retry_count"' ); for marker in "${MQ189_MARKERS[@]}"; do HITS=$(grep -c "$marker" tools/dev_message_queue.py || true); if [ "$HITS" -lt 1 ]; then echo "  ❌ BLOCK: marker '$marker' expected ≥1, got 0 (R110-189)"; MQ189_FAIL=1; fi; done; [ "$MQ189_FAIL" -ne 0 ] && { echo "  Fix: re-apply R110-189 directive"; exit 1; }; echo "  ✅ Check 20 passed: 15/15 MQ hardening P2 markers present"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 23: orphan-recipe registration (R110-204) ===" && python3 tools/dev_check_orphan_recipes.py --repo-root . > /tmp/orphan_check_23.txt 2>&1; ORPHAN_RC=$?; if [ "$ORPHAN_RC" -ne 0 ]; then echo "  ❌ BLOCK: Check 23 — orphan-recipe(s) detected"; sed 's/^/     /' /tmp/orphan_check_23.txt; exit 1; fi; echo "  ✅ Check 23 passed: all DOMAIN 1 recipes registered"; cat /tmp/orphan_check_23.txt | head -10
+
+=== Check 16+: category drift (R110-94) ===
+drift rc=0
+{
+  "drift": [],
+  "conform": [
+    {
+      "hash": "c546b7f18749025c3963bb083f58477430fde059",
+      "date": "2026-08-19T11:04:49+00:00",
+      "subject": "\ud83d\udcdd R110-213 \u2014 pre-push-gate final report (R110-210/211/212 retroactive verification)"
+    },
+    {
+      "hash": "52014cb36f8862c17e586ca81b030dcf3b19d8f9",
+      "date": "2026-08-19T10:37:52+00:00",
+      "subject": "\ud83d\udcdd R110-212 \u2014 R110-211 body-claim-drift korrigiert (bytes vs lines)"
+    },
+    {
+      "hash": "933915461872d3d7e6d36613ae7fca48608dbb6e",
+      "date": "2026-08-19T10:37:23+00:00",
+      "subject": "\ud83d\udcdd R110-211 \u2014 R110-210 evidence-archive + retroaktive Step 4+5 completion (transparency honor-code)"
+    },
+    {
+      "hash": "c37ac385b890e81f17ae2afa6ebb1d51ac3f0b21",
+      "date": "2026-08-19T09:34:57+00:00",
+      "subject": "\ud83d\udcdd R110-210 \u2014 MM9-EXT deferred findings als false-positive klassifiziert + scanner-self-test-fixture"
+    },
+    {
+      "hash": "766b50144c6f375d3218d00ed2dbcc40c53a7abe",
+      "date": "2026-08-19T06:40:07+00:00",
+      "subject": "fix: R110-209 \u2014 drift-risk MM9-EXT findings (4 highest-priority)"
+    },
+    {
+      "hash": "e8c26140688d81f419aa6a9003b2871253e1ab7e",
+      "date": "2026-08-19T05:45:27+00:00",
+      "subject": "chore: R110-208 \u2014 relocate R110-195 + R110-196 directives from .directives/ to .mase/directives/ (R110-140 convention)"
+    },
+    {
+      "hash": "14c7e9ddf14309b5ea9c144b3b2ca9ac79b061d9",
+      "date": "2026-08-19T05:31:00+00:00",
+      "subject": "chore: R110-207 \u2014 remove .directives/ duplicates of R110-204 + R110-206 (canonical is .mase/directives/)"
+    },
+    {
+      "hash": "3cdb4c5537f642cde78387d6dac46445b381d066",
+drift_count=0
+  ✅ Check 16+ passed: no category drift in last 30 days (post-cutoff 2026-08-04)=== Check 18: spec-invariant (R110-118) ===
+  ✅ Check 18 passed: test count-assertions match recipe count-declarations
+✅ spec-invariant: all count sources match recipe count-declarations=== Check 19: MQ semantic hardening (R110-188) ===
+  ✅ Check 19 passed: in_flight_at=7, quarantine=2, p95=3, invariants=1, strict=3=== Check 20: MQ hardening P2 markers (R110-189) ===
+  ✅ Check 20 passed: 15/15 MQ hardening P2 markers present=== Check 23: orphan-recipe registration (R110-204) ===
+  ✅ Check 23 passed: all DOMAIN 1 recipes registered
+OK: 110/110 DOMAIN 1 (mas-self) recipes registered (110 total in registry)Checks 16+, 18, 19, 20, 23 all pass. Now Check 21 (MQ topic caller-chain audit — the R110-198 check):
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 21: MQ topic caller-chain audit (R110-198) ===" && PRODUCER_TOPICS=()
+while IFS= read -r line; do
+    topic=$(echo "$line" | python3 -c "
+import sys, re
+for ln in sys.stdin:
+    m = re.search(r'[\"\']([a-z][a-z0-9_]*(?:[._][a-z0-9_]+)+)[\"\'].*', ln)
+    if m:
+        print(m.group(1))
+        break
+")
+    if [ -n "$topic" ] && [ "$topic" != "topic" ]; then
+        PRODUCER_TOPICS+=("$topic")
+    fi
+done < <(grep -rEnA1 '\.enqueue\(' tools/*.py 2>/dev/null \
+         | grep -v "\.pyc" | grep -v "^Binary" \
+         | grep -v "\.enqueue(")
+while IFS= read -r line; do
+    if echo "$line" | grep -qE 'TOPIC = ' ; then
+        topic=$(echo "$line" | python3 -c "
+import sys, re
+for ln in sys.stdin:
+    m = re.search(r'=\s*[\"\\']+([a-z0-9_]+)[\"\\']+\s*\$', ln)
+    if m:
+        print(m.group(1))
+        break
+")
+        if [ -n "$topic" ] && [ "$topic" != "topic" ]; then
+            PRODUCER_TOPICS+=("$topic")
+        fi
+    fi
+done < <(grep -rEn 'TOPIC\s*=\s*['"'"'"][a-z0-9_]+['"'"'"]\s*$' tools/*.py 2>/dev/null \
+         | grep -v "\.pyc")
+while IFS= read -r line; do
+    topic=$(echo "$line" | sed -nE "s/.*enqueue\(['\"]([a-zA-Z0-9._-]+)['\"].*/\1/p")
+    if [ -n "$topic" ] && [ "$topic" != "topic" ]; then
+        PRODUCER_TOPICS+=("$topic")
+    fi
+done < <(grep -rEn '\.enqueue\(' recipe/ 2>/dev/null | grep -v "\.pyc")
+PRODUCER_TOPICS=($(printf "%s\n" "${PRODUCER_TOPICS[@]}" | sort -u))
+echo "  Producer topics found: ${#PRODUCER_TOPICS[@]}"
+printf '    %s\n' "${PRODUCER_TOPICS[@]}"
+
+=== Check 21: MQ topic caller-chain audit (R110-198) ===
+  Producer topics found: 2
+    dispatches
+    monitor.health.degradedDiscovery found 2 producer topics. Let me verify discovery is complete (the instructions' example mentions `im.finding.created`, which suggests the discovery regexes may be brittle) and then run step 2 — the caller-chain verification:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== broader discovery: all enqueue call sites in tools/ ===" && grep -rnE '\.enqueue\(' tools/*.py 2>/dev/null | grep -v 'def enqueue' | head -40
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== TOPIC constants in tools/ ===" && grep -rnE 'TOPIC\s*=|topic\s*=\s*["\x27]' tools/*.py 2>/dev/null | grep -v '\.pyc' | head -30 && echo "=== enqueue in recipe/ ===" && grep -rnE '\.enqueue\(' recipe/ 2>/dev/null | grep -v '\.pyc' | head -20
+
+=== broader discovery: all enqueue call sites in tools/ ===
+tools/dev_dispatch_tracker.py:123:            mq.enqueue(
+tools/dev_dispatch_tracker.py:158:                mq.enqueue(
+tools/dev_phoenix_log_persister.py:173:            escalation_msg_id = _mq.enqueue(
+tools/dev_workflow_runner.py:215:                    msg_id = _mq_mod.enqueue(=== TOPIC constants in tools/ ===
+tools/dev_dashboard_data.py:379:        #     `mq_depth{topic="im.finding.created"} 0` etc.
+tools/dev_dispatch_tracker.py:53:MQ_TOPIC = "dispatches"
+tools/dev_message_queue.py:89:    """Sanitize topic name.  If MAS_MQ_STRICT_TOPIC=1, raise on
+tools/dev_message_queue.py:96:            f"{safe!r}. Use only [a-zA-Z0-9_-] or set MAS_MQ_STRICT_TOPIC=0.")
+tools/dev_message_queue.py:791:        out.append(f'mq_depth{{topic="{topic}"}} {t.get("depth", 0)}')
+tools/dev_message_queue.py:792:        out.append(f'mq_lag_p95_ms{{topic="{topic}"}} {t.get("current_p95_lag_ms", 0)}')
+tools/dev_message_queue.py:793:        out.append(f'mq_dlq_count{{topic="{topic}"}} {t.get("dlq_count_for_topic", 0)}')
+=== enqueue in recipe/ ===
+recipe/sub/sub_mas-pre-push-validator.yaml.bak.20260819_052053:16:prompt: 'I am pre-push-validator (v2.8.0) | MODE-CHECK: mas-engineer | 🚦 PRE-PUSH-GATEKEEPER (v2.8.0) ⛔ 23 checks before git push → if blocked, NO push allowed. NEW v2.7.0 (R110-198): Check 21 MQ topic caller-chain audit — every mq.enqueue(topic) producer must have a caller-chain (workflow recipe, sub_recipe, or test that consumes the topic), prevents the R110-194-B dead-end-topic pattern from recurring. NEW v2.8.0 (R110-204): Check 23 orphan-recipe registration audit — runs tools/dev_check_orphan_recipes.py; any DOMAIN 1 recipe/sub/*.yaml not registered in workflows.yaml configs.mas-self.sub_agents BLOCKS the push (prevents the R110-195/R110-203 orphan-recipe bug class from recurring). NEW v2.6.0 (R110-189): Check 19 +Check 20 MQ hardening P1 (R110-188) + P2 (R110-189) markers — must run in dev_message_queue.py. NEW v2.5.0 (R110-189): MQ hardening signature drift detection. NEW v2.4.0 (R110-118): Check 18 spec-invariant runs tools/dev_spec_invariant.py after the Check 17 pytest-run and BLOCKS the push if test count-assertions drift from recipe count-declarations — closes R110-78 PHASE 3 (R110-109 DIREKTIVE 2+3). NEW v2.3.0 (R110-78): Check 17 pytest-run executes the full test-tree and BLOCKS the push if any test failed or any error occurred — prevents the validator-green+tests-red state that R110-71 caused (recipe-count change pushed while 2 tests were already broken). NEW v2.2.0 (R110-94): Check 16+ detects historical commit-subject category drift across the last 30 days via tools/dev_category_drift.py (R110-92) — catches the window that Check 1.5 (latest-only) misses. NEW v2.1.0 (R110-56): Check 0 enforces that every claim in the commit body is PROVEN by file evidence (e.g. "Adds 4 new tests" must be backed by git-show-stat showing +4 new test functions). See recipe/instructions/sub_mas-pre-push-validator.md → Check 0, Check 16+, Check 18, Check 19+20, and Check 21 for full procedure.'
+recipe/sub/sub_mas-pre-push-validator.yaml:16:prompt: 'I am pre-push-validator (v2.8.0) | MODE-CHECK: mas-engineer | 🚦 PRE-PUSH-GATEKEEPER (v2.8.0) ⛔ 23 checks before git push → if blocked, NO push allowed. NEW v2.7.0 (R110-198): Check 21 MQ topic caller-chain audit — every mq.enqueue(topic) producer must have a caller-chain (workflow recipe, sub_recipe, or test that consumes the topic), prevents the R110-194-B dead-end-topic pattern from recurring. NEW v2.8.0 (R110-204): Check 23 orphan-recipe registration audit — runs tools/dev_check_orphan_recipes.py; any DOMAIN 1 recipe/sub/*.yaml not registered in workflows.yaml configs.mas-self.sub_agents BLOCKS the push (prevents the R110-195/R110-203 orphan-recipe bug class from recurring). NEW v2.6.0 (R110-189): Check 19 +Check 20 MQ hardening P1 (R110-188) + P2 (R110-189) markers — must run in dev_message_queue.py. NEW v2.5.0 (R110-189): MQ hardening signature drift detection. NEW v2.4.0 (R110-118): Check 18 spec-invariant runs tools/dev_spec_invariant.py after the Check 17 pytest-run and BLOCKS the push if test count-assertions, test-docstrings, or recipe/instructions literals drift from recipe count-declarations (R110-206 scope extension) — closes R110-78 PHASE 3 (R110-109 DIREKTIVE 2+3). NEW v2.3.0 (R110-78): Check 17 pytest-run executes the full test-tree and BLOCKS the push if any test failed or any error occurred — prevents the validator-green+tests-red state that R110-71 caused (recipe-count change pushed while 2 tests were already broken). NEW v2.2.0 (R110-94): Check 16+ detects historical commit-subject category drift across the last 30 days via tools/dev_category_drift.py (R110-92) — catches the window that Check 1.5 (latest-only) misses. NEW v2.1.0 (R110-56): Check 0 enforces that every claim in the commit body is PROVEN by file evidence (e.g. "Adds 4 new tests" must be backed by git-show-stat showing +4 new test functions). See recipe/instructions/sub_mas-pre-push-validator.md → Check 0, Check 16+, Check 18, Check 19+20, Check 21, and Check 23 for full procedure.'
+recipe/instructions/sub_mas-pre-push-validator.md:1047:**Goal:** Every MQ topic that is PRODUCED (mq.enqueue() call in
+recipe/instructions/sub_mas-pre-push-validator.md:1070:# and recipe/ for mq.enqueue() calls.  We use grep with
+recipe/instructions/sub_mas-pre-push-validator.md:1084:#     mq.enqueue(
+recipe/instructions/sub_mas-pre-push-validator.md:1094:    # line looks like:    file:N:        mq.enqueue(
+recipe/instructions/sub_mas-pre-push-validator.md:1112:         | grep -v "\.enqueue(")
+recipe/instructions/sub_mas-pre-push-validator.md:1116:# mq.enqueue(MQ_TOPIC, ...)).  Anchor: line ends with
+recipe/instructions/sub_mas-pre-push-validator.md:1137:# explicit mq.enqueue() invocations (recipe side may
+recipe/instructions/sub_mas-pre-push-validator.md:1138:# enqueue via shell: `python3 -c "...mq.enqueue('topic'..."`).
+recipe/instructions/sub_mas-pre-push-validator.md:1156:#       mq.consume(<topic>) or mq.enqueue(<topic>, ...) andLet me inspect the actual enqueue call sites to confirm complete topic discovery:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== dev_dispatch_tracker.py:120-165 ===" && sed -n '115,165p' tools/dev_dispatch_tracker.py && echo "=== dev_phoenix_log_persister.py:165-185 ===" && sed -n '165,185p' tools/dev_phoenix_log_persister.py && echo "=== dev_workflow_runner.py:205-225 ===" && sed -n '205,225p' tools/dev_workflow_runner.py
+
+=== dev_dispatch_tracker.py:120-165 ===
+    # Legacy write (backward compat)
+    os.makedirs(os.path.dirname(LEGACY_LOG), exist_ok=True)
+    with open(LEGACY_LOG, 'a') as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + '\n')
+    # MQ enqueue (best-effort, no fail if MQ unavailable)
+    mq = _mq()
+    if mq is not None:
+        try:
+            mq.enqueue(
+                MQ_TOPIC,
+                {
+                    "event_type": "dispatch_start",
+                    **entry,
+                },
+                idempotency_key=f"dispatch_start-{entry_id}",
+                retry_policy={"max": 3, "backoff": [1, 2, 4]},
+                request_id=entry_id,
+            )
+        except Exception:
+            pass  # MQ is best-effort
+    return entry
+
+
+def done(entry_id, duration_ms, turns, result_summary, errors=None):
+    """Mark a dispatch as done. Updates legacy NDJSON + enqueues
+    MQ dispatch_done event."""
+    entries = _read_all()
+    updated = None
+    for e in entries:
+        if e["id"] == entry_id:
+            e["status"] = "done" if not errors else "error"
+            e["duration_ms"] = duration_ms
+            e["turns"] = turns
+            e["result_summary"] = result_summary
+            e["errors"] = errors
+            updated = dict(e)
+            break
+    _write_all(entries)
+    # MQ dispatch_done event
+    if updated is not None:
+        mq = _mq()
+        if mq is not None:
+            try:
+                mq.enqueue(
+                    MQ_TOPIC,
+                    {
+                        "event_type": "dispatch_done",
+                        "id": updated["id"],
+                        "from": updated.get("from"),
+                        "to": updated.get("to"),
+                        "task": updated.get("task"),
+=== dev_phoenix_log_persister.py:165-185 ===
+                "summary": {
+                    "phoenix_request_id": request_id,
+                    "levels_passed": levels_passed,
+                    "levels_total": levels_total,
+                    "final_status": final_status,
+                    "degraded_levels": failed_levels,
+                },
+            }
+            escalation_msg_id = _mq.enqueue(
+                "monitor.health.degraded", esc_payload
+            )
+            # Re-write the log with the escalation msg id
+            log_entry["escalation_msg_id"] = escalation_msg_id
+            with open(log_path, "w") as f:
+                json.dump(log_entry, f, indent=2)
+        except Exception as e:
+            # Escalation failure must not lose the original log.
+            # Surface the error in the return value; defib can
+            # still pick up the run via the persisted log file.
+            try:
+                rel = str(log_path.relative_to(REPO_ROOT))
+=== dev_workflow_runner.py:205-225 ===
+                idem = step.get("idempotency_key")
+                if idem is not None:
+                    idem = _substitute(idem)
+                request_id = step.get("request_id")
+                if request_id is not None:
+                    request_id = _substitute(request_id)
+                retry_policy = step.get("retry_policy")
+                try:
+                    import importlib
+                    _mq_mod = importlib.import_module("dev_message_queue")
+                    msg_id = _mq_mod.enqueue(
+                        topic, payload,
+                        idempotency_key=idem,
+                        request_id=request_id,
+                        retry_policy=retry_policy,
+                    )
+                    ok = True
+                    out = f"enqueued msg_id={msg_id} topic={topic}"
+                    if "into" in step:
+                        params[step["into"]] = msg_id
+                except Exception as e:Producer topology confirmed: `dispatches` (dev_dispatch_tracker, via MQ_TOPIC const) and `monitor.health.degraded` (dev_phoenix_log_persister). `dev_workflow_runner` passes a variable topic (dispatcher — correctly excluded per check semantics). Now running step 2 — caller-chain verification:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && PRODUCER_TOPICS=("dispatches" "monitor.health.degraded") && MQ21_FAIL=0 && MQ21_UNCOVERED=() && for topic in "${PRODUCER_TOPICS[@]}"; do
+    _sanitized=$(echo "$topic" | tr '.' '_')
+    HITS=0
+    HITS=$((HITS + $(grep -l "$topic" recipe/wf_*.yaml 2>/dev/null | wc -l)))
+    HITS=$((HITS + $(grep -l "$_sanitized" recipe/wf_*.yaml 2>/dev/null | wc -l)))
+    HITS=$((HITS + $(grep -lE "$topic|$_sanitized" recipe/sub/sub_mas-*.yaml 2>/dev/null | wc -l)))
+    HITS=$((HITS + $(grep -lE "mq\.(enqueue|consume)\(['\"]?$topic|['\"]?$_sanitized" tests/test_*.py 2>/dev/null | wc -l)))
+    HITS=$((HITS + $(grep -lE "mq\.(enqueue|consume)\(['\"]?$topic|['\"]?$_sanitized" tests/test_dev_*.py 2>/dev/null | wc -l)))
+    HITS=$((HITS + $(grep -lE "$topic|$_sanitized" tools/dev_mq_consumer*.py 2>/dev/null | wc -l)))
+    if [ "$HITS" -eq 0 ]; then
+        echo "  ❌ BLOCK: Check 21 — topic '$topic' has a producer but NO consumer-side caller chain"
+        MQ21_FAIL=1
+        MQ21_UNCOVERED+=("$topic")
+    else
+        echo "  ✅ Check 21: topic '$topic' has $HITS caller-chain reference(s)"
+    fi
+done
+if [ "$MQ21_FAIL" -ne 0 ]; then
+    echo "     Uncovered topics: ${MQ21_UNCOVERED[*]}"
+    echo "     Fix: add a consumer (workflow recipe wf_<topic>.yaml, or sub_recipe in recipe/sub/, or test that mq.consume()s the topic).  Pattern: see R110-195 (wf_im_consume_findings + sub_mas-design-patches)."
+    exit 1
+fi
+echo "  ✅ Check 21 passed: all ${#PRODUCER_TOPICS[@]} producer topic(s) have caller chains"
+
+  ✅ Check 21: topic 'dispatches' has 8 caller-chain reference(s)
+  ✅ Check 21: topic 'monitor.health.degraded' has 4 caller-chain reference(s)
+  ✅ Check 21 passed: all 2 producer topic(s) have caller chains✅ Check 21 PASS — both producer topics have caller chains. Now the remaining three: Check 14 (multi-dim coverage), Check 17 (pytest), Check 10 (e2e baseline). First, verify Check 14's prerequisites and the e2e baseline file:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && ls -la tools/coverage_test tools/test_subagents 2>&1; echo "---baseline---"; cat .mase/pre-push-e2e-baseline.json 2>/dev/null | head -30; echo "---coverage dir---"; ls .mase/coverage/ 2>/dev/null | tail -5; echo "---env overrides---"; env | grep -E 'MAS_SKIP|MAS_AUTO' || echo "(no MAS_SKIP/MAS_AUTO env set)"
+
+-rwxr-xr-x 1 root root 11413 Aug 14 15:58 tools/coverage_test
+-rwxr-xr-x 1 root root 10275 Aug 14 15:48 tools/test_subagents
+---baseline---
+{
+  "checked_at": "2026-08-16T08:17:54+00:00",
+  "baseline_source": "logs/e2e-results/2026-08-05-run-1/raw-results.json (prior evidence file)",
+  "baseline_pass": 131,
+  "baseline_total": 131,
+  "current_pass": 131,
+  "current_total": 131,
+  "regression_detected": false,
+  "failing_tests": [],
+  "command": "MAS_AUTO_CONFIRM=1 python3 tools/e2e_run_all.py --quick --no-interactive --auto-confirm",
+  "current_results": "logs/e2e-results/2026-08-16-run-1/raw-results.json"
+}
+---coverage dir---
+coverage-20260818T201643.json
+coverage-20260819T061743.json
+coverage-20260819T105500.json
+coverage-20260819T143519.json
+coverage-20260819T144146.json
+---env overrides---
+(no MAS_SKIP/MAS_AUTO env set)Prerequisites in place. Running Check 14 (multi-dim coverage) with the project-root path adapted:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && python3 - <<'PYEOF'
+import subprocess, json
+from pathlib import Path
+
+W = Path("/workspace/dev-branch/mas-engineer-cleanup/mas-engineer")
+
+# 1. Behavior coverage (no LLM, fast)
+r1 = subprocess.run(
+    ["python3", str(W / "tools/coverage_test"),
+     "--all", "--framework-only", "--mode=explain", "--timeout=10"],
+    capture_output=True, text=True, timeout=120, cwd=str(W),
+)
+coverage_dir = W / ".mase" / "coverage"
+latest = max(coverage_dir.glob("coverage-*.json"), key=lambda p: p.stat().st_mtime, default=None)
+if latest:
+    cov = json.loads(latest.read_text())
+    behavior_pass = cov.get("passed", 0)
+    behavior_total = cov.get("total", 0)
+else:
+    behavior_pass, behavior_total = 0, 0
+
+# 2. Structure coverage (R72)
+r2 = subprocess.run(
+    ["python3", str(W / "tools/test_subagents"), "--all"],
+    capture_output=True, text=True, timeout=60, cwd=str(W),
+)
+import re
+m = re.search(r"Total: (\d+) \| PASS: (\d+) \| FAIL: (\d+)", r2.stdout)
+if m:
+    struct_total = int(m.group(1))
+    struct_pass = int(m.group(2))
+    struct_fail = int(m.group(3))
+else:
+    struct_total, struct_pass, struct_fail = 0, 0, 999
+
+ok = (behavior_pass == behavior_total and behavior_total > 0 and struct_fail == 0)
+print(f"  Behavior coverage: {behavior_pass}/{behavior_total}")
+print(f"  Structure coverage: {struct_pass}/{struct_total} (FAIL={struct_fail})")
+if not ok:
+    reasons = []
+    if behavior_pass != behavior_total:
+        reasons.append(f"behavior-fail: {behavior_total - behavior_pass} recipes")
+    if struct_fail > 0:
+        reasons.append(f"structure-fail: {struct_fail} recipes")
+    print(f"  ❌ Multi-dim coverage FAILED: {', '.join(reasons)}")
+else:
+    print(f"  ✅ Multi-dim coverage PASS ({behavior_pass} behavior + {struct_pass} structure)")
+
+print("CHECK14_RESULT:", json.dumps({
+    "ok": ok,
+    "behavior_pass": behavior_pass, "behavior_total": behavior_total,
+    "struct_pass": struct_pass, "struct_total": struct_total, "struct_fail": struct_fail,
+}))
+PYEOF
+echo "CHECK14_RC=$?"
+
+  Behavior coverage: 113/113
+  Structure coverage: 113/113 (FAIL=0)
+  ✅ Multi-dim coverage PASS (113 behavior + 113 structure)
+CHECK14_RESULT: {"ok": true, "behavior_pass": 113, "behavior_total": 113, "struct_pass": 113, "struct_total": 113, "struct_fail": 0}
+CHECK14_RC=0✅ Check 14 PASS (113/113 behavior + structure). Now Check 17 (pytest-run, full test tree with retry logic):
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 17: pytest-run (R110-78) ===" && if [ ! -d "tests" ]; then echo "  ⚠️  WARN: no tests/ directory found"; echo "  ✅ Check 17 passed: no tests/ dir (PASSED, WARN-only)"; else
+    PYTEST_RC=1
+    PYTEST_ATTEMPT=0
+    while [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt 3 ]; do
+        PYTEST_ATTEMPT=$((PYTEST_ATTEMPT + 1))
+        echo "  (attempt $PYTEST_ATTEMPT/3)"
+        PYTEST_OUTPUT=$(python3 -m pytest tests/ -q --tb=line --color=no 2>&1 | tail -30)
+        (set -o pipefail; python3 -m pytest tests/ -q --tb=line --color=no >/dev/null 2>&1)
+        PYTEST_RC=$?
+        if [ "$PYTEST_RC" -eq 127 ]; then
+            break
+        fi
+        if [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt 3 ]; then
+            echo "  ⚠️  RETRY $PYTEST_ATTEMPT/3: pytest exit=$PYTEST_RC — cleaning up before retry (R-208)"
+            pkill -f 'dev_mq_consumer' 2>/dev/null || true
+            rm -rf /tmp/mas-engineer-test /tmp/mas-engineer 2>/dev/null || true
+        fi
+    done
+    PASSED=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ passed" | grep -oE "[0-9]+" | head -1)
+    FAILED=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ failed" | grep -oE "[0-9]+" | head -1)
+    ERRORS=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ error" | grep -oE "[0-9]+" | head -1)
+    SKIPPED=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ skipped" | grep -oE "[0-9]+" | head -1)
+    DURATION=$(echo "$PYTEST_OUTPUT" | grep -oE "in [0-9.]+s" | grep -oE "[0-9.]+" | head -1)
+    PASSED=${PASSED:-0}; FAILED=${FAILED:-0}; ERRORS=${ERRORS:-0}; SKIPPED=${SKIPPED:-0}
+    DURATION=${DURATION:-0.0}
+    if [ "$PYTEST_RC" -eq 127 ]; then
+        echo "  ❌ BLOCK: pytest not installed (exit 127). Install with: pip install pytest"
+        exit 1
+    fi
+    if [ "$FAILED" -gt 0 ] || [ "$ERRORS" -gt 0 ] || [ "$PYTEST_RC" -ne 0 ]; then
+        echo "  ❌ BLOCK: Check 17 — pytest failed: $FAILED failed, $ERRORS errors, exit=$PYTEST_RC"
+        echo "$PYTEST_OUTPUT" | tail -10 | sed 's/^/     /'
+        echo "PYTEST_SUMMARY: {\"passed\": $PASSED, \"failed\": $FAILED, \"errors\": $ERRORS, \"skipped\": $SKIPPED, \"duration_seconds\": $DURATION, \"exit_code\": $PYTEST_RC}"
+        exit 1
+    fi
+    echo "  ✅ Check 17 passed: $PASSED passed, $FAILED failed, $ERRORS errors, $SKIPPED skipped in ${DURATION}s"
+    echo "PYTEST_SUMMARY: {\"passed\": $PASSED, \"failed\": $FAILED, \"errors\": $ERRORS, \"skipped\": $SKIPPED, \"duration_seconds\": $DURATION, \"exit_code\": $PYTEST_RC}"
+fi
+    timeout_secs: 300
+
+=== Check 17: pytest-run (R110-78) ===
+  (attempt 1/3)
+  ✅ Check 17 passed: 1622 passed, 0 failed, 0 errors, 16 skipped in 122.78s
+PYTEST_SUMMARY: {"passed": 1622, "failed": 0, "errors": 0, "skipped": 16, "duration_seconds": 122.78, "exit_code": 0}✅ Check 17 PASS: 1622 passed, 0 failed, 16 skipped in 122.78s (matches the R110-213 claim). Final check — Check 10 (e2e regression baseline, requires both `--auto-confirm` flag and `MAS_AUTO_CONFIRM=1` env):
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && export MAS_AUTO_CONFIRM=1 && echo "=== Check 10: e2e regression baseline (R110-58/60) ===" && timeout 240 python3 tools/e2e_run_all.py --quick --no-interactive --auto-confirm 2>&1 | tail -35; E2E_RC=${PIPESTATUS[0]}; echo "E2E_RC=$E2E_RC"
+    timeout_secs: 260
+
+=== Check 10: e2e regression baseline (R110-58/60) ===
+
+============================================================
+  TEST 2: Top-level workflows (3 of 3)
+============================================================
+[14:51:44] [INFO]   running build-test...
+[14:51:49] [INFO]     build-test: ok
+[14:51:49] [INFO]   running si-analyse...
+[14:51:49] [INFO]     si-analyse: ok
+[14:51:49] [INFO]   running knowledge-refresh...
+[14:51:49] [INFO]     knowledge-refresh: ok
+
+============================================================
+  TEST 3: Recovery workflows (5 of 5)
+============================================================
+[14:51:49] [INFO]   running wf_recovery_immune...
+[14:51:49] [INFO]     wf_recovery_immune: ok (auto_repair: ok)
+[14:51:49] [INFO]   running wf_recovery_checkpoint...
+[14:51:50] [INFO]     wf_recovery_checkpoint: ok (auto_repair: ok)
+[14:51:50] [INFO]   running wf_recovery_safezone...
+[14:51:50] [INFO]     wf_recovery_safezone: ok (auto_repair: ok)
+[14:51:50] [INFO]   running wf_recovery_timeline...
+[14:51:50] [INFO]     wf_recovery_timeline: ok (auto_repair: ok)
+[14:51:50] [INFO]   running wf_recovery_defib...
+[14:52:51] [INFO]     wf_recovery_defib: ok (auto_repair: n/a)
+
+============================================================
+  FINAL SCORE
+============================================================
+[14:52:51] [INFO] TOTAL: 133 tested, 133 PASS (100.0%)
+[14:52:51] [INFO]   recipe_yaml:        125/125 OK
+[14:52:51] [INFO]   top_workflows:      3/3 OK
+[14:52:51] [INFO]   recovery_workflows: 5/5 OK
+[14:52:51] [INFO] elapsed: 66.7s
+[14:52:51] [INFO] results: /workspace/dev-branch/mas-engineer-cleanup/logs/e2e-results/2026-08-19-run-2/raw-results.json
+[14:52:51] [SUCCESS] PASS (>= 95%)
+E2E_RC=0

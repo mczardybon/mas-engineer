@@ -1,0 +1,301 @@
+
+producers = sorted(producers)
+print(f"  Discovered {len(producers)} producer topic(s): {producers}")
+
+# Step 2: caller-chain evidence
+fail = 0
+uncovered = []
+for topic in producers:
+    san = topic.replace('.', '_')
+    hits = 0
+    # (a) workflow recipes
+    for f in glob.glob('recipe/wf_*.yaml'):
+        s = open(f, encoding='utf-8', errors='replace').read()
+        if topic in s or san in s: hits += 1
+    # (b) sub_recipes
+    for f in glob.glob('recipe/sub/sub_mas-*.yaml'):
+        s = open(f, encoding='utf-8', errors='replace').read()
+        if topic in s or san in s: hits += 1
+    # (c) tests
+    for f in glob.glob('tests/test_*.py'):
+        s = open(f, encoding='utf-8', errors='replace').read()
+        if re.search(rf"mq\.(enqueue|consume)\(['\"]?{re.escape(topic)}|['\"]?{re.escape(san)}", s): hits += 1
+    # (d) dev_mq_consumer call sites
+    for f in glob.glob('tools/dev_mq_consumer*.py'):
+        s = open(f, encoding='utf-8', errors='replace').read()
+        if topic in s or san in s: hits += 1
+    if hits == 0:
+        print(f"  ❌ BLOCK: Check 21 — topic '{topic}' has a producer but NO consumer-side caller chain")
+        fail = 1
+        uncovered.append(topic)
+    else:
+        print(f"  ✅ Check 21: topic '{topic}' has {hits} caller-chain reference(s)")
+if fail:
+    print(f"     Uncovered topics: {uncovered}")
+    exit(1)
+print(f"  ✅ Check 21 passed: all {len(producers)} producer topic(s) have caller chains")
+PYEOF
+echo "CHECK21_EXIT=$?"
+
+=== Check 21: MQ topic caller-chain audit (R110-198) ===
+  Discovered 3 producer topic(s): ['dispatches', 'monitor.health.degraded', 'topic']
+  ✅ Check 21: topic 'dispatches' has 5 caller-chain reference(s)
+  ✅ Check 21: topic 'monitor.health.degraded' has 3 caller-chain reference(s)
+  ✅ Check 21: topic 'topic' has 21 caller-chain reference(s)
+  ✅ Check 21 passed: all 3 producer topic(s) have caller chains
+CHECK21_EXIT=0Check 21 PASS (note: my scanner also caught the literal `'topic'` narrative false-positive — the instruction script filters it; with the filter the real producers are `dispatches` + `monitor.health.degraded`, both covered). Now Checks 23 + 24.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "=== Check 23: orphan-recipe registration audit (R110-204) ===" && python3 tools/dev_check_orphan_recipes.py --repo-root . > /tmp/orphan_check_23.txt 2>&1; ORPHAN_RC=$?; echo "orphan_rc=$ORPHAN_RC"; if [ $ORPHAN_RC -ne 0 ]; then sed 's/^/     /' /tmp/orphan_check_23.txt | head -20; else echo "  ✅ Check 23 passed: all DOMAIN 1 recipes registered"; cat /tmp/orphan_check_23.txt | head -5; fi; echo "=== Check 24: evidence/directive SOT-location audit (R110-257) ===" && cd /workspace/dev-branch/mas-engineer-cleanup && python3 mas-engineer/tools/dev_evidence_sot.py --strict --git > /tmp/sot_check_24.txt 2>&1; SOT_RC=$?; echo "sot_rc=$SOT_RC"; if [ $SOT_RC -ne 0 ]; then sed 's/^/     /' /tmp/sot_check_24.txt | head -40; else echo "  ✅ Check 24 passed: all evidence/directive files at SOT locations"; head -15 /tmp/sot_check_24.txt; fi
+
+=== Check 23: orphan-recipe registration audit (R110-204) ===
+orphan_rc=0
+  ✅ Check 23 passed: all DOMAIN 1 recipes registered
+OK: 110/110 DOMAIN 1 (mas-self) recipes registered (110 total in registry)
+=== Check 24: evidence/directive SOT-location audit (R110-257) ===
+sot_rc=0
+  ✅ Check 24 passed: all evidence/directive files at SOT locations
+============================================================
+R110-257 EVIDENCE/DIRECTIVE SOT CHECKER
+============================================================
+SOT evidence:      logs/e2e-evidence-gen2/ (REPO-ROOT)
+SOT directives:    mas-engineer/.mase/directives/
+Anti-SOT evidence: mas-engineer/logs/
+Anti-SOT direct.:  mas-engineer/.directives/
+------------------------------------------------------------
+  ✅ evidence_sot_working_tree: ok
+  ✅ directives_sot_working_tree: ok
+  ✅ sot_evidence_dir_health: ok
+  ✅ sot_directives_dir_health: ok
+  ✅ evidence_sot_git_index: ok
+  ✅ directives_sot_git_index: ok
+============================================================Checks 23 + 24 PASS. Remaining: Check 10 (e2e baseline) and Check 17 (full pytest). Let me first inspect `e2e_run_all.py --quick` to gauge its behavior, then run Check 10 with the mandated `MAS_AUTO_CONFIRM=1` + `--auto-confirm`.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && grep -n 'def main\|--quick\|quick\|auto.confirm\|MAS_AUTO_CONFIRM\|last_confirmation\|--no-interactive\|subprocess\|goose' tools/e2e_run_all.py | head -40
+
+13:  5. mas-engineer recipe loads via goose
+23:  python3 tools/e2e_run_all.py --quick         # just YAML + top + recovery (no task_workflows)
+24:  python3 tools/e2e_run_all.py --no-interactive  # skip goose run (saves 20 min)
+26:  python3 tools/e2e_run_all.py --quick --no-interactive --auto-confirm  # CI mode (requires MAS_AUTO_CONFIRM=1)
+34:import subprocess
+103:            r = subprocess.run(
+111:        except subprocess.TimeoutExpired:
+124:            r = subprocess.run(
+131:            # subprocess timeout was raised 60 -> 90. For wf_recovery_defib,
+140:                # step's subprocess returns rc=1, even though that is the
+171:        except subprocess.TimeoutExpired:
+202:    # > the 20s e2e subprocess timeout). They run fine in production /
+211:        # the e2e subprocess timeout is 20s. The test passes in
+216:        # The e2e sample subprocess cap is 20s. The workflow is healthy
+222:        # takes 174s for the 1622-test suite. The e2e sample subprocess
+269:            r = subprocess.run(
+280:        except subprocess.TimeoutExpired:
+295:    section("TEST 5: mas-engineer recipe via goose")
+296:    log("  running goose run --recipe recipe/test-mas-user.yaml...")
+299:    # R110-148: goose 1.45 requires GOOSE_PROVIDER + GOOSE_MODEL in env to
+301:    # "No provider configured. Run 'goose configure' first." even when
+308:        r = subprocess.run(
+309:            ["goose", "run", "--recipe", "recipe/test-mas-user.yaml"],
+316:    except subprocess.TimeoutExpired:
+319:        return {"ok": False, "error": "goose not in PATH"}
+322:def main():
+324:    parser.add_argument("--quick", action="store_true", help="skip task_workflows (saves 5-10 min)")
+325:    parser.add_argument("--no-interactive", action="store_true", help="skip goose run (saves 20 min)")
+328:        "--auto-confirm", action="store_true",
+329:        help="operator-sanctioned R01 bypass: update .mase/.last_confirmation to now. "
+335:    # blocks workflows when .mase/.last_confirmation is older than
+340:    # both --auto-confirm AND MAS_AUTO_CONFIRM=1, it refreshes the
+348:    # - If --auto-confirm is passed AND MAS_AUTO_CONFIRM=1 is set in env: update
+350:    # - If only --auto-confirm OR only MAS_AUTO_CONFIRM=1: print warning + skip
+353:    auto_confirm_requested = args.auto_confirm or os.environ.get("MAS_AUTO_CONFIRM") == "1"
+354:    auto_confirm_enabled = args.auto_confirm and os.environ.get("MAS_AUTO_CONFIRM") == "1"
+355:    if auto_confirm_requested:
+356:        confirmation_path = os.path.join(ROOT, ".mase/.last_confirmation")
+358:        if auto_confirm_enabled:
+362:            log(f"R01 bypass active: --auto-confirm + MAS_AUTO_CONFIRM=1 both set; "Running **Check 10** (e2e regression baseline) with the mandated dual-bypass (`--auto-confirm` + `MAS_AUTO_CONFIRM=1`).
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && MAS_AUTO_CONFIRM=1 timeout 150 python3 tools/e2e_run_all.py --quick --no-interactive --auto-confirm > /tmp/check10_e2e.log 2>&1; RC=$?; echo "e2e_rc=$RC"; echo "=== summary lines ==="; grep -iE 'Summary:|passed \(|failed|All .* passed|OK: [0-9]+|regress' /tmp/check10_e2e.log | tail -15; echo "=== last 15 lines ==="; tail -15 /tmp/check10_e2e.log
+
+e2e_rc=0
+=== summary lines ===
+[05:12:21] [INFO] OK: 125, WARN: 0, FAIL: 0
+=== last 15 lines ===
+[05:12:45] [INFO]   running wf_recovery_timeline...
+[05:12:45] [INFO]     wf_recovery_timeline: ok (auto_repair: ok)
+[05:12:45] [INFO]   running wf_recovery_defib...
+[05:13:45] [INFO]     wf_recovery_defib: ok (auto_repair: n/a)
+
+============================================================
+  FINAL SCORE
+============================================================
+[05:13:45] [INFO] TOTAL: 133 tested, 133 PASS (100.0%)
+[05:13:45] [INFO]   recipe_yaml:        125/125 OK
+[05:13:45] [INFO]   top_workflows:      3/3 OK
+[05:13:45] [INFO]   recovery_workflows: 5/5 OK
+[05:13:45] [INFO] elapsed: 83.9s
+[05:13:45] [INFO] results: /workspace/dev-branch/mas-engineer-cleanup/logs/e2e-results/2026-08-26-run-1/raw-results.json
+[05:13:45] [SUCCESS] PASS (>= 95%)**Check 10 PASS** — 133/133 (100%), e2e_rc=0. Now **Check 17** (full pytest run, ~7 min per spec) — the definitive test of the body's "1641 passed" claim.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && echo "starting pytest at $(date -u +%H:%M:%S)"; timeout 900 python3 -m pytest tests/ -q --tb=line --color=no --timeout=300 --ignore=.state > /tmp/check17_pytest.log 2>&1; PYTEST_RC=$?; echo "pytest_rc=$PYTEST_RC"; tail -5 /tmp/check17_pytest.log; grep -oE '[0-9]+ (passed|failed|error|skipped)' /tmp/check17_pytest.log | sort | uniq -c | head
+    timeout_secs: 960
+
+starting pytest at 05:13:51
+pytest_rc=0
+  /workspace/dev-branch/mas-engineer-cleanup/mas-engineer/tools/dev_spec_invariant.py:2: DeprecationWarning: invalid escape sequence '\s'
+    """
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+1641 passed, 1 warning in 419.51s (0:06:59)
+      1 1641 passed**Check 17 PASS** — 1641 passed, 0 failed, 0 errors in 419.51s (confirms the body's 1641 count exactly). All 24 checks are complete: **2 hard BLOCKS (Check 0, Check 16+)**, 22 pass, 2 warnings. Let me verify workspace state after the runs, then write the gate report.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup && git status --porcelain | head -15; echo "---"; git status --porcelain | wc -l; echo "=== check evidence SOT still clean post-runs ===" && python3 mas-engineer/tools/dev_evidence_sot.py --strict --git >/dev/null 2>&1; echo "sot_rc=$?"; echo "=== last_confirmation (R01 bypass used by Check 10) ===" && cat mas-engineer/.mase/.last_confirmation 2>/dev/null || cat .mase/.last_confirmation 2>/dev/null || echo "none"
+
+?? user_input_files/
+---
+1
+=== check evidence SOT still clean post-runs ===
+sot_rc=0
+=== last_confirmation (R01 bypass used by Check 10) ===
+1787721141All state verified (SOT still clean post-runs; only pre-existing untracked `user_input_files/`). Writing the gate report to the designated state-dir artifact.
+  ────────────────────────────────────────
+  ▸ write
+    path /w/d/m/m/./pipeline/pre_push_validation.yaml
+    content: signal: DONE
+request_id: pre-push-20260826T0521Z
+from: sub_mas-pre-push-validator
+to: human + git-operator
+status: blocked
+data:
+  validation:
+    ok: false
+    blocked_reasons:
+      - >-
+        Check 0 (commit-body disclosure audit, R110-56): commit 7e74f4e body claims
+        contradict git evidence — (1) 'validator.yaml +8/-8' vs actual +4/-4;
+        (2) 'R110-257-EVIDENCE.md +123' vs actual 114 lines;
+        (3) '.gitignore +3' vs actual +31 lines (root .gitignore, commit diff);
+        (4) 'git ls-files logs/e2e-evidence-gen2/ = 139 (was 113, +26)' vs actual 140
+        (was 113, +27 incl. the new R110-257-EVIDENCE.md). Fix: amend the commit body
+        on the cleanup branch to match git numstat / ls-files, or rebase the claims.
+      - >-
+        Check 16+ (historical commit-subject category drift, R110-94): 1 commit in the
+        last 30 days violates the 5-category protocol — HEAD 7e74f4e subject
+        'fix(evidence-sot,directives-sot,validator): ...' does not match
+        'chore:|docs:|fix:|wrench:|book:' nor a 🔧/📝/📚/📊 prefix (conventional-commit
+        'fix(scope):' passes Check 1.5 but not tools/dev_category_drift.py). Fix:
+        rebase/normalize the subject to e.g. '🔧 R110-257 — fix: bulk-move 28
+        SOT-violating files to canonical locations + install 4 prevention layers'.
+    warnings:
+      - >-
+        Check 6: mas-engineer/{tools,recipe,docs} is clean, but repo-root
+        docs/commit-push-protocol-2026-07-27.md contains pre-existing German umlauts
+        (non-core material per R110-141; R110-237 PARTIAL closure). Root docs/ is
+        outside the validator source_dir SOT, so not blocked here; it WILL block in
+        flat-layout validator runs and should be queued for R110-237 closure.
+      - >-
+        Check 7: untracked user_input_files/ (contains 0-byte jpg) present in working
+        tree — not staged, not committed. Ensure it is not swept by `git add -A`.
+      - >-
+        Check 9: skipped (nothing staged — dev_self_auditor --scope staged only fires
+        on staged .md/.txt files).
+      - >-
+        Check 0 note: the body's '1641 passed' count is EXACTLY reproduced by Check 17
+        (1641 passed, 419.51s); the 12-new-tests, 28-git-mv, 26+2 split, +351/+291/+65/+174
+        and secret-scan=0 claims were verified true. Only the 4 numeric claims listed
+        above contradict git evidence.
+  checks:
+    check_0_commit_body_disclosure: BLOCK
+    check_1_5_last_commit_title_convention: PASS
+    check_1_p1_findings: PASS
+    check_2_hardcoded_home_paths: PASS
+    check_3_yaml_validity: PASS
+    check_4_python_compile: PASS
+    check_5_shell_syntax: PASS
+    check_6_german_words: PASS
+    check_7_git_status: WARN
+    check_7_5_backup_files: PASS
+    check_8_missing_goose_mechanism: PASS
+    check_9_verification_theater: SKIP
+    check_10_e2e_regression_baseline: PASS
+    check_11_sub_recipe_resolution: PASS
+    check_12_test_coverage_gate: PASS
+    check_13_constitution_coverage: PASS
+    check_14_multi_dim_coverage: PASS
+    check_16_plus_category_drift: BLOCK
+    check_17_pytest_run: PASS
+    check_18_spec_invariant: PASS
+    check_19_mq_semantic_hardening: PASS
+    check_20_mq_hardening_p2: PASS
+    check_21_mq_topic_caller_chain: PASS
+    check_23_orphan_recipe_registration: PASS
+    check_24_evidence_directive_sot: PASS
+  checks_run: 24
+  checks_passed: 22
+  checks_failed: 2
+  timestamp: 2026-08-26T05:21:00Z
+
+
+Wrote /workspace/dev-branch/mas-engineer-cleanup/mas-engineer/.mase/pipeline/pre_push_validation.yaml (73 lines)✅ Report written to `mas-engineer/.mase/pipeline/pre_push_validation.yaml`. All 24 checks executed. Here is the gate verdict:
+
+---
+
+# 🚦 PRE-PUSH-GATEKEEPER v2.9.0 — VERDICT: ⛔ BLOCKED
+
+**`validation.ok: false` — NO push allowed.** 2 hard failures, both on the HEAD commit `7e74f4e` (R110-257). Push delta is currently 0 vs `origin/mas-t`, but if this HEAD is pushed, the gate blocks it.
+
+| # | Check | Result |
+|---|---|---|
+| 0 | Commit-body disclosure audit (R110-56) | ❌ **BLOCK** |
+| 1.5 | Last commit title convention | ✅ |
+| 1 | P1 high-severity findings | ✅ 0 🔴 |
+| 2 | Hardcoded `/home/` paths | ✅ |
+| 3 | YAML validity | ✅ 125 files |
+| 4 | Python compile | ✅ |
+| 5 | Shell syntax | ✅ |
+| 6 | German words | ✅ (core clean) |
+| 7 | Git status | ⚠️ WARN |
+| 7.5 | Backup files in last 5 commits | ✅ |
+| 8 | Missing Goose mechanism | ✅ CONFORM |
+| 9 | Verification theater (staged) | ⏭️ skip (nothing staged) |
+| 10 | e2e regression baseline | ✅ 133/133 (100%) |
+| 11 | sub_recipe resolution | ✅ 77 refs, 0 broken |
+| 12 | Test coverage gate | ✅ ratio 1.426 |
+| 13 | Constitution coverage | ✅ 0 missing |
+| 14 | Multi-dim coverage | ✅ 113/113 + 113/113 |
+| 16+ | Historical category drift (R110-94) | ❌ **BLOCK** |
+| 17 | pytest-run (R110-78) | ✅ **1641 passed** (419.5s) |
+| 18 | Spec-invariant (R110-118/206) | ✅ |
+| 19 | MQ semantic hardening | ✅ |
+| 20 | MQ hardening P2 | ✅ 15/15 |
+| 21 | MQ topic caller-chain | ✅ 2 topics covered |
+| 23 | Orphan-recipe registration | ✅ 110/110 |
+| 24 | Evidence/directive SOT-location (v2.9.0) | ✅ all SOT-clean |
+
+## ❌ Block 1 — Check 0 (R110-56): body claims contradict git evidence
+The R110-257 body's "VERIFICATION (deterministic, body-claim-verified)" section is **itself inaccurate in 4 places** (verified against `git show HEAD --numstat` / `ls-tree` / `--name-status -M`):
+
+1. `validator.yaml +8/-8` → actual **+4/-4** (2× overstated)
+2. `R110-257-EVIDENCE.md +123` → actual **114 lines**
+3. `.gitignore +3` → actual **+31 lines** (root `.gitignore`, commit diff)
+4. `git ls-files logs/e2e-evidence-gen2/ = 139 (was 113, +26)` → actual **140** (113 + 26 moved + 1 new evidence file = 140)
+
+Verified **true**: 37 files/1120/12, 28 `git mv` (26 evidence + 2 directives), 12 new tests, +351/+291/+65/+174, version 2.9.0, anti-SOT tracked = 0, secret scan 0 hits, and the **1641 passed** count (exactly reproduced by Check 17).
+
+## ❌ Block 2 — Check 16+ (R110-94): category drift on HEAD itself
+`tools/dev_category_drift.py --since 30` → `drift_count: 1`, and the violator is **the commit being validated**: subject `fix(evidence-sot,directives-sot,validator): …` starts with `fix(` — the detector requires strict `chore:|docs:|fix:|wrench:|book:` or a 🔧/📝/📚/📊 prefix. (Check 1.5 passes it via the conventional-commit pattern; the drift detector is stricter. This is a Check 1.5-vs-16+ spec gap worth aligning.)
+
+## ⚠️ Warnings (non-blocking)
+- **Check 7:** untracked `user_input_files/` (0-byte jpg) — don't `git add -A` it.
+- **Check 6:** repo-root `docs/commit-push-protocol-2026-07-27.md` has pre-existing German umlauts (non-core per R110-141; R110-237 remains PARTIAL — will block in flat-layout runs).
+- **Check 9:** skipped — no staged `.md/.txt`.
+
+## 🔧 Fix path (before any push)
+1. **Amend `7e74f4e`** (cleanup branch) — correct the 4 numeric claims in the body to match git numstat, **and**
+2. **Rebase/normalize the subject** to the 5-category protocol, e.g. `🔧 R110-257 — fix: bulk-move 28 SOT-violating files to canonical locations + install 4 prevention layers`, then re-run the gate (Check 0 + Check 16+ must both go green).
+
+Per boundaries, I did **not** modify any source file and did **not** run `git push`. Gate report: `mas-engineer/.mase/pipeline/pre_push_validation.yaml`.
+rc=0

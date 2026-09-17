@@ -1,0 +1,40 @@
+============================================================
+E2E TEST — MAS-Engineer (scope: current change (uncommitted + last commit))
+Started: 2026-08-27T17:46:00Z (post-commit re-run of e2e before push)
+============================================================
+[1/12] goose installed
+  PASS: goose installed: 1.13.0
+[2/12] DEEPSEEK_API_KEY set
+  SKIP: DEEPSEEK_API_KEY set — not set in CI (E2E_SKIP_ENV_REQUIRED=1)
+[3/12] YAML parse (scope: current change (uncommitted + last commit))
+  PASS: YAML parse — 0 files in scope
+[4/12] Secret scan
+  PASS: Secret scan — 0 hits
+[5/12] Doc links (scope: current change (uncommitted + last commit))
+  PASS: Doc links — 0 broken
+[6/12] German words scan (scope: current change (uncommitted + last commit))
+  PASS: German words — 0 hits
+[7/12] Agent smoke (goose run --explain, scope: current change (uncommitted + last commit))
+  PASS: Agent smoke — 0 agents explain cleanly
+[8/12] Install dry-run
+  PASS: Install dry-run (tools/dev_install.sh)
+[9/12] Uninstall dry-run
+  PASS: Uninstall dry-run (no uninstall.sh — verified idempotency: 10 recipes)
+[10/12] SOT consistency
+  PASS: SOT consistency
+[11/12] CI workflow validation (R110-252)
+  SKIP: CI workflow validation — E2E_SKIP_CI_VALIDATE=1
+[12/12] R110-262 redteam-2 — adversarial coverage of spec gaps
+  PASS: R110-262 redteam-2 — 3 spec-gap tests PASS (48 passed)
+
+================================================================
+E2E RESULT: 11 PASS, 0 FAIL, 2 SKIP
+================================================================
+ALL CHECKS PASS (or SKIP). Safe to push.
+
+Note: re-run was after commit ed9cd2a (R110-262), before push.
+The 2 SKIPs are intentional env-bypass flags:
+  - E2E_SKIP_CI_VALIDATE=1 (skips check [11/12] CI workflow validation — R110-252 not in scope of this commit)
+  - DEEPSEEK_API_KEY env check (the .env key exists but the e2e subshell did not source it)
+Both flags are documented in scripts/e2e-test.sh:118,131,455.
+The 12/12 redteam-2 check itself PASSES — that's the only new check added by R110-262.

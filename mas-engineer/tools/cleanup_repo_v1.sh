@@ -9,7 +9,7 @@
 #   P2: e2e-evidence-gen2/findings_R51_consumer.yaml misplaciert
 #   P3: 20 -ORIGINAL.yaml in recipe/sub/legacy/ (history cruft)
 #   P4: 4 untracked leftovers in recipe/sub/ (3 stubs + 1 backup)
-#   P5: .gitignore — runtime-only statt global .state/ exclude
+#   P5: .gitignore — runtime-only statt global .mase/ exclude
 #
 # USAGE:
 #   ./tools/cleanup_repo_v1.sh --dry-run    # zeigen was passieren würde
@@ -28,20 +28,21 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GIT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 
-# Detection: monorepo vs standalone
-if [ -d "$SCRIPT_DIR/../e2e-evidence-gen2" ]; then
+# Detection: monorepo vs standalone (e2e-evidence-gen2 liegt seit 2026-08-07
+# im zentralen logs/ Ordner auf Repo-Root-Ebene)
+if [ -d "$SCRIPT_DIR/../logs/e2e-evidence-gen2" ]; then
     # mas-engineer IST im monorepo
     REPO_ROOT="$GIT_ROOT"
     MAS_ENGINEER="$SCRIPT_DIR/.."
     PREFIX="mas-engineer"
-elif [ -d "$SCRIPT_DIR/e2e-evidence-gen2" ]; then
+elif [ -d "$SCRIPT_DIR/logs/e2e-evidence-gen2" ]; then
     # mas-engineer IST repo root
     REPO_ROOT="$SCRIPT_DIR"
     MAS_ENGINEER="$SCRIPT_DIR"
     PREFIX=""
 else
-    echo "FEHLER: Kann e2e-evidence-gen2/ nicht finden von $SCRIPT_DIR aus" >&2
-    echo "  Erwartet: $SCRIPT_DIR/../e2e-evidence-gen2/ ODER $SCRIPT_DIR/e2e-evidence-gen2/" >&2
+    echo "FEHLER: Kann logs/e2e-evidence-gen2/ nicht finden von $SCRIPT_DIR aus" >&2
+    echo "  Erwartet: $SCRIPT_DIR/../logs/e2e-evidence-gen2/ ODER $SCRIPT_DIR/logs/e2e-evidence-gen2/" >&2
     exit 1
 fi
 
@@ -91,7 +92,7 @@ preflight() {
     
     # Gate 2: yaml-valid (sample)
     for f in "$(MP recipe/sub/sub_mas-pre-push-validator.yaml)" \
-             "$(MP e2e-evidence-gen2/findings_R51_consumer.yaml)"; do
+             "$REPO_ROOT/logs/e2e-evidence-gen2/findings_R51_consumer.yaml"; do
         if [ -f "$f" ]; then
             python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null || abort "yaml-invalid: $f"
         fi
@@ -116,7 +117,7 @@ preflight() {
 # ========================================================================
 p1_r58_r74_evidence() {
     log "P1: R58-R74 EVIDENCE.md generieren (17 files)"
-    local out="$(MP e2e-evidence-gen2)"
+    local out="$REPO_ROOT/logs/e2e-evidence-gen2"
     log "Output dir: $out"
     
     # R58
@@ -267,10 +268,10 @@ kein FULL_IMPROVEMENT, sondern cleanup.
 
 ## Files modified
 
-- `.state/pipeline/patches.yaml` — neue patches
-- `.state/pipeline/validation.yaml` — validation
-- `.state/pre-push-e2e-baseline.json` — baseline update
-- `.state/todo.md` — R66 noted
+- `.mase/pipeline/patches.yaml` — neue patches
+- `.mase/pipeline/validation.yaml` — validation
+- `.mase/pre-push-e2e-baseline.json` — baseline update
+- `.mase/todo.md` — R66 noted
 EOF
 
     # R67
@@ -336,7 +337,7 @@ EOF
 ## User request (R70 trigger)
 
 "R70 cost-control. $5/Tag war nicht enforced. 4 fixes:
-(1) `.mas/config/cost.yaml` — daily_budget_usd, per_run_max_usd, gates
+(1) `.mase/config/cost.yaml` — daily_budget_usd, per_run_max_usd, gates
 (2) `tools/mas_cost` CLI — status, check, set, reset
 (3) `tools/dev_recursion_override.py` — pre-patch cost gate
 (4) Goose sqlite: `/root/.local/share/goose/sessions/sessions.db` (ABSOLUTE)"
@@ -347,7 +348,7 @@ EOF
 
 | File | Lines | Purpose |
 |------|-------|---------|
-| `.mas/config/cost.yaml` | +18 | cost config SOT |
+| `.mase/config/cost.yaml` | +18 | cost config SOT |
 | `tools/dev_recursion_override.py` | +72 | pre-patch cost gate |
 | `tools/mas_cost` | +243 | cost CLI |
 
@@ -491,12 +492,12 @@ p2_duplicate() {
     log "P2: duplicate findings_R51_consumer.yaml entfernen"
     
     # Tatsache: file existiert in BEIDEN verzeichnissen, identischer content
-    # - .state/pipeline/findings_R51_consumer.yaml (korrekt, wo mas es hinschreibt)
+    # - .mase/pipeline/findings_R51_consumer.yaml (korrekt, wo mas es hinschreibt)
     # - e2e-evidence-gen2/findings_R51_consumer.yaml (R48-commit-bug)
     # Lösung: e2e-evidence-gen2/ version löschen
     
-    local dup="$(MP e2e-evidence-gen2/findings_R51_consumer.yaml)"
-    local keep="$(MP .state/pipeline/findings_R51_consumer.yaml)"
+    local dup="$REPO_ROOT/logs/e2e-evidence-gen2/findings_R51_consumer.yaml"
+    local keep="$(MP .mase/pipeline/findings_R51_consumer.yaml)"
     
     if [ ! -f "$dup" ]; then
         warn "$dup existiert nicht — skip"
@@ -586,49 +587,49 @@ p5_gitignore() {
 # RUNTIME (regenerated, soll NICHT tracked)
 # ============================================================
 
-# .state/ runtime (NICHT: knowledge, rules, templates, SOT)
-.state/todo.md
-.state/changes.json
-.state/changes.unlimited-archive-*.json
-.state/health-history.json
-.state/health-report.json
-.state/audit.log.jsonl
-.state/audit_result.yaml
-.state/analysis.json
-.state/guardian.yaml
-.state/.last_confirmation
-.state/backups/
-.state/checkpoints/
-.state/workflow_runs/
-.state/dashboards/
+# .mase/ runtime (NICHT: knowledge, rules, templates, SOT)
+.mase/todo.md
+.mase/changes.json
+.mase/changes.unlimited-archive-*.json
+.mase/health-history.json
+.mase/health-report.json
+.mase/audit.log.jsonl
+.mase/audit_result.yaml
+.mase/analysis.json
+.mase/guardian.yaml
+.mase/.last_confirmation
+.mase/backups/
+.mase/checkpoints/
+.mase/workflow_runs/
+.mase/dashboards/
 
-# .state/pipeline/ runtime (NICHT: findings_R*_structural, validation-R*.json)
-.state/pipeline/signals.log
-.state/pipeline/ranked_findings.yaml
-.state/pipeline/findings.yaml
-.state/pipeline/patches.yaml
-.state/pipeline/pre_push_validation.yaml
-.state/pipeline/summarizer_result.yaml
-.state/pipeline/summarizer_result_*.yaml
-.state/pipeline/signal_*.yaml
-.state/pipeline/round*_findings.json
-.state/pipeline/skip_recently_split.yaml
-.state/pipeline/self_audit.yaml
-.state/pipeline/README.md
+# .mase/pipeline/ runtime (NICHT: findings_R*_structural, validation-R*.json)
+.mase/pipeline/signals.log
+.mase/pipeline/ranked_findings.yaml
+.mase/pipeline/findings.yaml
+.mase/pipeline/patches.yaml
+.mase/pipeline/pre_push_validation.yaml
+.mase/pipeline/summarizer_result.yaml
+.mase/pipeline/summarizer_result_*.yaml
+.mase/pipeline/signal_*.yaml
+.mase/pipeline/round*_findings.json
+.mase/pipeline/skip_recently_split.yaml
+.mase/pipeline/self_audit.yaml
+.mase/pipeline/README.md
 
-# .state/rules runtime
-.state/rules/.last_refresh
-.state/rules/.state
+# .mase/rules runtime
+.mase/rules/.last_refresh
+.mase/rules/.state
 
-# .mas/ runtime
-.mas/dashboards/data.json
-.mas/dashboards/history.json
-.mas/dashboards/.updated
-.mas/live-daemon.log
+# .mase/ runtime
+.mase/dashboards/data.json
+.mase/dashboards/history.json
+.mase/dashboards/.updated
+.mase/live-daemon.log
 
 # Worktrees
 .worktrees/
-.dev-team/.heartbeat
+.monitor/.heartbeat
 
 # Python / OS
 __pycache__/

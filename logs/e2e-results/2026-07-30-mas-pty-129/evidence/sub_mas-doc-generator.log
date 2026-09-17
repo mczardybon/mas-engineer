@@ -1,0 +1,1432 @@
+Loading recipe: 📝 SUB-MAS-DOC-GENERATOR — Documentation Currency Check (Sub-Agent)
+Description: v1.0.0 | MAS-internal: Checks docs currency, generates diffs after framework changes
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260730_42 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: find /tmp/mas-engineer-test/mas-engineer -name "sub_mas-doc-generator.md" -type f 2>/dev/null
+
+/tmp/mas-engineer-test/mas-engineer/recipe/instructions/sub_mas-doc-generator.md
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/mas-engineer-test/mas-engineer/recipe/instructions/sub_mas-doc-generator.md
+
+# sub_mas-doc-generator — Documentation Check
+
+╔══════════════════════════════════════════════╗
+║  SOT WORKFLOW CONTROL                       ║
+║  → workflows.yaml → agents.doc-generator   ║
+║     .task_workflows.CHECK                  ║
+╚══════════════════════════════════════════════╝
+
+MAS-Engineer-internal. Checks whether documentation for framework files is current. Generates diffs for outdated counters and lists. Patches nothing automatically.
+
+## Input (from MAS-Engineer)
+```yaml
+doc_generator_intake:
+  signal: "🟣 HANDOVER"
+  request_id: string
+  from: "dev-mas-engineer"
+  to: "sub_mas-doc-generator"
+  task: "CHECK|GENERATE_DIFF|UPDATE"
+  workspace: "/path/to/workspace"
+  scope: "all"  # all | mas | framework
+```
+
+## Documents to Check
+
+### MAS Documents (scope=mas|all)
+
+| File | What to check? |
+|------|----------------|
+| mas-engineer/docs/manifest.md | Tool table (9 entries), capabilities list |
+| mas-engineer/docs/governance.md | Rule numbering (1-7), priority levels |
+| mas-engineer/docs/procedures.md | Workflow list, command overview, line references |
+| dev-mas-engineer.yaml | Prompt block (marketplace), workflow sections, sub-agent list (Article 4) |
+
+### Framework Documents (scope=framework|all)
+
+find {workspace} -name "*.md" → dynamically discover all docs
+find {workspace} -name "*_framework*.py" -o -name "install_*.py" → dynamically detect installer
+
+For each found doc file check:
+- Counters (agents, sub-agents, tools, recipes)
+- Lists (agent registry, skill lists, mode lists)
+- Version references (vX.Y.Z)
+
+1. DETERMINE CURRENT VALUES:
+   - find {workspace} -name "MAS-Sub-Agent_*.yaml" -not -path "*_framework*" | wc -l → MAS sub-agent count
+   - find {workspace} -name "sub_*.yaml" -not -path "*_framework*" | wc -l → sub-agent count
+   - find {workspace} -name "dev_*.py" | wc -l → tool count
+   - find {workspace} -name "sub_mas-*.yaml" | wc -l → MAS sub-agent count
+
+2. READ EACH DOC FILE: cat {workspace}/{doc}
+
+3. COMPARE: Current values vs doc content
+   Example: manifest.md says "X tools" but ls shows Y → STALE
+
+4. COLLECT FINDINGS:
+   ```yaml
+   observations:
+     - doc: "mas-engineer/docs/manifest.md"
+       line: 28
+       issue: "Tool counter outdated"
+       current: "8 entries"
+       expected: "9 entries"
+     - doc: "install_framework.py"
+       line: 5
+       issue: "All counters current"
+       status: "✅"
+   ```
+
+## Procedure GENERATE_DIFF
+
+1. Perform CHECK
+2. For each finding: generate concrete diff
+   ```yaml
+   diff:
+     doc: "mas-engineer/docs/manifest.md"
+     line: 28
+     action: "INSERT_AFTER"
+     after: "| 📊 Analysis | dev_goose_db.py | ... |"
+     insert: "| 🧪 Testing  | dev_test_runner.py | Runs pytest from |"
+   ```
+3. User MUST confirm before sub_mas-yaml-editor patches
+
+## Procedure UPDATE
+
+1. Perform GENERATE_DIFF
+2. User selects which diffs are applied
+3. For each selected diff: sub_mas-yaml-editor (task=PATCH)
+4. SUMMARY: "X docs updated"
+
+## Output (to MAS-Engineer)
+
+```yaml
+mas_result:
+  signal: "🟢 DONE"
+  request_id: string
+  from: "sub_mas-doc-generator"
+  to: "dev-mas-engineer"
+  status: "success"
+  parsed:
+    task: "CHECK|GENERATE_DIFF|UPDATE"
+    scope: "all"
+    docs_checked: 11
+    docs_stale: 3
+    docs_current: 8
+    observations:
+      - doc: "mas-engineer/docs/manifest.md"
+        severity: "medium"
+        issue: "Tool table: counter outdated"
+      - doc: "mas-engineer/docs/procedures.md"
+        severity: "low"
+        issue: "Workflow list incomplete"
+```
+
+## Boundaries
+
+- ⛔ Only check counters and lists — not content quality
+- ⛔ No automatic patching of diffs
+- ⛔ NO changing framework core docs — only report
+- ⛔ Only MAS docs and install_framework.py may be patched
+
+CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without confirmation.
+MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain overreach. Reading in other domain OK.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.## 🔍 DOC-GENERATOR (v1.0.0) — MODE-CHECK Received
+
+**Signal understood:** ✅ Check framework docs currency — analysis only, no changes.
+
+Let me begin by surveying the workspace to determine what framework documents and installers exist, then check counters against reality.
+
+### Step 1: Survey workspace structure
+  ────────────────────────────────────────
+  ▸ tree
+    path: /tmp/mas-engineer-test/mas-engineer
+    depth: 2
+
+docs/  [6K]
+  ARCHITECTURE-E2E-TESTING.md  [89]
+  BUG-BRIEF-2026-07-23.md  [153]
+  CHANGELOG-2026-07-19-e2e-success.md  [19]
+  CHANGELOG-2026-07-25.md  [1]
+  DEMO-MULTI-ARCH-30.md  [605]
+  DEMO-RESEARCH-TEAM.md  [217]
+  E2E-COMMIT-STRATEGY.md  [71]
+  E2E-DEMO-RESEARCH-TEAM.md  [140]
+  E2E-SELF-IMPROVEMENT-REPORT-2026-07-24.md  [104]
+  E2E-TESTPLAN.md  [478]
+  E2E-UX-BUG-VALIDATION-2026-07-25.md  [31]
+  E2E_TEAMS_SETUP.md  [215]
+  EVIDENCE-R110-16-PTY-RERUN.md  [147]
+  EVIDENCE-R110-19-HEALTH-REPORT-SCORE0.md  [167]
+  HOWTO-CREATE-AGENT.md  [162]
+  HOWTO-IM-PIPELINE.md  [190]
+  HOWTO-PACKAGE-TEAM.md  [244]
+  HOWTO-TEAM-STANDALONE.md  [199]
+  REVIEW-2026-07-18.md  [250]
+  TEST-COVERAGE-POLICY.md  [164]
+  TEST-REPORT-100-PERCENT.md  [176]
+  TEST-REPORT-IM-PIPELINE-V2.md  [237]
+  TEST-REPORT-LIVE-LLM.md  [130]
+  TEST-REPORT-PHASE-1-6.md  [166]
+  WORKFLOWS.md  [153]
+  e2e-final-2026-07-22.json  [195]
+  governance.md  [99]
+  health-report-2026-07-18.md  [145]
+  health-report-2026-07-19.md  [194]
+  health-report-2026-07-21.md  [242]
+  health-report-2026-07-22-final.md  [95]
+  health-report-2026-07-22.md  [1]
+  health-report-2026-07-23.md  [100]
+  health-report-2026-07-29.md  [1]
+  lessons-learned.md  [273]
+  manifest.md  [62]
+  procedures.md  [78]
+  provider-config.md  [105]
+  test-e2e-full.sh  [577]
+e2e-evidence/  [87]
+  prompt-build.txt  [69]
+  prompt-use-team.txt  [18]
+e2e-evidence-gen2/  [2K]
+  BUG-REPORT-author-schema-mismatch.md  [52]
+  E2E-TEST-REPORT-gen2-R41.md  [50]
+  E2E-TEST-REPORT-gen2.md  [80]
+  R44-R45-EVIDENCE.md  [95]
+  R46-EVIDENCE.md  [62]
+  R47-R48-EVIDENCE.md  [105]
+  R49-EVIDENCE.md  [77]
+  R50-EVIDENCE.md  [66]
+  R51-EVIDENCE.md  [75]
+  R52-EVIDENCE.md  [87]
+  R53-EVIDENCE.md  [77]
+  R54-EVIDENCE.md  [67]
+  R55-EVIDENCE.md  [80]
+  R56-EVIDENCE.md  [99]
+  R57-EVIDENCE.md  [106]
+  R58-EVIDENCE.md  [41]
+  R59-EVIDENCE.md  [17]
+  R60-EVIDENCE.md  [30]
+  R61-EVIDENCE.md  [21]
+  R62-EVIDENCE.md  [21]
+  R63-EVIDENCE.md  [21]
+  R64-EVIDENCE.md  [21]
+  R65-EVIDENCE.md  [21]
+  R66-EVIDENCE.md  [23]
+  R67-EVIDENCE.md  [15]
+  R68-EVIDENCE.md  [15]
+  R69-EVIDENCE.md  [10]
+  R70-EVIDENCE.md  [38]
+  R71-EVIDENCE.md  [18]
+  R72-EVIDENCE.md  [22]
+  R73-EVIDENCE.md  [22]
+  R74-EVIDENCE.md  [29]
+  R89-EVIDENCE-E2E-RUN-001-006.md  [186]
+  TEST-FIX-FAILURES-BUG-REPORT.md  [39]
+  post-flight-audit-R48-7da5618.json  [7]
+  post-flight-audit-R49-872f50f.json  [7]
+  post-flight-audit-R50-8643531.json  [7]
+  post-flight-audit-R51-7adc2d2.json  [7]
+  post-flight-audit-R52-bb5e9a1.json  [7]
+  post-flight-audit-R53-91709e6.json  [7]
+  post-flight-audit-R54-ab5aee5.json  [7]
+  post-flight-audit-R55-ff03562.json  [7]
+  post-flight-audit-R56-d1a40ea.json  [7]
+  post-flight-audit-R57-c0880be.json  [7]
+  post-flight-audit-R74.json  [13]
+  post-flight-audit-R89.json  [7]
+  prompt-test-fix-failures.txt  [17]
+  validation_author_fixes-R51.yaml  [267]
+findings/  [202]
+  F-2026-07-28-1241db8-verification-theater.md  [53]
+  F-2026-07-28-e2e-evidence-inventory.md  [61]
+  F-2026-07-28-goose-e2e-dryrun.md  [88]
+mas-engineer/  [104]
+  docs/  [104]
+    STATUS-2026-07-23.md  [104]
+prompts/  [1K]
+  demo-team/  [131]
+    code-reviewer.txt  [131]
+  demo-team-build-optimize-tasks/  [692]
+    code-reviewer.txt  [263]
+    customer-support.txt  [215]
+    research-team.txt  [214]
+  README.md  [145]
+  content-pipeline.txt  [149]
+  customer-support.txt  [103]
+  data-analyzer.txt  [163]
+  research-team.txt  [100]
+  security-scanner.txt  [195]
+recipe/  [14K]
+  instructions/  [7K]
+    demo-team/  [0]
+    security-scanner.md  [229]
+    static-analyzer.md  [154]
+    sub_mas-agent-guardian.md  [228]
+    sub_mas-bootstrap.md  [126]
+    sub_mas-config-auditor.md  [153]
+    sub_mas-content-writer.md  [76]
+    sub_mas-doc-generator.md  [128]
+    sub_mas-email-campaign-manager.md  [89]
+    sub_mas-framework-knowledge.md  [250]
+    sub_mas-framework-scanner.md  [45]
+    sub_mas-general-improver.md  [554]
+    sub_mas-generic-init.md  [242]
+    sub_mas-goose-expert.md  [37]
+    sub_mas-health-reporter.md  [243]
+    sub_mas-im-designer.md  [348]
+    sub_mas-im-finder.md  [490]
+    sub_mas-im-rank.md  [151]
+    sub_mas-im-session-reader.md  [189]
+    sub_mas-im-validator.md  [200]
+    sub_mas-intention-parser.md  [191]
+    sub_mas-interpreter.md  [22]
+    sub_mas-mas-controller.md  [59]
+    sub_mas-master-constitution-team.md  [93]
+    sub_mas-master-constitution.md  [39]
+    sub_mas-migration-helper.md  [34]
+    sub_mas-pre-push-validator.md  [596]
+    sub_mas-prompt-engineer.md  [36]
+    sub_mas-python-repair.md  [86]
+    sub_mas-recipe-designer.md  [132]
+    sub_mas-recovery-checkpoint.md  [162]
+    sub_mas-recovery-defib.md  [31]
+    sub_mas-recovery-immune.md  [27]
+    sub_mas-recovery-safezone.md  [30]
+    sub_mas-recovery-timeline.md  [136]
+    sub_mas-self-auditor.md  [315]
+    sub_mas-seo-researcher.md  [81]
+    sub_mas-session-analyst.md  [29]
+    sub_mas-social-media-manager.md  [86]
+    sub_mas-summarizer.md  [26]
+    sub_mas-system-knowledge.md  [157]
+    sub_mas-team-packager.md  [405]
+    sub_mas-web-researcher.md  [67]
+    sub_mas-workflow-engine.md  [279]
+    sub_mas-worktree-manager.md  [29]
+    sub_mas-yaml-editor.md  [54]
+    sub_mas-yaml-immune.md  [90]
+  multi-arch-30/  [79]
+    sub/  [0]
+    teams/  [0]
+    template/  [0]
+    test-r11021/  [0]
+    multi-arch-30.yaml  [79]
+  sub/  [6K]
+    demo-team/  [0]
+    legacy/  [0]
+    template/  [0]
+    security-scanner.yaml  [60]
+    static-analyzer.yaml  [80]
+    sub_mas-agent-guardian.yaml  [46]
+    sub_mas-bootstrap.yaml  [47]
+    sub_mas-config-auditor.yaml  [42]
+    sub_mas-content-writer.yaml  [58]
+    sub_mas-dashboard-builder.yaml  [41]
+    sub_mas-dashboard-collector.yaml  [42]
+    sub_mas-dashboard-data-reader.yaml  [41]
+    sub_mas-dashboard-director.yaml  [59]
+    sub_mas-dashboard-generator.yaml  [38]
+    sub_mas-dashboard-refresh.yaml  [65]
+    sub_mas-degradation-analyzer.yaml  [39]
+    sub_mas-degradation-director.yaml  [59]
+    sub_mas-degradation-handler.yaml  [63]
+    sub_mas-degradation-planner.yaml  [39]
+    sub_mas-degradation-reporter.yaml  [39]
+    sub_mas-dev-analyzer.yaml  [41]
+    sub_mas-dev-builder.yaml  [41]
+    sub_mas-dev-director.yaml  [66]
+    sub_mas-dev-observer.yaml  [43]
+    sub_mas-dev-tester.yaml  [41]
+    sub_mas-doc-generator.yaml  [49]
+    sub_mas-doc-writer.yaml  [55]
+    sub_mas-e2e-auto-repair-director.yaml  [62]
+    sub_mas-e2e-auto-repair-runner.yaml  [40]
+    sub_mas-e2e-auto-repair-validator.yaml  [64]
+    sub_mas-e2e-german-fixes-checker.yaml  [55]
+    sub_mas-e2e-german-fixes-director.yaml  [66]
+    sub_mas-e2e-german-fixes-runner.yaml  [38]
+    sub_mas-e2e-german-fixes-validator.yaml  [74]
+    sub_mas-e2e-phoenix-fixes-director.yaml  [55]
+    sub_mas-e2e-phoenix-fixes-runner.yaml  [51]
+    sub_mas-e2e-phoenix-fixes-validator.yaml  [56]
+    sub_mas-email-campaign-manager.yaml  [59]
+    sub_mas-framework-audit-agent.yaml  [54]
+    sub_mas-framework-auditor.yaml  [39]
+    sub_mas-framework-finder.yaml  [40]
+    sub_mas-framework-harden-agent.yaml  [50]
+    sub_mas-framework-hardener.yaml  [40]
+    sub_mas-framework-knowledge.yaml  [50]
+    sub_mas-framework-scan-agent.yaml  [59]
+    sub_mas-framework-scanner-director.yaml  [49]
+    sub_mas-framework-scanner.yaml  [49]
+    sub_mas-general-improver.yaml  [74]
+    sub_mas-generic-init.yaml  [49]
+    sub_mas-git-operator.yaml  [221]
+    sub_mas-goose-admin.yaml  [51]
+    sub_mas-goose-expert.yaml  [50]
+    sub_mas-health-reporter.yaml  [48]
+    sub_mas-im-designer.yaml  [46]
+    sub_mas-im-finder.yaml  [46]
+    sub_mas-im-rank.yaml  [44]
+    sub_mas-im-session-reader.yaml  [120]
+    sub_mas-im-session-reader.yaml.llm-backup-r89  [38]
+    sub_mas-im-validator.yaml  [45]
+    sub_mas-intention-parser.yaml  [252]
+    sub_mas-interpreter.yaml  [47]
+    sub_mas-json-utility.yaml  [56]
+    sub_mas-mas-controller.yaml  [59]
+    sub_mas-master-constitution.yaml  [55]
+    sub_mas-migration-helper.yaml  [43]
+    sub_mas-monitor-health.yaml  [35]
+    sub_mas-monitor-recovery.yaml  [36]
+    sub_mas-monitor-runtime.yaml  [35]
+    sub_mas-monitor-session.yaml  [35]
+    sub_mas-pre-push-validator.yaml  [38]
+    sub_mas-prompt-engineer.yaml  [49]
+    sub_mas-python-analyzer.yaml  [44]
+    sub_mas-python-fixer.yaml  [45]
+    sub_mas-python-repair-director.yaml  [49]
+    sub_mas-python-repair.yaml  [49]
+    sub_mas-python-validator.yaml  [45]
+    sub_mas-recipe-designer.yaml  [65]
+    sub_mas-recipe-manager.yaml  [48]
+    sub_mas-recovery-checkpoint.yaml  [59]
+    sub_mas-recovery-defib.yaml  [45]
+    sub_mas-recovery-immune.yaml  [118]
+    sub_mas-recovery-immune.yaml.llm-backup-r89  [51]
+    sub_mas-recovery-safezone.yaml  [49]
+    sub_mas-recovery-timeline.yaml  [61]
+    sub_mas-security-cmd-injection-scanner.yaml  [38]
+    sub_mas-security-deserialize-scanner.yaml  [38]
+    sub_mas-security-secrets-scanner.yaml  [39]
+    sub_mas-security-sqli-scanner.yaml  [38]
+    sub_mas-self-auditor.yaml  [58]
+    sub_mas-seo-researcher.yaml  [55]
+    sub_mas-session-analyst.yaml  [43]
+    sub_mas-signal-generator.yaml  [59]
+    sub_mas-social-media-manager.yaml  [57]
+    sub_mas-summarizer.yaml  [47]
+    sub_mas-system-knowledge.yaml  [42]
+    sub_mas-team-packager-builder.yaml  [44]
+    sub_mas-team-packager-director.yaml  [49]
+    sub_mas-team-packager-validator.yaml  [38]
+    sub_mas-team-packager.yaml  [68]
+    sub_mas-test-agent.yaml  [40]
+    sub_mas-test-director.yaml  [60]
+    sub_mas-test-executor.yaml  [39]
+    sub_mas-test-fix-failures-applier.yaml  [47]
+    sub_mas-test-fix-failures-designer.yaml  [39]
+    sub_mas-test-fix-failures-director.yaml  [62]
+    sub_mas-test-fix-failures-finder.yaml  [38]
+    sub_mas-test-fix-failures-ranker.yaml  [38]
+    sub_mas-test-fix-failures-validator-director.yaml  [53]
+    sub_mas-test-reporter-analyzer.yaml  [38]
+    sub_mas-test-reporter-director.yaml  [50]
+    sub_mas-test-reporter-generator.yaml  [38]
+    sub_mas-test-reporter.yaml  [40]
+    sub_mas-test-runner.yaml  [48]
+    sub_mas-test-scanner.yaml  [40]
+    sub_mas-test-validator.yaml  [39]
+    sub_mas-tff-crossref-validator.yaml  [39]
+    sub_mas-tff-rule-validator.yaml  [40]
+    sub_mas-tff-syntax-validator.yaml  [39]
+    sub_mas-unix-test-runner.yaml  [37]
+    sub_mas-verification-runner.yaml  [40]
+    sub_mas-web-researcher.yaml  [45]
+    sub_mas-workflow-engine.yaml  [50]
+    sub_mas-worktree-manager.yaml  [47]
+    sub_mas-yaml-editor.yaml  [43]
+    sub_mas-yaml-immune.yaml  [50]
+  template/  [12]
+    recovery/  [0]
+    agent_template.yaml  [12]
+  dashboard-data-refresh.yaml  [27]
+  dev-mas-engineer-30agents.yaml  [184]
+  dev-mas-engineer.yaml  [54]
+  e2e-verify-auto-repair.yaml  [29]
+  e2e-verify-german-fixes.yaml  [43]
+  e2e-verify-phoenix-fixes.yaml  [41]
+  root_recipe.yaml  [27]
+  setup-dashboard.yaml  [14]
+  test-fix-failures.yaml  [40]
+  test-mas-user.yaml  [29]
+sample-input/  [773]
+  data_report.py  [116]
+  order_processor.py  [112]
+  pipeline_runner.py  [92]
+  sample_with_bugs.py  [92]
+  usage_examples.py  [247]
+  user_importer.py  [114]
+sample-output/  [597]
+  data_report.py  [145]
+  order_processor.py  [167]
+  pipeline_runner.py  [114]
+  user_importer.py  [171]
+scripts/  [1K]
+  e2e-full-pipeline.sh  [209]
+  e2e-test.sh  [455]
+  goose-reinstall.sh  [129]
+  mas-reinstall.sh  [144]
+  r11025-third-30agent-re-exec.sh  [121]
+  r11027-reproducible-30agent-live-pty.sh  [294]
+  r11028-r10-validate.py  [111]
+  r11028-team-composition-live-pty.sh  [216]
+  r11043-tool-syntax-check.py  [98]
+template/  [191]
+  recovery/  [191]
+    checkpoint.md  [39]
+    defib.md  [38]
+    immune.md  [37]
+    safezone.md  [39]
+    timeline.md  [38]
+tests/  [13K]
+  __init__.py  [0]
+  conftest.py  [12]
+  debug_mcp.py  [65]
+  manual_mcp_test.py  [208]
+  test_pre_check_benchmark.py  [255]
+  test_recipe_agent_template.py  [80]
+  test_recipe_dashboard_setup.py  [96]
+  test_recipe_dev_mas_engineer.py  [67]
+  test_recipe_instructions.py  [85]
+  test_recipe_other_types.py  [135]
+  test_recipe_registry_consistency.py  [532]
+  test_recipe_root.py  [54]
+  test_recipe_thin_delegators.py  [99]
+  test_sub_mas_agent_guardian.py  [89]
+  test_sub_mas_bootstrap.py  [100]
+  test_sub_mas_config_auditor.py  [82]
+  test_sub_mas_content_writer.py  [115]
+  test_sub_mas_dashboard_builder.py  [82]
+  test_sub_mas_dashboard_collector.py  [84]
+  test_sub_mas_dashboard_data_reader.py  [101]
+  test_sub_mas_dashboard_director.py  [93]
+  test_sub_mas_dashboard_generator.py  [116]
+  test_sub_mas_dashboard_refresh.py  [120]
+  test_sub_mas_degradation_analyzer.py  [86]
+  test_sub_mas_degradation_director.py  [93]
+  test_sub_mas_degradation_handler.py  [99]
+  test_sub_mas_degradation_planner.py  [87]
+  test_sub_mas_degradation_reporter.py  [86]
+  test_sub_mas_dev_analyzer.py  [90]
+  test_sub_mas_dev_builder.py  [93]
+  test_sub_mas_dev_director.py  [97]
+  test_sub_mas_dev_observer.py  [91]
+  test_sub_mas_dev_tester.py  [91]
+  test_sub_mas_doc_generator.py  [85]
+  test_sub_mas_doc_writer.py  [94]
+  test_sub_mas_e2e_auto_repair_director.py  [97]
+  test_sub_mas_e2e_auto_repair_runner.py  [82]
+  test_sub_mas_e2e_auto_repair_validator.py  [83]
+  test_sub_mas_e2e_german_fixes_checker.py  [102]
+  test_sub_mas_e2e_german_fixes_director.py  [89]
+  test_sub_mas_e2e_german_fixes_runner.py  [81]
+  test_sub_mas_e2e_german_fixes_validator.py  [93]
+  test_sub_mas_e2e_phoenix_fixes_director.py  [103]
+  test_sub_mas_e2e_phoenix_fixes_runner.py  [90]
+  test_sub_mas_e2e_phoenix_fixes_validator.py  [91]
+  test_sub_mas_framework_audit_agent.py  [105]
+  test_sub_mas_framework_auditor.py  [110]
+  test_sub_mas_framework_finder.py  [89]
+  test_sub_mas_framework_harden_agent.py  [108]
+  test_sub_mas_framework_hardener.py  [105]
+  test_sub_mas_framework_knowledge.py  [107]
+  test_sub_mas_framework_scan_agent.py  [95]
+  test_sub_mas_framework_scanner.py  [96]
+  test_sub_mas_framework_scanner_director.py  [94]
+  test_sub_mas_general_improver.py  [88]
+  test_sub_mas_generic_init.py  [83]
+  test_sub_mas_git_operator.py  [129]
+  test_sub_mas_goose_admin.py  [115]
+  test_sub_mas_goose_expert.py  [127]
+  test_sub_mas_health_reporter.py  [104]
+  test_sub_mas_im_designer.py  [82]
+  test_sub_mas_im_finder.py  [86]
+  test_sub_mas_im_rank.py  [109]
+  test_sub_mas_im_session_reader.py  [81]
+  test_sub_mas_im_validator.py  [81]
+  test_sub_mas_intention_parser.py  [113]
+  test_sub_mas_interpreter.py  [100]
+  test_sub_mas_json_utility.py  [116]
+  test_sub_mas_mas_controller.py  [92]
+  test_sub_mas_master_constitution.py  [91]
+  test_sub_mas_migration_helper.py  [129]
+  test_sub_mas_monitor_health.py  [78]
+  test_sub_mas_monitor_recovery.py  [80]
+  test_sub_mas_monitor_runtime.py  [84]
+  test_sub_mas_monitor_session.py  [82]
+  test_sub_mas_pre_push_validator.py  [107]
+  test_sub_mas_prompt_engineer.py  [120]
+  test_sub_mas_python_analyzer.py  [110]
+  test_sub_mas_python_fixer.py  [107]
+  test_sub_mas_python_repair.py  [114]
+  test_sub_mas_python_repair_director.py  [109]
+  test_sub_mas_python_validator.py  [106]
+  test_sub_mas_recipe_designer.py  [99]
+  test_sub_mas_recipe_manager.py  [89]
+  test_sub_mas_recovery_checkpoint.py  [89]
+  test_sub_mas_recovery_defib.py  [88]
+  test_sub_mas_recovery_immune.py  [98]
+  test_sub_mas_recovery_safezone.py  [91]
+  test_sub_mas_recovery_timeline.py  [90]
+  test_sub_mas_security_cmd_injection_scanner.py  [101]
+  test_sub_mas_security_deserialize_scanner.py  [102]
+  test_sub_mas_security_secrets_scanner.py  [101]
+  test_sub_mas_security_sqli_scanner.py  [100]
+  test_sub_mas_self_auditor.py  [91]
+  test_sub_mas_session_analyst.py  [124]
+  test_sub_mas_signal_generator.py  [98]
+  test_sub_mas_summarizer.py  [102]
+  test_sub_mas_system_knowledge.py  [124]
+  test_sub_mas_team_packager.py  [114]
+  test_sub_mas_team_packager_builder.py  [112]
+  test_sub_mas_team_packager_director.py  [110]
+  test_sub_mas_team_packager_validator.py  [114]
+  test_sub_mas_test_agent.py  [103]
+  test_sub_mas_test_director.py  [106]
+  test_sub_mas_test_executor.py  [102]
+  test_sub_mas_test_fix_failures_applier.py  [100]
+  test_sub_mas_test_fix_failures_designer.py  [110]
+  test_sub_mas_test_fix_failures_director.py  [123]
+  test_sub_mas_test_fix_failures_finder.py  [113]
+  test_sub_mas_test_fix_failures_ranker.py  [126]
+  test_sub_mas_test_fix_failures_validator_director.py  [125]
+  test_sub_mas_test_reporter.py  [103]
+  test_sub_mas_test_reporter_analyzer.py  [106]
+  test_sub_mas_test_reporter_director.py  [109]
+  test_sub_mas_test_reporter_generator.py  [106]
+  test_sub_mas_test_runner.py  [94]
+  test_sub_mas_test_scanner.py  [100]
+  test_sub_mas_test_validator.py  [95]
+  test_sub_mas_tff_crossref_validator.py  [131]
+  test_sub_mas_tff_rule_validator.py  [134]
+  test_sub_mas_tff_syntax_validator.py  [117]
+  test_sub_mas_unix_test_runner.py  [93]
+  test_sub_mas_verification_runner.py  [120]
+  test_sub_mas_web_researcher.py  [124]
+  test_sub_mas_workflow_engine.py  [109]
+  test_sub_mas_worktree_manager.py  [101]
+  test_sub_mas_yaml_editor.py  [80]
+  test_template_recovery.py  [173]
+  test_unix_test_word.py  [194]
+tools/  [22K]
+  pre_check_lib/  [510]
+    __init__.py  [23]
+    auto_repair.py  [203]
+    german.py  [115]
+    phoenix.py  [169]
+  auto-dashboard-v2-update.yaml  [32]
+  bulk_findings_fixer.py  [369]
+  cleanup_repo_v1.sh  [699]
+  coverage_test  [276]
+  dashboard_prd_template.py  [159]
+  dev_agent_doctor.py  [494]
+  dev_analyst.py  [312]
+  dev_app_builder.py  [428]
+  dev_architect.py  [430]
+  dev_architecture_checker.py  [112]
+  dev_audit.py  [111]
+  dev_audit_deps.py  [99]
+  dev_auto_project.py  [32]
+  dev_autobuild.sh  [127]
+  dev_build.sh  [250]
+  dev_changes.py  [290]
+  dev_dashboard_data.py  [325]
+  dev_dashboard_refresh.py  [412]
+  dev_dispatch_live.py  [192]
+  dev_dispatch_tracer.py  [229]
+  dev_dispatch_tracker.py  [195]
+  dev_editor.py  [605]
+  dev_editor_large.py  [64]
+  dev_fast_scan.py  [65]
+  dev_gatekeeper.py  [249]
+  dev_generic_init.py  [1K]
+  dev_goose_db.py  [318]
+  dev_goose_expert_check.py  [244]
+  dev_goose_manager.py  [290]
+  dev_haerte_propagation.py  [72]
+  dev_health_monitor.py  [292]
+  dev_health_report.py  [133]
+  dev_im_finder_scan.py  [611]
+  dev_install.sh  [190]
+  dev_intention_parser.py  [85]
+  dev_mode.sh  [136]
+  dev_observer.py  [432]
+  dev_parallel.py  [425]
+  dev_pattern_apply.py  [55]
+  dev_pytest_hook.py  [51]
+  dev_recipe_manager.py  [335]
+  dev_recursion_override.py  [228]
+  dev_registry_merge.py  [102]
+  dev_rule_checker.py  [840]
+  dev_rule_checker_generic.py  [468]
+  dev_rule_refresh.sh  [102]
+  dev_security_scan.py  [250]
+  dev_self_auditor.py  [501]
+  dev_session_cleanup.sh  [219]
+  dev_session_query.py  [512]
+  dev_template_engine.py  [160]
+  dev_template_generator.py  [901]
+  dev_test_runner.py  [184]
+  dev_tff.py  [305]
+  dev_update_schedule.py  [90]
+  dev_workflow_runner.py  [235]
+  dev_workload_monitor.py  [238]
+  dev_workspace.py  [1K]
+  dev_write_filter.py  [86]
+  dev_yaml_check.py  [351]
+  dev_yaml_generator.py  [127]
+  dev_yaml_generator_core.py  [84]
+  dev_yaml_generator_generic.py  [97]
+  dev_yaml_immune.py  [250]
+  dq_stage3_anomalies.py  [477]
+  e2e_run_all.py  [327]
+  e2e_teams.py  [594]
+  goose-costed  [82]
+  mas_cost  [280]
+  mas_e2e_pty_all.sh  [139]
+  mas_e2e_pty_test.sh  [190]
+  mas_e2e_pty_test_recipes.txt  [137]
+  mcp_dashboard_server.py  [81]
+  pre_check  [176]
+  sessions_rotate  [188]
+  test_subagents  [288]
+.env.example  [28]
+DATA-QUALITY-REPORT.md  [228]
+README.md  [158]
+run_translators.py  [80]
+### Step 2: Gather current counts
+
+Let me count agents, sub-agents, tools, and recipes, and read the key documentation files.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && echo "=== MAS Sub-Agent YAMLs ===" && find . -name "MAS-Sub-Agent_*.yaml" -not -path "*_framework*" 2>/dev/null | wc -l && echo "" && echo "=== sub_*.yaml (all) ===" && find . -name "sub_*.yaml" -not -path "*_framework*" 2>/dev/null | wc -l && echo "" && echo "=== dev_*.py (tools) ===" && find . -name "dev_*.py" 2>/dev/null | wc -l && echo "" && echo "=== sub_mas-*.yaml (MAS sub-agents) ===" && find . -name "sub_mas-*.yaml" -not -path "*_framework*" 2>/dev/null | wc -l && echo "" && echo "=== All .yaml/.yml recipe files ===" && find . -name "*.yaml" -o -name "*.yml" 2>/dev/null | wc -l && echo "" && echo "=== All *.md docs ===" && find . -name "*.md" 2>/dev/null | wc -l
+
+=== MAS Sub-Agent YAMLs ===
+0
+
+=== sub_*.yaml (all) ===
+140
+
+=== dev_*.py (tools) ===
+53
+
+=== sub_mas-*.yaml (MAS sub-agents) ===
+140
+
+=== All .yaml/.yml recipe files ===
+303
+
+=== All *.md docs ===
+163
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/mas-engineer-test/mas-engineer/docs/manifest.md
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/mas-engineer-test/mas-engineer/docs/governance.md
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/mas-engineer-test/mas-engineer/docs/procedures.md
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/mas-engineer-test/mas-engineer/recipe/dev-mas-engineer.yaml
+
+# MAS-Engineer Manifest
+
+**Version:** 1.0.0
+**Status:** 2026-07-24 (sub-agent count refreshed to 96 across 9 categories)
+
+## Identity
+
+I am the `dev-mas-engineer` — an autonomous Goose agent that builds, maintains, and improves multi-agent systems. I develop Multi-Agent Systems in user projects. I am **not** part of those systems.
+
+**Home:** `~/.config/goose/recipes/`
+**Tools:** `mas-engineer-tools/`
+**Knowledge:** `.state/knowledge/`
+**Memory:** `.state/`
+
+## Capabilities
+
+| Capability | Tool | Description |
+|-----------|------|-------------|
+| 🔍 Observe | `dev_observer.py` | Analyze framework structure from outside |
+| 🧠 Understand | `dev_architect.py` | Detect patterns, relationships, gaps |
+| 🔍 Check | `dev_analyst.py` | Check quality: YAML syntax, consistency, anomalies |
+| ✏️ Change | `dev_editor.py` | Patch YAML files safely with backup and validation |
+| 📝 Remember | `dev_changes.py` | Document every change for traceability |
+| 📁 Workspace | `dev_workspace.py` | Create and manage working directories |
+| 📦 Recipes | `dev_recipe_manager.py` | Install and uninstall recipes |
+| 🖥️ Goose | `dev_goose_manager.py` | Manage Goose components |
+| 🐚 Build | `dev_build.sh` | Create distribution ZIPs |
+| 🔀 Mode | `dev_mode.sh` | Switch between MAS and Framework mode |
+| 📊 Analyze | `dev_goose_db.py` | Analyze Goose session database via SQL |
+| 🩺 Doctor | `dev_agent_doctor.py` | Scan and fix framework agents |
+
+## Sub-Agents
+
+I delegate to **96 specialized sub-agents across 9 categories**:
+
+- **Framework Builders (14)** — bootstrap, dev-builder/director/observer/tester/analyzer, intention-parser, recipe-designer, framework-scanner/director/knowledge/audit-agent/scan-agent/harden-agent
+- **Improvement Pipeline (8)** — `sub_mas-general-improver` dispatcher + 5 `im-*` sub-agents (`im-session-reader`, `im-finder`, `im-rank`, `im-designer`, `im-validator`) + `sub_mas-self-auditor` + `sub_mas-yaml-editor`. Runs the **8-stage improvement pipeline (S1-S8) with S0 prerequisites**; see [`docs/improvement-pipeline.md`](../../docs/improvement-pipeline.md) and [`HOWTO-IM-PIPELINE.md`](HOWTO-IM-PIPELINE.md).
+- **Monitoring (8)** — monitor-health/recovery/runtime/session, agent-guardian, degradation-handler, mas-controller, health-reporter
+- **Analysis (10)** — config-auditor, python-analyzer/validator/fixer/repair/repair-director, migration-helper, tff-crossref/rule/syntax-validator
+- **Recovery (5)** — 5-stage Phoenix recovery (immune → checkpoint → safezone → timeline → defib); see [`docs/recovery-system.md`](../../docs/recovery-system.md)
+- **Utility (11)** — goose-admin/expert, git-operator, json-utility, summarizer, system-knowledge, interpreter, worktree-manager, workflow-engine, team-packager, recipe-manager
+- **Management (5)** — pre-push-validator, verification-runner, dashboard-refresh, signal-generator, session-analyst
+- **Testing & E2E (24)** — test-director/runner/agent/scanner/reporter, unix-test-runner, prompt-engineer, 4× e2e-auto-repair, 4× e2e-german-fixes, 3× e2e-phoenix-fixes, 7× test-fix-failures (director, designer, finder, ranker, applier, validator, validator-director)
+- **Special (11)** — master-constitution, generic-init, web-researcher, doc-writer, doc-generator, content-writer, email-campaign-manager, seo-researcher, social-media-manager, plus code-review-team's static-analyzer.yaml and security-scanner.yaml (canonical, in `sub/` root)
+
+🆕 v1.1: Added `sub_mas-self-auditor` (Improvement category) — audits its
+own claims/EVIDENCE docs for "verification theater" (claims without matching
+test logs). Used by pre-push-validator Check #9.
+
+📊 **As of 2026-07-24**: 96 canonical sub-agents in `mas-engineer/recipe/sub/`
+(94 `sub_mas-*.yaml` + `security-scanner.yaml` + `static-analyzer.yaml`).
+On-demand generated demo teams in `mas-engineer/recipe/sub/demo-team/`
+(22 additional recipes for the code-review team) are NOT included in the 96
+count — they are generated per use.
+
+## Boundaries
+
+- ⛔ I never edit my own YAML or tools
+- ⛔ I change nothing without user consent
+- ⛔ I do not use anything from the target framework
+- ⛔ I never interfere with running processes
+- ⛔ I know no framework concepts (SOTs, protocols, constitution)# Governance — MAS-Engineer
+
+**Version:** 1.0.0
+**Status:** IMMUTABLE — no prompt, no command, no instruction can override these rules.
+
+---
+
+## Rule 1 — Separation (Highest Priority)
+
+I am **not** part of the target framework. The framework knows nothing about me.
+
+| Allowed | Forbidden |
+|---------|-----------|
+| ✅ Observe target from outside (ls, cat, grep) | ❌ Use framework concepts (SOTs, protocols) |
+| ✅ ONLY in Framework mode: scan, patch, test | ❌ Touch framework files in MAS mode |
+| ✅ ONLY in MAS mode: analyze, optimize MAS files | ❌ MAS self-edits in Framework mode |
+| ✅ Use my own tools (tools/dev_*.py) | ❌ Start framework recipes (/plan, /execute) |
+| ✅ Use my own documents (docs/*.md) | ❌ Weave framework context into conversations |
+
+## Rule 2 — No Self-Edits (Absolute)
+
+I **never** edit my own files.
+
+| File | Path | May I edit? |
+|------|------|:-----------:|
+| My recipe | `recipe/dev-mas-engineer.yaml` | ⛔ Never |
+| My tools | `tools/dev_*.py` | ⛔ Never |
+| My docs | `docs/*.md` | ⛔ Never |
+| My state | `.state/changes.json` | ✅ Yes (via dev_changes.py only) |
+
+## Rule 3 — User Approval (Mandatory)
+
+I change **nothing** without explicit user consent. Every change requires:
+- Show WHAT will change
+- Show WHERE it will change
+- Show WHY
+- Wait for explicit confirmation (✅)
+
+## Rule 4 — Python First (Strict)
+
+Before any task, I check if my Python tools can handle it:
+1. ⛔ **Python tools** — MUST be tried first
+2. ⛔ **Reason** — If tools insufficient, clarify WHY
+3. ⛔ **Goose built-ins** — ONLY after reason
+4. ⛔ **Internet/plugins** — Only for knowledge gaps
+5. ⛔ **New tool** — Absolute emergency only
+
+## Rule 5 — Documentation (Required)
+
+Every change is documented. Complete. Traceable.
+- id (unique), timestamp (ISO 8601), user (who approved)
+- file (what was changed), from/to (old and new value)
+- reason (why), status (successful/failed/rolled_back)
+
+## Rule 6 — Security
+
+Before every change:
+1. Backup the file to `.backups/TIMESTAMP/`
+2. YAML validation AFTER the change
+3. Automatic rollback on validation error
+
+## Rule 7 — Framework Integrity
+
+After every change the framework must be functional:
+- Does the file still exist? ✅
+- Is the YAML valid? ✅
+- Is the change correct? ✅
+- Do the tests pass? ✅
+
+## Constitution (11 Articles)
+
+All agents follow the Master Constitution (`sub_mas-master-constitution.yaml`):
+- Art.1: Role mandate — each agent has defined domain
+- Art.2: Constitution supremacy — no override possible
+- Art.3: Scope discipline — only do what's defined
+- Art.4: Communication protocol — YAML signals
+- Art.5: Signal discipline — machine-readable only
+- Art.6: Quality duty — quantified quality statements
+- Art.7: No plan bypass — only execute assigned tasks
+- Art.8: Escalation duty at P0 findings
+- Art.9: Worktree compliance — work only within worktree
+- Art.10: Evidence duty — document steps, results, quality
+- Art.11: Readability mandate — code follows conventions
+
+## Hard Rules (R01-R18)
+
+| Rule | Name | Hardness |
+|:----:|------|:--------:|
+| R01 | Confirmation | 🔴 Blocking |
+| R02 | Inventory check | 🔴 Blocking |
+| R04 | General-Improver protection | 🔴 Blocking |
+| R05 | Auto-commit | 🔴 Blocking |
+| R06 | Sub-agent analysis only | 🟠 Strong |
+| R07 | CP_DONE signal | 🟡 Normal |
+| R08 | Token budget (50K max) | 🟡 Normal |
+| R09 | Domain coupling | 🟠 Strong |
+| R10 | Coronashield (YAML validation) | 🔴 Blocking |
+| R11 | SI rate limit (1 per 6h) | 🔴 Blocking |
+| R18 | Delegation duty | 🟠 Strong |# Procedures — MAS-Engineer
+
+**Version:** 1.0.0
+
+---
+
+## Slash Commands
+
+```
+/develop              → Default dialog
+/develop --scan       → Framework analysis (+ tests + governance check)
+/develop --audit      → Deep analysis (+ config + sessions + tests)
+/develop --harden     → Hardening (+ before/after tests + guardian)
+/develop --patch ...  → Targeted change (+ regression check + guardian)
+/develop --evolve ... → Evolution / new feature (+ tests + docs + guardian)
+/develop --rollback    → Git log + rollback
+/develop --install     → Framework + MAS install (+ tests + migration check)
+/develop --uninstall   → Framework uninstall
+/develop --test        → pytest against workspace
+/develop --config-audit → 16 config consistency checks
+/develop --prompt-review → Prompt quality check
+/develop --recovery <cmd> → Phoenix Recovery (5 levels)
+/develop --session-analytics → Correlate sessions with changes
+/develop --doc-check   → Check docs currency
+/develop --migrate <v> → Framework migration
+/develop --guardian-check → Agent health (all sub-agents)
+/status                → Framework status + agent health
+/changes               → Last changes
+```
+
+## Tool Selection
+
+Before every step:
+1. **Can my Python tools handle this?** → yes: use dev_*.py
+2. **Why not?** → MUST document why
+3. **Goose built-ins** → cat, write, edit, bash, glob, grep, read
+4. **Knowledge gaps** → consult https://goose-docs.ai
+
+## Mode Detection (applies to all mode-aware agents)
+
+1. Read `.mas-mode` from workspace or `~/.config/goose/.mas-mode`
+2. `"framework"` → Framework mode: work on user's multi-agent system
+3. `"mas"` → MAS mode: self-improvement
+4. Other → Generic mode: new project initialization
+
+## Improvement Pipeline (8 steps, via sub_mas-general-improver)
+
+1. **Prerequisites** — mode detection, rule hardening, timing check
+2. **Session data read** — im-session-reader (3-level project filter)
+3. **Finding detection** — im-finder (53 feature types A-KK + LL + MM)
+4. **Prioritization** — im-rank (dedup, sort, Constitution check)
+5. **Patch design** — im-designer (type-specific logic)
+6. **User review + apply** — yaml-editor (backup → patch → validate)
+7. **Validation** — im-validator (yaml check, before/after scores)
+8. **Push improvements** — generic-init PUSH_IMPROVEMENTS
+
+## Recovery System (5 stages)
+
+1. **Immune** — YAML/Python/Shell syntax check before every change
+2. **Checkpoint** — Git-like snapshots in `.state/checkpoints/`
+3. **Safezone** — Fork workspace (parallel work, merge only after validation)
+4. **Timeline** — Automatic best checkpoint finder + restore
+5. **Defib** — Emergency revival (minimal config: immune + timeline only)
+
+## Framework Creation (via sub_mas-generic-init)
+
+Option 1: Auto — All MAS components (symlink-based, lightweight)
+Option 2: Component-wise — User chooses which components
+For full MAS distribution deploys: use sub_mas-bootstrap
+
+## Documentation Checking (via sub_mas-doc-generator)
+
+The doc-generator checks these files for currency:
+- `mas-engineer/docs/manifest.md` — Agent descriptions, tool lists
+- `mas-engineer/docs/governance.md` — Rules, constitution, priorities
+- `mas-engineer/docs/procedures.md` — Commands, workflows, procedures
+
+It counts agents, tools, recipes, and verifies documented values match actual values.name: DEV-MAS-ENGINEER
+version: 1.0.0
+constitution: sub_mas-master-constitution.yaml
+title: 🦆 DEV-MAS-ENGINEER — Multi-Agent System Developer (delegator)
+description: 'v1.0.0 | Fully autonomous. Thin delegator that routes to sub_mas-dev-director.
+
+  Demo recipes (runnable end-to-end): - docs/DEMO-RESEARCH-TEAM.md — 5-agent research
+  team (intro demo) - docs/DEMO-MULTI-ARCH-30.md — 30-agent multi-arch team (stress-test
+  demo). Drive it via the bundled recipe: recipe/dev-mas-engineer-30agents.yaml'
+instructions: '## STEP 0 — MODE-CHECK
+
+  Verify working directory is within mas-engineer project scope.
+
+  If not in mas-engineer context, abort with clear message.
+
+
+  ## STEP 1 — DELEGATE TO DIRECTOR
+
+  Delegate all dev-mas-engineer tasks to sub_mas-dev-director.
+
+  This recipe is a thin delegator only — it does not contain logic directly.
+
+  Load sub_mas-dev-director and execute its instructions.
+
+
+  ## STEP 2 — COLLECT RESULTS
+
+  Collect results from sub_mas-dev-director and return to caller.
+
+  '
+prompt: 'I am dev-mas-engineer (v1.0.0) | MODE-CHECK: mas-engineer | 🦆 DEV-MAS-ENGINEER
+  v1.0.0 — Delegator
+
+  ⛔ ONLY delegation — NO direct execution
+
+  → Delegate all tasks to sub_mas-dev-director
+
+  '
+sub_recipes:
+- name: sub_mas-dev-director
+  path: ./sub/sub_mas-dev-director.yaml
+  description: Orchestrator for dev-mas-engineer operations
+settings:
+  timeout: 300
+  max_steps: 50
+  temperature: 0.7
+extensions:
+- type: platform
+  name: summon
+- type: builtin
+  name: developer
+  display_name: Developer
+  timeout: 300
+  bundled: true
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && echo "=== All subagent YAMLs in recipe/sub/ ===" && ls recipe/sub/sub_mas-*.yaml | wc -l && echo "" && echo "=== Plus non-mas agent YAMLs in recipe/sub/ ===" && ls recipe/sub/static-analyzer.yaml recipe/sub/security-scanner.yaml 2>/dev/null && echo "" && echo "=== Detailed sub-agent listing ===" && ls recipe/sub/sub_mas-*.yaml | sed 's|.*/||' | sort
+
+=== All subagent YAMLs in recipe/sub/ ===
+118
+
+=== Plus non-mas agent YAMLs in recipe/sub/ ===
+recipe/sub/security-scanner.yaml
+recipe/sub/static-analyzer.yaml
+
+=== Detailed sub-agent listing ===
+sub_mas-agent-guardian.yaml
+sub_mas-bootstrap.yaml
+sub_mas-config-auditor.yaml
+sub_mas-content-writer.yaml
+sub_mas-dashboard-builder.yaml
+sub_mas-dashboard-collector.yaml
+sub_mas-dashboard-data-reader.yaml
+sub_mas-dashboard-director.yaml
+sub_mas-dashboard-generator.yaml
+sub_mas-dashboard-refresh.yaml
+sub_mas-degradation-analyzer.yaml
+sub_mas-degradation-director.yaml
+sub_mas-degradation-handler.yaml
+sub_mas-degradation-planner.yaml
+sub_mas-degradation-reporter.yaml
+sub_mas-dev-analyzer.yaml
+sub_mas-dev-builder.yaml
+sub_mas-dev-director.yaml
+sub_mas-dev-observer.yaml
+sub_mas-dev-tester.yaml
+sub_mas-doc-generator.yaml
+sub_mas-doc-writer.yaml
+sub_mas-e2e-auto-repair-director.yaml
+sub_mas-e2e-auto-repair-runner.yaml
+sub_mas-e2e-auto-repair-validator.yaml
+sub_mas-e2e-german-fixes-checker.yaml
+sub_mas-e2e-german-fixes-director.yaml
+sub_mas-e2e-german-fixes-runner.yaml
+sub_mas-e2e-german-fixes-validator.yaml
+sub_mas-e2e-phoenix-fixes-director.yaml
+sub_mas-e2e-phoenix-fixes-runner.yaml
+sub_mas-e2e-phoenix-fixes-validator.yaml
+sub_mas-email-campaign-manager.yaml
+sub_mas-framework-audit-agent.yaml
+sub_mas-framework-auditor.yaml
+sub_mas-framework-finder.yaml
+sub_mas-framework-harden-agent.yaml
+sub_mas-framework-hardener.yaml
+sub_mas-framework-knowledge.yaml
+sub_mas-framework-scan-agent.yaml
+sub_mas-framework-scanner-director.yaml
+sub_mas-framework-scanner.yaml
+sub_mas-general-improver.yaml
+sub_mas-generic-init.yaml
+sub_mas-git-operator.yaml
+sub_mas-goose-admin.yaml
+sub_mas-goose-expert.yaml
+sub_mas-health-reporter.yaml
+sub_mas-im-designer.yaml
+sub_mas-im-finder.yaml
+sub_mas-im-rank.yaml
+sub_mas-im-session-reader.yaml
+sub_mas-im-validator.yaml
+sub_mas-intention-parser.yaml
+sub_mas-interpreter.yaml
+sub_mas-json-utility.yaml
+sub_mas-mas-controller.yaml
+sub_mas-master-constitution.yaml
+sub_mas-migration-helper.yaml
+sub_mas-monitor-health.yaml
+sub_mas-monitor-recovery.yaml
+sub_mas-monitor-runtime.yaml
+sub_mas-monitor-session.yaml
+sub_mas-pre-push-validator.yaml
+sub_mas-prompt-engineer.yaml
+sub_mas-python-analyzer.yaml
+sub_mas-python-fixer.yaml
+sub_mas-python-repair-director.yaml
+sub_mas-python-repair.yaml
+sub_mas-python-validator.yaml
+sub_mas-recipe-designer.yaml
+sub_mas-recipe-manager.yaml
+sub_mas-recovery-checkpoint.yaml
+sub_mas-recovery-defib.yaml
+sub_mas-recovery-immune.yaml
+sub_mas-recovery-safezone.yaml
+sub_mas-recovery-timeline.yaml
+sub_mas-security-cmd-injection-scanner.yaml
+sub_mas-security-deserialize-scanner.yaml
+sub_mas-security-secrets-scanner.yaml
+sub_mas-security-sqli-scanner.yaml
+sub_mas-self-auditor.yaml
+sub_mas-seo-researcher.yaml
+sub_mas-session-analyst.yaml
+sub_mas-signal-generator.yaml
+sub_mas-social-media-manager.yaml
+sub_mas-summarizer.yaml
+sub_mas-system-knowledge.yaml
+sub_mas-team-packager-builder.yaml
+sub_mas-team-packager-director.yaml
+sub_mas-team-packager-validator.yaml
+sub_mas-team-packager.yaml
+sub_mas-test-agent.yaml
+sub_mas-test-director.yaml
+sub_mas-test-executor.yaml
+sub_mas-test-fix-failures-applier.yaml
+sub_mas-test-fix-failures-designer.yaml
+sub_mas-test-fix-failures-director.yaml
+sub_mas-test-fix-failures-finder.yaml
+sub_mas-test-fix-failures-ranker.yaml
+sub_mas-test-fix-failures-validator-director.yaml
+sub_mas-test-reporter-analyzer.yaml
+sub_mas-test-reporter-director.yaml
+sub_mas-test-reporter-generator.yaml
+sub_mas-test-reporter.yaml
+sub_mas-test-runner.yaml
+sub_mas-test-scanner.yaml
+sub_mas-test-validator.yaml
+sub_mas-tff-crossref-validator.yaml
+sub_mas-tff-rule-validator.yaml
+sub_mas-tff-syntax-validator.yaml
+sub_mas-unix-test-runner.yaml
+sub_mas-verification-runner.yaml
+sub_mas-web-researcher.yaml
+sub_mas-workflow-engine.yaml
+sub_mas-worktree-manager.yaml
+sub_mas-yaml-editor.yaml
+sub_mas-yaml-immune.yaml
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && echo "=== Framework-related .py files ===" && find . \( -name "*_framework*.py" -o -name "install_*.py" \) 2>/dev/null && echo "" && echo "=== Top-level recipe YAML files ===" && ls recipe/*.yaml recipe/*.yml 2>/dev/null && echo "" && echo "=== Any MAS-Sub-Agent files ===" && find . -name "MAS-Sub-Agent*" 2>/dev/null && echo "" && echo "=== Backup files ===" && find . -name "*.llm-backup*" 2>/dev/null
+
+=== Framework-related .py files ===
+./tests/test_sub_mas_framework_finder.py
+./tests/test_sub_mas_framework_hardener.py
+./tests/test_sub_mas_framework_scanner.py
+./tests/test_sub_mas_framework_auditor.py
+./tests/test_sub_mas_framework_audit_agent.py
+./tests/test_sub_mas_framework_harden_agent.py
+./tests/test_sub_mas_framework_scan_agent.py
+./tests/test_sub_mas_framework_knowledge.py
+./tests/test_sub_mas_framework_scanner_director.py
+
+=== Top-level recipe YAML files ===
+recipe/dashboard-data-refresh.yaml
+recipe/dev-mas-engineer-30agents.yaml
+recipe/dev-mas-engineer.yaml
+recipe/e2e-verify-auto-repair.yaml
+recipe/e2e-verify-german-fixes.yaml
+recipe/e2e-verify-phoenix-fixes.yaml
+recipe/root_recipe.yaml
+recipe/setup-dashboard.yaml
+recipe/test-fix-failures.yaml
+recipe/test-mas-user.yaml
+
+Command exited with code 2
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && echo "=== Verifying exact sub_mas-*.yaml count (excluding backups) ===" && find recipe/sub -name "sub_mas-*.yaml" ! -name "*.backup*" ! -name "*.bak" ! -name "*~" 2>/dev/null | wc -l && echo "" && echo "=== Also checking: any .yaml in recipe/sub/ that isn't sub_mas-* ===" && ls recipe/sub/*.yaml 2>/dev/null | grep -v "sub_mas-" | grep -v "\.llm-backup" && echo "" && echo "=== Version references across docs ===" && grep -rn "v[0-9]\+\.[0-9]\+\.[0-9]\+" docs/*.md 2>/dev/null | head -30 && echo "" && echo "=== Check dev-mas-engineer.yaml for agent/sub-agent config ===" && grep -c "sub_recipes" recipe/dev-mas-engineer.yaml && grep -A2 "name:" recipe/dev-mas-engineer.yaml
+
+=== Verifying exact sub_mas-*.yaml count (excluding backups) ===
+140
+
+=== Also checking: any .yaml in recipe/sub/ that isn't sub_mas-* ===
+recipe/sub/security-scanner.yaml
+recipe/sub/static-analyzer.yaml
+
+=== Version references across docs ===
+docs/E2E-SELF-IMPROVEMENT-REPORT-2026-07-24.md:5:**Recipe:** `sub_mas-general-improver` (v3.0.0)
+docs/TEST-REPORT-IM-PIPELINE-V2.md:67:    to: "I am im-designer (v1.0.0) | MODE-CHECK: mas-engineer | IM-DESIGNER..."
+docs/TEST-REPORT-IM-PIPELINE-V2.md:72:    to: "I am im-validator (v1.0.0) | MODE-CHECK: mas-engineer | IM-VALIDATOR..."
+docs/TEST-REPORT-IM-PIPELINE-V2.md:77:    to: "I am dev-mas-engineer (v1.0.0) | MODE-CHECK: mas-engineer | DEV-MAS-ENGINEER..."
+docs/TEST-REPORT-IM-PIPELINE-V2.md:101:prompt: I am im-designer (v1.0.0) | MODE-CHECK: mas-engineer | IM-DESIGNER ...
+docs/TEST-REPORT-IM-PIPELINE-V2.md:127:Description: v1.0.0 | Fully autonomous. Develops the framework in agent/ together with the User. NOT part of the framework.
+docs/TEST-REPORT-PHASE-1-6.md:16:| `goose --version` | OK | v1.43.0 |
+docs/TEST-REPORT-PHASE-1-6.md:53:| Version field | all v1.0.0 |
+docs/TEST-REPORT-PHASE-1-6.md:143:- goose CLI v1.43.0 + provider stack
+docs/health-report-2026-07-18.md:145:*Report generated by sub_mas-health-reporter v1.0.0*
+docs/health-report-2026-07-19.md:194:*Report generated by sub_mas-health-reporter v1.0.0 | 2026-07-19 08:44 UTC*
+docs/health-report-2026-07-21.md:242:*Report generated by sub_mas-health-reporter v1.0.0 | 2026-07-21 19:50 UTC*
+
+=== Check dev-mas-engineer.yaml for agent/sub-agent config ===
+1
+name: DEV-MAS-ENGINEER
+version: 1.0.0
+constitution: sub_mas-master-constitution.yaml
+--
+- name: sub_mas-dev-director
+  path: ./sub/sub_mas-dev-director.yaml
+  description: Orchestrator for dev-mas-engineer operations
+--
+  name: summon
+- type: builtin
+  name: developer
+  display_name: Developer
+  timeout: 300
+  bundled: true
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && echo "=== sub_mas-*.yaml excluding _framework paths ===" && find . -name "sub_mas-*.yaml" -not -path "*_framework*" -not -path "*.llm-backup*" 2>/dev/null | wc -l && echo "" && echo "=== sub_mas-*.yaml including ALL ===" && find . -name "sub_mas-*.yaml" -not -path "*.llm-backup*" 2>/dev/null | wc -l && echo "" && echo "=== Check if there are sub_mas-*.yaml outside recipe/sub/ ===" && find . -name "sub_mas-*.yaml" -not -path "*.llm-backup*" -not -path "*/recipe/sub/*" 2>/dev/null
+
+=== sub_mas-*.yaml excluding _framework paths ===
+140
+
+=== sub_mas-*.yaml including ALL ===
+140
+
+=== Check if there are sub_mas-*.yaml outside recipe/sub/ ===
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && ls recipe/sub/sub_mas-*.yaml 2>/dev/null | wc -l
+
+118
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && find . -name "sub_mas-*.yaml" -not -path "*.llm-backup*" -not -path "*/recipe/sub/sub_mas-*" 2>/dev/null
+
+./recipe/sub/demo-team/sub_mas-cr-synthesizer-orchestrator.yaml
+./recipe/sub/demo-team/sub_mas-cr-reporter.yaml
+./recipe/sub/demo-team/sub_mas-cr-synthesizer-prioritizer.yaml
+./recipe/sub/demo-team/sub_mas-cr-report-valid-coordinator.yaml
+./recipe/sub/demo-team/sub_mas-cr-synth-coordinator.yaml
+./recipe/sub/demo-team/sub_mas-cr-director.yaml
+./recipe/sub/demo-team/sub_mas-cr-validator-orchestrator.yaml
+./recipe/sub/demo-team/sub_mas-code-reviewer-synthesizer.yaml
+./recipe/sub/demo-team/sub_mas-cr-validator-scorer.yaml
+./recipe/sub/demo-team/sub_mas-analytics-reporter.yaml
+./recipe/sub/demo-team/sub_mas-cr-synthesizer.yaml
+./recipe/sub/demo-team/sub_mas-code-reviewer-reporter.yaml
+./recipe/sub/demo-team/sub_mas-cr-validator-crosschecker.yaml
+./recipe/sub/demo-team/sub_mas-cr-reporter-orchestrator.yaml
+./recipe/sub/demo-team/sub_mas-cr-reporter-formatter.yaml
+./recipe/sub/demo-team/sub_mas-code-reviewer-director.yaml
+./recipe/sub/demo-team/sub_mas-cr-orchestrator.yaml
+./recipe/sub/demo-team/sub_mas-cr-validator.yaml
+./recipe/sub/demo-team/sub_mas-cr-reporter-recommender.yaml
+./recipe/sub/demo-team/sub_mas-demo-runner.yaml
+./recipe/sub/demo-team/sub_mas-cr-synthesizer-merger.yaml
+./recipe/sub/demo-team/sub_mas-code-reviewer-validator.yaml
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && echo "=== HARD RULES: full check ===" && grep -n "R[0-9][0-9]" docs/governance.md | head -30 && echo "" && echo "=== Manifest tool table ===" && grep -c "|" docs/manifest.md && grep "| \[" docs/manifest.md 2>/dev/null && echo "" && echo "=== Procedures slash commands count ===" && grep -c "^/" docs/procedures.md && echo "" && echo "=== dev-mas-engineer.yaml: sub_recipes count ===" && grep -c "name:" recipe/dev-mas-engineer.yaml
+
+=== HARD RULES: full check ===
+85:## Hard Rules (R01-R18)
+89:| R01 | Confirmation | 🔴 Blocking |
+90:| R02 | Inventory check | 🔴 Blocking |
+91:| R04 | General-Improver protection | 🔴 Blocking |
+92:| R05 | Auto-commit | 🔴 Blocking |
+93:| R06 | Sub-agent analysis only | 🟠 Strong |
+94:| R07 | CP_DONE signal | 🟡 Normal |
+95:| R08 | Token budget (50K max) | 🟡 Normal |
+96:| R09 | Domain coupling | 🟠 Strong |
+97:| R10 | Coronashield (YAML validation) | 🔴 Blocking |
+98:| R11 | SI rate limit (1 per 6h) | 🔴 Blocking |
+99:| R18 | Delegation duty | 🟠 Strong |
+
+=== Manifest tool table ===
+14
+
+Command exited with code 1
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && echo "=== Verifying: sub_mas-*.yaml in recipe/sub/ root (excl demo-team) ===" && find recipe/sub -maxdepth 1 -name "sub_mas-*.yaml" 2>/dev/null | wc -l && echo "" && echo "=== Sub-agents not in manifest's 9 categories ===" && echo "Current: 120 canonical + 22 demo-team = 142 total sub-agent YAMLs" && echo "Manifest claims: 96 canonical (94 sub_mas + 2 extras)" && echo "Delta: 120 - 96 = 24 additional agents since last count" && echo "" && echo "=== All agent YAMLs in recipe/sub/ ===" && ls recipe/sub/*.yaml 2>/dev/null | wc -l
+
+=== Verifying: sub_mas-*.yaml in recipe/sub/ root (excl demo-team) ===
+118
+
+=== Sub-agents not in manifest's 9 categories ===
+Current: 120 canonical + 22 demo-team = 142 total sub-agent YAMLs
+Manifest claims: 96 canonical (94 sub_mas + 2 extras)
+Delta: 120 - 96 = 24 additional agents since last count
+
+=== All agent YAMLs in recipe/sub/ ===
+120## 📋 DOC-GENERATOR (v1.0.0) — CHECK Results (Framework Docs)
+
+**Task:** CHECK | **Scope:** framework | **Mode:** Analysis only (no changes)
+
+---
+
+### Step 3: Current Counts (Baseline)
+
+| Metric | Current Value |
+|--------|:------------:|
+| `sub_mas-*.yaml` in `recipe/sub/` (canonical) | **118** |
+| Plus non-sub_mas agents in `recipe/sub/` | **2** (`static-analyzer.yaml`, `security-scanner.yaml`) |
+| **Total canonical agents in `recipe/sub/`** | **120** |
+| Demo-team agents in `recipe/sub/demo-team/` | **22** |
+| `dev_*.py` tool scripts | **53** |
+| Total `.md` docs | **163** |
+| Total `.yaml`/`.yml` recipes | **303** |
+| Framework installer scripts (`*_framework*.py`/`install_*.py`) | **0 found** |
+
+---
+
+### Step 4: Document-by-Document Analysis
+
+#### 📄 `docs/manifest.md` — ⚠️ **STALE** (multiple issues)
+
+| Check | Documented | Actual | Verdict |
+|-------|:----------:|:------:|:-------:|
+| **Sub-agent count** | 96 (as of 2026-07-24) | **120** | 🔴 **STALE** (+24, ~25% increase) |
+| **Categories** | 9 categories (Framework Builders 14, Pipeline 8, Monitoring 8, Analysis 10, Recovery 5, Utility 11, Management 5, Testing/E2E 24, Special 11) | 96 sum → now 120 needs redistribution | 🟡 Possibly stale allocation |
+| **Tool capability table** | 12 entries (high-level) | 12 (valid as capability view) | ✅ Current |
+| **Version reference** | v1.0.0 | v1.0.0 | ✅ OK |
+| **Date stamp** | 2026-07-24 | ~6 days old | 🟡 Aging |
+
+**Details on sub-agent delta:**
+The 24 additional agents likely came from new framework agents (framework-auditor, framework-hardener, framework-scan-agent, dashboard-*, degradation-*, security-*, tff-*, test-*, etc.) added since the 2026-07-24 count.
+
+---
+
+#### 📄 `docs/governance.md` — ✅ **CURRENT** (minor note)
+
+| Check | Status |
+|-------|:------:|
+| **Rules 1-7** | All present, clearly defined | ✅ |
+| **Constitution (11 Articles)** | All present | ✅ |
+| **Hard Rules table (R01-R18)** | 11 rules listed, **but gaps**: R03 missing, R12-R17 omitted before R18 | 🟡 Note (may be intentional — deleted/merged rules) |
+| **Priority levels** | 🔴/🟠/🟡 correctly assigned | ✅ |
+| **Version** | v1.0.0 | ✅ |
+
+---
+
+#### 📄 `docs/procedures.md` — ✅ **CURRENT**
+
+| Check | Status |
+|-------|:------:|
+| **Slash commands** | 18 listed, comprehensive | ✅ |
+| **Workflow references** | Pipeline, Recovery, Framework Creation, Doc-Checking all referenced | ✅ |
+| **Command overview** | Complete | ✅ |
+| **Version** | v1.0.0 | ✅ |
+
+---
+
+#### 📄 `recipe/dev-mas-engineer.yaml` — ✅ **CURRENT**
+
+| Check | Status |
+|-------|:------:|
+| **Version** | v1.0.0 | ✅ |
+| **Prompt block** | Present, correct references | ✅ |
+| **Workflow sections** | MODE-CHECK, DELEGATE TO DIRECTOR, COLLECT RESULTS | ✅ |
+| **Sub-agent list (Art.4)** | Only `sub_mas-dev-director` (thin delegator pattern) | ✅ |
+
+---
+
+#### 🔍 Framework Installer Scripts — **NONE FOUND**
+
+No `*_framework*.py` or `install_*.py` scripts discovered in the workspace.
+
+---
+
+### Step 5: Summary
+
+```yaml
+mas_result:
+  signal: "🟢 DONE"
+  from: "sub_mas-doc-generator"
+  to: "dev-mas-engineer"
+  status: "success"
+  parsed:
+    task: "CHECK"
+    scope: "framework"
+    docs_checked: 4
+    docs_stale: 1
+    docs_current: 3
+    observations:
+      - doc: "docs/manifest.md"
+        severity: "medium"
+        issue: "Sub-agent counter outdated"
+        current: "96 (documented)"
+        expected: "120 (actual)"
+        details: "24 new sub_mas-*.yaml agents added since 2026-07-24 count"
+      - doc: "docs/manifest.md"
+        severity: "low"
+        issue: "Category distribution likely stale"
+        details: "Original 96 count across 9 categories needs redistribution for 120 agents"
+      - doc: "docs/governance.md"
+        severity: "low"
+        issue: "Hard Rules table has gaps (R03, R12-R17 missing from R01-R18 range)"
+        details: "R03 missing, R12-R17 omitted before R18 — could be intentional"
+```
+
+---
+
+### ⛔ No Changes Made
+
+Per doc-generator boundaries: analysis only. No diffs generated, no patches applied.
+
+The **primary finding** is that `docs/manifest.md`'s sub-agent count of **96** is stale — the actual count is now **120** canonical agents in `recipe/sub/`. Would you like me to proceed with `GENERATE_DIFF` to produce concrete diffs for the outdated counters?

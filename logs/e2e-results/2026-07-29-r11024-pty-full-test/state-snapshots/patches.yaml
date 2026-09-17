@@ -1,0 +1,419 @@
+stage: 3
+agent: im-designer
+timestamp: "2026-07-29T09:26:03+0000"
+request_id: im-rank-framework-20260729
+from: im-designer
+to: sub_mas-im-validator
+status: success
+input_file: .state/pipeline/ranked_findings.yaml
+data:
+  patches: []
+  skipped:
+    - finding_id: F-097
+      reason: |
+        PRECONDITION FAILURE: instruction lines (17) < 200 threshold.
+        ARCHITECTURAL NOTE: sub_mas-dev-director.yaml is ALREADY an orchestrator pattern
+        (has summon extension, delegation map with 5 sub-agents, sub_recipes list).
+        The "9 distinct roles" from im-finder are delegation targets, not direct agent roles.
+        Further splitting would create an orchestrator-of-orchestrators, which adds
+        indirection without benefit. File is 66 lines total — micro-split risk.
+      why_skipped: "fails precondition 1 (line threshold < 200) + agent already follows orchestrator pattern"
+
+    - finding_id: F-100
+      reason: |
+        PRECONDITION FAILURE: instruction lines (22) < 200 threshold.
+        ARCHITECTURAL NOTE: sub_mas-test-director.yaml is ALREADY a split architecture
+        (orchestrator delegating to test-executor, test-reporter, test-scanner, test-validator).
+        The "7 distinct roles" from im-finder are delegation map targets, not agent roles.
+        File is 60 lines total — micro-split risk. NN1 enhancement already noted in title.
+      why_skipped: "fails precondition 1 (line threshold < 200) + agent already split into orchestrator+subs"
+
+    - finding_id: F-103
+      reason: |
+        PRECONDITION FAILURE: instruction lines (103) < 200 threshold.
+        ARCHITECTURAL NOTE: sub_mas-im-session-reader.yaml is a THIN WRAPPER (120 lines total)
+        around tools/dev_session_query.py. The "7 distinct roles" are actually 5 subcommands
+        (ANALYZE, FILTER_LEVEL, SHOW_DB_INFO, STALE, HELP) all calling the SAME deterministic
+        tool with different arguments. Splitting would create 5 micro-agents (session-analyzer,
+        session-filter, session-db-info, session-stale, session-help) that all invoke the same
+        script. This violates the thin-wrapper principle (R89 Phase 7 migration goal).
+      why_skipped: "fails precondition 1 (line threshold < 200) + thin wrapper around single tool"
+
+    - finding_id: F-094
+      reason: |
+        PRECONDITION FAILURE: instruction lines (21) < 200 threshold.
+        ARCHITECTURAL NOTE: sub_mas-intention-parser.yaml has 252 lines total but 231 of those
+        are the patterns: data array. Instructions have only 21 lines (outsourced to
+        recipe/instructions/sub_mas-intention-parser.md, 191 lines). The "6 distinct roles"
+        are pattern matching domains (analyze, validate, read, write, edit) — these are
+        detection scope indicators, not agent execution roles. Main logic is in external
+        files and template generator. Splitting would create micro-agents for each pattern
+        category, adding orchestration overhead to a pattern-matcher.
+      why_skipped: "fails precondition 1 (line threshold < 200) + instructions outsourced to external file + patterns are data, not roles"
+
+    - finding_id: F-104
+      reason: |
+        PARTIAL PRECONDITION PASS: instruction lines (214) >= 200 ✅, recency guard ✅,
+        but flagged_by field not in findings.yaml ❌.
+        DESIGN PROPOSAL: sub_mas-git-operator.yaml is the ONLY top-5 finding with
+        substantial instructions (214 lines, 7 distinct operations). A split into
+        orchestrator + 3 sub-agents would separate concerns:
+        - Read-only ops (STATUS, LOG, DIFF) → sub_mas-git-reader
+        - Write ops (COMMIT pipeline) → sub_mas-git-committer
+        - Push ops (PUSH) → sub_mas-git-pusher
+        - Orchestrator → sub_mas-git-operator (updated) or sub_mas-git-director (new)
+        See proposed YAML patches below.
+      why_skipped: "fails precondition 3 (flagged_by) — but proposed as best-effort design below"
+
+  patches:
+    - type: NN1_split_proposal
+      file: recipe/sub/sub_mas-git-operator.yaml
+      finding_id: F-104
+      priority: 0.54
+      goose_verdict: null
+      reason: |
+        Why: sub_mas-git-operator.yaml has 214 instruction lines across 7 distinct
+        git operations (INIT, COMMIT, COMMIT_AND_PUSH, STATUS, LOG, DIFF, PUSH).
+        Read-only ops (STATUS/LOG/DIFF) and write ops (COMMIT/PUSH) have different
+        safety profiles — COMMIT requires 5-step pipeline with user confirmation,
+        while STATUS is pure read. Splitting improves SRP compliance.
+        Precondition: fails precondition 3 (flagged_by not in findings.yaml) but
+        line threshold (214 >= 200) and recency guard pass.
+      patches:
+        - type: create_orchestrator
+          file: recipe/sub/sub_mas-git-director.yaml
+          content: |
+            name: GIT-DIRECTOR
+            constitution: sub_mas-master-constitution.yaml
+            version: 1.0.0
+            title: 🔧 GIT-DIRECTOR — Git Operations Orchestrator
+            description: 'v1.0.0 | MAS-internal: Orchestrates git operations by delegating to specialized sub-agents'
+            instructions: |
+              # GIT-DIRECTOR v1.0.0
+              # Orchestrator — delegates to specialized git sub-agents
+
+              ## ⛔ ONLY orchestration — NO direct git execution
+              → Delegate to specialized git sub-agents based on operation type
+
+              ## Delegation Map
+              - init/setup → sub_mas-git-initer
+              - commit/pipeline → sub_mas-git-committer
+              - push/deploy → sub_mas-git-pusher
+              - status/log/diff → sub_mas-git-reader
+
+              ## RULES
+              - R01: No changes without User confirmation
+              - R09: Strict domain separation
+              - R10: CORONASHIELD — validate YAML before storage
+            prompt: |
+              I am git-director (v1.0.0) | MODE-CHECK: mas-engineer | 🔧 GIT-DIRECTOR (v1.0.0)
+              ⛔ ONLY orchestration — NO direct git execution
+              → Delegate to specialized sub-agents based on git operation
+            sub_recipes:
+              - name: sub_mas-git-initer
+                path: ./sub_mas-git-initer.yaml
+                description: Initialize git repositories
+              - name: sub_mas-git-committer
+                path: ./sub_mas-git-committer.yaml
+                description: CLEAN-COMMIT pipeline with selective add and user confirmation
+              - name: sub_mas-git-pusher
+                path: ./sub_mas-git-pusher.yaml
+                description: Push commits with --force-with-lease
+              - name: sub_mas-git-reader
+                path: ./sub_mas-git-reader.yaml
+                description: Read-only git operations (status, log, diff)
+            settings:
+              timeout: 600
+              max_steps: 100
+              goose_provider: openai
+              goose_model: deepseek-v4-flash
+              temperature: 0.3
+            extensions:
+              - type: platform
+                name: summon
+              - type: builtin
+                name: developer
+                display_name: Developer
+                timeout: 300
+                bundled: true
+
+        - type: create_sub_agent
+          file: recipe/sub/sub_mas-git-committer.yaml
+          content: |
+            name: GIT-COMMITTER
+            version: 1.0.0
+            constitution: sub_mas-master-constitution.yaml
+            title: 📝 GIT-COMMITTER — CLEAN-COMMIT Pipeline
+            description: 'v1.0.0 | MAS-internal: Executes the CLEAN-COMMIT pipeline with selective add, pre-commit review, and descriptive messages'
+            instructions: |
+              # sub_mas-git-committer — CLEAN-COMMIT Pipeline (v1.0.0)
+
+              MAS-Engineer-internal. Responsible for the COMMIT pipeline only.
+              ⛔ NEVER push — delegate to sub_mas-git-pusher
+              ⛔ NEVER init — delegate to sub_mas-git-initer
+              ⛔ NEVER read-only ops — delegate to sub_mas-git-reader
+
+              ## ════════════════════════════════════════════
+              ## CLEAN-COMMIT PIPELINE
+              ## ════════════════════════════════════════════
+
+              **STEP 1: PRE-COMMIT REVIEW (transparency)**
+              Show git status + diff --stat. Wait for explicit ✅ (R01).
+
+              **STEP 2: SELECTIVE ADD + VALIDATE (no `git add -A`)**
+              Add ONLY specified files. Verify no backup/ dirs staged.
+
+              **STEP 3: VALIDATE YAML (if YAML files staged)**
+              python3 -c "import yaml; yaml.safe_load(open('$f'))"
+
+              **STEP 4: COMMIT with DESCRIPTIVE MESSAGE**
+              Match repo commit-title convention via `git log --oneline -20`.
+              Type: `type(scope): desc` or `mas(round-NN): FULL_IMPROVEMENT`.
+
+              **STEP 5: VERIFY (post-commit)**
+              git log --oneline -1; git show --stat HEAD
+
+              ## COMMIT BODY TEMPLATE
+              <1-2 sentence WHY>
+              Bug: <what was broken>
+              Fix: <what was changed>
+              Pipeline: <RXX> (date) <TYPE>
+              Files: <N>, +<M> lines
+              Refs: <finding IDs, IM-XXX>
+
+              ## FORBIDDEN
+              ⛔ NEVER `git add -A`
+              ⛔ NEVER commit backup/ or .state/pipeline/backup-*/ dirs
+              ⛔ NEVER monolithic commits — split by logical concern
+              ⛔ NEVER invent new emoji prefixes for commit titles
+              ⛔ NEVER push
+
+              ## INPUT
+              ```yaml
+              agent_intake:
+                task: COMMIT
+                message: string
+                files: list<string>
+              ```
+
+              ## OUTPUT
+              ```yaml
+              mas_result:
+                signal: '🟢 DONE'
+                status: 'success' | 'error'
+                commit_hash: string
+                files_committed: list<string>
+              ```
+            prompt: |
+              I am git-committer (v1.0.0) | MODE-CHECK: mas-engineer | 📝 GIT-COMMITTER (v1.0.0)
+              ⛔ ONLY commit pipeline — NO push, NO init, NO read-only ops
+              → Execute CLEAN-COMMIT pipeline with selective add and user confirmation
+            settings:
+              timeout: 300
+              max_steps: 50
+              goose_provider: openai
+              goose_model: deepseek-v4-flash
+              temperature: 0.2
+            extensions:
+              - type: builtin
+                name: developer
+                display_name: Developer
+                timeout: 300
+                bundled: true
+
+        - type: create_sub_agent
+          file: recipe/sub/sub_mas-git-reader.yaml
+          content: |
+            name: GIT-READER
+            version: 1.0.0
+            constitution: sub_mas-master-constitution.yaml
+            title: 📋 GIT-READER — Read-Only Git Operations
+            description: 'v1.0.0 | MAS-internal: Handles STATUS, LOG, DIFF git operations (read-only)'
+            instructions: |
+              # sub_mas-git-reader — Read-Only Git Operations (v1.0.0)
+
+              MAS-Engineer-internal. Responsible for STATUS, LOG, DIFF operations only.
+              ⛔ NEVER commit, push, or init — those are separate sub-agents.
+
+              ## TASKS
+
+              ### STATUS
+              ```bash
+              cd {workspace}
+              echo '=== GIT STATUS ===' && git status --short
+              echo '' && echo '=== LAST 5 COMMITS ===' && git log --oneline -5
+              ```
+
+              ### LOG
+              ```bash
+              cd {workspace}
+              git log --oneline -10
+              ```
+
+              ### DIFF
+              ```bash
+              cd {workspace}
+              git diff --stat HEAD~1 HEAD
+              ```
+
+              ## OUTPUT
+              ```yaml
+              mas_result:
+                signal: '🟢 DONE'
+                status: 'success' | 'error'
+                task: STATUS | LOG | DIFF
+                output: string
+              ```
+            prompt: |
+              I am git-reader (v1.0.0) | MODE-CHECK: mas-engineer | 📋 GIT-READER (v1.0.0)
+              ⛛ ONLY read-only git operations — NO write ops
+              → Execute STATUS, LOG, DIFF and return output
+            settings:
+              timeout: 120
+              max_steps: 20
+              goose_provider: openai
+              goose_model: deepseek-v4-flash
+              temperature: 0.2
+            extensions:
+              - type: builtin
+                name: developer
+                display_name: Developer
+                timeout: 300
+                bundled: true
+
+        - type: create_sub_agent
+          file: recipe/sub/sub_mas-git-pusher.yaml
+          content: |
+            name: GIT-PUSHER
+            version: 1.0.0
+            constitution: sub_mas-master-constitution.yaml
+            title: 🚀 GIT-PUSHER — Git Push Operations
+            description: 'v1.0.0 | MAS-internal: Handles git push operations with safety checks'
+            instructions: |
+              # sub_mas-git-pusher — Git Push (v1.0.0)
+
+              MAS-Engineer-internal. Responsible for PUSH operations only.
+              ⛔ NEVER commit — delegate to sub_mas-git-committer
+              ⛔ NEVER init — delegate to sub_mas-git-initer
+              ⛔ NEVER `git rebase`, `reset --hard`, `push --force` (use --force-with-lease)
+
+              ## PROCEDURE
+
+              **STEP 1: PREVIEW**
+              ```bash
+              cd {workspace}
+              echo '=== PUSH PREVIEW ==='
+              git log --oneline origin/master..HEAD
+              echo ''
+              echo '=== DIFF vs origin ==='
+              git diff --stat origin/master
+              ```
+              Wait for explicit ✅ (R01).
+
+              **STEP 2: PUSH**
+              ```bash
+              cd {workspace}
+              if [ -n "$GITHUB_PAT" ]; then
+                git remote set-url origin "https://${GITHUB_PAT}@github.com/mczardybon/mas-engineer.git"
+              fi
+              git push origin master
+              ```
+
+              ## OUTPUT
+              ```yaml
+              mas_result:
+                signal: '🟢 DONE'
+                status: 'success' | 'error'
+                pushed: bool
+                push_url: string
+              ```
+            prompt: |
+              I am git-pusher (v1.0.0) | MODE-CHECK: mas-engineer | 🚀 GIT-PUSHER (v1.0.0)
+              ⛔ ONLY push operations — NO commit, init, or read-only ops
+              → Push with --force-with-lease after user confirmation
+            settings:
+              timeout: 120
+              max_steps: 20
+              goose_provider: openai
+              goose_model: deepseek-v4-flash
+              temperature: 0.2
+            extensions:
+              - type: builtin
+                name: developer
+                display_name: Developer
+                timeout: 300
+                bundled: true
+
+        - type: create_sub_agent
+          file: recipe/sub/sub_mas-git-initer.yaml
+          content: |
+            name: GIT-INITER
+            version: 1.0.0
+            constitution: sub_mas-master-constitution.yaml
+            title: 🏗️ GIT-INITER — Git Init Operations
+            description: 'v1.0.0 | MAS-internal: Initializes git repositories'
+            instructions: |
+              # sub_mas-git-initer — Git Init (v1.0.0)
+
+              MAS-Engineer-internal. Responsible for INIT operations only.
+
+              ### INIT
+              ```bash
+              cd {workspace}
+              git init
+              ```
+              Check stdout for 'initialized'.
+
+              ## OUTPUT
+              ```yaml
+              mas_result:
+                signal: '🟢 DONE'
+                status: 'success' | 'error'
+                initialized: bool
+              ```
+            prompt: |
+              I am git-initer (v1.0.0) | MODE-CHECK: mas-engineer | 🏗️ GIT-INITER (v1.0.0)
+              ⛔ ONLY init operations — NO commit, push, status, log, diff
+              → Initialize git repositories
+            settings:
+              timeout: 60
+              max_steps: 10
+              goose_provider: openai
+              goose_model: deepseek-v4-flash
+              temperature: 0.2
+            extensions:
+              - type: builtin
+                name: developer
+                display_name: Developer
+                timeout: 300
+                bundled: true
+
+        - type: archive_original
+          file: recipe/sub/legacy/sub_mas-git-operator-ORIGINAL.yaml
+          from: recipe/sub/sub_mas-git-operator.yaml
+          reason: "Archive original git-operator with all 7 roles before NN1 split"
+
+        - type: update_sub_recipes
+          file: recipe/sub/sub_mas-dev-director.yaml
+          field: sub_recipes[].path for git-operator entry
+          from: |
+            - name: sub_mas-git-operator
+              path: ./sub_mas-git-operator.yaml
+              description: v2.0.0 CLEAN-COMMIT — git add/commit/push with transparency + selective add + user-confirmation (R01)
+          to: |
+            - name: sub_mas-git-director
+              path: ./sub_mas-git-director.yaml
+              description: v1.0.0 Orchestrator — delegates git operations to specialized sub-agents (init, commit, push, read)
+          reason: "Update dev-director to delegate to git-director orchestrator instead of monolithic git-operator"
+
+        - type: update_delegation_map
+          file: recipe/sub/sub_mas-dev-director.yaml
+          field: instructions delegation map
+          from: "- commit/git/push → sub_mas-git-operator (v2.0.0 — CLEAN-COMMIT, NO `git add -A`)"
+          to: "- commit/git/push → sub_mas-git-director (v1.0.0 — orchestrates git init/commit/push/read)"
+          reason: "Update delegation map to point to new git-director orchestrator"
+
+        - type: update_sot
+          file: .state/workflows.yaml
+          operation: "Register 5 new agents (git-director, git-committer, git-reader, git-pusher, git-initer)"
+          reason: "SOT entry required for 5 new sub-agents created by NN1 split"

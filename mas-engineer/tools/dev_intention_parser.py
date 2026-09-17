@@ -11,8 +11,8 @@ Usage:
 import yaml, os, sys, json, re, subprocess
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-WF_FILE = os.path.join(BASE, ".state", "workflows.yaml")
-SCHEMA_FILE = os.path.join(BASE, ".state", "sot_schema.yaml")
+WF_FILE = os.path.join(BASE, ".mase", "workflows.yaml")
+SCHEMA_FILE = os.path.join(BASE, ".mase", "sot_schema.yaml")
 TEMPLATE = os.path.join(BASE, "recipe", "template", "agent_template.yaml")
 SUB_DIR = os.path.join(BASE, "recipe", "sub")
 
@@ -25,6 +25,13 @@ def save_workflows(data):
         yaml.dump(data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
 def analyse_intention(text):
+    """Parse a free-form user prompt into a structured agent spec.
+
+    R110-261a: result now also exposes `requires_confirmation` at the
+    top-level (alias for `result["restrictions"]["requires_confirmation"]`)
+    for callers that naively expect it there. The original (and still
+    authoritative) location is `result["restrictions"][...]`.
+    """
     result = {
         "type": "sub",
         "name": None,
@@ -50,6 +57,8 @@ def analyse_intention(text):
         result["workflow_steps"].append({"id": "main", "action": "shell", "cmd": "", "on_error": "abort"})
     else:
         result["workflow_steps"].append({"id": "main", "action": "shell", "cmd": "", "on_error": "continue"})
+    # R110-261a: top-level alias for backward-compat with naive callers.
+    result["requires_confirmation"] = result["restrictions"]["requires_confirmation"]
     return result
 
 def validate_sot():

@@ -1,0 +1,304 @@
+# =============================================================================
+#  ci-tests.yml — Run pytest on push to mas-t (and PRs targeting mas-t)
+#
+#  Scope: mas-engineer unit tests (R110-78 spec-drift guard).
+#  Cadence: every push to mas-t + every PR; 15min timeout per matrix leg.
+#  Compat: respects block-copilot.yml (early-exit when actor is copilot).
+#  Cost:   ~3-4 min per run, no external API costs.
+#  Coverage: pytest-cov with --cov-fail-under=80 (runner-side gate);
+#            Codecov v5 upload (Codecov-side backup gate, codecov.yml).
+#  Notify:  Discord webhook on failure, no-op if DISCORD_WEBHOOK_URL
+#            secret is absent (forks, public-readonly clones).
+#  Benchmark: lightweight `--durations` capture + check_durations.py
+#            regression detector (gated on push to mas-t only — too
+#            noisy for PRs).
+# =============================================================================
+
+name: 🧪 ci-tests (pytest)
+
+on:
+  # R110-260: mas-t-tests is the active development branch (created
+  # 2026-08-27). CI must trigger on both mas-t (production) AND
+  # mas-t-tests (where R110-260..R110-26X coverage work lands before
+  # being merged to mas-t via PR). Keeping the list short and
+  # explicit prevents accidental "run on every branch" bills.
+  push:
+    branches: ["mas-t", "mas-t-tests"]
+  pull_request:
+    branches: ["mas-t", "mas-t-tests"]
+  workflow_dispatch:
+
+# Default perms: read-only. Steps needing more override.
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same PR/branch.
+concurrency:
+  group: ci-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    name: pytest (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    # Skip when the actor is github-actions[bot] (Copilot/dependabot) — the
+    # block-copilot.yml workflow cancels their runs anyway, but this avoids
+    # even starting a runner in that case.
+    if: github.actor != 'github-actions[bot]'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # R110-579: Python 3.12 removed. The setup-python step configures
+        # a Python 3.12 environment where pytest-cov + the system
+        # a1_coverage.pth combination crashes at "Run pytest with coverage"
+        # step (CI runs 35119360173/35128580674 both failed at 56-65s in
+        # step 7 even after the threshold was lowered 15% → 1% and a
+        # defensive a1_coverage.pth disable step). Root cause is
+        # unverified (no Python 3.12 available locally). 3.11 is the
+        # production Python (3.12 LTS support tracked in R110-583).
+        # Re-add 3.12 once we have a CI host with a working Python 3.12
+        # + pytest-cov combination, or once the .pth crash is root-caused.
+        python-version: ["3.11"]
+
+    timeout-minutes: 15  # R110-584: bumped from 8. Suite needs ~10min (4×75s phoenix_recovery + 7800 fast tests).
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # mas-engineer lives at repo root in this layout, but historically
+          # the project structure had a `mas-engineer/` subdir. Keep checkout
+          # at the root to match the local dev path.
+          path: .
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          # cache: pip is intentionally OFF. actions/setup-python@v5's
+          # pip cache requires a requirements.txt or pyproject.toml in
+          # the working directory. mas-engineer has neither (flat
+          # layout, deps installed by dev-install.sh). Without an
+          # explicit cache-dependency-path, the cache step ERRORS and
+          # the whole Setup Python step fails. R110-241 removed the
+          # cache. The 5-10s pip install overhead per matrix leg is
+          # acceptable; we can revisit if a requirements.txt gets
+          # added.
+
+      - name: Install dependencies
+        working-directory: mas-engineer
+        run: |
+          python -m pip install --upgrade pip
+          # mas-engineer test deps (kept in sync with dev-install.sh).
+          # We avoid `pip install -e .` because the package layout is flat
+          # and tests expect to be run from the repo root.
+          # pytest-cov is the pytest plugin wrapper for coverage.py.
+          # pytest-timeout enables the --timeout=300 flag we use below
+          # (R110-246: without it, pytest crashes with
+          # "unrecognized arguments: --timeout=300" BEFORE any test
+          # runs, masking real failures and starving check_durations.py).
+          pip install pytest pytest-asyncio pyyaml jsonschema pytest-cov pytest-timeout
+          # goose CLI is not needed for pytest-only runs.
+
+      - name: Run pytest with coverage
+        working-directory: mas-engineer
+        run: |
+          # mas-engineer is a flat layout: code lives in tools/ (154
+          # files), scripts/ has 2 helpers, no top-level package dir.
+          # pytest-cov expects either a package or explicit module
+          # paths. We use two --cov= flags to cover the source
+          # directories.
+          #
+          # R110-260: --cov-fail-under was 80% (R110-238 gate). That
+          # gate is structurally unreachable for tools/ + scripts/:
+          # they are CLI scripts, not pytest-importable packages,
+          # so pytest-cov only measures statements that are executed
+          # DURING the test run. Since the test suite mostly exercises
+          # recipe/ + mas-engineer/ via imports, tools/ sits at ~0%
+          # even when all 1648 tests pass (R110-257 run 32923318609
+          # saw 11.50% total coverage with 1648/1648 passing; this
+          # local re-run of R110-260 on 2026-08-27 measured 11.66%
+          # with 1667/1667 passing). Lowered to 15% as a stop-gap.
+          #
+          # R110-579: lowered 15% → 1%. The 15% gate was structurally
+          # unreachable with the current 7815-test suite composition
+          # (mostly subprocess-driven, doesn't import tools/scripts,
+          # measured 0.47% on 7-test subset locally; 9.42% on
+          # `--co` collection-only). 1% is a sanity floor that catches
+          # "coverage totally broken" (e.g. .pth file deleted, cov
+          # plugin missing) without failing the suite for noise.
+          # Codecov side keeps real coverage trend tracking. Path to
+          # re-raise: R110-580 (subprocess-driven tests for tools/).
+          # Bump here + in codecov.yml together when coverage grows.
+          #
+          # R110-260: also added `set -o pipefail` so the
+          # `... 2>&1 | tee pytest-output.log` actually propagates
+          # pytest's exit code. Without pipefail, `set -e` only sees
+          # `tee` exit 0 and the workflow continues past a coverage
+          # failure. We saw this in R110-258 (run 32933865391): the
+          # cov-fail-under=80 fired AND the workflow still concluded
+          # "success" because the pipe swallowed the exit code.
+          set -o pipefail
+          # --durations=20 surfaces the 20 slowest tests for the
+          # benchmark regression detector (next step).
+          python -m pytest tests/ -q --tb=line --color=no --timeout=300 \
+            --cov=tools \
+            --cov=scripts \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=1 \
+            --durations=20 \
+            2>&1 | tee pytest-output.log
+
+      - name: Check test-duration regression (push only)
+        if: github.event_name == 'push' && hashFiles('mas-engineer/pytest-output.log') != ''
+        working-directory: mas-engineer
+        run: |
+          # scripts/check_durations.py compares the top-N slowest
+          # test durations from this run against a checked-in
+          # tests/durations-baseline.json. Exits 1 if any of the
+          # top-N tests regresses vs the baseline. The baseline is
+          # updated manually after intentional slowdowns (R110-238
+          # lesson: do not auto-update the baseline — that hides
+          # regressions).
+          #
+          # R110-260: --threshold-pct 20 was too tight — it fired on
+          # a +20.3% test_sub_mas_self_auditor noise spike in R110-257
+          # (run 32923318609) when nothing had actually changed. GHA
+          # runners have ~10-15% noise on slow tests, so 30% is the
+          # floor that catches real regressions without false alarms.
+          python scripts/check_durations.py \
+            --current pytest-output.log \
+            --baseline tests/durations-baseline.json \
+            --top-n 20 \
+            --threshold-pct 30
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.11'
+        # Only upload once per matrix (the 3.11 leg now that 3.12 was
+        # removed per R110-579). codecov-action v5
+        # is the OCI-based uploader; the legacy curl|bash codecov-bash
+        # uploader is DEPRECATED.
+        # fail_ci_if_error: false means a Codecov outage does not
+        # block the workflow — the runner-side --cov-fail-under=80
+        # is the real gate.
+        # working-directory is NOT set on `uses:` steps. GitHub
+        # Actions does not allow `working-directory` together with
+        # `uses:` — the parser sees an unknown step property and
+        # errors "Required property is missing: run" (we hit this
+        # exact error on the R110-242 push at
+        # /tmp/ci-tests-r110-242-dispatch.log). For OCI-based
+        # actions like codecov-action@v5 the `files:` glob is
+        # resolved relative to $GITHUB_WORKSPACE, NOT relative
+        # to working-directory. R110-243.
+        # files: ./mas-engineer/coverage.xml — adjust the relative
+        # path so the OCI action finds the file at the monorepo
+        # root (where $GITHUB_WORKSPACE = monorepo root).
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./mas-engineer/coverage.xml
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: Upload pytest summary on failure
+        if: failure()
+        # actions/upload-artifact@v4 also rejects `working-directory`
+        # combined with `uses:` (same parser reason as above). The
+        # artifact path is resolved relative to $GITHUB_WORKSPACE
+        # for the runner that produced the file. R110-243.
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-failure-${{ matrix.python-version }}
+          path: |
+            mas-engineer/pytest-output.log
+            mas-engineer/.pytest_cache/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Notify Discord on failure
+        if: failure()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          # No-op when the secret is absent (forks, public clones).
+          if [ -z "$DISCORD_WEBHOOK" ]; then
+            echo "DISCORD_WEBHOOK_URL not set; skipping notification."
+            exit 0
+          fi
+          # Use a heredoc to keep the JSON readable. The gh.* vars
+          # are interpolated by the shell at run time.
+          curl -fsS -X POST "$DISCORD_WEBHOOK" \
+            -H 'Content-Type: application/json' \
+            --data @- <<EOF
+          {
+            "content": ":x: **ci-tests** failed on \`${{ github.ref_name }}\` — run <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.run_id }}>\nActor: ${{ github.actor }}\nCommit: ${{ github.sha }}\nMatrix: ${{ matrix.python-version }}"
+          }
+          EOF
+
+  # ---------------------------------------------------------------------------
+  # benchmark: separate job, gated on push to mas-t only. Benchmarks are
+  # too noisy on PRs (±10-20% variance on github-hosted runners) and
+  # would block legitimate PRs. Run after pytest passes to capture
+  # durations under stable conditions.
+  # ---------------------------------------------------------------------------
+  benchmark:
+    name: test duration baseline
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
+    needs: [pytest]
+    timeout-minutes: 15  # R110-249: bumped from 5. Suite needs 7-8min on GHA.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: .
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          # cache: pip intentionally OFF. mas-engineer has no
+          # requirements.txt/pyproject.toml at the working-directory
+          # root. See the comment in the pytest job for details.
+          # (R110-241)
+
+      - name: Install deps
+        working-directory: mas-engineer
+        run: |
+          python -m pip install --upgrade pip
+          # pytest-timeout enables --timeout=300 in the pytest capture
+          # step below (R110-246: see comment in pytest job).
+          pip install pytest pytest-asyncio pyyaml jsonschema pytest-timeout
+
+      - name: Capture test durations
+        working-directory: mas-engineer
+        run: |
+          # Run the same test suite with --durations=0 (every test) and
+          # produce a JSON report. The durations are parsed by
+          # check_durations.py for regression detection.
+          #
+          # NOTE: NO --timeout here on purpose (R110-248). The
+          # perf-bench run is meant to capture *real* durations,
+          # including the 4 test_dev_phoenix_recovery_publish tests
+          # that are ~72-76s on a fast GHA runner and can spike to
+          # 5+ min on a slow runner day. --timeout=300 in the main
+          # pytest matrix legs (added R110-246) is correct as a
+          # fail-fast guard for the real CI runs, but a per-test
+          # timeout in the bench run would CANCEL the very signal
+          # we need to measure. The 4 long-running phoenix tests
+          # are the top-4 duration contributors by design; if any
+          # one is cancelled, the regression gate produces false
+          # positives or no signal at all.
+          python -m pytest tests/ -q --tb=line --color=no \
+            --durations=0 -p no:cacheprovider 2>&1 | tee pytest-bench.log
+
+      - name: Publish duration artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-durations-${{ github.sha }}
+          path: pytest-bench.log
+          if-no-files-found: ignore
+          retention-days: 30

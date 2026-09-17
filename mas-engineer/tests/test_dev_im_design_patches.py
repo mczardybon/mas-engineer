@@ -1,0 +1,358 @@
+"""
+test_dev_im_design_patches.py — R110-195 (R110-194-B, MQ Full Adoption).
+
+3-test pytest suite for the consume-and-design loop (the
+DESIGN half). Verifies the end-to-end behavior of the
+sub_recipe sub_mas-design-patches (R110-195) by driving it
+through the public python kernel dev_im_design_patches.process_msg:
+
+  1. happy path: 1 MQ msg → 1 patch file at
+     .mase/im/patches/<request_id>.yaml with patch_type /
+     priority / actions_count derived from the payload.
+  2. zero-findings: msg with findings_total=0 → patch_type=
+     "no_findings", priority="P4", actions=[] (still
+     writes a file — design is always produced).
+  3. kernel exception: process_msg raises → consumer's
+     nack path is the correct response (we simulate this
+     by passing a non-dict msg and asserting that the
+     consumer-level integration would nack, not ack).
+
+Run with:
+    python3 -m pytest tests/test_dev_im_design_patches.py -v
+"""
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+import pytest
+import yaml
+
+REPO_ROOT = Path(__file__).parent.parent.resolve()
+TOOLS = REPO_ROOT / "tools"
+
+# Import as tools.X so pytest-cov tracks coverage under the correct
+# module name (the file lives at tools/dev_im_design_patches.py).
+import tools.dev_im_design_patches as design  # noqa: E402
+import tools.dev_message_queue as mq          # noqa: E402
+
+
+# ─── Per-test isolated MAS_PATCHES_DIR + MAS_MQ_ROOT ─────────────
+
+@pytest.fixture
+def patches_dir(tmp_path, monkeypatch):
+    """Isolated patch output dir (kernel writes here, not the real
+    .mase/im/patches/).  The kernel resolves the dir at call-time
+    from MAS_PATCHES_DIR, so monkeypatching the env var is enough."""
+    d = tmp_path / "patches"
+    monkeypatch.setenv("MAS_PATCHES_DIR", str(d))
+    return d
+
+
+@pytest.fixture
+def mq_root(tmp_path, monkeypatch):
+    """Isolated MQ root so process_msg can be called via the
+    consumer's --processor integration (test #3 below) without
+    touching the real .mase/mq."""
+    root = tmp_path / "mq"
+    root.mkdir()
+    monkeypatch.setenv("MAS_MQ_ROOT", str(root))
+    return root
+
+
+def _finding_envelope(request_id: str, total: int, by_sev: dict,
+                      top: list) -> dict:
+    """Build the MQ message envelope the consumer would receive.
+
+    Mirrors the shape produced by dev_im_finder_scan.py --publish
+    and wrapped by dev_mq_consumer.consume() (msg_id + payload)."""
+    return {
+        "msg_id": f"msg-{request_id}",
+        "topic": "im.finding.created",
+        "status": "in_flight",
+        "payload": {
+            "request_id": request_id,
+            "source": "dev_im_finder_scan",
+            "timestamp": "2026-08-18T12:00:00Z",
+            "findings_total": total,
+            "findings_by_severity": by_sev,
+            "findings_by_type": {"yaml_typo": by_sev.get("high", 0)},
+            "findings_top": top,
+        },
+    }
+
+
+# ─── Tests ───────────────────────────────────────────────────────
+
+def test_happy_path_writes_patch_file(patches_dir, mq_root):
+    """(1) Sub_recipe design loop: 1 MQ msg → 1 patch file with
+    patch_type / priority / actions_count derived correctly from
+    a payload that has 1 blocker + 2 high findings."""
+    request_id = "rq-happy-001"
+    envelope = _finding_envelope(
+        request_id=request_id,
+        total=3,
+        by_sev={"blocker": 1, "high": 2, "medium": 0, "low": 0},
+        top=[
+            {"type": "yaml_typo", "severity": "blocker",
+             "location": "recipe/dev.yaml:10", "description": "bad indent"},
+            {"type": "secret_leak", "severity": "high",
+             "location": "tools/dev_x.py:42", "description": "GH_PAT in code"},
+            {"type": "test_gap", "severity": "high",
+             "location": "tests/test_x.py:1", "description": "no test"},
+        ],
+    )
+
+    result = design.process_msg(envelope)
+
+    # 1. Returned dict has expected keys
+    assert "patch_written" in result
+    assert result["patch_type"] == "blocker_remediation", \
+        f"expected blocker_remediation, got {result['patch_type']}"
+    assert result["priority"] == "P0"
+    assert result["actions_count"] == 3
+
+    # 2. The patch file exists at MAS_PATCHES_DIR/<request_id>.yaml
+    out = patches_dir / f"{request_id}.yaml"
+    assert out.exists(), f"patch file not written: {out}"
+
+    # 3. Patch YAML is well-formed and contains the expected fields
+    with open(out) as f:
+        body = yaml.safe_load(f)
+    assert body["request_id"] == request_id
+    assert body["source_msg_id"] == "msg-rq-happy-001"
+    assert body["source_topic"] == "im.finding.created"
+    assert body["findings_total"] == 3
+    assert body["findings_by_severity"] == \
+        {"blocker": 1, "high": 2, "medium": 0, "low": 0}
+    assert body["apply_status"] == "pending"
+    assert len(body["actions"]) == 3
+    # Top-3 cap is enforced by the kernel
+    assert all(a["action"] for a in body["actions"])
+
+
+def test_zero_findings_writes_no_op_patch(patches_dir, mq_root):
+    """(2) Even an empty-findings msg produces a design patch
+    (patch_type='no_findings', priority='P4', actions=[]).
+    Rationale: the apply-stage pipeline needs an explicit
+    "we ran, there's nothing to do" record per scan, not
+    silence.  The MQ-Full-Adoption invariant is: every ack
+    has a corresponding .yaml file."""
+    request_id = "rq-zero-002"
+    envelope = _finding_envelope(
+        request_id=request_id,
+        total=0,
+        by_sev={},
+        top=[],
+    )
+
+    result = design.process_msg(envelope)
+
+    assert result["patch_type"] == "no_findings"
+    assert result["priority"] == "P4"
+    assert result["actions_count"] == 0
+    assert result["patch_written"].endswith(f"{request_id}.yaml")
+
+    out = patches_dir / f"{request_id}.yaml"
+    assert out.exists()
+    with open(out) as f:
+        body = yaml.safe_load(f)
+    assert body["findings_total"] == 0
+    assert body["actions"] == []
+    assert body["apply_status"] == "pending"  # still pending — humans decide
+
+
+def test_kernel_exception_propagates_to_caller(patches_dir, mq_root, monkeypatch):
+    """(3) When process_msg raises, the exception MUST propagate
+    to the caller (dev_mq_consumer's processor wrapper) so it
+    nacks instead of acking.
+
+    The consumer-level integration (nack on exception) is tested
+    separately in tests/test_dev_mq_consumer.py.  Here we verify
+    the kernel half: the exception is not swallowed inside
+    process_msg — the caller's try/except actually has a chance
+    to run.
+
+    We simulate the failure by monkeypatching yaml.safe_dump
+    to raise.  (A set-injected payload would NOT trigger
+    yaml.safe_dump to raise on modern pyyaml — sets are dumped
+    as !!set tags by default.  Direct monkeypatch is the
+    reliable way to inject a controlled failure.)"""
+    import yaml as _yaml
+
+    request_id = "rq-bad-003"
+    envelope = _finding_envelope(
+        request_id=request_id,
+        total=1,
+        by_sev={"high": 1},
+        top=[
+            {"type": "yaml_typo", "severity": "high",
+             "location": "x.yaml:1", "description": "ok"},
+        ],
+    )
+
+    def _boom(*a, **kw):
+        raise RuntimeError("simulated yaml.safe_dump failure")
+
+    # Patch yaml.safe_dump in the design module's namespace
+    # (it imported yaml at module load).  Also patch the yaml
+    # module itself so any internal lookups there see the stub.
+    monkeypatch.setattr(design.yaml, "safe_dump", _boom)
+    monkeypatch.setattr(_yaml, "safe_dump", _boom)
+
+    # The exception must propagate to the caller.  The
+    # consumer's processor wrapper catches it and nacks;
+    # any other caller (e.g. a manual run) gets the
+    # exception and can decide what to do.
+    with pytest.raises(RuntimeError, match="simulated yaml.safe_dump"):
+        design.process_msg(envelope)
+
+
+def test_low_medium_priority_p2_branch(patches_dir, mq_root):
+    """(4) findings_total > 0 with NO blocker/high produces
+    patch_type='low_medium_cleanup' and priority='P2'.
+
+    Closes the only remaining uncovered branch in
+    tools/dev_im_design_patches.py lines 80-82 (the
+    `elif findings_total > 0:` arm). Brings the file
+    from 96.6% (57/59) to 100% (59/59) coverage.
+
+    Setup: 5 medium findings, 2 low findings, no blocker/high.
+    Expected: patch_type='low_medium_cleanup', priority='P2',
+              actions_count=3 (top-3 cap enforced).
+    """
+    request_id = "rq-lowmedium-004"
+    envelope = _finding_envelope(
+        request_id=request_id,
+        total=7,  # 5 medium + 2 low
+        by_sev={"blocker": 0, "high": 0, "medium": 5, "low": 2},
+        top=[
+            {"type": "yaml_typo", "severity": "medium",
+             "location": "recipe/x.yaml:1", "description": "indent"},
+            {"type": "test_gap", "severity": "medium",
+             "location": "tests/x.py:1", "description": "no test"},
+            {"type": "doc_drift", "severity": "medium",
+             "location": "docs/x.md:5", "description": "outdated"},
+            {"type": "yaml_typo", "severity": "low",
+             "location": "recipe/y.yaml:2", "description": "minor"},
+        ],
+    )
+
+    result = design.process_msg(envelope)
+
+    # 1. Returned dict has the expected branch attributes
+    assert result["patch_type"] == "low_medium_cleanup", (
+        f"expected low_medium_cleanup, got {result['patch_type']!r}"
+    )
+    assert result["priority"] == "P2", (
+        f"expected P2, got {result['priority']!r}"
+    )
+    assert result["actions_count"] == 3  # top-3 cap
+
+    # 2. The patch file exists and is well-formed
+    out = patches_dir / f"{request_id}.yaml"
+    assert out.exists(), f"patch file not written: {out}"
+    with open(out) as f:
+        body = yaml.safe_load(f)
+    assert body["request_id"] == request_id
+    assert body["findings_total"] == 7
+    assert body["findings_by_severity"] == (
+        {"blocker": 0, "high": 0, "medium": 5, "low": 2}
+    )
+    assert body["apply_status"] == "pending"
+    # Top-3 cap: only the first 3 of the 4 findings in `top` are written
+    assert len(body["actions"]) == 3
+
+
+# ─── R110-513 coverage tests (target: lines 46, 148-150, 155-158) ────
+
+def test_patches_dir_uses_default_when_no_env_var(tmp_path, monkeypatch):
+    """Covers line 46: _patches_dir() falls back to DEFAULT_PATCHES_DIR
+    when MAS_PATCHES_DIR is unset.
+
+    The default points at <repo>/.mase/im/patches (resolved at module
+    import time via Path(__file__).resolve().parent.parent).  We just
+    verify that _patches_dir() returns the default directory (without
+    writing any actual file).
+    """
+    monkeypatch.delenv("MAS_PATCHES_DIR", raising=False)
+    d = design._patches_dir()
+    assert d == design.DEFAULT_PATCHES_DIR
+    # And that calling it again is idempotent (mkdir exists_ok=True).
+    assert d.exists()
+
+
+def test_suggest_action_yaml_type():
+    """Covers line 141 (yaml branch in _suggest_action)."""
+    assert design._suggest_action({"type": "yaml_typo"}) == "fix_yaml_syntax"
+    assert design._suggest_action({"type": "YAML_SYNTAX_ERROR"}) == "fix_yaml_syntax"
+
+
+def test_suggest_action_secret_and_drift_and_test_and_doc():
+    """Covers lines 142-149: secret/leak, drift, test, doc branches."""
+    # secret / leak
+    assert design._suggest_action({"type": "secret_leak"}) == \
+        "rotate_secret_and_remove_from_history"
+    assert design._suggest_action({"type": "leak"}) == \
+        "rotate_secret_and_remove_from_history"
+    # drift
+    assert design._suggest_action({"type": "category_drift"}) == \
+        "align_with_pre_push_validator"
+    assert design._suggest_action({"type": "DRIFT"}) == \
+        "align_with_pre_push_validator"
+    # test
+    assert design._suggest_action({"type": "test_gap"}) == "add_or_fix_test"
+    # doc
+    assert design._suggest_action({"type": "doc_missing"}) == \
+        "update_documentation"
+
+
+def test_suggest_action_default_branch():
+    """Covers line 150: the default `review_and_manually_fix` branch."""
+    assert design._suggest_action({"type": "unknown"}) == \
+        "review_and_manually_fix"
+    assert design._suggest_action({}) == "review_and_manually_fix"
+
+
+def test_main_block_via_runpy(monkeypatch, capsys):
+    """Covers lines 155-158: `if __name__ == '__main__':` block via runpy.
+
+    runpy.run_path(__name__='__main__') loads the module with
+    __name__ == '__main__' so the guard fires under the test process
+    where pytest-cov IS tracking.  We feed it a JSON msg on stdin
+    via monkeypatch.setattr(sys, "stdin", io.StringIO(json)).
+    """
+    import io
+    import json
+    import runpy
+    # Stub stdin with a valid im.finding.created envelope
+    msg = {
+        "msg_id": "msg-runpy-001",
+        "topic": "im.finding.created",
+        "status": "in_flight",
+        "payload": {
+            "request_id": "rq-runpy-001",
+            "source": "test",
+            "timestamp": "2026-09-12T00:00:00Z",
+            "findings_total": 1,
+            "findings_by_severity": {"high": 1},
+            "findings_by_type": {"yaml_typo": 1},
+            "findings_top": [
+                {"type": "yaml_typo", "severity": "high",
+                 "location": "x.yaml:1", "description": "test"}
+            ],
+        },
+    }
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(msg)))
+    # Set MAS_PATCHES_DIR to a tmp dir so the runpy-executed process_msg
+    # writes there (not the real repo .mase/im/patches).
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        monkeypatch.setenv("MAS_PATCHES_DIR", tmp)
+        runpy.run_path(design.__file__, run_name="__main__")
+    captured = capsys.readouterr()
+    # The main() body prints json.dumps(result, indent=2).  Verify the
+    # output contains patch_type and patch_written.
+    assert "patch_type" in captured.out
+    assert "patch_written" in captured.out

@@ -202,19 +202,25 @@ def update_dashboard():
     else:
         print("⚠️ No Dashboard-JSON found")
 
-if __name__ == "__main__":
+def cli_main():
+    """CLI dispatcher (R110-556 refactor for testability).
+
+    Wraps the if __name__ == '__main__': block so tests can call
+    it directly in-process (covering all 25 lines via coverage.py's
+    tracer instead of trying to exec/re-run the guard).
+    """
     if len(sys.argv) < 2:
         print("Usage: dev_dispatch_tracer.py log|complete|status|tree|update [args]")
         sys.exit(1)
-    
+
     cmd = sys.argv[1]
-    
+
     if cmd == "log" and len(sys.argv) >= 5:
-        log_dispatch(sys.argv[2], sys.argv[3], sys.argv[4], 
+        log_dispatch(sys.argv[2], sys.argv[3], sys.argv[4],
                      sys.argv[5] if len(sys.argv) > 5 else "sync",
                      sys.argv[6] if len(sys.argv) > 6 else None)
     elif cmd == "complete" and len(sys.argv) >= 4:
-        complete_dispatch(sys.argv[2], int(sys.argv[3]), 
+        complete_dispatch(sys.argv[2], int(sys.argv[3]),
                          sys.argv[4] if len(sys.argv) > 4 else "completed")
     elif cmd == "status":
         show_status()
@@ -227,3 +233,7 @@ if __name__ == "__main__":
     else:
         print(f"Unbekannter Command: {cmd}")
         print("Available: log, complete, status, tree, update")
+
+
+if __name__ == "__main__":
+    cli_main()

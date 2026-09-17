@@ -1,465 +1,523 @@
 #!/usr/bin/env python3
-"""Comprehensive IM-Finder scan — detects all 53+ feature types A-MM + NN.
+"""Python-tool scanner wrapper — R110-411b script-mode.
 
-IM-005 SCOPE-FIX (2026-07-22): The scan was previously hardcoded to
-RECIPE_DIR='recipe' which meant user-installed demo teams in
-/root/.config/goose/recipes/*/ were never analyzed. Now we accept
---scope (CLI arg) or the SCAN_SCOPE env var to extend coverage.
-Default behavior is unchanged (backward-compatible).
+This is the THIN CLI WRAPPER for the Python-tool portion of the
+``dev_im_finder_scan`` feature set. It wraps the Python tool walker,
+the ``check_*`` helpers, the orchestration try/except dispatch, the
+summary printers, and the optional ``--publish`` block inside ``main()``
+so that ``importlib.util.spec_from_file_location(...)`` is side-effect-free.
+
+The YAML scanner (which is the larger half of the original file) lives in
+``tools/dev_im_finder_scan_lib.py`` and is exposed via ``run_yaml_scan()``.
+
+Usage:
+    python3 tools/dev_im_finder_scan.py --scope=recipe
+    python3 tools/dev_im_finder_scan.py --scope=all
+    python3 tools/dev_im_finder_scan.py --scope=recipe --publish
+
+For unit-testing the check_* helpers, import them from
+``dev_im_finder_scan_lib`` (re-exported here for backward compatibility):
+    from tools.dev_im_finder_scan import check_spec_drift, add_finding
 """
-import yaml, os, glob, re, json, sys, argparse
+
+# Re-export the library so existing tests that do
+# `mod = importlib.util.spec_from_file_location("dev_im_finder_scan", ...)`
+# and then access ``mod.check_spec_drift``, ``mod.add_finding``,
+# ``mod.findings``, ``mod.fid`` etc. keep working.
+import glob
+import os
+import re
+import sys
+import json
+import yaml
+import time
+import argparse
+import importlib.util as _importlib_util
+from pathlib import Path
 from collections import Counter
 
-# --- SEVERITY FILTER (R28 fix) ---
-# Default: report all severities. Set SEVERITY_FILTER=medium,high
-# (or pass --severity-filter=medium,high) to suppress low-severity
-# style findings and only show actionable issues.
-SEVERITY_FILTER = {'low', 'medium', 'high'}
-for _a in sys.argv[1:]:
-    if _a.startswith('--severity-filter='):
-        SEVERITY_FILTER = {s.strip() for s in _a.split('=', 1)[1].split(',') if s.strip()}
-        break
-_env_sev = os.environ.get('SEVERITY_FILTER')
-if _env_sev:
-    SEVERITY_FILTER = {s.strip() for s in _env_sev.split(',') if s.strip()}
+_glob = glob
+_os = os
+_re = re
+_sys = sys
 
-# SCAN_SCOPE may be a single directory, a comma-separated list, or multiple
-# --scope args.  Default = 'recipe' (backward compatible).
-def _collect_scope_dirs():
-    raw = []
-    # 1. CLI arg
-    for arg in sys.argv[1:]:
-        if arg.startswith('--scope='):
-            raw.append(arg.split('=', 1)[1])
-    # 2. Env var
-    env = os.environ.get('SCAN_SCOPE')
-    if env:
-        raw.append(env)
-    # 3. Fallback
-    if not raw:
-        raw = ['recipe']
-    # Split on comma for env, allow duplicates; de-dup
-    dirs = []
-    for r in raw:
-        for d in r.split(','):
-            d = d.strip()
-            if d and d not in dirs:
-                dirs.append(d)
-    return dirs
+_LIB_PATH = Path(__file__).parent / 'dev_im_finder_scan_lib.py'
+_lib_spec = _importlib_util.spec_from_file_location('dev_im_finder_scan_lib', str(_LIB_PATH))
+_lib_mod = _importlib_util.module_from_spec(_lib_spec)
+sys.modules['dev_im_finder_scan_lib'] = _lib_mod
+_lib_spec.loader.exec_module(_lib_mod)
 
-SCAN_DIRS = _collect_scope_dirs()
-ALL_YAMLS = []
-# Directories to skip during scan (excluded by name match)
-EXCLUDED_DIR_NAMES = {
-    '.backups',          # mas-engineer auto-backups (R27 fix)
-    '.git',              # version control
-    'node_modules',      # dependencies
-    '__pycache__',       # python bytecode
-    'legacy',            # R84 fix: archived ORIGINAL files (20+ stale findings per scan)
-    'demo-team',         # R84 fix: on-demand demo-team recipes (varianz, nicht framework-bug)
-}
-# Path patterns to skip (substring match on full path)
-EXCLUDED_PATH_PATTERNS = [
-    '/.config/goose/recipes/',  # external marketing recipes (not mas-engineer)
-    '/.config/goose/sessions/', # goose runtime session data
-    '/.config/goose/memory/',   # goose memory
-    '/.config/goose/workspace/',# goose workspace
-    '/.local/share/goose/',     # goose internal storage
-    '-ORIGINAL.yaml',           # R84 fix: archival copies of split agents
-    '.bak',                     # R80 fix: stale backup files
-]
-
-def _is_path_excluded(path):
-    """Check if a path matches any exclusion pattern."""
-    for pat in EXCLUDED_PATH_PATTERNS:
-        if pat in path:
-            return True
-    return False
+from dev_im_finder_scan_lib import (
+    SEVERITY_FILTER,
+    _ISSUE_DB, _ISSUE_DB_ACTIVE, _ISSUE_DB_PATH, _ISSUE_DB_MOD,
+    _issue_db_module, _issue_db_settings, _get_issue_db,
+    compute_issue_hash, compute_structural_pattern,
+    _collect_scope_dirs,
+    SCAN_DIRS, ALL_YAMLS,
+    EXCLUDED_DIR_NAMES, EXCLUDED_PATH_PATTERNS,
+    _INCLUDE_EXTERNAL, _USER_EXPLICIT_SCOPE,
+    _is_path_excluded,
+    # NOTE: findings, fid, add_finding are intentionally NOT re-exported
+    # via `from ... import ...` here. Doing so would create a separate
+    # binding in this module's namespace, so that `mod.findings = []` in
+    # test reset_state fixtures would reassign the CLI-side binding
+    # without touching the LIB-side binding that ``add_finding`` writes to.
+    #
+    # Instead, we expose them as PROPERTIES that always look up the LIB
+    # via sys.modules, so any test that does ``mod.findings = []`` ALSO
+    # clears the LIB's list (test isolation works correctly).
+    # R110-411b: extracted from CLI main() body so tests can access them
+    # as ``mod.check_spec_drift`` etc. via spec_from_file_location.
+    _is_pycache_or_backup,
+    _is_self_reference,
+    _is_common_value,
+    _is_in_docstring,
+    _is_in_code_block,
+    _is_in_table_or_example,
+    _is_runtime_var_assert,
+    check_spec_drift,
+    check_spec_drift_reverse,
+    check_hardcode_stale,
+    check_stale_literal,
+    run_yaml_scan,
+)
 
 
-for SCAN_DIR in SCAN_DIRS:
-    if not os.path.isdir(SCAN_DIR):
-        continue
-    for root, dirs, files in os.walk(SCAN_DIR):
-        # In-place filter: modify dirs list to skip excluded subdirs
-        # (os.walk honors dirs[:] modifications)
-        dirs[:] = [d for d in dirs if d not in EXCLUDED_DIR_NAMES]
-        # Also skip if root path itself matches excluded pattern
-        if _is_path_excluded(root + '/'):
+# --- R110-411b: sync CLI findings ↔ LIB findings for check_* funcs --------
+# The check_* functions live in the LIB and call lib.add_finding() in their
+# lexical scope, which appends to LIB's module-global `findings` list. Tests
+# do ``mod.findings = []`` to reset state (CLI globals). For test assertions
+# on ``mod.findings`` to work, we wrap the imported check_* functions to
+# sync the findings list before AND after the call.
+# This is a NO-OP in production (mod.findings and lib.findings are the
+# same list object after the first sync).
+def _wrap_check_with_sync(_func):
+    import functools as _ft
+    @_ft.wraps(_func)
+    def wrapper(findings, *args, **kwargs):
+        # Sync CLI's findings list → LIB's findings list
+        if 'findings' in globals():
+            _lib_mod.findings = globals()['findings']
+        if 'fid' in globals():
+            _lib_mod.fid = globals()['fid']
+        result = _func(findings, *args, **kwargs)
+        # Sync back: LIB's findings → CLI's findings
+        globals()['findings'] = _lib_mod.findings
+        globals()['fid'] = _lib_mod.fid
+        return result
+    return wrapper
+
+check_spec_drift = _wrap_check_with_sync(check_spec_drift)
+check_spec_drift_reverse = _wrap_check_with_sync(check_spec_drift_reverse)
+check_hardcode_stale = _wrap_check_with_sync(check_hardcode_stale)
+check_stale_literal = _wrap_check_with_sync(check_stale_literal)
+
+
+# --- R110-411b: shared-state proxy via PEP 562 __getattr__
+# The test fixture does ``mod.findings = []`` to reset scanner state
+# between tests. In the pre-refactor monolithic file, this worked
+# because ``findings`` was a module-level binding in the SAME module
+# the test loaded. Now ``findings`` lives in the LIB.
+#
+# PEP 562 only supports __getattr__ for modules — module-level
+# __setattr__ is NOT called by Python (modules always go through
+# ModuleType.__setattr__ which sets __dict__ directly). So we cannot
+# intercept ``mod.findings = []`` and forward it to the LIB.
+#
+# Workaround: define a thin wrapper ``add_finding`` that, on each
+# call, synchronizes the LIB's findings list with whatever the CLI
+# module's __dict__ holds. The test's ``mod.findings = []`` puts a
+# fresh list in mod.__dict__, and the next add_finding() call will
+# push that fresh list into the LIB. add_finding itself stays as a
+# direct reference to lib.add_finding (so the test can verify
+# ``callable(mod.add_finding)`` etc.).
+_PROXIED_ATTRS = frozenset({
+    'findings', 'fid', 'add_finding', 'SEVERITY_FILTER',
+    '_ISSUE_DB', '_ISSUE_DB_ACTIVE', '_ISSUE_DB_PATH', '_ISSUE_DB_MOD',
+    '_issue_db_module', '_issue_db_settings', '_get_issue_db',
+    '_collect_scope_dirs', 'SCAN_DIRS', 'ALL_YAMLS',
+    'EXCLUDED_DIR_NAMES', 'EXCLUDED_PATH_PATTERNS',
+    '_INCLUDE_EXTERNAL', '_USER_EXPLICIT_SCOPE',
+    '_is_path_excluded',
+    'compute_issue_hash', 'compute_structural_pattern',
+    '_is_pycache_or_backup',
+    '_is_self_reference',
+    '_is_common_value',
+    '_is_in_docstring',
+    '_is_in_code_block',
+    '_is_in_table_or_example',
+    '_is_runtime_var_assert',
+    'check_spec_drift',
+    'check_spec_drift_reverse',
+    'check_hardcode_stale',
+    'check_stale_literal',
+    'run_yaml_scan',
+    # R110-411b: SD regex/frozenset constants live in the LIB
+    '_SD_STRING_IN_RE', '_SD_INT_EQ_RE', '_SD_INT_CMP_RE',
+    '_SD_URL_RE', '_SD_WS_ONLY_RE',
+    '_SD_ASSERT_RUNTIME_RE', '_SD_RUNTIME_CALL_RE',
+    '_SD_RUNTIME_VARS', '_SD_RUNTIME_DICT_KEYS',
+    '_SD_DATA_DIRS',
+    '_RECIPE_NUMERIC_RE', '_RECIPE_CHECKS_RE', '_COUNT_ANCHOR_NEXT',
+})
+
+
+def __getattr__(name):
+    """PEP 562 module-level __getattr__ — proxies attribute access to the LIB.
+
+    For ``findings`` / ``fid`` we return whatever the CLI module's
+    __dict__ holds (the test may have reassigned it), falling back to
+    the LIB's value. This makes ``mod.findings = []`` work as expected:
+    the new list is visible on subsequent ``mod.findings`` reads.
+    """
+    if name in _PROXIED_ATTRS:
+        if name in ('findings', 'fid') and name in globals():
+            # Test has reassigned this in CLI module's __dict__
+            return globals()[name]
+        return getattr(_lib_mod, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def add_finding(ftype, severity, file, issue, impact, fix,
+                *, line_start=None, line_end=None, **pattern_kwargs):
+    """Thin wrapper around lib.add_finding.
+
+    Before delegating, sync the LIB's ``findings``/``fid``/``SEVERITY_FILTER``
+    with whatever the CLI module's __dict__ holds. This makes the test's
+    ``mod.findings = []`` / ``mod.SEVERITY_FILTER = {...}`` resets visible
+    to the LIB (which otherwise would append to / filter against its own
+    stale state).
+    """
+    if 'findings' in globals():
+        _lib_mod.findings = globals()['findings']
+    if 'fid' in globals():
+        _lib_mod.fid = globals()['fid']
+    if 'SEVERITY_FILTER' in globals():
+        _lib_mod.SEVERITY_FILTER = globals()['SEVERITY_FILTER']
+    result = _lib_mod.add_finding(
+        ftype, severity, file, issue, impact, fix,
+        line_start=line_start, line_end=line_end, **pattern_kwargs,
+    )
+    # Sync back so subsequent mod.findings / mod.fid reads see the update
+    globals()['findings'] = _lib_mod.findings
+    globals()['fid'] = _lib_mod.fid
+    return result
+
+
+def main():
+    """R110-411b: entry point for the Python-tool scanner.
+
+    Runs the YAML walker + dev_*.py/mcp_*.py walker, invokes all check_*
+    helpers, prints the summary, and optionally enqueues findings via
+    --publish.
+    """
+
+    # --- R110-411b: YAML walker (R110-78 + R110-112 + R110-124 etc.) -------
+    # R110-411b moved the YAML walker out of `import`-side effects
+    # (R110-362 lesson) and into run_yaml_scan() so it runs once per
+    # invocation, behind the if __name__ guard at the bottom of the LIB.
+    # The walker populates ALL_YAMLS and emits MM1-MM5, Q1-Q3, NN1-NN3,
+    # E1, etc. findings. The CLI also calls it so that `python3 tools/
+    # dev_im_finder_scan.py` reproduces the original behavior.
+    run_yaml_scan()
+
+    # --- Python tool scanner (R110-13): catches R110-10 bugs #2 and #3 ---
+    # The YAML scanner above cannot see into .py files. R110-10 documented
+    # 3 runtime-mode bugs; Q4 caught #1 (off-by-one path in recipe prompt).
+    # Q4c catches #2 (data.json format drift) and Q4d catches #3
+    # (confidence 0.95 hardcoded markers). Both walk tools/*.py directly.
+    import glob as _glob
+    PY_TOOLS = sorted(_glob.glob('tools/dev_*.py') + _glob.glob('tools/mcp_*.py'))
+    for _pt in PY_TOOLS:
+        try:
+            with open(_pt) as _f:
+                _src = _f.read()
+        except Exception:
             continue
-        for f in files:
-            if f.endswith('.yaml') or f.endswith('.yml'):
-                full_path = os.path.join(root, f)
-                if _is_path_excluded(full_path):
+
+        # Q4c: data.json format drift (R110-10 bug #2)
+        # Detects json.dump / json.dumps calls that omit explicit indent or
+        # ensure_ascii. When the dashboard generator runs in PTY mode vs
+        # --no-session mode, missing options lead to different file
+        # layouts (e.g. compact on one side, pretty on the other). R110-10
+        # saw exactly this: data.json was valid in both modes but
+        # dashboard consumers misparsed because the format silently differed.
+        # Only flag files that actually write to a dashboard/JSON output
+        # path (contain 'data.json' or 'dashboards' string) — pure
+        # logging/serialization tools are out of scope.
+        #
+        # R110-270 refinement: NDJSON writes (one JSON object per line,
+        # written via `f.write(json.dumps(...))`) are intentionally compact
+        # and do not need `indent` — but DO benefit from `ensure_ascii=False`
+        # to keep file diffs stable across encodings. Skip files that are
+        # clearly NDJSON writers (one json.dumps per write call, then
+        # newline-appended) and require BOTH flags only for pretty-printed
+        # multi-line JSON output.
+        if ('data.json' in _src or 'dashboards' in _src) and 'json.dump' in _src:
+            # Match each json.dump/dumps call individually (non-greedy to
+            # stay inside one paren-group, even if call spans multiple lines).
+            # Skip json.load (read-only, no mode-drift risk).
+            _json_dumps = re.findall(
+                r"json\.dump(?:s)?\s*\((?:[^()]|\n)*?\)", _src)
+            for _call in _json_dumps:
+                # R110-277: recursion guard — skip when the matched
+                # `json.dumps(...)` substring is just a fragment of the
+                # detector's own issue-message literals (lines 800, 805 etc.
+                # contain "print(json.dumps(...))" inside the fix-text).
+                # Heuristic: a real json.dump call has at least one
+                # identifier / dict-literal / variable name between the
+                # parens; an issue-message fragment has only "..." or
+                # whitespace.
+                _arg = _call.split('(', 1)[1].rstrip(')').strip()
+                if not _arg or _arg in ('...',) or set(_arg) <= {' ', '.'}:
                     continue
-                ALL_YAMLS.append(full_path)
-# Also pick up top-level yamls in cwd (legacy)
-for f in glob.glob('*.yaml') + glob.glob('*.yml'):
-    if os.path.isfile(f) and f not in ALL_YAMLS:
-        ALL_YAMLS.append(f)
+                # Must contain BOTH indent and ensure_ascii to be mode-safe
+                # for multi-line pretty output. NDJSON-only writers
+                # (no indent expected) are still flagged if ensure_ascii is
+                # missing, but only when the call is for an interactive
+                # stdout/print path (heuristic: look for a 'print' wrapper
+                # within +/- 2 lines of the call).
+                # R110-271: for print(json.dumps(...)) (stdout output), only
+                # ensure_ascii=False is required — indent=2 is not needed
+                # for human-readable stdout (R110-270 design decision: kept
+                # compact for grep-friendliness). For file-write, ensure_ascii
+                # alone is still required.
+                _has_indent = 'indent' in _call
+                _has_ascii = 'ensure_ascii' in _call
+                _is_print = bool(re.search(
+                    r'print\s*\(\s*' + re.escape(_call[:20]),
+                    _src))
+                if _is_print and not _has_ascii:
+                    add_finding('Q4c', 'medium', _pt,
+                                f'data_json_drift: print json.dumps missing ensure_ascii: "{_call[:80].strip()}..."',
+                                'Non-ASCII output may differ across encodings',
+                                'Pass ensure_ascii=False to all print(json.dumps(...)) calls')
+                elif not _is_print and not _has_ascii:
+                    # NDJSON/file-write: only flag missing ensure_ascii
+                    add_finding('Q4c', 'low', _pt,
+                                f'data_json_drift: file-write json.dump missing ensure_ascii: "{_call[:80].strip()}..."',
+                                'ensure_ascii=False keeps file diffs stable across encodings',
+                                'Pass ensure_ascii=False to NDJSON/file-write json.dump calls')
 
-findings = []
-fid = 0
+        # Q4d: hardcoded confidence markers (R110-10 bug #3)
+        # Detects numeric confidence values (0.X or 1.0) hardcoded in
+        # pattern/secrets/regex definitions. When the scanner is invoked
+        # from PTY mode vs --no-session mode, hardcoded values get logged
+        # literally, but downstream consumers expect to read confidence
+        # from session metadata. R110-10 found that 6+ secret-detection
+        # patterns had hardcoded 0.95 values, and the discrepancy surfaced
+        # as "log marker drift" between run modes.
+        if 'confidence' in _src:
+            # Simpler: count confidence-like values that appear inside
+            # a 3-tuple position (after a quoted string, before another
+            # quoted string). Format in PATTERNS dict is:
+            #   (r"regex", "SEVERITY", 0.95, "py")
+            # so we look for ", 0.X, " or ", 1.0, " patterns.
+            # Bumped severity to 'medium' (was 'low' in first cut) because
+            # R97 SEVERITY_FILTER = {medium, high} would otherwise hide
+            # this finding, and the R110-10 confidence-drift bug
+            # manifested as silent log misparse, not just style.
+            _conf_hardcoded = re.findall(
+                r",\s*(0\.\d+|1\.0)\s*,\s*[\"']", _src)
+            if len(_conf_hardcoded) >= 3:
+                add_finding('Q4d', 'medium', _pt,
+                            f'confidence_marker_drift: {len(_conf_hardcoded)} hardcoded confidence values in pattern tuples',
+                            'Log mode compares confidence by string match; hardcoded values differ between run modes',
+                            'Read confidence from session metadata, not from pattern tuples')
 
-def add_finding(ftype, severity, file, issue, impact, fix):
-    global fid
-    # R28: respect SEVERITY_FILTER
-    if severity not in SEVERITY_FILTER:
-        return
-    fid += 1
-    findings.append({
-        'id': f'F-{fid:03d}',
-        'type': ftype,
-        'severity': severity,
-        'file': file,
-        'issue': issue,
-        'impact': impact,
-        'fix': fix
+    # --- SD: Spec-Drift detection (R110-78 PHASE 2, R110-105) ---
+    # Detects test-files in tests/ that assert literals which no longer
+    # appear anywhere in recipe/, tools/, or docs/ (R110-71 spec-drift
+    # incident pattern). Emits SD-<test-basename>-<idx> findings.
+    # Spec: .mase/directives/R110-78-spec-drift.md PHASE 2 (R110-83 sub-spec).
+    _SD_STRING_IN_RE = re.compile(
+        r'''assert\s+["']([^"']{4,80})["']\s+in\s+''')
+    _SD_INT_EQ_RE = re.compile(
+        r'''assert\s+\(?(\d+)\)?\s*==\s*[\w\.\(]''')
+    _SD_INT_CMP_RE = re.compile(
+        r'''assert\s+[\w\.\(\)]+\s*(?:==|!=|>|<|>=|<=)\s*(\d+)''')
+    _SD_URL_RE = re.compile(r'https?://', re.IGNORECASE)
+    _SD_WS_ONLY_RE = re.compile(r'^\s*$')
+
+    # R110-279: regex to match `assert "LITERAL" in <RHS>` where RHS is a
+    # captured/runtime value. The regex captures the literal (group 1) and
+    # the RHS expression (group 2) so the skip-rule can decide whether the
+    # RHS is a runtime-var (out, result, content, intake, capsys, ...) or
+    # a static source literal (recipe, yaml, etc.). The optional `\s*\[...\]`
+    # at the end handles subscript access like `rules["bp_autonomie"]`.
+    # The pattern is NOT anchored to start-of-line because the assert
+    # clause may follow a semicolon-separated assignment on the same line,
+    # e.g. `captured = capsys.readouterr(); assert "x" in captured.out`.
+    # Caller is responsible for `re.search` (not `re.match`).
+    _SD_ASSERT_RUNTIME_RE = re.compile(
+        r'''assert\s+["']([^"']{4,80})["']\s+in\s+'''
+        r'''([a-zA-Z_][\w\.]*(?:\(\))?(?:\.[a-zA-Z_]\w*)*)\s*(?:\[[^\]]*\])?''')
+
+    # R110-279: recognized runtime-variable names on the RHS of `in`. These
+    # are captured in the test (capsys.readouterr().out, file.read_text(),
+    # function return values, etc.). A literal asserted against a runtime
+    # value is by definition not a static source-literal — it can only be
+    # produced by the code under test. The drift detector's purpose is to
+    # catch stale static literals; runtime-var asserts are a different
+    # concern (the test itself will fail if the function regresses).
+    _SD_RUNTIME_VARS = frozenset({
+        'out', 'output', 'stdout', 'stderr', 'result', 'content',
+        'captured', 'captured_output', 'intake', 'printed', 'printed_output',
+        'response', 'rules', 'data', 'config', 'cli', 'cli_output',
+        'tmp', 'tmpdir', 'tmp_path', 'tmpdir_str',
     })
 
-for yp in sorted(ALL_YAMLS):
+    # R110-279: regex for common "captured-output" method calls on the RHS,
+    # e.g. capsys.readouterr().out, result.stdout, CliRunner().invoke(...).output.
+    # These are always runtime values regardless of the variable name.
+    _SD_RUNTIME_CALL_RE = re.compile(
+        r'''capsys\.readouterr\(\)\.(?:out|err)\b'''
+        r'''|context\.(?:stdout|stderr)\b'''
+        r'''|cli\.invoke\([^)]*\)\.output\b'''
+        r'''|runner\.invoke\([^)]*\)\.output\b'''
+        r'''|result\.(?:stdout|stderr|output)\b''')
+
+    # R110-279: recognized subscript keys (e.g. rules["bp_autonomie"]) for
+    # dict-of-rules / dict-of-config runtime vars. A literal in a runtime
+    # dict access is still a runtime check, not static-source drift.
+    _SD_RUNTIME_DICT_KEYS = frozenset({
+        'rules', 'data', 'config', 'cfg', 'result', 'response', 'intake',
+        'parsed', 'output', 'captured', 'output_data',
+    })
+
+    # --- R110-112 reverse-mode: detect recipe count-assertions not in tests/ ---
+    # Targeted: only detect count-assertions like "N checks", "N tests",
+    # "N critical X", "N rules" that are load-bearing spec-anchors (the
+    # R110-111 L26 pattern). Descriptive numeric prose ("30 seconds",
+    # "100 files") is NOT a count-assertion and is correctly skipped.
+    _RECIPE_NUMERIC_RE = re.compile(r'\b(\d{2,})\s+(\w[\w-]*)')
+    _RECIPE_CHECKS_RE = re.compile(r'(\d+)\s+(critical\s+)?checks?\b')
+    _COUNT_ANCHOR_NEXT = {'check', 'checks', 'test', 'tests', 'assert',
+                          'asserts', 'rule', 'rules', 'finding', 'findings',
+                          'validator', 'validators'}
+
+
+    # --- R110-124: Pattern A + B sister-functions -----------------------------
+    # Wrap dev_self_audit detectors (producer) as scanner findings (consumer).
+    # R02: scanner is consumer, self_audit is producer — do NOT duplicate the
+    # detection logic; lazy-import the module and reuse PATTERN_A_RE /
+    # PATTERN_A_ACCEPT_CTX / _is_in_fence / _strip_inline_code / _scan_pattern_b
+    # / _build_repo_literal_index. See: .mase/directives/R110-124-scanner-pattern-ab.md
+
+    # IDEMPOTENZ (spec section 7): grep-based check avoids re-inserting
+    # check_spec_drift body if a previous run already wrote it.
+    # (Unconditional call below is safe; function is module-scope and only
+    # defined once per file.)
     try:
-        with open(yp) as f:
-            data = yaml.safe_load(f)
-    except Exception as e:
-        add_finding('Q2', 'high', yp, f'YAML parse error: {e}',
-                    'Cannot process this file', 'Fix YAML syntax')
-        continue
-    if data is None:
-        continue
+        check_spec_drift(findings, '.')
+    except Exception as _sd_err:
+        add_finding('SD-err', 'low', 'tools/dev_im_finder_scan.py',
+                    f'spec_drift_check errored: {_sd_err}',
+                    'SD findings may be incomplete', 'Inspect traceback')
 
-    fname = os.path.basename(yp)
-
-    # --- MM: YAML Structure (9 types) ---
-    top_keys = set(data.keys())
-    if not top_keys & {'about', 'name', 'version'}:
-        add_finding('MM1', 'medium', yp, f'top-level keys wrong: {top_keys}',
-                    'Missing standard top-level keys', 'Add about/name/version')
-
-    if 'prompt' not in data:
-        add_finding('MM2', 'medium', yp, 'missing prompt: field',
-                    'Agent has no prompt block', 'Add prompt: field')
-
-    if 'instructions' not in data:
-        add_finding('MM3', 'medium', yp, 'missing instructions: field',
-                    'Agent has no instructions block', 'Add instructions: field')
-
-    settings = data.get('settings', {})
-    if settings:
-        for req in ['temperature']:
-            if req not in settings:
-                add_finding('MM4', 'medium', yp,
-                            f'settings missing required keys: [{req}]',
-                            'Agent may use Goose defaults instead of optimized MAS values',
-                            f'add missing settings: [{req}]')
-
-    # P-F012-4: MM5 (constitution: missing) is a MAS-engineer convention, NOT a Goose-native field.
-    # SKIP for sub-agents (they inherit master-constitution).
-    # APPLY only for top-level orchestrators (dev-mas-engineer, im-*).
-    is_sub_agent = 'sub' in fname or '/sub/' in str(yp)
-    is_top_orchestrator = any(t in fname for t in ['dev-mas-engineer', 'im-'])
-    if 'constitution' not in data and is_top_orchestrator and not is_sub_agent:
-        add_finding('MM5', 'low', yp, 'constitution: missing',
-                    'Agent may lack behavioral guardrails', 'Add constitution: field')
-
-    if 'extensions' not in data and 'sub' in fname:
-        add_finding('MM6', 'medium', yp,
-                    'extensions: missing when sub-delegation may be needed',
-                    'Agent cannot delegate to sub-agents', 'Add extensions: [summon]')
-
-    desc = data.get('description', '')
-    if not desc or desc.strip() in ['', 'description', 'TODO']:
-        add_finding('MM7', 'low', yp, 'description: empty or placeholder',
-                    'Agent purpose unclear', 'Add meaningful description')
-
-    # --- MM8/MM9: I_AM identity / MODE-CHECK (MAS convention) ---
-    # P-F012-5: SKIP templates and recovery (they get I_AM/MODE-CHECK at deploy time)
-    prompt = data.get('prompt', '')
-    is_template = '/template/' in str(yp) or '/recovery/' in str(yp)
-    if prompt and not is_template:
-        if len(prompt) > 30 and 'I_AM' not in prompt and 'I am' not in prompt:
-            add_finding('MM8', 'low', yp,
-                        'prompt: > 30 chars but no I_AM identity',
-                        'Agent lacks clear role identity', 'Add I_AM identity to prompt')
-        if ('I_AM' in prompt or 'I am' in prompt) and 'MODE-CHECK' not in prompt:
-            add_finding('MM9', 'low', yp,
-                        'prompt: contains I_AM but no MODE-CHECK',
-                        'Agent may not detect operating mode', 'Add MODE-CHECK to prompt')
-
-    # --- F: Prompt Block ---
-    if prompt and 'MODE-CHECK' not in prompt:
-        add_finding('F3', 'low', yp, 'prompt has no MODE-CHECK',
-                    'Agent may not detect operating mode', 'Add MODE-CHECK to prompt')
-
-    if prompt and 'I_AM' not in prompt and 'I am' not in prompt:
-        add_finding('F4', 'low', yp, 'prompt has no I_AM identity',
-                    'Agent may lack clear role definition', 'Add I_AM identity to prompt')
-
-    # --- B: Prompt Engineering ---
-    if prompt and len(prompt) > 300:
-        add_finding('B2', 'low', yp, f'prompt > 300 chars ({len(prompt)})',
-                    'Prompt may be too verbose', 'Shorten prompt to under 300 chars')
-
-    if prompt and 'context' not in prompt.lower() and 'workspace' not in prompt.lower():
-        add_finding('B3', 'low', yp, 'prompt missing context-info',
-                    'Agent may lack operational context', 'Add context info to prompt')
-
-    # --- A: Timeout/Steps Optimization ---
-    timeout = settings.get('timeout', 0) if settings else 0
-    max_steps = settings.get('max_steps', 0) if settings else 0
-
-    if timeout and timeout < 60:
-        add_finding('A1', 'medium', yp, f'timeout={timeout}s too low (< 60s)',
-                    'Agent may timeout before completing tasks',
-                    f'set timeout={min(timeout*2, 3600)}')
-    if max_steps and max_steps < 10:
-        add_finding('A2', 'medium', yp, f'max_steps={max_steps} too low (< 10)',
-                    'Agent may run out of steps', f'set max_steps={max_steps+10}')
-    if timeout == 0:
-        add_finding('A5', 'medium', yp, 'timeout=0 (unlimited)',
-                    'Goose has 5min default sub-agent timeout', 'Set explicit timeout')
-
-    # --- G: Mode-Detection ---
-    instructions = data.get('instructions', '')
-    if instructions and 'mode' not in instructions.lower() and 'MODE' not in instructions:
-        add_finding('G2', 'low', yp,
-                    'mode detection logic may be missing from instructions',
-                    'Agent may not adapt to different modes',
-                    'Add mode detection to instructions')
-
-    # --- H: Constitution Reference ---
-    if 'constitution' not in data:
-        add_finding('H1', 'low', yp,
-                    'missing R01-R18 reference (no constitution)',
-                    'Agent lacks rule framework', 'Add constitution with R01-R18')
-
-    # --- Q: YAML Schema Violations ---
-    for req in ['name', 'version', 'description']:
-        if req not in data:
-            add_finding('Q1', 'medium', yp, f'missing required field: {req}',
-                        'YAML schema incomplete', f'Add {req} field')
-
-    known_fields = {'about', 'name', 'version', 'description', 'instructions',
-                    'prompt', 'extensions', 'settings', 'constitution',
-                    'parameters', 'tools', 'triggers', 'metadata', 'tags', 'category'}
-    unknown = top_keys - known_fields
-    if unknown:
-        add_finding('Q3', 'low', yp,
-                    f'extra/unknown fields: {", ".join(sorted(unknown))}',
-                    'Non-standard fields may not be processed',
-                    'Remove or rename unknown fields')
-
-    # --- JJ: Extensions ---
-    # P-F012-2: only fire JJ1 if extensions: is present AND not empty AND missing summon
-    # SKIP files where extensions: is absent (templates, one-off recipes, recovery)
-    if 'extensions' in data:
-        extensions = data.get('extensions', [])
-        if isinstance(extensions, list) and len(extensions) > 0:
-            # summon can be either string 'summon' or dict with name='summon'
-            has_summon = any(
-                e == 'summon' or (isinstance(e, dict) and e.get('name') == 'summon')
-                for e in extensions
-            )
-            if not has_summon:
-                add_finding('JJ1', 'medium', yp,
-                            "extensions: list missing summon (sub-agents can't be summoned)",
-                            'Agent cannot delegate to sub-agents', 'Add summon to extensions')
-
-    # --- T: Template Variables ---
-    if instructions:
-        hardcoded_paths = re.findall(r'/tmp/[^\s\"\'\)]+', instructions)
-        if hardcoded_paths:
-            add_finding('T1', 'low', yp,
-                        f'hardcoded path(s): {hardcoded_paths}',
-                        'Hardcoded paths may not exist on all systems',
-                        'Use {workspace} variable instead')
-
-    # --- C: Instructions Quality ---
-    if instructions:
-        if '⛔' not in instructions:
-            add_finding('C1', 'low', yp,
-                        'missing ⛔ prohibition markers in instructions',
-                        'Critical steps may not be enforced',
-                        'Add ⛔ markers before critical steps')
-        if 'STEP' not in instructions and 'step' not in instructions.lower():
-            add_finding('C2', 'low', yp,
-                        'steps not numbered',
-                        'Agent may skip critical phases',
-                        'Add numbered STEPs to instructions')
-        outdated = re.findall(r'/tmp/[^\s\"\'\)]+', instructions)
-        if outdated:
-            add_finding('C4', 'low', yp,
-                        f'outdated path reference: {outdated}',
-                        'Hardcoded /tmp/ path may not exist',
-                        'Replace with {{workspace}} variable')
-
-    # --- K: Error Handling ---
-    if instructions:
-        if 'try' not in instructions.lower() and 'except' not in instructions.lower():
-            add_finding('K1', 'low', yp,
-                        'missing try/except in instructions',
-                        'Errors may go unhandled', 'Add error handling steps')
-        if 'retry' not in instructions.lower():
-            add_finding('K3', 'low', yp,
-                        'no retry on transient errors',
-                        'Transient failures may abort the agent',
-                        'Add retry logic')
-
-    # --- L: Session Management ---
-    if instructions:
-        if 'cleanup' not in instructions.lower() and 'clean' not in instructions.lower():
-            add_finding('L1', 'low', yp,
-                        'session cleanup missing from instructions',
-                        'Temporary files may accumulate', 'Add cleanup step')
-        if 'log' not in instructions.lower():
-            add_finding('L2', 'low', yp,
-                        'log rotation missing from instructions',
-                        'Logs may grow unbounded', 'Add log management')
-
-    # --- N: Delegation Logic ---
-    # P-F012-3: N2 only fires for ACTIVE sub-agents in recipe/sub/, not templates/recovery
-    if 'sub' in fname and isinstance(extensions, list):
-        # P-F012-3 GUARD: only fire if extensions: is present AND non-empty AND missing summon
-        if 'extensions' in data and len(extensions) > 0:
-            has_summon = any(
-                e == 'summon' or (isinstance(e, dict) and e.get('name') == 'summon')
-                for e in extensions
-            )
-            if not has_summon:
-                add_finding('N2', 'medium', yp,
-                            'missing delegation capability (no summon)',
-                            'Agent cannot delegate to sub-agents',
-                            'Add summon to extensions')
-
-    # --- O: Output Schema ---
-    if instructions and 'output' not in instructions.lower() and 'return' not in instructions.lower():
-        add_finding('O1', 'low', yp,
-                    'output schema missing from instructions',
-                    'Agent output format undefined',
-                    'Define output schema in instructions')
-
-    # --- U: Undo/Rollback ---
-    if instructions:
-        if 'undo' not in instructions.lower() and 'rollback' not in instructions.lower():
-            add_finding('U1', 'low', yp,
-                        'change not undoable (no rollback in instructions)',
-                        'Changes may be irreversible', 'Add rollback instructions')
-
-    # --- V: Validation Hooks ---
-    if instructions:
-        if 'valid' not in instructions.lower() and 'check' not in instructions.lower():
-            add_finding('V1', 'low', yp,
-                        'no pre-apply check in instructions',
-                        'Changes may be applied without validation',
-                        'Add validation step')
-
-    # --- Y: Yield/Performance ---
-    if instructions and 'loop' in instructions.lower() and 'batch' not in instructions.lower():
-        add_finding('Y1', 'low', yp,
-                    'possible O(n²) loop without batching',
-                    'Performance may degrade with scale',
-                    'Add batch processing')
-
-    # --- BB: Boundaries ---
-    if instructions and '⛔' not in instructions:
-        add_finding('BB1', 'low', yp,
-                    'missing ⛔ prohibition list',
-                    'Agent may overstep boundaries',
-                    'Add ⛔ prohibition markers')
-
-    # --- II: I/O Format ---
-    if instructions and 'format' not in instructions.lower() and 'schema' not in instructions.lower():
-        add_finding('II1', 'low', yp,
-                    'format mismatch risk (no format/schema in instructions)',
-                    'Producer/consumer may disagree on format',
-                    'Specify I/O format in instructions')
-
-# --- D: Orchestrator Recipe (dev-mas-engineer.yaml) ---
-dev_path = 'recipe/dev-mas-engineer.yaml'
-if os.path.exists(dev_path):
-    with open(dev_path) as f:
-        dev_data = yaml.safe_load(f)
-    dev_instructions = dev_data.get('instructions', '')
-    if dev_instructions:
-        if 'MODE-CHECK' not in dev_instructions and 'STEP 0' not in dev_instructions:
-            add_finding('D1', 'medium', dev_path,
-                        'missing STEP 0 (MODE-CHECK)',
-                        'Orchestrator may not detect operating mode',
-                        'Add STEP 0 MODE-CHECK')
-        if 'STEP' not in dev_instructions:
-            add_finding('D3', 'medium', dev_path,
-                        'missing step entirely (no numbered STEPs)',
-                        'Orchestrator may skip critical phases',
-                        'Add numbered STEPs')
-
-# --- E: Intention-Parser Patterns ---
-ip_path = 'recipe/sub/sub_mas-intention-parser.yaml'
-if os.path.exists(ip_path):
-    with open(ip_path) as f:
-        ip_data = yaml.safe_load(f)
-    ip_instructions = ip_data.get('instructions', '')
-    if ip_instructions and 'pattern' not in ip_instructions.lower():
-        add_finding('E1', 'medium', ip_path,
-                    'missing pattern in intention-parser',
-                    'Intention parser cannot detect patterns',
-                    'Add pattern definitions')
-
-# --- NN: Agent Architecture (Split-Detection) ---
-for yp in ALL_YAMLS:
+    # R110-112: run reverse-mode check
     try:
-        with open(yp) as f:
-            data = yaml.safe_load(f)
-    except:
-        continue
-    if data is None:
-        continue
-    prompt = data.get('prompt', '') or ''
-    instructions = data.get('instructions', '') or ''
-    combined = prompt + ' ' + instructions
-    role_verbs = ['analyze', 'validate', 'generate', 'monitor', 'dispatch',
-                  'repair', 'audit', 'report', 'scan', 'design', 'rank',
-                  'find', 'read', 'write', 'edit', 'deploy', 'test', 'build',
-                  'configure', 'manage']
-    found_roles = [v for v in role_verbs if v in combined.lower()]
-    if len(found_roles) >= 5:
-        add_finding('NN1', 'medium', yp,
-                    f'multi_role_agent: {len(found_roles)} distinct roles ({found_roles[:5]})',
-                    'Agent may violate single-responsibility principle',
-                    'Consider splitting into orchestrator + sub-agents')
+        check_spec_drift_reverse(findings, '.')
+    except Exception as _sd_rev_err:
+        add_finding('SD-rev-err', 'low', 'tools/dev_im_finder_scan.py',
+                    f'spec_drift_reverse_check errored: {_sd_rev_err}',
+                    'SD-recipe findings may be incomplete', 'Inspect traceback')
 
-    # NN2: tool_overload
-    extensions = data.get('extensions', [])
-    if isinstance(extensions, list) and len(extensions) >= 5:
-        add_finding('NN2', 'medium', yp,
-                    f'tool_overload: {len(extensions)} extensions declared',
-                    'Too many tools may confuse the agent',
-                    'Distribute tools across specialized sub-agents')
+    # R110-124: Pattern A + B drift detection
+    try:
+        check_hardcode_stale(findings, '.')
+    except Exception as _ha_err:
+        add_finding('HARDCODE-STALE-err', 'low',
+                    'tools/dev_im_finder_scan.py',
+                    f'hardcode_check errored: {_ha_err}',
+                    'HARDCODE-STALE findings may be incomplete',
+                    'Inspect traceback')
+    try:
+        check_stale_literal(findings, '.')
+    except Exception as _sl_err:
+        add_finding('STALE-LITERAL-err', 'low',
+                    'tools/dev_im_finder_scan.py',
+                    f'stale_literal_check errored: {_sl_err}',
+                    'STALE-LITERAL findings may be incomplete',
+                    'Inspect traceback')
 
-    # NN3: scope_bloat
-    desc = data.get('description', '')
-    if desc and len(desc) > 200:
-        domains = ['config', 'recipe', 'yaml', 'code', 'test', 'deploy',
-                   'monitor', 'report', 'audit', 'security', 'pipeline',
-                   'session', 'recovery', 'knowledge', 'dispatch']
-        found_domains = [d for d in domains if d in desc.lower()]
-        if len(found_domains) >= 3:
-            add_finding('NN3', 'medium', yp,
-                        f'scope_bloat: description > 200 chars with {len(found_domains)} domains ({found_domains[:3]})',
-                        'Agent scope too broad',
-                        'Split into domain-specific sub-agents')
+    # --- Summary ---
+    by_type = Counter(f['type'] for f in findings)
+    by_sev = Counter(f['severity'] for f in findings)
+    print(f'Total findings: {len(findings)}')
+    print(f'By severity: {dict(by_sev)}')
+    print(f'By type: {dict(sorted(by_type.items()))}')
+    print(f'Types covered: {len(by_type)}/53+')
 
-# --- Summary ---
-by_type = Counter(f['type'] for f in findings)
-by_sev = Counter(f['severity'] for f in findings)
-print(f'Total findings: {len(findings)}')
-print(f'By severity: {dict(by_sev)}')
-print(f'By type: {dict(sorted(by_type.items()))}')
-print(f'Types covered: {len(by_type)}/53+')
+    # Output as JSON for processing
+    # R110-276: ensure_ascii=False so non-ASCII findings survive the
+    # round-trip to consumers (e2e-evidence archive, downstream scanners).
+    print('---JSON_START---')
+    print(json.dumps({'findings': findings, 'summary': {
+        'total': len(findings),
+        'by_type': dict(by_type),
+        'by_severity': dict(by_sev)
+    }}, indent=2, ensure_ascii=False))
 
-# Output as JSON for processing
-print('---JSON_START---')
-print(json.dumps({'findings': findings, 'summary': {
-    'total': len(findings),
-    'by_type': dict(by_type),
-    'by_severity': dict(by_sev)
-}}, indent=2))
+    # --- R110-177 PHASE 2: persist issue-db (only when active) ---
+    # ISSUE_DB summary goes to STDERR so the stdout JSON block stays
+    # parseable (existing consumers split on ---JSON_START---).
+    _issue_db = _get_issue_db()
+    if _issue_db is not None:
+        _issue_db.save()  # atomic write
+        _sum = _issue_db._data['summary']
+        print(f"ISSUE_DB: total={_sum['total_issues']} "
+              f"open={_sum['by_status']['open']} "
+              f"fixed={_sum['by_status']['fixed']} "
+              f"wontfix={_sum['by_status']['wontfix']}", file=sys.stderr)
+
+    # --- R110-165 phase 1.2: optional --publish to enqueue im.finding.created ---
+    # Detect flag in sys.argv (we don't use argparse for backward compat).
+    if any(a == '--publish' or a.startswith('--publish=') for a in sys.argv):
+        _publish_topic = 'im.finding.created'
+        _request_id = next(
+            (a.split('=', 1)[1] for a in sys.argv
+             if a.startswith('--publish-request-id=')),
+            f'im-finder-{int(time.time())}'
+        )
+        _payload = {
+            'request_id': _request_id,
+            'source': 'dev_im_finder_scan',
+            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+            'findings_total': len(findings),
+            'findings_by_severity': dict(by_sev),
+            'findings_by_type': dict(by_type),
+            # only ship the high+medium findings inline; low-severity are counted but not listed
+            # (R110-191 fix: real finding keys are 'file'/'issue', not 'location'/'description' —
+            #  ship both so consumers using either spec work; pre-existing since R110-165 266ceb7)
+            'findings_top': [
+                {k: f[k] for k in ('type', 'severity', 'file', 'issue')
+                 if k in f} | {'location': f['file'], 'description': f['issue']}
+                for f in findings
+                if f.get('severity') in ('high', 'blocker')
+            ][:20],
+        }
+        try:
+            import subprocess as _sp
+            _enq = _sp.run(
+                ['python3', str(Path(__file__).resolve().parent / 'dev_message_queue.py'),
+                 '--enqueue', _publish_topic, json.dumps(_payload),
+                 '--idempotency-key', f'{_request_id}-im-finder',
+                 '--request-id', _request_id],
+                capture_output=True, text=True, timeout=30, cwd=Path(__file__).resolve().parent.parent,
+            )
+            _msg_id = (_enq.stdout or '').strip()
+            if _enq.returncode != 0 or not _msg_id:
+                print(f'[PUBLISH-ERROR] enqueue failed: exit={_enq.returncode} stderr={_enq.stderr.strip()}', file=sys.stderr)
+            else:
+                print(f'[PUBLISH-OK] {_publish_topic} msg_id={_msg_id}', file=sys.stderr)
+        except Exception as _e:
+            print(f'[PUBLISH-ERROR] {_e!r}', file=sys.stderr)
+
+# --- R110-411b: script-mode guard (was: bare module-level block pre-R110-411b) ---
+# Without this guard, `import dev_im_finder_scan` would walk
+# tools/dev_*.py + tools/mcp_*.py at import-time, causing 30s+
+# timeouts in test fixtures (R110-362 lesson). Now the walk is
+# gated behind `python3 tools/dev_im_finder_scan.py ...`.
+if __name__ == '__main__':
+    main()

@@ -5,13 +5,13 @@ Will be called on user refresh ONLY. NO daemon. NO polling.
 Generates Dashboard for den AKTUELLEN Workspace.
 
 call: python3 dev_dashboard_refresh.py
-Output: .mas/dashboards/project.json + formatierte Text-Output
+Output: .mase/dashboards/project.json + formatierte Text-Output
 """
 import json, os, subprocess, glob, re, sys
 from datetime import datetime
 
 WORKSPACE = os.environ.get('MAS_WORKSPACE', '.')
-DASH_DIR = os.path.join(WORKSPACE, '.mas', 'dashboards')
+DASH_DIR = os.path.join(WORKSPACE, '.mase', 'dashboards')
 HISTORY_FILE = os.path.join(DASH_DIR, 'history.json')
 
 
@@ -44,7 +44,7 @@ def load_json(path, default=None):
 def generate_dashboard(ws):
     ws_abs = os.path.abspath(ws)
     mas_dir = os.path.join(ws_abs, 'mas-engineer')
-    state_dir = os.path.join(mas_dir, '.state')
+    state_dir = os.path.join(mas_dir, '.mase')
     tools_dir = os.path.join(mas_dir, 'tools')
     sub_dir = os.path.join(mas_dir, 'recipe', 'sub')
     docs_dir = os.path.join(mas_dir, 'docs')
@@ -228,7 +228,7 @@ def generate_dashboard(ws):
     # ─── EXECUTION STATUS (aus memory) ───
     execution = {"has_active_plan": False, "current_task": None,
                  "last_status": None, "done": 0, "total": 0, "running": []}
-    mem_dir = os.path.join(ws_abs, '.dev-team', 'memory')
+    mem_dir = os.path.join(ws_abs, '.monitor', 'memory')
     if os.path.exists(mem_dir):
         summary_files = glob.glob(os.path.join(mem_dir, 'summary-*.md'))
         if summary_files:
@@ -400,7 +400,7 @@ if __name__ == '__main__':
 
     # History write
     with open(HISTORY_FILE, 'w') as f:
-        json.dump(data['history'], f, indent=2)
+        json.dump(data['history'], f, indent=2, ensure_ascii=False)
 
     # Send notification for realtime updates
     flag_file = os.path.join(DASH_DIR, '.updated')

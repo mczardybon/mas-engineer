@@ -78,13 +78,17 @@ def merge_findings(findings, registry_path, project):
             patterns.append(new_p)
             new_count += 1
     reg['patterns'] = patterns
+    # R110-320: hoist `now` out of the for-loop so empty-findings
+    # (a valid input per the tool's API) doesn't crash with
+    # UnboundLocalError on the post-loop `reg['last_updated'] = now`.
+    now = datetime.datetime.now().isoformat()
+    reg['last_updated'] = now
     reg['pattern_stats'] = {
         'total_projects': len(existing_projects),
         'total_runs': len(patterns),
         'total_patterns': len(patterns),
         'avg_confidence': round(sum(p.get('confidence',0) for p in patterns) / max(1,len(patterns)), 2)
     }
-    reg['last_updated'] = now
     with open(registry_path, 'w') as f:
         yaml.dump(reg, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
     return {'new_patterns': new_count, 'merged_count': merged_count,

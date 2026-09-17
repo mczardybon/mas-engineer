@@ -38,8 +38,8 @@ USAGE:
   python3 tools/e2e_teams.py --dry-run          # check team presence only
 
 OUTPUT:
-  - e2e-results/<date>-teams-<n>/raw-results.json
-  - e2e-results/<date>-teams-<n>/logs/<team>-<level>.log
+  - logs/e2e-results/<date>-teams-<n>/raw-results.json
+  - logs/e2e-results/<date>-teams-<n>/logs/<team>-<level>.log
   - Exit 0 if all PRESENT (non-skip) tests pass.
 """
 
@@ -56,18 +56,27 @@ import fcntl
 import termios
 import struct
 from datetime import datetime
+import shutil
+import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Central logs/ folder at the git repo root (single destination for all
+# generated artifacts). ROOT is mas-engineer/, so the repo root is ROOT.parent.
+LOGS_ROOT = os.path.join(os.path.dirname(ROOT), "logs")
 
-# Team recipes live at the goose user config (not in this repo)
+# Team recipes live at the goose user config (not in this repo).
+# R110-43: use os.path.expanduser so $HOME is honored (works for any user, not just root).
+_TEAM_RECIPES_BASE = os.path.expanduser("~/.config/goose/recipes")
 TEAM_RECIPES = {
-    "translator": "/root/.config/goose/recipes/translator/translator-team.yaml",
-    "sales":      "/root/.config/goose/recipes/sales/sales-team.yaml",
-    "marketing":  "/root/.config/goose/recipes/marketing/marketing-team.yaml",
+    "translator": os.path.join(_TEAM_RECIPES_BASE, "translator", "translator-team.yaml"),
+    "sales":      os.path.join(_TEAM_RECIPES_BASE, "sales",      "sales-team.yaml"),
+    "marketing":  os.path.join(_TEAM_RECIPES_BASE, "marketing",  "marketing-team.yaml"),
 }
 
-# Where the runner writes generated wrapper recipes (ephemeral, in /tmp)
-WRAPPER_DIR = "/tmp/e2e_teams_recipes"
+# Where the runner writes generated wrapper recipes (ephemeral, in /tmp).
+# R110-43: use $TMPDIR (honored by tempfile) so multi-user systems don't collide.
+# Falls back to /tmp if TMPDIR is unset.
+WRAPPER_DIR = os.environ.get("TMPDIR", tempfile.gettempdir()) + "/e2e_teams_recipes"
 
 
 def log(msg, level="INFO"):
@@ -328,7 +337,7 @@ def build_wrapper_recipe(team, level, case, team_recipe_path):
             "max_steps": 30,
             "max_turns": 25,
             "goose_provider": "openai",
-            "goose_model": "deepseek-chat",
+            "goose_model": "deepseek-v4-flash",
         }
     }
     return yaml.dump(wrapper, default_flow_style=False, sort_keys=False,
@@ -340,7 +349,7 @@ def write_wrapper(team, level, case):
     os.makedirs(WRAPPER_DIR, exist_ok=True)
     wrapper_path = f"{WRAPPER_DIR}/{team}-{level}.yaml"
     content = build_wrapper_recipe(team, level, case, TEAM_RECIPES[team])
-    with open(wrapper_path, "w") as f:
+    with open(wrapper_path, "w", encoding="utf-8") as f:
         f.write(content)
     return wrapper_path
 
@@ -368,7 +377,9 @@ def run_team_test(team, level, case, env):
     wrapper = write_wrapper(team, level, case)
 
     # 2. Build goose command: --recipe <wrapper> --params <kv>... --no-session
-    cmd = ["/root/.local/bin/goose", "run", "--recipe", wrapper, "--no-session"]
+    # R110-43: use shutil.which to find goose on PATH, not hard-coded /root/.local/bin
+    _goose = shutil.which("goose") or os.path.expanduser("~/.local/bin/goose")
+    cmd = [_goose, "run", "--recipe", wrapper, "--no-session"]
     for k, v in case["params"].items():
         cmd.extend(["--params", f"{k}={v}"])
 
@@ -403,7 +414,7 @@ def run_team_test(team, level, case, env):
             break
         if time.time() - last_data_time > IDLE_TIMEOUT and len(output) > 500:
             try: os.write(master, b"\x03")
-            except: pass
+            except (OSError, ValueError): pass
             break
         # Early exit if marker found AND a newline after it (final response)
         if case["marker"].encode() in output:
@@ -411,7 +422,7 @@ def run_team_test(team, level, case, env):
             if b"\n" in tail[tail.rfind(case["marker"].encode()):]:
                 time.sleep(2)
                 try: os.write(master, b"\x03")
-                except: pass
+                except (OSError, ValueError): pass
                 break
 
     try: proc.wait(timeout=3)
@@ -497,7 +508,9 @@ def main():
         sys.exit(0)
 
     env = {**os.environ}
-    env.setdefault("PATH", "/root/.local/bin:" + env.get("PATH", ""))
+    # R110-43: use ~/.local/bin dynamically (works for any user)
+    _user_bin = os.path.expanduser("~/.local/bin")
+    env.setdefault("PATH", _user_bin + ":" + env.get("PATH", ""))
     # Use DEEPSEEK_API_KEY from .env if present, else fall back to OPENAI_API_KEY.
     # The placeholder "sk-e1a...1b93" was a redacted test value that produced 401s.
     env.setdefault("OPENAI_HOST", "https://api.deepseek.com")
@@ -508,11 +521,11 @@ def main():
     levels = [args.level] if args.level else ["easy", "medium", "hard"]
 
     today = datetime.now().strftime("%Y-%m-%d")
-    existing = sorted(glob.glob(f"e2e-results/{today}-teams-*"))
+    existing = sorted(glob.glob(os.path.join(LOGS_ROOT, "e2e-results", f"{today}-teams-*")))
     run_n = len(existing) + 1
-    out_dir = f"e2e-results/{today}-teams-{run_n}"
+    out_dir = os.path.join(LOGS_ROOT, "e2e-results", f"{today}-teams-{run_n}")
     os.makedirs(out_dir, exist_ok=True)
-    os.makedirs(f"{out_dir}/logs", exist_ok=True)
+    os.makedirs(os.path.join(out_dir, "logs"), exist_ok=True)
     log(f"results dir: {out_dir}")
 
     all_results = {"started": datetime.now().isoformat(), "tests": {}}
@@ -528,7 +541,7 @@ def main():
             section(f"TEST: {test_key}")
             result = run_team_test(team, level, case, env)
             all_results["tests"][test_key] = result
-            with open(f"{out_dir}/logs/{team}-{level}.log", "w") as f:
+            with open(f"{out_dir}/logs/{team}-{level}.log", "w", encoding="utf-8") as f:
                 f.write(f"# {test_key}\n")
                 f.write(f"# params: {case['params']}\n")
                 f.write(f"# marker: {case['marker']}\n")
@@ -547,7 +560,7 @@ def main():
     all_results["elapsed_s"] = round(time.time() - overall_start, 1)
     all_results["finished"] = datetime.now().isoformat()
 
-    with open(f"{out_dir}/raw-results.json", "w") as f:
+    with open(f"{out_dir}/raw-results.json", "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2, default=str)
 
     statuses = [t["status"] for t in all_results["tests"].values()]

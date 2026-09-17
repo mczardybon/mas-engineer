@@ -1,0 +1,76 @@
+# 30-agent task definitions for R110-27 reproducible live PTY test
+# Format: <recipe-name>: <user-task-message>
+# Each task is REAL and relevant to the agent's role (not boilerplate)
+# Tasks reference the sample-input files in this directory.
+
+# Team 1: code-review (hierarchical)
+code-review-correctness: |
+  Review sample-input/sample_with_bugs.py for correctness issues. List each bug with line number and explain the fix.
+code-review-perf: |
+  Review sample-input/sample_with_bugs.py and sample-input/perf_critical.py for performance issues. List findings with impact estimates.
+code-review-readability: |
+  Review sample-input/sample_with_bugs.py for readability. Suggest improvements, then rate readability 1-10.
+code-review-style: |
+  Review sample-input/sample_with_bugs.py for PEP 8 style violations. List each violation.
+code-review-lead: |
+  Synthesize findings from correctness, perf, readability, and style agents for sample-input/sample_with_bugs.py. Output a final review report.
+
+# Team 2: security-scan (flat)
+security-scan-1-sast: |
+  Static-analyze sample-input/sample_with_bugs.py for security issues. List CWE references.
+security-scan-2-secrets: |
+  Scan all files in sample-input/ for hardcoded secrets, API keys, or credentials. Report findings.
+security-scan-3-deps: |
+  Audit the imports in sample-input/*.py for known-vulnerable dependencies. Report findings.
+security-scan-4-input: |
+  Check sample-input/*.py for input-validation vulnerabilities (SQLi, command injection, path traversal). Report findings.
+security-scan-5-crypto: |
+  Review sample-input/*.py for cryptographic misuse. Report findings with best-practice recommendations.
+
+# Team 3: data-quality (pipeline)
+dq-stage-1-profile: |
+  Profile sample-input/data.csv. Report row count, column types, missing-value counts, and basic statistics.
+dq-stage-2-validate: |
+  Validate sample-input/data.csv against these rules: age in [0,120], no missing id, valid country code (DE/US/UK/FR). Report violations.
+dq-stage-3-anomalies: |
+  Detect anomalies in sample-input/data.csv (using profile from stage 1 + validation from stage 2). Report outliers and their likely cause.
+dq-stage-4-enrich: |
+  Suggest enrichment strategies for sample-input/data.csv (e.g., country name lookup, age band). Report suggestions.
+dq-stage-5-report: |
+  Generate a final data-quality report for sample-input/data.csv. Include executive summary, findings, and remediation steps.
+
+# Team 4: perf-eval (hierarchical)
+perf-eval-cpu: |
+  Analyze sample-input/perf_critical.py for CPU performance issues. List hot functions with complexity analysis.
+perf-eval-memory: |
+  Analyze sample-input/perf_critical.py for memory performance issues (allocations, leaks, GC pressure). Report findings.
+perf-eval-io: |
+  Analyze sample-input/*.py for I/O performance issues. Report findings.
+perf-eval-concurrency: |
+  Analyze sample-input/*.py for concurrency issues (race conditions, deadlocks, false sharing). Report findings.
+perf-eval-lead: |
+  Synthesize perf-eval findings (CPU, memory, I/O, concurrency) for sample-input/*.py into a final report.
+
+# Team 5: refactor (flat)
+refactor-1-simplify: |
+  Suggest before/after refactoring for sample-input/sample_with_bugs.py focusing on simplifying complex expressions.
+refactor-2-extract: |
+  Identify extraction opportunities (functions/classes) in sample-input/*.py. Suggest before/after.
+refactor-3-rename: |
+  Suggest better variable/function names for sample-input/*.py. Provide before/after table.
+refactor-4-patterns: |
+  Identify design-pattern opportunities in sample-input/*.py. Suggest which pattern fits where.
+refactor-5-decompose: |
+  Suggest decomposition for any long methods in sample-input/*.py. Provide before/after.
+
+# Team 6: doc-gen (pipeline)
+doc-gen-1-analyze: |
+  Analyze sample-input/sample_with_bugs.py and extract the public API (functions, classes, methods with signatures).
+doc-gen-2-skeleton: |
+  Generate a docstring skeleton (Google style) for all functions/classes in sample-input/sample_with_bugs.py.
+doc-gen-3-examples: |
+  Generate usage examples for the public API in sample-input/sample_with_bugs.py.
+doc-gen-4-crosslink: |
+  Identify cross-references between functions/classes in sample-input/*.py. Suggest "see also" links.
+doc-gen-5-render: |
+  Render the final documentation (skeleton + examples + crosslinks) for sample-input/sample_with_bugs.py in Markdown format.

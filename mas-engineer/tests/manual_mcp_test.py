@@ -9,7 +9,7 @@ import time
 import os
 
 WS = os.getcwd()
-MCP = f'{WS}/.mas/mcp'
+MCP = f'{WS}/.mase/mcp'
 
 def send(proc, msg):
     """Send JSON-RPC message as newline-delimited JSON (MCP SDK accepts both)."""

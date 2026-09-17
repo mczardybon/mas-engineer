@@ -10,7 +10,7 @@ call: python3 dev_yaml_generator_generic.py --target <user-projekt> [--validate-
 import os, sys, yaml
 from dev_yaml_generator_core import generate_agent_yaml, validate_generated
 
-SCHEMA_FILE = ".state/templates/agent_schema.yaml"
+SCHEMA_FILE = ".mase/templates/agent_schema.yaml"
 SUB_DIR = "sub"
 
 def load_schema(target_dir):

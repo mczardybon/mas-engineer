@@ -1,0 +1,93 @@
+Loading recipe: 🛡️ SUB-MAS-SECURITY-CMD-INJECTION-SCANNER — Command Injection (Script-wrapper)
+Description: v2.0.0 | Code-Review-Team: Scans for command injection vulnerabilities. Delegates to tools/dev_security_scan.py SCAN cmd-injection.
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260730_116 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: python3 tools/dev_security_scan.py SCAN cmd-injection .
+    timeout_secs: 60
+
+{
+  "command": "SCAN",
+  "scan": "cmd-injection",
+  "path": "/tmp/mas-engineer-test/mas-engineer",
+  "timestamp": "2026-07-30T05:06:24.362653+00:00",
+  "scanned_files": 148,
+  "findings": [
+    {
+      "file": "run_translators.py",
+      "line": 41,
+      "pattern": "subprocess\\.\\w+\\([^)]*shell\\s*=\\s*True",
+      "match": "subprocess.run(\n            shell_cmd,\n            shell=True",
+      "context": "result = subprocess.run(",
+      "severity": "CRITICAL",
+      "confidence": 0.95,
+      "scan": "cmd-injection"
+    },
+    {
+      "file": "tests/test_unix_test_word.py",
+      "line": 190,
+      "pattern": "subprocess\\.\\w+\\([^)]*shell\\s*=\\s*True",
+      "match": "subprocess.run(\"command -v test && type test\", shell=True",
+      "context": "r = subprocess.run(\"command -v test && type test\", shell=True,",
+      "severity": "CRITICAL",
+      "confidence": 0.95,
+      "scan": "cmd-injection"
+    }
+  ],
+  "count": 2,
+  "by_severity": {
+    "CRITICAL": 2,
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "INFO": 0
+  },
+  "issues_found": true
+}
+
+Command exited with code 1## 🛡️ CMD-Injection Scan Results
+
+| Metric | Value |
+|---|---|
+| **Scanned files** | 148 |
+| **Issues found** | ✅ **2 CRITICAL** |
+| **Scanner** | `dev_security_scan.py v2.0.0` |
+| **Timestamp** | 2026-07-30T05:06:24 UTC |
+
+---
+
+### 🔴 CRITICAL Findings
+
+#### 1. `run_translators.py` — Line 41
+```python
+result = subprocess.run(
+    shell_cmd,
+    shell=True,
+    ...
+)
+```
+- **Pattern:** `subprocess.run(... shell=True`
+- **Risk:** Unsanitized `shell_cmd` passed with `shell=True` enables shell injection if the command string contains user-controlled input.
+
+#### 2. `tests/test_unix_test_word.py` — Line 190
+```python
+r = subprocess.run("command -v test && type test", shell=True, ...)
+```
+- **Pattern:** `subprocess.run(... shell=True`
+- **Risk:** Hardcoded command in a test — lower blast radius, but still `shell=True` where `shell=False` with a list would suffice.
+
+---
+
+### Recommendations
+
+| File | Fix |
+|---|---|
+| `run_translators.py:41` | Replace `shell=True` with argument list `[cmd, arg1, arg2]` or use `shlex.split()`. If `shell=True` is unavoidable, validate/sanitize all inputs. |
+| `tests/test_unix_test_word.py:190` | Replace with `subprocess.run(["command", "-v", "test"], ...)` — no `shell=True` needed. |
+
+**Scan complete.** Both issues flagged as CRITICAL due to the use of `shell=True` in `subprocess.run()`.

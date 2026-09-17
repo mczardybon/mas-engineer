@@ -36,7 +36,8 @@ Tools are symlinks: project/tools → MAS tools installation.
        ASK: "👁️  Monitoring (health report)? [Y/n]"
        SET components = selected components (e.g. "rules,state,knowledge")
    NOTE: For deploying MAS-Engineer as a standalone distribution
-         (all 96 sub-agents + 57 tools copied), use
+         (all sub-agents + tools copied — (historical, 2026-07-25: 112 sub-agents / 58 tools)
+          current 116 sub-agents / 80 tools, 2026-08-19), use
          delegate(sub_mas-bootstrap, task=DEPLOY) instead.
    OPTIONAL:
    "Should I search for current techniques via sub_mas-web-researcher
@@ -73,7 +74,7 @@ Expected output:
   - ✅ .gitignore + .gitattributes
   - ✅ .goosehints (Goose integration)
   - ✅ .mas-mode (mode file with project name)
-  - ✅ .mas/dashboards/ (dashboard data + MCP app)
+  - ✅ .mase/dashboards/ (dashboard data + MCP app)
   - ✅ Extended components per selection:
     • rules:    Rules R01-R18 + hardness levels + responsibility matrix
     • state:    changes.json + guardian.yaml + schedule.yaml + audit.log
@@ -128,7 +129,7 @@ SHOW:
   🔬 Analysis:  Remote via sub_mas-general-improver
                 No agent copy needed — im-* read remotely
 
-  ✅ Rules:    .state/rules/regeln.yaml (adapt to your project)
+  ✅ Rules:    .mase/rules/regeln.yaml (adapt to your project)
                 3 default rules (R01, R04, R09) — in auto mode: R01-R18 + hardness levels
 
   📊 Checklist: BP-CHECKLIST.md (37 feature types)
@@ -199,7 +200,7 @@ Used by intention-parser when user requests a team with (interactive)/(manual)/(
 2. After confirmation:
    a. Create coordinator YAML (use dev_template_generator.py)
    b. Create N member YAMLs (use dev_template_generator.py with generic task)
-   c. Update SOT (.state/workflows.yaml)
+   c. Update SOT (.mase/workflows.yaml)
    d. Update sub_recipes (recipe/dev-mas-engineer.yaml)
    e. NO split-pattern (this is the interactive alternative to auto-split)
 3. Return result:

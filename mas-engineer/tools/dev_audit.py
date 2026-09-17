@@ -11,7 +11,7 @@ call: dev_audit.py --log --action WRITE --agent gatekeeper --ziel path --status 
 import sys, os, json, datetime
 
 MAS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STATE_DIR = os.path.join(MAS_DIR, ".state")
+STATE_DIR = os.path.join(MAS_DIR, ".mase")
 AUDIT_FILE = os.path.join(STATE_DIR, "audit.log.jsonl")
 LOCK_FILE = os.path.join(STATE_DIR, ".disziplin_lock")
 

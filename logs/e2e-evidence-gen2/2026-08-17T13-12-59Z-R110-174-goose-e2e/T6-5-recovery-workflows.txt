@@ -1,0 +1,24 @@
+Recovery workflows found: 5
+  wf_recovery_immune: 4 steps
+    - check: python3 tools/dev_rule_checker.py --all 2>&1 | tail -5
+    - list_violations: python3 tools/dev_rule_checker.py --all 2>&1 | grep -E "^(VIOLATION|FAIL)" | hea
+    - categorize: if [ -s .mase/immune_violations.log ]; then CRITICAL=$(grep -c -E "^VIOLATION" .
+    - auto_repair: SEVERITY=$(cat .mase/immune_severity 2>/dev/null || echo OK); if [ "$SEVERITY" =
+  wf_recovery_checkpoint: 4 steps
+    - list_checkpoints: test -d .mase/checkpoints/ && ls -1 .mase/checkpoints/ | head -5
+    - validate_latest: LATEST=$(ls -1t .mase/checkpoints/ 2>/dev/null | head -1) && if [ -n "$LATEST" ]
+    - ensure_recipe: LATEST=$(ls -1t .mase/checkpoints/ 2>/dev/null | head -1) && [ -d ".mase/checkpo
+    - auto_repair: LATEST=$(ls -1t .mase/checkpoints/ 2>/dev/null | head -1) && if [ -n "$LATEST" ]
+  wf_recovery_safezone: 4 steps
+    - list_templates: ls -1 template/recovery/ 2>&1 | head -5
+    - validate_templates: python3 -c "import glob; files = glob.glob('template/recovery/*.md'); print(f'{l
+    - check_fork: test -L mas-engineer_active 2>/dev/null && echo "Fork ACTIVE" || echo "No active
+    - auto_repair: if [ ! -L mas-engineer_active ]; then LATEST=$(ls -1dt mas-engineer_fork_* 2>/de
+  wf_recovery_timeline: 4 steps
+    - find_latest: ls -1t .mase/checkpoints/ 2>/dev/null | head -1
+    - count_checkpoints: ls -1 .mase/checkpoints/ 2>/dev/null | wc -l
+    - score_latest: LATEST=$(ls -1t .mase/checkpoints/ 2>/dev/null | head -1) && [ -n "$LATEST" ] &&
+    - auto_repair: LATEST=$(ls -1t .mase/checkpoints/ 2>/dev/null | head -1) && if [ -n "$LATEST" ]
+  wf_recovery_defib: 2 steps
+    - consume: python3 tools/dev_mq_consumer.py --topic monitor.health.degraded --consumer-id w
+    - verify_log: if [ -f .mase/recovery/log/{request_id}.json ]; then echo "DEFIB_OK: .mase/recov

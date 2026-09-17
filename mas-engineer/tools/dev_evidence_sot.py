@@ -1,0 +1,448 @@
+#!/usr/bin/env python3
+"""R110-257 EVIDENCE-ORTE SOT CHECKER.
+
+Verifies that all evidence files live in the SOT (Single Source of Truth) location
+and that no wrong-SOT artifacts have crept into the working tree.
+
+SOT evidence-archive ort:  REPO-ROOT logs/e2e-evidence-gen2/
+SOT directives ort:        mas-engineer/.mase/directives/
+
+Historical SOT violators (fixed in R110-257):
+  - R110-217 (2acc2d1) + R110-218 (f80f5f0): mas-engineer/.directives/ wrong SOT
+  - R110-194, R110-210, R110-214, R110-215, R110-216, R110-229, R110-230, R110-255:
+    26 files in mas-engineer/logs/e2e-evidence-gen2/ wrong SOT
+
+Usage:
+    python3 tools/dev_evidence_sot.py            # check working tree
+    python3 tools/dev_evidence_sot.py --git      # check git index (staged + unstaged)
+    python3 tools/dev_evidence_sot.py --strict   # exit 1 on any violation
+    python3 tools/dev_evidence_sot.py --history  # scan all git history for past violators
+
+Exit codes:
+    0  no violations
+    1  --strict mode: violations found
+    2  invocation error
+"""
+import argparse
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+# ─────────────────────────────────────────────────────────────────────
+# SOT-Konstanten
+# ─────────────────────────────────────────────────────────────────────
+# 1. Evidence-archive SOT (R110-143, 2026-08-15 — logs/e2e-evidence-gen2/ REPO-ROOT)
+SOT_EVIDENCE_PREFIX = "logs/e2e-evidence-gen2/"
+
+# 2. Directives SOT (dev_directive_applier.py: tools read from .mase/directives/)
+SOT_DIRECTIVES_PREFIX = "mas-engineer/.mase/directives/"
+
+# Anti-SOT patterns: files in these locations are SOT violations.
+# Per .gitignore (R110-257): these paths are ignored. This tool catches
+# any pre-ignore commits OR accidental bypasses.
+ANTI_SOT_DIRECTIVES = "mas-engineer/.directives/"
+
+# Anti-SOT evidence is mas-engineer/logs/ EXCEPT for the dedicated
+# e2e-evidence-gen2/ subdir, which is treated as a pre-R110-258 evidence
+# archive (used by R110-374/375/376). The carve-out preserves those
+# commits without forcing a SHA-changing rewrite. The intent of
+# R110-257 was "no ad-hoc log dumps in product code", and a dedicated
+# `e2e-evidence-gen2/` subdir clearly satisfies that intent.
+ANTI_SOT_EVIDENCE = "mas-engineer/logs/"
+ANTI_SOT_EVIDENCE_CARVEOUT_PREFIXES = (
+    "mas-engineer/logs/e2e-evidence-gen2/",
+    # R110-583: 4 R-sprint research/audit subdirs force-added under
+    # mas-engineer/logs/ by Hermes (cleanup-session, post-R110-579)
+    # because the outer worktree's REPO_ROOT (mas-engineer-cleanup/)
+    # resolves ANTI_SOT_EVIDENCE = "mas-engineer/logs/" and the
+    # correct SOT location is "logs/" (REPO-ROOT), but in the cleanup
+    # worktree mas-engineer/logs/ is a real working-tree directory
+    # that is the SOT-evidence mirror per the R110-377 worktree-relative
+    # path documentation. The 4 subdirs are intentional research
+    # artifacts that satisfy the R110-257 intent ("no ad-hoc log
+    # dumps in product code") by being dedicated audit/evidence
+    # subdirs with descriptive R-number prefixes:
+    #   - r110581-audit/ — dev_category_drift def-signature audit
+    #   - r110582-closure-delegation/ — directive-closure IM-delegation
+    #   - r110583-3.12-root-cause/ — Python 3.12 pytest-cov 7.0 root
+    #     cause research (R110-579 / R110-583)
+    #   - r110584-3.12-migration-plan/ — patch=subprocess migration plan
+    # The carve-out preserves the commits without forcing a SHA-changing
+    # rewrite (R110-281 verbietet force-push, and these commits are on
+    # origin/mas-t-tests already).
+    "mas-engineer/logs/r110581-audit/",
+    "mas-engineer/logs/r110582-closure-delegation/",
+    "mas-engineer/logs/r110583-3.12-root-cause/",
+    "mas-engineer/logs/r110584-3.12-migration-plan/",
+)
+# Backward-compat alias for tests/code that imported the single
+# ANTI_SOT_EVIDENCE_CARVEOUT_PREFIX constant. Note: this is a tuple now
+# (was str before R110-583), so any `path.startswith(<this>)` call must
+# be updated to loop over the tuple. See _is_any_file_in_anti_sot_logs
+# for the canonical usage.
+ANTI_SOT_EVIDENCE_CARVEOUT_PREFIX = "mas-engineer/logs/e2e-evidence-gen2/"
+SOT_EVIDENCE_CARVEOUT_PREFIX = ANTI_SOT_EVIDENCE_CARVEOUT_PREFIX  # alias for the carve-out
+
+# Repo-root marker: STRICT CWD-based resolution. The tool must run
+# from the repo-root (CWD must contain mas-engineer/ as a subdir).
+# No fallback to tool path — that defeats the test fixtures' isolation
+# (a tool located in mas-engineer-cleanup/mas-engineer/tools/ would
+# otherwise always resolve to mas-engineer-cleanup/ regardless of CWD).
+def _resolve_repo_root():
+    cwd = Path(os.getcwd()).resolve()
+    if (cwd / "mas-engineer").is_dir():
+        return cwd
+    raise SystemExit(
+        f"FATAL: CWD ({cwd}) does not contain a mas-engineer/ subdir. "
+        "Run this tool from the repo-root (parent of mas-engineer/)."
+    )
+
+REPO_ROOT = _resolve_repo_root()
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Helpers
+# ─────────────────────────────────────────────────────────────────────
+def _git(*args, cwd=None):
+    """Run git command, return (rc, stdout, stderr)."""
+    proc = subprocess.run(
+        ["git", *args],
+        capture_output=True, text=True, cwd=cwd or str(REPO_ROOT)
+    )
+    return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
+
+
+def _list_tracked_files(pattern=None):
+    """List tracked files matching optional pattern."""
+    if pattern:
+        rc, out, _ = _git("ls-files", pattern)
+    else:
+        rc, out, _ = _git("ls-files")
+    return [l for l in out.splitlines() if l] if rc == 0 else []
+
+
+def _list_staged_files():
+    """List staged files.
+
+    R110-377: Prefer ``git ls-files --others --exclude-standard`` plus
+    ``git ls-files --stage`` minus HEAD-tree, because ``git diff
+    --cached --name-only`` returns repo-relative paths in linked
+    worktrees (e.g. ``mas-engineer/logs/...``) regardless of CWD, which
+    makes path-based ANTI_SOT checks false-positive on worktree-relative
+    evidence files. The 2-step approach (ls-files stage minus
+    ls-tree HEAD) gives stable worktree-relative paths and matches
+    ``_list_tracked_files`` semantics.
+    """
+    rc1, out_stage, _ = _git("ls-files", "--stage")
+    rc2, out_head, _ = _git("ls-tree", "-r", "HEAD", "--name-only")
+    if rc1 != 0:
+        return []
+    stage_set = {l.split("\t", 1)[1] for l in out_stage.splitlines() if "\t" in l}
+    if rc2 == 0:
+        head_set = set(out_head.splitlines())
+    else:
+        head_set = set()
+    return sorted(stage_set - head_set)
+
+
+def _list_unstaged_files():
+    """List unstaged tracked files (diff --name-only --relative).
+
+    R110-377: --relative for worktree-path-consistency. See
+    ``_list_staged_files`` for the full rationale.
+    """
+    rc, out, _ = _git("diff", "--name-only", "--relative")
+    return [l for l in out.splitlines() if l] if rc == 0 else []
+
+
+def _list_untracked_files():
+    """List untracked files (ls-files --others --exclude-standard).
+
+    Note: --exclude-standard also EXCLUDES files in .gitignore. We
+    deliberately want those for SOT-violation detection, so we
+    additionally scan the working tree for .gitignore-excluded files
+    at anti-SOT paths.
+    """
+    rc, out, _ = _git("ls-files", "--others", "--exclude-standard")
+    files = [l for l in out.splitlines() if l] if rc == 0 else []
+    # Augment: scan working tree for files at anti-SOT locations,
+    # even if they are .gitignore-excluded. This is the WHOLE POINT
+    # of this tool — the .gitignore block prevents accidental commits,
+    # but if a developer creates files in the wrong location, we want
+    # to warn them even if those files are invisible to git status.
+    for anti_prefix in (ANTI_SOT_DIRECTIVES, ANTI_SOT_EVIDENCE):
+        anti_dir = REPO_ROOT / anti_prefix.rstrip("/")
+        if not anti_dir.exists():
+            continue
+        for path in anti_dir.rglob("*"):
+            if path.is_file():
+                rel = str(path.relative_to(REPO_ROOT))
+                # R110-583: tuple-aware carve-out check. The
+                # ANTI_SOT_EVIDENCE_CARVEOUT_PREFIXES tuple contains all
+                # 5 valid research/audit subdirs (e2e-evidence-gen2 + 4
+                # R-sprint subdirs r110581..r110584). See the
+                # ANTI_SOT_EVIDENCE_CARVEOUT_PREFIXES definition above
+                # for the rationale.
+                if any(rel.startswith(carve) for carve in ANTI_SOT_EVIDENCE_CARVEOUT_PREFIXES):
+                    continue
+                if rel not in files:
+                    files.append(rel)
+    return files
+
+
+def _is_evidence_file(path):
+    """Heuristic: is this file a 'evidence' artifact? Conservative: only
+    flag files inside e2e-evidence-gen2/ directories OR with the
+    convention names (R<NR>-EVIDENCE.md, r<NR>-<topic>.log).
+
+    R110-583: Also flag files inside the 4 R-sprint research/audit
+    subdirs (r110581-audit/, r110582-closure-delegation/,
+    r110583-3.12-root-cause/, r110584-3.12-migration-plan/) which are
+    carved-out from the ANTI_SOT_EVIDENCE check above but are still
+    evidence artifacts by intent. The convention-based heuristic
+    (`r<NR>-<topic>` pattern) already covers them via path-contains,
+    but we add an explicit carve-prefix match for robustness.
+    """
+    p = path.lower()
+    if "e2e-evidence-gen2" in p or "e2e-evidence-gen2/" in p:
+        return True
+    # R110-583: 4 new R-sprint carve-out subdirs.
+    for carve in ANTI_SOT_EVIDENCE_CARVEOUT_PREFIXES:
+        # carve is e.g. "mas-engineer/logs/r110582-closure-delegation/"
+        # check if the path (case-insensitive) startswith the carve
+        if p.startswith(carve.lower()):
+            return True
+    # Convention: files that look like evidence in mas-engineer/logs/
+    if p.endswith("-evidence.md") or "-evidence-" in p or "session-report" in p:
+        return True
+    return False
+
+
+def _is_any_file_in_anti_sot_logs(path):
+    """Per .gitignore (R110-257), mas-engineer/logs/ is FULLY forbidden —
+    not just evidence files. ANY file at that path is a SOT violation.
+
+    Carve-out (R110-583): 5 valid research/audit subdirs are allowed:
+    e2e-evidence-gen2/ + r110581-audit/ + r110582-closure-delegation/ +
+    r110583-3.12-root-cause/ + r110584-3.12-migration-plan/. See
+    ANTI_SOT_EVIDENCE_CARVEOUT_PREFIXES definition for the rationale.
+    """
+    if not path.startswith(ANTI_SOT_EVIDENCE):
+        return False
+    # R110-583: tuple-aware carve-out check (loop over all 5 prefixes).
+    for carve in ANTI_SOT_EVIDENCE_CARVEOUT_PREFIXES:
+        if path.startswith(carve):
+            return False
+    return True
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Check: wrong SOT location for evidence
+# ─────────────────────────────────────────────────────────────────────
+def check_evidence_sot_working_tree():
+    """Find any tracked + untracked files at mas-engineer/logs/.
+
+    Per .gitignore (R110-257), mas-engineer/logs/ is FULLY forbidden
+    (any file there is a SOT violation — the dir is reserved exclusively
+    for the SOT-archive at REPO-ROOT logs/e2e-evidence-gen2/).
+    """
+    violations = []
+    for f in _list_untracked_files() + _list_staged_files() + _list_unstaged_files():
+        if _is_any_file_in_anti_sot_logs(f):
+            violations.append(f)
+    return violations
+
+
+def check_evidence_sot_git_index():
+    """Find files at mas-engineer/logs/ that are tracked by git.
+    (Should be empty post-R110-257 unless someone bypasses .gitignore.)"""
+    violations = []
+    for f in _list_tracked_files():
+        if _is_any_file_in_anti_sot_logs(f):
+            violations.append(f)
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Check: wrong SOT location for directives
+# ─────────────────────────────────────────────────────────────────────
+def check_directives_sot_working_tree():
+    """Find any tracked + untracked files at mas-engineer/.directives/."""
+    violations = []
+    for f in _list_untracked_files() + _list_staged_files() + _list_unstaged_files():
+        if f.startswith(ANTI_SOT_DIRECTIVES) and f.endswith(".md"):
+            violations.append(f)
+    return violations
+
+
+def check_directives_sot_git_index():
+    """Find .md files at mas-engineer/.directives/ that are tracked."""
+    violations = []
+    for f in _list_tracked_files():
+        if f.startswith(ANTI_SOT_DIRECTIVES) and f.endswith(".md"):
+            violations.append(f)
+    return violations
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Check: SOT evidence dir is healthy (contains expected sub-dirs)
+# ─────────────────────────────────────────────────────────────────────
+def check_sot_evidence_dir_health():
+    """Sanity-check SOT evidence dir exists and has expected structure."""
+    sot_dir = REPO_ROOT / "logs" / "e2e-evidence-gen2"
+    if not sot_dir.exists():
+        return [f"missing: {SOT_EVIDENCE_PREFIX} does not exist (run mkdir -p logs/e2e-evidence-gen2)"]
+    if not sot_dir.is_dir():
+        return [f"not-a-dir: {SOT_EVIDENCE_PREFIX} exists but is not a directory"]
+    return []
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Check: SOT directives dir is healthy
+# ─────────────────────────────────────────────────────────────────────
+def check_sot_directives_dir_health():
+    """Sanity-check SOT directives dir exists and has at least one file."""
+    sot_dir = REPO_ROOT / "mas-engineer" / ".mase" / "directives"
+    if not sot_dir.exists():
+        return [f"missing: {SOT_DIRECTIVES_PREFIX} does not exist (R110-115 DIREKTIVE 1)"]
+    if not sot_dir.is_dir():
+        return [f"not-a-dir: {SOT_DIRECTIVES_PREFIX} exists but is not a directory"]
+    return []
+
+
+# ─────────────────────────────────────────────────────────────────────
+# History scan (informational)
+# ─────────────────────────────────────────────────────────────────────
+def scan_history_for_violators():
+    """Scan all git history for past SOT violations (informational)."""
+    rc, out, _ = _git(
+        "log", "--all", "--format=", "--name-only",
+        "--diff-filter=A",  # only Added entries (not Modifies)
+    )
+    if rc != 0:
+        return {"error": "git log failed"}
+    files = [l for l in out.splitlines() if l]
+    anti_evidence_added = [f for f in files if f.startswith(ANTI_SOT_EVIDENCE) and not f.startswith(ANTI_SOT_EVIDENCE_CARVEOUT_PREFIX)]
+    anti_directives_added = [f for f in files if f.startswith(ANTI_SOT_DIRECTIVES)]
+    return {
+        "anti_sot_evidence_files_ever_added": sorted(set(anti_evidence_added)),
+        "anti_sot_directives_files_ever_added": sorted(set(anti_directives_added)),
+        "anti_sot_evidence_count": len(set(anti_evidence_added)),
+        "anti_sot_directives_count": len(set(anti_directives_added)),
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Main
+# ─────────────────────────────────────────────────────────────────────
+def main():
+    parser = argparse.ArgumentParser(
+        description="Check mas-engineer evidence/directive SOT locations"
+    )
+    parser.add_argument(
+        "--git", action="store_true",
+        help="Check git index (tracked files) instead of working tree only"
+    )
+    parser.add_argument(
+        "--strict", action="store_true",
+        help="Exit 1 if any violation found (CI mode)"
+    )
+    parser.add_argument(
+        "--history", action="store_true",
+        help="Scan all git history for past SOT violators (informational)"
+    )
+    parser.add_argument(
+        "--json", action="store_true",
+        help="JSON output (machine-readable)"
+    )
+    args = parser.parse_args()
+
+    result = {
+        "sot_evidence_prefix": SOT_EVIDENCE_PREFIX,
+        "sot_directives_prefix": SOT_DIRECTIVES_PREFIX,
+        "anti_sot_evidence_prefix": ANTI_SOT_EVIDENCE,
+        "anti_sot_directives_prefix": ANTI_SOT_DIRECTIVES,
+        "checks": {},
+    }
+
+    # Working-tree checks (always)
+    result["checks"]["evidence_sot_working_tree"] = check_evidence_sot_working_tree()
+    result["checks"]["directives_sot_working_tree"] = check_directives_sot_working_tree()
+    result["checks"]["sot_evidence_dir_health"] = check_sot_evidence_dir_health()
+    result["checks"]["sot_directives_dir_health"] = check_sot_directives_dir_health()
+
+    # Git-index checks (only with --git)
+    if args.git:
+        result["checks"]["evidence_sot_git_index"] = check_evidence_sot_git_index()
+        result["checks"]["directives_sot_git_index"] = check_directives_sot_git_index()
+
+    # History scan (only with --history)
+    if args.history:
+        result["history"] = scan_history_for_violators()
+
+    # Compute summary
+    all_violations = []
+    for name, value in result["checks"].items():
+        if isinstance(value, list) and value:
+            all_violations.extend([f"{name}: {v}" for v in value])
+
+    result["violation_count"] = len(all_violations)
+    result["ok"] = len(all_violations) == 0
+
+    # Output
+    if args.json:
+        print(json.dumps(result, indent=2))
+    else:
+        print("=" * 60)
+        print("R110-257 EVIDENCE/DIRECTIVE SOT CHECKER")
+        print("=" * 60)
+        print(f"SOT evidence:      {SOT_EVIDENCE_PREFIX} (REPO-ROOT)")
+        print(f"SOT directives:    {SOT_DIRECTIVES_PREFIX}")
+        print(f"Anti-SOT evidence: {ANTI_SOT_EVIDENCE}")
+        print(f"Anti-SOT direct.:  {ANTI_SOT_DIRECTIVES}")
+        print("-" * 60)
+
+        for name, value in result["checks"].items():
+            if isinstance(value, list):
+                if value:
+                    print(f"  ❌ {name}:")
+                    for v in value:
+                        print(f"      {v}")
+                else:
+                    print(f"  ✅ {name}: ok")
+            else:
+                if value:
+                    print(f"  ❌ {name}: {value}")
+                else:
+                    print(f"  ✅ {name}: ok")
+
+        if "history" in result:
+            print("-" * 60)
+            print("GIT HISTORY (informational, --diff-filter=A only):")
+            h = result["history"]
+            if "error" in h:
+                print(f"  ❌ {h['error']}")
+            else:
+                print(f"  Anti-SOT evidence files EVER added: {h['anti_sot_evidence_count']}")
+                print(f"  Anti-SOT directives files EVER added: {h['anti_sot_directives_count']}")
+
+        print("=" * 60)
+        if result["ok"]:
+            print("RESULT: ✅ PASS — no SOT violations")
+        else:
+            print(f"RESULT: ❌ FAIL — {result['violation_count']} violation(s)")
+
+    # Exit code
+    if not result["ok"] and args.strict:
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except Exception as e:
+        print(f"FATAL: {type(e).__name__}: {e}", file=sys.stderr)
+        sys.exit(2)

@@ -1,0 +1,126 @@
+Loading recipe: 🛡️ SUB-MAS-YAML-IMMUNE — R10 CORONASHIELD Universal Validator (Sub-Agent)
+Description: v1.0.0 | R10 universal yaml-validator: syntax + roundtrip + path resolution + strict-mode required fields. Standalone wrapper for non-mas-workflow scripts.
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260730_157 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/mas-engineer-test/mas-engineer/recipe/instructions/sub_mas-yaml-immune.md 2>/dev/null || echo "FILE NOT FOUND"
+
+# sub_mas-yaml-immune — 🛡️ Universal R10 CORONASHIELD Validator (R110-30)
+
+MAS-Engineer-internal. Universal yaml validator that extends R10 enforcement to ALL yaml save paths, not just the mas-workflow (yaml-editor R18 + dev_editor.py).
+
+## Why this agent exists
+
+R10 CORONASHIELD was originally enforced only via:
+- yaml-editor sub-agent (R18 delegation duty)
+- dev_editor.py (programmatic patch with built-in validation)
+
+**Problem:** Standalone recipe-pack testscripts (e.g. `scripts/r11028-r10-validate.py`) did NOT invoke yaml-editor — they called `goose run` directly. BUG-1 (sub_recipe path resolution failure) went undetected because no yaml validation step ran before `goose run`.
+
+**Solution:** This sub-agent + `tools/dev_yaml_immune.py` provide a standalone, delegation-friendly yaml-immune check callable from ANY script (not just mas-workflow).
+
+## Input (from MAS-Engineer)
+
+```yaml
+yaml_immune_intake:
+  signal: "🟣 HANDOVER"
+  request_id: string
+  from: "dev-mas-engineer"
+  to: "sub_mas-yaml-immune"
+  task: "VALIDATE|VALIDATE_STRICT"
+  files:
+    - "recipe/sub/sub_mas-foo.yaml"
+    - "recipe/sub/sub_mas-bar.yaml"
+  reason: "pre-save CORONASHIELD check"
+```
+
+## Procedure VALIDATE — Syntax-only (default)
+
+For each file in `files`:
+1. ⛔ `python3 tools/dev_yaml_immune.py <file>` — exit 0/1
+2. If exit 0: continue to next file
+3. If exit 1: report error with line number, abort
+
+**Output:**
+```yaml
+yaml_immune_result:
+  total: N
+  valid: M
+  invalid: 0
+  status: "OK" | "BLOCKED"
+  errors: []
+```
+
+## Procedure VALIDATE_STRICT — Full check
+
+For each file in `files`:
+1. ⛔ `python3 tools/dev_yaml_immune.py --strict <file>` — exit 0/1
+2. --strict runs: syntax + roundtrip + path-check + required-fields
+3. Report all failures with line numbers
+
+**Use case:** New sub-agent recipe creation. Catches missing title/description/version + unresolvable sub_recipe paths.
+
+## Graceful Degradation
+
+| Condition | Behavior |
+|-----------|----------|
+| `tools/dev_yaml_immune.py` missing | WARN, return status="skip", do NOT block |
+| `files` list empty | return status="empty", do NOT error |
+| File not found | log to errors[], continue with next file |
+| yaml module (PyYAML) missing | return status="yaml_module_missing", warn caller |
+| Malformed yaml | return status="BLOCKED", include line number from yaml parser |
+
+## R18 DELEGATION DUTY Compliance
+
+This agent is ANALYSIS-only. The caller (dev-mas-engineer or testscript) is responsible for:
+- Running `goose run` after VALIDATE returns OK
+- Committing the result (NOT this agent — see R36 bug: 27k backup lines committed)
+- Updating registry/evidence files
+
+## Example Call
+
+```bash
+# Validate a new sub-agent recipe before registration
+python3 tools/dev_yaml_immune.py --strict recipe/sub/sub_mas-foo-new.yaml
+if [ $? -eq 0 ]; then
+    echo "R10 OK — safe to register in dev-mas-engineer.yaml"
+else
+    echo "R10 BLOCKED — fix errors before registration"
+fi
+```
+
+## R110-30 Changelog
+
+- v1.0.0: Initial creation
+  - Standalone wrapper `tools/dev_yaml_immune.py` (syntax, roundtrip, path, required-fields)
+  - Graceful degradation when tool missing (mas remains runnable)
+  - --strict mode for sub-agent recipe validation🛡️ **yaml-immune (v1.0.0)** acknowledged and loaded.
+
+I've read the full procedure from `recipe/instructions/sub_mas-yaml-immune.md` — I understand my role as the **universal R10 CORONASHIELD validator** for ALL YAML save paths.
+
+**My capabilities (per R110-30):**
+| Mode | Checks |
+|------|--------|
+| `VALIDATE` | Syntax only (exit 0/1 via `dev_yaml_immune.py`) |
+| `VALIDATE_STRICT` | Syntax + roundtrip + path resolution + required fields (title, description, version) |
+
+**Graceful degradation** is built in — if the tool is missing, I skip and warn. No crashes.
+
+---
+
+So — do you have **YAML files to validate**? I need a `yaml_immune_intake` with a file list and task type (`VALIDATE` or `VALIDATE_STRICT`). For example:
+
+```yaml
+yaml_immune_intake:
+  task: "VALIDATE_STRICT"
+  files:
+    - "recipe/sub/sub_mas-example.yaml"
+  reason: "pre-save CORONASHIELD check"
+```
+
+What YAML files should I check?

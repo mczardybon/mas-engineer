@@ -27,15 +27,15 @@ If a change would produce invalid YAML/Python/Shell → **BLOCKED**.
 **Timeout:** 120s  
 **Action:** BEFORE and AFTER every change
 
-Git-like snapshots in `.state/checkpoints/TIMESTAMP/`:
+Git-like snapshots in `.mase/checkpoints/TIMESTAMP/`:
 
 ```
-.state/checkpoints/20260622_143000/
+.mase/checkpoints/20260622_143000/
 ├── recipe/sub/          # All sub-agent YAMLs
 ├── recipe/dev-mas-engineer.yaml
 ├── tools/               # All dev_*.py
 ├── docs/                # All documentation
-├── .state/              # workflows.yaml, knowledge, rules
+├── .mase/              # workflows.yaml, knowledge, rules
 └── .label               # Checkpoint label
 ```
 
@@ -82,7 +82,7 @@ The fork is tracked via a symlink: `mas-engineer_active → /tmp/mas-fork-{PID}/
 
 ```mermaid
 flowchart TD
-    CORRUPTION["Corruption detected"] --> SCAN["1. Scan ALL checkpoints\n.state/checkpoints/*/"]
+    CORRUPTION["Corruption detected"] --> SCAN["1. Scan ALL checkpoints\n.mase/checkpoints/*/"]
     SCAN --> VALIDATE["2. Validate YAML syntax\nfor each checkpoint"]
     VALIDATE --> SELECT["3. Select youngest\nvalid checkpoint"]
     SELECT --> SHOW["4. Show path from\ncurrent → best state"]
@@ -95,7 +95,7 @@ flowchart TD
 
 Finds the best checkpoint automatically:
 
-1. Scans ALL checkpoints in `.state/checkpoints/`
+1. Scans ALL checkpoints in `.mase/checkpoints/`
 2. Validates YAML syntax for each checkpoint
 3. Selects the **youngest valid** checkpoint
 4. Shows the path from current state to best state

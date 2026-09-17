@@ -2,7 +2,7 @@
 # sub_mas-recovery-checkpoint — Snapshot-System
 
 MAS-Engineer-internal. Creates complete workspace snapshots before changes.
-Stores recipe/ + tools/ + docs/ + state/ in .state/checkpoints/{timestamp}/.
+Stores recipe/ + tools/ + docs/ + state/ in .mase/checkpoints/{timestamp}/.
 Enables: "Restore state from before 3 steps."
 
 ╔══════════════════════════════════════════════╗
@@ -29,7 +29,7 @@ checkpoint_intake:
 ## Procedure
 AUTO_COMMIT — Automatically after each change
 1. git add -A && git commit -m "[MAS] {action}"
-2. checkpoint .state/checkpoints/{ts}/
+2. checkpoint .mase/checkpoints/{ts}/
 3. changes.json + {timestamp, action}
 4. echo("✅ {action}")
 
@@ -47,15 +47,15 @@ mas_result:
 
 STEP 1 — Timestamp + Directory:
   timestamp=$(date +%Y%m%d_%H%M%S)
-  checkpoint_dir={workspace}/mas-engineer/.state/checkpoints/$timestamp
+  checkpoint_dir={workspace}/mas-engineer/.mase/checkpoints/$timestamp
   mkdir -p $checkpoint_dir
 
 STEP 2 — Backup the 4 core areas:
   cp -r {workspace}/mas-engineer/recipe $checkpoint_dir/
   cp -r {workspace}/mas-engineer/tools  $checkpoint_dir/
   cp -r {workspace}/mas-engineer/docs   $checkpoint_dir/
-  cp {workspace}/mas-engineer/.state/changes.json       $checkpoint_dir/ 2>/dev/null || true
-  cp {workspace}/mas-engineer/.state/best-practices.yaml $checkpoint_dir/ 2>/dev/null || true
+  cp {workspace}/mas-engineer/.mase/changes.json       $checkpoint_dir/ 2>/dev/null || true
+  cp {workspace}/mas-engineer/.mase/best-practices.yaml $checkpoint_dir/ 2>/dev/null || true
 
 STEP 3 — Write metadata:
   echo '{label}' > $checkpoint_dir/.label
@@ -76,7 +76,7 @@ STEP 4 — Confirmation:
 ## Task LIST — Last 10 Checkpoints
 
 STEP 1 — Check existence:
-  checkpoint_dir={workspace}/mas-engineer/.state/checkpoints
+  checkpoint_dir={workspace}/mas-engineer/.mase/checkpoints
   if [ ! -d "$checkpoint_dir" ] || [ -z "$(ls -A $checkpoint_dir 2>/dev/null)" ]; then
     signal='HANDOVER'
     echo 'No Checkpoints existing — Create first with SNAPSHOT'
@@ -100,7 +100,7 @@ STEP 2 — Formatted list:
 ## Task RESTORE — Restore checkpoint
 
 STEP 1 — Identify checkpoint:
-  target=$(ls -t {workspace}/mas-engineer/.state/checkpoints | sed -n '{id}p')
+  target=$(ls -t {workspace}/mas-engineer/.mase/checkpoints | sed -n '{id}p')
   if [ -z "$target" ]; then
     signal='HANDOVER'
     echo "Checkpoint #{id} not found"
@@ -108,7 +108,7 @@ STEP 1 — Identify checkpoint:
   fi
 
 STEP 2 — YAML-check:
-  python3 -c "import yaml; yaml.safe_load(open('{workspace}/mas-engineer/.state/checkpoints/$target/recipe/dev-mas-engineer.yaml'))"
+  python3 -c "import yaml; yaml.safe_load(open('{workspace}/mas-engineer/.mase/checkpoints/$target/recipe/dev-mas-engineer.yaml'))"
   if [ $? -ne 0 ]; then
     signal='HANDOVER'
     echo "Checkpoint #{id} has YAML-Error"
@@ -119,9 +119,9 @@ STEP 3 — Restore:
   rm -rf {workspace}/mas-engineer/recipe
   rm -rf {workspace}/mas-engineer/tools
   rm -rf {workspace}/mas-engineer/docs
-  cp -r {workspace}/mas-engineer/.state/checkpoints/$target/recipe {workspace}/mas-engineer/
-  cp -r {workspace}/mas-engineer/.state/checkpoints/$target/tools  {workspace}/mas-engineer/
-  cp -r {workspace}/mas-engineer/.state/checkpoints/$target/docs   {workspace}/mas-engineer/
+  cp -r {workspace}/mas-engineer/.mase/checkpoints/$target/recipe {workspace}/mas-engineer/
+  cp -r {workspace}/mas-engineer/.mase/checkpoints/$target/tools  {workspace}/mas-engineer/
+  cp -r {workspace}/mas-engineer/.mase/checkpoints/$target/docs   {workspace}/mas-engineer/
 
 STEP 4 — Completion:
   signal='DONE'
@@ -136,15 +136,15 @@ STEP 4 — Completion:
 ## Task DIFF — Difference between checkpoints
 
 STEP 1 — Resolve IDs:
-  from_cp=$(ls -t {workspace}/mas-engineer/.state/checkpoints | sed -n '{from_id}p')
-  to_cp=$(ls -t {workspace}/mas-engineer/.state/checkpoints | sed -n '{to_id}p')
+  from_cp=$(ls -t {workspace}/mas-engineer/.mase/checkpoints | sed -n '{from_id}p')
+  to_cp=$(ls -t {workspace}/mas-engineer/.mase/checkpoints | sed -n '{to_id}p')
 
 STEP 2 — Compare:
-  diff -rq {workspace}/mas-engineer/.state/checkpoints/$from_cp/recipe/ {workspace}/mas-engineer/.state/checkpoints/$to_cp/recipe/ 2>/dev/null || true
-  diff -rq {workspace}/mas-engineer/.state/checkpoints/$from_cp/tools/  {workspace}/mas-engineer/.state/checkpoints/$to_cp/tools/  2>/dev/null || true
+  diff -rq {workspace}/mas-engineer/.mase/checkpoints/$from_cp/recipe/ {workspace}/mas-engineer/.mase/checkpoints/$to_cp/recipe/ 2>/dev/null || true
+  diff -rq {workspace}/mas-engineer/.mase/checkpoints/$from_cp/tools/  {workspace}/mas-engineer/.mase/checkpoints/$to_cp/tools/  2>/dev/null || true
 
 STEP 3 — Summary:
-  changed=$(diff -rq {workspace}/mas-engineer/.state/checkpoints/$from_cp/ {workspace}/mas-engineer/.state/checkpoints/$to_cp/ 2>/dev/null | grep -c 'differ' || echo 0)
+  changed=$(diff -rq {workspace}/mas-engineer/.mase/checkpoints/$from_cp/ {workspace}/mas-engineer/.mase/checkpoints/$to_cp/ 2>/dev/null | grep -c 'differ' || echo 0)
   signal='DONE'
   echo "Diff {from_id}..{to_id}: {changed} changes"
 

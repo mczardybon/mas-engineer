@@ -14,22 +14,22 @@ import time
 
 BASE_DIR = os.path.abspath(".")
 MAS_DIR = os.path.join(BASE_DIR, "mas-engineer") if os.path.isdir(os.path.join(BASE_DIR, "mas-engineer")) else BASE_DIR
-# MAS-Rulen liegen in mas-engineer/.state/rules/ (not in .state/rules/)
+# MAS-Rulen liegen in mas-engineer/.mase/rules/ (not in .mase/rules/)
 
 # --mode generic: User-Projekt (rules.yaml)
 # --mode mas (default): MAS-eigene Rulen (rules_5_extreme.yaml + hard_rules.yaml)
-REGEL_DATEI = os.path.join(MAS_DIR, ".state/rules/rules_5_extreme.yaml")
-REGEL_4_DATEI = os.path.join(MAS_DIR, ".state/rules/rules_4_strong.yaml")
-REGEL_GENERIC_DATEI = os.path.join(BASE_DIR, ".state/rules/rules.yaml")
-HARTE_REGEL_DATEI = os.path.join(MAS_DIR, ".state/rules/hard_rules.yaml")
+REGEL_DATEI = os.path.join(MAS_DIR, ".mase/rules/rules_5_extreme.yaml")
+REGEL_4_DATEI = os.path.join(MAS_DIR, ".mase/rules/rules_4_strong.yaml")
+REGEL_GENERIC_DATEI = os.path.join(BASE_DIR, ".mase/rules/rules.yaml")
+HARTE_REGEL_DATEI = os.path.join(MAS_DIR, ".mase/rules/hard_rules.yaml")
 MODE_DATEI = os.path.join(BASE_DIR, ".mas-mode")
-WORKFLOWS_DATEI = os.path.join(MAS_DIR, ".state/workflows.yaml")
-CONFIRMATION_DATEI = os.path.join(MAS_DIR, ".state/.last_confirmation")
+WORKFLOWS_DATEI = os.path.join(MAS_DIR, ".mase/workflows.yaml")
+CONFIRMATION_DATEI = os.path.join(MAS_DIR, ".mase/.last_confirmation")
 
 def load_rules(path):
     if not os.path.exists(path):
         return []
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
     return data.get("rules", [])
 
@@ -38,7 +38,7 @@ def get_rules(mode=None):
     m = mode or "mas"
     if m == "generic":
         if os.path.exists(REGEL_GENERIC_DATEI):
-            with open(REGEL_GENERIC_DATEI) as f:
+            with open(REGEL_GENERIC_DATEI, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
             return data.get("rules", data.get("rules", []))
         return []
@@ -48,7 +48,7 @@ def get_rules(mode=None):
         # Load additionally aus workflows.yaml (R12-R18)
         WORKFLOWS_DATEI
         if os.path.exists(WORKFLOWS_DATEI):
-            with open(WORKFLOWS_DATEI) as f:
+            with open(WORKFLOWS_DATEI, encoding="utf-8") as f:
                 wf = yaml.safe_load(f)
             restrictions = wf.get("configs", {}).get("mas-self", {}).get("restrictions", {})
             for key, val in restrictions.items():
@@ -65,24 +65,24 @@ def get_rules(mode=None):
 def check_mode():
     if not os.path.exists(MODE_DATEI):
         return "unbekannt"
-    with open(MODE_DATEI) as f:
+    with open(MODE_DATEI, encoding="utf-8") as f:
         return f.read().strip()
 
 def check_confirmation():
     """Checks if user confirmation exists within the last 5 minutes"""
     if not os.path.exists(CONFIRMATION_DATEI):
         return False
-    with open(CONFIRMATION_DATEI) as f:
+    with open(CONFIRMATION_DATEI, encoding="utf-8") as f:
         ts = int(f.read().strip())
     return int(time.time()) - ts < 300
 
 def check_rule(rule_id, action=""):
-    rules = load_rules(REGEL_DATEI)
+    rules = load_rules(REGEL_DATEI) + load_rules(REGEL_4_DATEI) + load_rules(HARTE_REGEL_DATEI)
     # Load auch aus workflows.yaml (R12-R19)
     import os as _wf_os
     if _wf_os.path.exists(WORKFLOWS_DATEI):
         try:
-            with open(WORKFLOWS_DATEI) as f:
+            with open(WORKFLOWS_DATEI, encoding="utf-8") as f:
                 wf = yaml.safe_load(f)
             restrictions = wf.get("configs", {}).get("mas-self", {}).get("restrictions", {})
             for key, val in restrictions.items():
@@ -93,8 +93,16 @@ def check_rule(rule_id, action=""):
                         "name": val.get("description", key),
                         "hardness": 5 if val.get("level") == "extreme" else (4 if val.get("level") == "strong" else 3)
                     })
-        except:
-            pass
+        except (yaml.YAMLError, OSError, KeyError, TypeError) as e:
+            # R110-340: narrow bare `except:` to the 4 error classes
+            # that the rules-builder can actually raise. Other
+            # exceptions (KeyboardInterrupt, SystemExit, real bugs)
+            # now propagate instead of being silently swallowed.
+            print(
+                f"⚠️ rule-builder: skipping malformed rule entry: "
+                f"{type(e).__name__}: {e}",
+                file=sys.stderr,
+            )
     for rule in rules:
         if rule["id"] != rule_id:
             continue
@@ -119,14 +127,14 @@ def check_rule(rule_id, action=""):
             
             # Read Configuration
             base = _os9.path.dirname(_os9.path.dirname(_os9.path.abspath(__file__)))
-            reg_path = _os9.path.join(base, ".state/domains/registry.yaml")
+            reg_path = _os9.path.join(base, ".mase/domains/registry.yaml")
             mode_file = _os9.path.expanduser("~/.config/goose/.mas-mode")
             domain_file = _os9.path.expanduser("~/.config/goose/.active_domain")
             
             # Read registry
             domains = {}
             if _os9.path.exists(reg_path):
-                with open(reg_path) as f:
+                with open(reg_path, encoding="utf-8") as f:
                     reg = _yaml9.safe_load(f) or {}
                 domains = reg.get("domains", {})
             
@@ -136,7 +144,7 @@ def check_rule(rule_id, action=""):
             # Read active_domain
             active_domain = None
             if _os9.path.exists(domain_file):
-                with open(domain_file) as f:
+                with open(domain_file, encoding="utf-8") as f:
                     active_domain = f.read().strip()
             
             akt = action.lower()
@@ -191,9 +199,9 @@ def check_rule(rule_id, action=""):
                 cwd = _os.getcwd()
                 full_path = _os.path.join(cwd, path) if not _os.path.isabs(path) else path
                 
-                special_path = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), ".state/agents/special_agents.yaml")
+                special_path = _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), ".mase/agents/special_agents.yaml")
                 if _os.path.exists(special_path):
-                    with open(special_path) as _f:
+                    with open(special_path, encoding="utf-8") as _f:
                         special = _yaml.safe_load(_f)
                     if special and "agents" in special:
                         fname = _os.path.basename(path)
@@ -277,20 +285,185 @@ def check_rule(rule_id, action=""):
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": "general-improver.yaml may not be edited", "action": "BLOCKED"}
         
-        if rule_id == "R10":
-            """CORONASHIELD: Every YAML must be validated before saving"""
-            import os as _os
+        if rule_id == "R110-31":
+            """DOMAIN-SCOPED sub-agent registration (R110-31, R110-30 correction)
+            Three domains, coupled to .mas-mode work_on (R14):
+              work_on=mas      → DOMAIN 1: mas-self sub-agents, MUST be in
+                                 workflows.yaml.configs.mas-self.sub_agents
+              work_on=framework → DOMAIN 2: mas-generated team (orchestrator + sub-agents
+                                  in same dir), NO mas-self registration required.
+                                  Orchestrator's instructions.md is the registry.
+              work_on=generic  → DOMAIN 3: project in framework/generic mode.
+                                  mas-engineer workflows.yaml NOT involved.
+
+            Detection priority:
+              1. Read .mas-mode file (authoritative — set by R14 work_on)
+              2. If .mas-mode missing, fall back to action string heuristics
+            """
             akt = action.lower()
+            if not any(x in akt for x in ["write", "edit", "create", "add"]):
+                return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": "No write/edit action — R110-31 not applicable",
+                        "action": "OK"}
+
+            # PRIORITY 1: read .mas-mode (authoritative per R14)
+            work_on = None
+            mas_mode_paths = [
+                os.path.join(BASE_DIR, "mas-engineer/.mas-mode"),
+                os.path.join(BASE_DIR, ".mas-mode"),
+                os.path.expanduser("~/.config/goose/.mas-mode"),
+            ]
+            for p in mas_mode_paths:
+                if os.path.exists(p):
+                    try:
+                        # R110-340: file-leak + encoding fix
+                        # (was `work_on = open(p).read().strip().lower()`).
+                        # The bare `open(p)` left the file unclosed until
+                        # GC, triggering ResourceWarning on each call.
+                        with open(p, encoding="utf-8") as _f:
+                            work_on = _f.read().strip().lower()
+                    except (OSError, UnicodeDecodeError) as e:
+                        print(
+                            f"⚠️ mas-mode load failed for {p}: "
+                            f"{type(e).__name__}: {e}",
+                            file=sys.stderr,
+                        )
+                        pass
+                    break
+
+            domain = None
+            domain_source = None
+            if work_on == "mas":
+                domain = 1; domain_source = f".mas-mode={work_on}"
+            elif work_on == "framework":
+                domain = 2; domain_source = f".mas-mode={work_on}"
+            elif work_on == "generic":
+                domain = 3; domain_source = f".mas-mode={work_on}"
+
+            # PRIORITY 2: action string heuristics (only if .mas-mode missing/unknown)
+            if domain is None:
+                is_domain_2 = any(x in akt for x in ["demo-team", "demo_team", "generated team",
+                                                      "on-demand team", "user-generated team",
+                                                      "orchestrator"])
+                is_domain_3 = any(x in akt for x in ["project workflows.yaml", "framework mode",
+                                                      "generic mode", "project sub-agent",
+                                                      "project workspace"])
+                is_domain_1 = ("sub_mas-" in akt or "recipe/sub/" in akt or
+                               "mas-self" in akt or "mas_self" in akt)
+                if is_domain_2: domain = 2
+                elif is_domain_3: domain = 3
+                elif is_domain_1: domain = 1
+                domain_source = "string-heuristic (no .mas-mode found)"
+
+            # If still unknown → OK with note
+            if domain is None:
+                return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": "Domain not determined (no .mas-mode, no clear signal). "
+                                  "Use LLM judgment. See R110-31 prompt_text for the "
+                                  "3-domain table keyed to .mas-mode (R14).",
+                        "action": "OK"}
+
+            # DOMAIN 2 / 3: NO mas-self registration required
+            if domain == 2:
+                return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"DOMAIN 2 ({domain_source}) — mas-generated team. "
+                                  f"NO mas-self registration required. Orchestrator's "
+                                  f"instructions.md is the registry.",
+                        "action": "OK"}
+            if domain == 3:
+                return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"DOMAIN 3 ({domain_source}) — project in framework/generic "
+                                  f"mode. mas-engineer workflows.yaml NOT involved. "
+                                  f"Project owns its own workflow.",
+                        "action": "OK"}
+
+            # DOMAIN 1: check registration
+            wf_path = os.path.join(MAS_DIR, ".mase/workflows.yaml")
+            if not os.path.exists(wf_path):
+                return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"DOMAIN 1 ({domain_source}) but workflows.yaml missing — "
+                                  f"cannot verify registration (fresh clone?)",
+                        "action": "OK"}
+
+            with open(wf_path, encoding="utf-8") as f:
+                wf = yaml.safe_load(f)
+            sub_agents = wf.get("configs", {}).get("mas-self", {}).get("sub_agents", {})
+            all_registered = set()
+            for cat, agents in sub_agents.items():
+                if isinstance(agents, list):
+                    all_registered.update(agents)
+
+            import re
+            mentioned_agents = re.findall(r"sub_mas-[a-z0-9-]+", akt)
+            if not mentioned_agents:
+                return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"DOMAIN 1 ({domain_source}) but no sub_mas-* name in action "
+                                  f"— cannot verify. Use R10 for yaml validation.",
+                        "action": "OK"}
+
+            unregistered = [a for a in mentioned_agents if a not in all_registered]
+            if unregistered:
+                return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"DOMAIN 1 ({domain_source}) sub-agents NOT registered: "
+                                  f"{unregistered}. R18 cannot dispatch unregistered agents "
+                                  f"(R110-29 lesson). Either add to workflows.yaml under a "
+                                  f"fitting category, OR check .mas-mode — if work_on != "
+                                  f"'mas' (it's currently {work_on}), set it correctly.",
+                        "action": "BLOCKED"}
+            return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                    "detail": f"DOMAIN 1 ({domain_source}) all sub-agents registered: "
+                              f"{mentioned_agents}",
+                    "action": "OK"}
+
+        if rule_id == "R10":
+            """CORONASHIELD (R110-30 extended): Every YAML must be validated before saving.
+
+            R110-30 EXTENSION:
+            - R10 NOW applies to ALL yaml save paths, not just mas-workflow.
+              Originally only yaml-editor R18 + dev_editor.py enforced R10.
+              Standalone recipe-pack testscripts did not invoke yaml-editor →
+              BUG-1 (sub_recipe path resolution failure) went undetected.
+            - R10 now also recognizes dev_yaml_immune.py (universal standalone
+              wrapper) and sub_mas-yaml-immune (delegation-friendly sub-agent).
+            - Graceful degradation: if dev_yaml_immune.py is missing, R10 returns
+              WARNING (not BLOCKED) so mas remains runnable on fresh clones.
+            - --action write/edit (CLI action-type flag) also triggers R10, not
+              just string match on "write "/"edit " in the action description.
+            """
+            import os as _os
+            import subprocess as _sp_r10
+            akt = action.lower()
+
+            # R110-30: detect action-type flag (--action-type write|edit|shell)
+            # Caller passes action like "write|edit: path/to/file.yaml"
+            action_type_yaml = any(x in akt for x in ["action-type write", "action-type edit", "action_type write", "action_type edit"])
 
             # Only bei write/edit von .yaml/.yml files check
             is_yaml_write = any(x in akt for x in [".yaml", ".yml"]) and ("write " in akt or "edit " in akt)
+            is_yaml_write = is_yaml_write or action_type_yaml
 
             if is_yaml_write:
                 # Check ob immune-check im Command ist
-                has_immune = "immune" in akt or "CHECK_YAML" in akt or "corona" in akt
+                # R110-30: extended trigger keywords
+                has_immune = any(kw in akt for kw in [
+                    "immune",           # sub_mas-yaml-immune, dev_yaml_immune
+                    "CHECK_YAML",       # sub_mas-recovery-immune CHECK_YAML
+                    "corona",           # R10 CORONASHIELD
+                    "yaml_immune",      # explicit tool call
+                    "dev_yaml_immune",  # standalone tool
+                    "yaml.safe_load",   # inline python yaml validation
+                ])
                 if not has_immune:
                     return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
-                            "detail": "YAML edit without CORONASHIELD check — sub_mas-recovery-immune CHECK_YAML required!", "action": "BLOCKED"}
+                            "detail": "YAML edit without CORONASHIELD check — invoke sub_mas-yaml-immune or dev_yaml_immune.py first! R110-30: R10 now applies to ALL yaml save paths.", "action": "BLOCKED"}
+
+                # R110-30: if dev_yaml_immune.py was called but failed, surface the error
+                # Otherwise graceful: if tool missing, WARN (not BLOCK) so mas remains runnable
+                immune_tool = _os.path.join(MAS_DIR if 'MAS_DIR' in dir() else BASE_DIR, "tools/dev_yaml_immune.py")
+                if not _os.path.exists(immune_tool):
+                    # Tool missing → graceful: WARN, not BLOCK
+                    return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"],
+                            "detail": "R10 yaml-immune check present in action string, but tools/dev_yaml_immune.py not found. mas continues in graceful-degradation mode (R10 falls back to check:null).", "action": "WARNING"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
 
         if rule_id == "R55":
@@ -343,13 +516,26 @@ def check_rule(rule_id, action=""):
                 # Read session counter
                 import yaml as _yaml
                 MAS_ROOT = "/workspace/mas-engineer-src/mas-engineer"
-                counter_path = f"{MAS_ROOT}/.state/pipeline/r55_session_count.yaml"
+                counter_path = f"{MAS_ROOT}/.mase/pipeline/r55_session_count.yaml"
                 session_count = 0
                 if _os.path.exists(counter_path):
                     try:
-                        cd = _yaml.safe_load(open(counter_path)) or {}
+                        # R110-340: file-leak + encoding fix
+                        # (was `cd = _yaml.safe_load(open(counter_path))`
+                        # which left the file unclosed).
+                        with open(counter_path, encoding="utf-8") as _cf:
+                            cd = _yaml.safe_load(_cf) or {}
                         session_count = int(cd.get("data", {}).get("applied_count", 0))
-                    except Exception:
+                    except (yaml.YAMLError, OSError, ValueError, KeyError, TypeError) as e:
+                        # R110-340: narrowed from `except Exception:` so
+                        # real bugs propagate.  ValueError/TypeError from
+                        # int() coercion now also caught (int("not a number")
+                        # raises ValueError, not just OSError).
+                        print(
+                            f"⚠️ session-count load failed: "
+                            f"{type(e).__name__}: {e}",
+                            file=sys.stderr,
+                        )
                         session_count = 0
                 if session_count < target:
                     return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
@@ -357,10 +543,140 @@ def check_rule(rule_id, action=""):
                             "action": "BLOCKED"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
 
+        if rule_id == "R56":
+            """EDIT_SPIN-LOOP (R91 2026-07-25, patched 2026-07-25):
+
+            Detects placeholder-edit patterns that indicate an LLM spin-loop.
+
+            Scope: ONLY applies to 'edit' actions. Write/shell/delegate are exempt.
+            The "3+ failures in 60s" BLOCK only blocks subsequent EDITS, not other actions.
+
+            Triggers:
+            1. action string contains 'before:' followed by placeholder patterns
+               (NONEXISTENT_TEXT, XYZ, PLACEHOLDER, TODO_FILL, BLOCKED, MARKER, KEEP, dummy)
+               AND contains 'after:' with the same placeholder (no-op edit)
+            2. consecutive edit failures in current session (tracked in .mase/pipeline/r56_edit_history.yaml)
+               if 3+ failures in last 60s, BLOCK subsequent edits
+
+            The spin-loop pattern observed in R90 (subagent-184):
+              22+ edits with `before: NONEXISTENT_TEXT_XYZ` `after: NONEXISTENT_TEXT_XYZ`
+              on already-existing files. Each edit returns "no match", LLM retries with
+              different placeholder string. Result: 0 progress, 6 min wasted, $0.04 cost.
+
+            Per R57 user-correction: erzwungene Regeln funktionieren, instruction-edits nicht.
+            This is a HARD RULE (block: true, hardness: 5).
+            """
+            import os as _os56, re as _re56, time as _t56
+            akt = action.lower()
+
+            # State file for tracking consecutive edit failures
+            MAS_ROOT = "/workspace/mas-engineer-src/mas-engineer"
+            history_path = f"{MAS_ROOT}/.mase/pipeline/r56_edit_history.yaml"
+
+            # Load history
+            history = []
+            if _os56.path.exists(history_path):
+                try:
+                    import yaml as _y56
+                    # R110-340: file-leak fix (was `_y56.safe_load(open(history_path))`
+                    # which left the file unclosed).  Also explicit
+                    # UTF-8 encoding.
+                    with open(history_path, encoding="utf-8") as _yf:
+                        hd = _y56.safe_load(_yf) or {}
+                    history = hd.get("edits", [])
+                except (yaml.YAMLError, OSError, KeyError, TypeError) as e:
+                    # R110-340: narrow bare `except:` so real bugs
+                    # propagate instead of being silently swallowed.
+                    print(
+                        f"⚠️ history-load: using empty history: "
+                        f"{type(e).__name__}: {e}",
+                        file=sys.stderr,
+                    )
+                    history = []
+
+            # Clean old entries (>120s)
+            now = _t56.time()
+            history = [e for e in history if now - e.get("ts", 0) < 120]
+
+            # SCOPE CHECK: only block edit-actions
+            is_edit_action = akt.startswith("edit ") or "edit " in akt.split("\n")[0]
+
+            # Check 1: placeholder pattern in current action
+            placeholder_patterns = [
+                r"before:\s*(?:NONEXISTENT_TEXT|TODO_FILL|BLOCKED|PLACEHOLDER|MARKER|DUMMY|XYZ|REPLACE_ME|FIXME_FILL)",
+                r"before:\s*[A-Z_]+(?:_XYZ|_PLACEHOLDER|_FILL|_DUMMY|_MARKER|_KEEP|_TBD)",
+            ]
+            has_placeholder = any(_re56.search(p, action, _re56.IGNORECASE) for p in placeholder_patterns)
+
+            # Check 2: no-op edit (before == after, both placeholders)
+            no_op = False
+            m_before = _re56.search(r"before:\s*([^\n]+)", action)
+            m_after = _re56.search(r"after:\s*([^\n]+)", action)
+            if m_before and m_after:
+                if m_before.group(1).strip() == m_after.group(1).strip():
+                    no_op = True
+
+            # Log this attempt
+            history.append({
+                "ts": now,
+                "has_placeholder": has_placeholder,
+                "no_op": no_op,
+                "is_edit": is_edit_action,
+                "action_preview": action[:200],
+            })
+
+            # Count recent placeholder/no-op EDITS in last 60s
+            recent_failures = sum(1 for e in history
+                                  if now - e["ts"] < 60
+                                  and e.get("is_edit", False)
+                                  and (e["has_placeholder"] or e["no_op"]))
+
+            # Save history
+            try:
+                import yaml as _y56s
+                # R110-340: explicit UTF-8 encoding (locale-default
+                # is non-deterministic on Windows / non-UTF-8 locales).
+                with open(history_path, "w", encoding="utf-8") as f:
+                    _y56s.safe_dump({"edits": history, "last_check": now, "recent_failures_60s": recent_failures}, f)
+            except (yaml.YAMLError, OSError) as e:
+                # R110-340: narrow bare `except:` so real bugs propagate.
+                # YAMLError: yaml.safe_dump failure (e.g. non-serializable
+                # data in history entry). OSError: write/close failure
+                # (e.g. disk full, EACCES on history_path).
+                print(
+                    f"⚠️ history-save: dropping this entry: "
+                    f"{type(e).__name__}: {e}",
+                    file=sys.stderr,
+                )
+
+            # NON-EDIT actions (write/shell/delegate): just log, never block
+            if not is_edit_action:
+                return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
+
+            # BLOCK on current placeholder attempt (edit-only)
+            if has_placeholder:
+                return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"EDIT-SPIN-LOOP: 'before' contains placeholder pattern (NONEXISTENT_TEXT, XYZ, PLACEHOLDER etc.). READ THE FILE FIRST, then use the EXACT existing text as 'before'. R90-Root-Cause 2026-07-25.",
+                        "action": "BLOCKED"}
+
+            if no_op:
+                return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"EDIT-SPIN-LOOP: no-op edit (before == after). Edit tool is for changing text. Use 'write' to overwrite a file.",
+                        "action": "BLOCKED"}
+
+            # BLOCK on accumulated spin-loop pattern (edit-only)
+            if recent_failures >= 3:
+                return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
+                        "detail": f"EDIT-SPIN-LOOP: {recent_failures} placeholder/no-op edits in last 60s. STOP editing. Use 'write' for new content, or 'load' + exact text match for edits.",
+                        "action": "BLOCKED"}
+
+            return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
+
+
         if rule_id == "R12":
             """WORK_MAS_DECOUPLING: MAS lebt in ~/.config/goose/.state/mas/"""
             akt = action.lower()
-            if any(x in akt for x in [".state/", "checkpoints/", ".backups/"]) and "checkpoint" not in akt:
+            if any(x in akt for x in [".mase/", "checkpoints/", ".backups/"]) and "checkpoint" not in akt:
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": "MAS state in work/ detected! State belongs in ~/.config/goose/.state/mas/", "action": "WARNING"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
@@ -373,11 +689,29 @@ def check_rule(rule_id, action=""):
         
         if rule_id == "R14":
             """WORK_ON_MODE: work_on = mas | <projekt>"""
-            mode_file = os.path.expanduser("~/.config/goose/.mas-mode")
-            if not os.path.exists(mode_file):
+            # R110-61 (R14 path-bug fix): R14 originally hard-coded only
+            # ~/.config/goose/.mas-mode (line 640), but R110-31 (same file,
+            # line 301-314) already canonicalized the path resolution to
+            # a 3-path priority list: mas-engineer/.mas-mode > .mas-mode >
+            # ~/.config/goose/.mas-mode. Apply the same here so R14 sees
+            # the same authoritative .mas-mode as R110-31 and as the rest
+            # of the system. Without this fix, running from a non-default
+            # cwd (e.g. a clone of mas-engineer) would make R14 BLOCK even
+            # though R110-31 would correctly pass — a false-positive that
+            # blocked the pre-push-gate's Check 10 e2e run.
+            mode_file = None
+            for p in [
+                os.path.join(BASE_DIR, "mas-engineer/.mas-mode"),
+                os.path.join(BASE_DIR, ".mas-mode"),
+                os.path.expanduser("~/.config/goose/.mas-mode"),
+            ]:
+                if os.path.exists(p):
+                    mode_file = p
+                    break
+            if mode_file is None:
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": "No .mas-mode found — work_on mode not determinable", "action": "BLOCKED"}
-            with open(mode_file) as _f:
+            with open(mode_file, encoding="utf-8") as _f:
                 mode = _f.read().strip()
             akt = action.lower()
             if mode != "mas":
@@ -398,7 +732,16 @@ def check_rule(rule_id, action=""):
                 if result.returncode == 1:
                     return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                             "detail": result.stdout.strip(), "action": "BLOCKED"}
-            except Exception:
+            except (subprocess.SubprocessError, FileNotFoundError, OSError) as e:
+                # R110-340: narrowed from `except Exception:` so real
+                # bugs propagate.  SubprocessError: timeout, CalledProcessError,
+                # etc.  FileNotFoundError: dev_architecture_checker.py
+                # not on PATH.  OSError: underlying IO failure.
+                print(
+                    f"⚠️ dev_architecture_checker.py exec failed: "
+                    f"{type(e).__name__}: {e}",
+                    file=sys.stderr,
+                )
                 return {"violation": True, "rule": rule["name"], "hardness": rule["hardness"],
                         "detail": "dev_architecture_checker.py not found", "action": "WARNING"}
             return {"violation": False, "rule": rule["name"], "hardness": rule["hardness"], "action": "OK"}
@@ -463,10 +806,10 @@ def check_rule(rule_id, action=""):
                         "detail": "No shell/write/edit action — R18 not applicable", "action": "OK"}
 
             # Check ob a passender Sub-Agent exists
-            wf_path = os.path.join(BASE_DIR, ".state/workflows.yaml")
+            wf_path = os.path.join(BASE_DIR, ".mase/workflows.yaml")
             sub_agent_found = False
             if os.path.exists(wf_path):
-                with open(WORKFLOWS_DATEI) as f:
+                with open(WORKFLOWS_DATEI, encoding="utf-8") as f:
                     wf = yaml.safe_load(f)
                 sub_agents = wf.get("configs", {}).get("mas-self", {}).get("sub_agents", {})
                 all_sub_agent_names = []

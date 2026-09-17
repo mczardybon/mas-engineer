@@ -7,7 +7,7 @@ Apps.createApp() with exact values.
 
 Path resolution:
   - Uses MAS_WORKSPACE env var, or
-  - Walks up the directory tree looking for .mas/dashboards/,
+  - Walks up the directory tree looking for .mase/dashboards/,
   - Falls back to current directory
 """
 import json, os, sys
@@ -18,13 +18,13 @@ def _resolve_workspace():
         return ws
     current = os.path.abspath('.')
     while current != os.path.dirname(current):
-        if os.path.isdir(os.path.join(current, '.mas', 'dashboards')):
+        if os.path.isdir(os.path.join(current, '.mase', 'dashboards')):
             return current
         current = os.path.dirname(current)
     return os.path.abspath('.')
 
 WORKSPACE = _resolve_workspace()
-DASHBOARD_DIR = os.path.join(WORKSPACE, '.mas', 'dashboards')
+DASHBOARD_DIR = os.path.join(WORKSPACE, '.mase', 'dashboards')
 STATUS_FILE = os.path.join(DASHBOARD_DIR, 'mas-dashboard-status.json')
 SIGNAL_FILE = os.path.join(DASHBOARD_DIR, 'mas-dashboard-signal.json')
 OUTPUT_FILE = os.path.join(DASHBOARD_DIR, 'dashboard_prd_current.txt')
@@ -127,7 +127,7 @@ Dispatch Tree (toggle with ▶/▼):
 PANEL 4 - FRAMEWORK (col 2, row 2):
 Title: "⚙ framework & Config"
 KPI: Recipes: {fw["recipes"]["total"]} | Specialists: {fw["recipes"]["specialists"]} | Sub: {fw["recipes"]["subs"]} | Core: {fw["recipes"]["core"]}
-Config: Provider={fw["config"]["provider"]}, Model=deepseek-chat, Extensions={len(fw["config"]["extensions"])}
+Config: Provider={fw["config"]["provider"]}, Model=deepseek-v4-flash, Extensions={len(fw["config"]["extensions"])}
 
 PANEL 5 - USER (col 3, row 2):
 Title: "👤 User-framework"

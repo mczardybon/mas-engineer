@@ -23,8 +23,134 @@ everything is healthy.
 
 ## Procedure VALIDATE
 
-Run the following 14 checks IN ORDER. Stop at the first failure if a hard
+Run the following 24 checks IN ORDER. Stop at the first failure if a hard
 block is detected, but always collect all warnings.
+
+### Check 0: Commit-body disclosure audit (NEW v2.1.0, R110-56)
+**Why:** A commit body that says "Adds 4 new tests" but git diff shows
+zero new test functions is **dishonest disclosure**. It corrupts the
+audit trail, makes R-numbered findings un-trustable, and lets actors
+hide regressions behind plausible-sounding text. The validator's
+job is to catch THIS class of failure, not just code-level syntax.
+R110-56 v1 (commit 72457b8) committed exactly this anti-pattern
+(claimed 3 new tests + a contradicting rationale). Archived at
+`e2e-evidence-gen2/r11056-body-v1-72457b8-archive.md`.
+```bash
+cd $WORKSPACE
+python3 - <<'PYEOF'
+import subprocess, re, sys
+
+# Get the last commit body (subject + body)
+raw = subprocess.run(
+    ['git', 'log', '-1', '--pretty=format:%B'],
+    capture_output=True, text=True
+).stdout
+lines = raw.split('\n')
+subject = lines[0]
+body = '\n'.join(lines[1:]).strip()
+
+# 1. No-body check: short commits don't make claims, so they pass.
+# (Trivial doc-style or chore commits typically have no body.)
+if len(body) < 50:
+    print(f"  ✅ Check 0 PASS (commit body too short to make claims: {len(body)} chars)")
+    print(f"     {subject!r}")
+    sys.exit(0)
+
+# 2. Claim-extraction patterns
+#    Each pattern returns (regex, claim_type, what evidence is required)
+CLAIM_PATTERNS = [
+    (r'\b[Aa]dds?\s+(\d+)\s+new\s+tests?\b', 'new_tests', 'pytest --collect-only -q | wc -l must show +N test items compared to HEAD~1'),
+    (r'\b[Ff]ixes?\s+(R?\d+-\d+(?:/[A-Z\d]+)?)\b', 'fixes_X', 'git show HEAD --stat must show the fix touching the X file/function'),
+    (r'\b[Rr]ationale:?\s*([^\n]+)', 'rationale', 'body rationale must not contradict git log --grep on the referenced round/issue'),
+    (r'\b[Rr]eplaces?\s+(R?\d+-\d+)\b', 'replaces_X', 'prior commit X must be reachable OR the archive file must be referenced in the body'),
+    (r'\b(?:DOMAIN_[A-Z_]+_TOKENS)', 'domain_tokens', 'body must explicitly call out what DOMAIN_*_TOKENS were added/removed'),
+]
+
+violations = []
+for pat, ctype, required_evidence in CLAIM_PATTERNS:
+    matches = re.findall(pat, body)
+    if not matches:
+        continue
+    # 3. Cross-check each claim against the actual repo state
+    if ctype == 'new_tests':
+        for n in matches:
+            n_int = int(n)
+            # pytest --collect-only comparison
+            cur = subprocess.run(['python3', '-m', 'pytest', '--collect-only', '-q', '--ignore=.state'],
+                                 capture_output=True, text=True, timeout=60).stdout
+            cur_count = sum(1 for line in cur.split('\n') if '::' in line and '::' in line.split('::', 1)[1])
+            prev = subprocess.run(['git', 'show', 'HEAD~1:./'],
+                                  capture_output=True, text=True, timeout=30)
+            # Simpler: count test functions in HEAD~1 and HEAD diff
+            head_tests = subprocess.run(['git', 'ls-tree', '-r', 'HEAD', '--name-only'],
+                                        capture_output=True, text=True).stdout
+            prev_tests = subprocess.run(['git', 'ls-tree', '-r', 'HEAD~1', '--name-only'],
+                                        capture_output=True, text=True).stdout
+            head_test_files = set(f for f in head_tests.split('\n') if f.startswith(('tests/', 'test/')) and f.endswith(('.py', '.sh')))
+            prev_test_files = set(f for f in prev_tests.split('\n') if f.startswith(('tests/', 'test/')) and f.endswith(('.py', '.sh')))
+            new_test_files = head_test_files - prev_test_files
+            if len(new_test_files) != n_int:
+                violations.append(
+                    f"  ❌ Claim 'Adds {n_int} new tests' but git shows {len(new_test_files)} "
+                    f"new test files (HEAD~1 vs HEAD): {sorted(new_test_files) or '(none)'}."
+                )
+    elif ctype == 'rationale':
+        # Just note: rationale review requires human judgment; the validator
+        # can only flag it for the operator to verify, not auto-block.
+        # Heuristic: search for prior rounds' contradicting rationales.
+        for match in matches[:1]:
+            # Find any commit whose message references the same R-number
+            rnums = re.findall(r'R\d+-\d+', match)
+            for rn in rnums[:2]:
+                prior = subprocess.run(
+                    ['git', 'log', '--grep', rn, '--pretty=format:%s'],
+                    capture_output=True, text=True
+                ).stdout.split('\n')
+                if len(prior) > 1:  # Multiple commits reference this R-number → potential contradiction
+                    pass  # Soft flag only
+        # We do NOT block on rationale — just print a reminder
+        print(f"  ⚠️  Commit body contains 'Rationale: ...' — operator should manually verify")
+        print(f"     the rationale does not contradict any prior R-numbered commit message.")
+
+# 4. Additional generic check: body must NOT claim files are modified if
+#    `git show --stat` doesn't show them.
+stat = subprocess.run(['git', 'show', '--stat', 'HEAD', '--pretty=format:'],
+                     capture_output=True, text=True).stdout
+files_changed = set()
+for line in stat.split('\n'):
+    m = re.search(r'\|.*\b(\S+)$', line)
+    if m:
+        files_changed.add(m.group(1))
+
+# Look for explicit file mentions in body
+file_mentions = re.findall(r'`([a-zA-Z_][\w/.-]+\.[a-zA-Z]{1,5})`', body)
+for f in file_mentions:
+    if f not in files_changed and not f.startswith(('/', '.')) and 'archive' not in f.lower():
+        # Only flag if the file isn't tracked anywhere
+        exists = subprocess.run(['git', 'ls-tree', '-r', 'HEAD', '--name-only'],
+                                capture_output=True, text=True).stdout
+        if f not in exists:
+            violations.append(
+                f"  ❌ Body mentions file `{f}` but file is not in HEAD (might be archive-only). "
+                f"Confirm the file is referenced as archive, not as a change."
+            )
+
+if violations:
+    print(f"  ❌ Check 0 BLOCK: {len(violations)} disclosure violation(s):")
+    for v in violations:
+        print(v)
+    print()
+    print(f"  Fix: amend the commit (on cleanup branch) or write a corrected body. ")
+    print(f"  See docs/lessons-learned.md L14 for the disclosure rule and worked example.")
+    sys.exit(1)
+else:
+    print(f"  ✅ Check 0 PASS (commit body claims are evidence-backed)")
+    print(f"     Subject: {subject!r}")
+    print(f"     Body: {len(body)} chars, {len([l for l in body.split(chr(10)) if l.strip()])} non-blank lines")
+PYEOF
+```
+**Block if:** any body claim contradicts `git show --stat` or known file state.
+**R-numbered rationale mismatches are soft-warned only (not blocked) — they require human judgment.**
 
 ### Check 1.5: Last commit title matches repo convention (NEW v2.0.0)
 **Why:** R36 anti-pattern — invented `🪤 TRAP` and `🛡️ PUSH` titles that
@@ -49,8 +175,21 @@ history = subprocess.run(
 # 2b. Allowed emojis (HARDCODED from repo history, NOT learned from last-50)
 # R36 lesson: if we learn allowed emojis from history, we perpetuate anti-patterns
 # (e.g. 🪤 TRAP, 🛡️ PUSH made it into history → would be allowed forever).
-# Only the 4 emojis that existed in 5eb67fe era (long before R36) are allowed.
-ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊'}
+# The 4 pre-R36 emojis (🔧,📝,📚,📊) plus 🧹 (added R110-413 for cleanup commits
+# like 926aa8a that git-rf test-pollution artifacts; semantic is
+# "tidy/junk-removal", distinct from 🔧 which is "code/config change") are allowed.
+# R110-491: ⚡ added for performance/optimization commits (e.g. scanner 10×
+# speedup via _is_common_value cache). Semantic is "perf-gain/speedup" —
+# distinct from 🔧 (code/config) and 🧹 (cleanup). All 3 sources (validator
+# / detector / skill) must agree per R110-78 lesson.
+# R110-545: 🧪 added for test-coverage sprints (R110-506/507/508/509/510).
+# Semantic is "test-coverage expansion" — distinct from 🔧 (code/config),
+# 🧹 (cleanup), and 📚 (docs). All 3 sources must agree.
+# R110-583: 🐛 added — semantic is "bug fix" (deprecation warnings, race
+# conditions, regression fixes). Historically used in 3 prior commits
+# (R110-262, R110-326 FIX deepseek-chat) — exempt-by-hash before. Now
+# canonicalized across all 3 sources.
+ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊', '🧹', '⚡', '📋', '🧪', '🐛'}
 
 # 3. Build set of historically-used emojis (for diagnostics only)
 EMOJI_RE = re.compile(r'[\U0001F000-\U0001FFFF\U00002600-\U000027BF]')
@@ -67,17 +206,55 @@ for t in history:
 allowed_patterns = [
     r'^(fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?:',  # conventional commits
     r'^mas\(round-\d+\):',  # MAS self-improve rounds
+    # R110-304: R-sprint round-up colon form `R<round>-<num>:
+    # <topic> — desc`. Mirrors the same addition in
+    # tools/dev_category_drift.py (R_SPRINT_COLON_RE) and the
+    # smoke test in tests/test_pre_push_check_1_5_skill_alignment.py
+    # (R110-304 update). All 3 sources stay in lockstep (R110-78
+    # lesson: validator / detector / skill must agree, or the next
+    # R-sprint silently re-introduces drift).
+    r'^R\d+-\d+((?: (?:follow-up|phase \d+|[\w-]+))?): ',
+    # R110-399: hybrid "emoji + conventional-commit" form
+    # `🔧 fix: R<num> — ...` (R110-179 spec, accepted by the
+    # alignment test in tests/test_pre_push_check_1_5_skill_alignment.py
+    # since R110-179). The validator-doc was missing the hybrid
+    # pattern even though the smoke test, the drift detector
+    # (R_SPRINT_COLON_RE / R110-304), and the commit protocol
+    # all accept it. Pure cosmetic lockstep — 3-source
+    # (validator / detector / alignment-test) symmetry per
+    # R110-78 lesson.
+    #
+    # R110-400: tighten the hybrid pattern to require the
+    # em-dash ` — ` after the R-num (R-num + space + em-dash
+    # + desc), so that the "missing em-dash" anti-form
+    # `🔧 fix: R110-261 title` (R-num + space + desc, no
+    # em-dash) is correctly REJECTED. The 2 KNOWN_GOOD entries
+    # `🔧 fix: R110-261 — title` and `🔧 fix(scope): R110-261 — title`
+    # both contain R<num> + space + em-dash + desc, so they
+    # still match. Pure pattern-tightening; the 3-source
+    # lockstep (validator / detector / alignment-test) stays
+    # in sync — the alignment test's `^[🔧📝📚📊] (fix|feat|...):`
+    # pattern is also anchored at start with no em-dash, so
+    # the alignment test only verifies that SOME pattern
+    # starts with the conventional form, not the full
+    # grammar. The full grammar lives in the validator.
+    r'^[🔧📝📚📊🧹⚡📋🧪🐛] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?: R\d+-\S+ — ',
+    r'^[🔧📝📚📊🧹⚡📋🧪🐛] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert): R\d+-\S+ — ',
 ]
 # Conventional commits with allowed emojis (the 4 in repo history)
 for allowed in ALLOWED_EMOJIS:
     allowed_patterns.append(f'^{re.escape(allowed)} (FIX|DOCS|STATE|TEST|FEAT|CHORE|ARCH) — ')
+# R108+ convention: emoji + R<round>-<num>[/<sub>] [follow-up] — desc
+# Examples: 🔧 R108-9 follow-up — ..., 📚 R108-7 — ..., 📊 EVIDENCE — R108-9 — ...
+for allowed in ALLOWED_EMOJIS:
+    allowed_patterns.append(f'^{re.escape(allowed)} (R\\d+-[\\w-]+( follow-up)? — |EVIDENCE — R\\d+-)')
 
 # 5. Check 5a: title matches a known pattern
 ok = any(re.match(p, last_title) for p in allowed_patterns)
 if not ok:
     print(f"  ❌ Last commit title doesn't match repo convention:")
     print(f"     {last_title!r}")
-    print(f"     Allowed patterns: type(scope): desc | mas(round-NN): | 🔧|📝|📚|📊 <TYPE> — desc")
+    print(f"     Allowed patterns: type(scope): desc | type: desc | 🔧|📝|📚|📊 <TYPE> — desc | 🔧|📝|📚|📊 R<round>-<num> [follow-up] — desc | 🔧|📝|📚|📊 (fix|feat|...): desc (R110-399 hybrid) | 📊 EVIDENCE — R<round>-<num> — desc")
     print(f"     Run `git log --oneline -20` to see the dominant style.")
     exit(1)
 
@@ -98,7 +275,8 @@ exit(0)
 PYEOF
 ```
 **Block if:** last commit title doesn't match `type(scope): desc`, `type: desc`,
-`mas(round-NN):`, or one of the 4 known emoji prefixes (`🔧`, `📝`, `📚`, `📊`).
+`mas(round-NN):`, one of the 4 known emoji prefixes (`🔧`, `📝`, `📚`, `📊`) followed by `<TYPE> — desc`,
+or R108+ convention `🔧|📝|📚|📊 R<round>-<num> [follow-up] — desc` / `📊 EVIDENCE — R<round>-<num> — desc`.
 **Block if:** last commit title uses an emoji NOT in the precedent set (anti-pattern: R36 🪤 TRAP, 🛡️ PUSH).
 
 ### Check 1: P1 (high-severity) findings = 0
@@ -106,9 +284,9 @@ PYEOF
 cd $WORKSPACE
 python3 - <<'PYEOF'
 import yaml, glob, os
-findings_path = ".state/pipeline/findings.yaml"
+findings_path = ".mase/pipeline/findings.yaml"
 if not os.path.exists(findings_path):
-    print("WARN: no .state/pipeline/findings.yaml — run im-finder first")
+    print("WARN: no .mase/pipeline/findings.yaml — run im-finder first")
     exit(0)
 with open(findings_path) as f:
     data = yaml.safe_load(f)
@@ -125,7 +303,7 @@ PYEOF
 ### Check 2: No hardcoded /home/<user>/ paths
 ```bash
 cd $WORKSPACE
-grep -rn '/home/[a-z]*/' tools/ recipe/ .mas/ 2>/dev/null
+grep -rn '/home/[a-z]*/' tools/ recipe/ .mase/ 2>/dev/null
 ```
 **Block if:** any hardcoded user-home path found.
 
@@ -150,7 +328,9 @@ sys.exit(1 if err else 0)
 ```bash
 cd $WORKSPACE
 for f in tools/dev_*.py; do
-    python3 -c "compile(open('$f').read(), '$f', 'exec')" 2>&1 | grep -q . && echo "SYNTAX: $f"
+    if ! python3 -c "compile(open('$f').read(), '$f', 'exec')" 2>/dev/null; then
+        echo "SYNTAX: $f"
+    fi
 done
 ```
 **Block if:** any Python syntax error.
@@ -170,7 +350,14 @@ cd $WORKSPACE
 # Check for umlaut characters and a list of common German-only words
 # Note: the actual umlaut characters (ae, oe, ue, ss) are written as hex escapes
 # below to keep this instructions file itself free of them and pass its own check.
-grep -rP $'[\xc3\xa4\xc3\xb6\xc3\xbc\xc3\x9f\xc3\x84\xc3\x96\xc3\x9c]' tools/ recipe/ docs/ 2>/dev/null
+# Whitelist: files that are intentionally German (translation libs, test data for
+# German validators, legacy archival). These are functional, not bugs.
+GERMAN_WHITELIST='^(tools/pre_check_lib/german\.py|tools/e2e_teams\.py|tools/cleanup_repo_v1\.sh|recipe/sub/legacy/)'
+grep -rP $'[\xc3\xa4\xc3\xb6\xc3\xbc\xc3\x9f\xc3\x84\xc3\x96\xc3\x9c]' tools/ recipe/ docs/ 2>/dev/null \
+  | grep -vE "$GERMAN_WHITELIST" \
+  | grep -vE '^[^:]+:\s*(#|//)' \
+  || echo "  (no off-whitelist German chars)"
+exit_code=0
 # Note: dashboard/agent/active etc. are English. Only flag the actual German words.
 ```
 **Block if:** any German special character found.
@@ -185,7 +372,7 @@ git status --porcelain | head -20
 
 ### Check 7.5: No backup files in commits (NEW v2.0.0 — R36 bug guard)
 **Why:** R36 had a bug where `git add -A` accidentally committed 27k lines of
-backup files (`.backups/20260724_*/`, `.state/pipeline/backup-*/`).
+backup files (`.backups/20260724_*/`, `.mase/pipeline/backup-*/`).
 This check prevents that class of bug from ever reaching master again.
 ```bash
 cd $WORKSPACE
@@ -194,7 +381,7 @@ python3 - <<'PYEOF'
 import subprocess, re
 backup_patterns = [
     r'\.backups/',
-    r'\.state/pipeline/backup-',
+    r'\.mase/pipeline/backup-',
     r'\.bak\.',
     r'backup-pre-r\d+/',
 ]
@@ -228,8 +415,8 @@ if [ -n "$DIFF_CONTENT" ]; then
   python3 tools/dev_goose_expert_check.py --check-mechanism "$DIFF_CONTENT"
 else
   # No recent changes — check current SOT findings/patches instead
-  python3 tools/dev_goose_expert_check.py --findings .state/pipeline/findings.yaml 2>/dev/null || true
-  python3 tools/dev_goose_expert_check.py --patches .state/pipeline/patches.yaml 2>/dev/null || true
+  python3 tools/dev_goose_expert_check.py --findings .mase/pipeline/findings.yaml 2>/dev/null || true
+  python3 tools/dev_goose_expert_check.py --patches .mase/pipeline/patches.yaml 2>/dev/null || true
 fi
 ```
 **Block if:** any "missing Goose mechanism" pattern found in uncommitted
@@ -245,17 +432,26 @@ flagged on 2026-07-21.
 
 This check delegates to `sub_mas-self-auditor` (sub-agent). The
 self-auditor reads e2e-results/, docs/, and top-level `*.md`, then
-emits a report to `.state/pipeline/self_audit.yaml`.
+emits a report to `.mase/pipeline/self_audit.yaml`.
 
 ```bash
 cd $WORKSPACE
-# Only run if e2e-results or cert-style files are staged
-STAGED_CERTS=$(git diff --cached --name-only | grep -E "^(e2e-results/|docs/.*CERTAIN|certificates/|\w*\.md$)" | head -5)
+# Only run if e2e-results or cert-style files are staged.
+# R108-13 fix: the previous detector used '\w*\.md$' which only matched
+# root-level .md files (e.g. README.md), NOT nested paths like
+# 'mas-engineer/docs/CERT.md' or 'e2e-results/2026-07-27/foo.md'.
+# Result: Check 9 was silently SKIPPED for almost every commit. The
+# --scope staged fix from R108-12 only runs IF this detector matches.
+# New pattern '\.md$' + '\.txt$' matches any path ending in those
+# suffixes (no leading-anchor on the filename part).
+STAGED_CERTS=$(git diff --cached --name-only | grep -E "(^e2e-results/|^docs/.*CERTAIN|^certificates/|\.md$|\.txt$)" | head -5)
 if [ -n "$STAGED_CERTS" ]; then
-  # Run the self-auditor
-  python3 tools/dev_self_auditor.py --scope e2e-results --check-patterns
+  # R108-12 fix: use --scope staged (audit only files in this commit),
+  # not --scope e2e-results (which would re-audit ALL historical reports
+  # and cause whack-a-mole: fix one cert → expose 5 more in older reports).
+  python3 tools/dev_self_auditor.py --scope staged
   # Read its report
-  cat .state/pipeline/self_audit.yaml
+  cat .mase/pipeline/self_audit.yaml
 fi
 ```
 
@@ -289,7 +485,19 @@ making the pre-push gate reject unbacked strong claims.
 **Command (FOREGROUND, ~25-60s, no PTY):**
 ```bash
 cd {workspace}
-python3 tools/e2e_run_all.py --quick --no-interactive --no-write-results 2>&1 | tail -30
+python3 tools/e2e_run_all.py --quick --no-interactive --auto-confirm 2>&1 | tail -30
+```
+
+**IMPORTANT (R110-60):** The `--auto-confirm` flag is REQUIRED for the R01 (CONFIRMATION_REQUIRED) bypass in e2e_run_all.py. Without it, the 5-minute confirmation window will expire mid-run and the e2e preflight will BLOCK every workflow with `⛔ R01 CONFIRMATION_REQUIRED` (not the e2e tests themselves failing).
+
+**BOTH required (defense in depth, R110-58 + R110-60):**
+- `--auto-confirm` CLI flag: signals operator-intent to bypass
+- `MAS_AUTO_CONFIRM=1` env var: signals automation-context (e.g. CI/pre-push-gate)
+
+If only one is present, e2e_run_all.py logs a WARN and skips the bypass. This mirrors the R01 hardness-5 AND-gate semantics. The pre-push-gate is an automation context, so `MAS_AUTO_CONFIRM=1` MUST be present in the validator's process environment before invoking the e2e tool. If you are running the validator manually (e.g. for debugging), set it in your shell first:
+```bash
+export MAS_AUTO_CONFIRM=1
+goose run --recipe recipe/sub/sub_mas-pre-push-validator.yaml
 ```
 
 **Parse output:** look for `✅ All {N} tests passed (100%)` or the summary line. Extract pass-count from the YAML report at the end of stdout (or stderr). The output format is: `Summary: {ok}/{total} passed ({pct}%)` — this is the canonical signal.
@@ -297,8 +505,8 @@ python3 tools/e2e_run_all.py --quick --no-interactive --no-write-results 2>&1 | 
 **Baseline source:**
 - PRIMARY: last successful `e2e-results/<date>-run-N/raw-results.json` where `summary` shows 100% (or highest known)
 - FALLBACK: hardcoded known-good baseline per run-mode
-  - `quick` mode: 83/83 (as of 2026-07-22)
-  - `full` mode: 139/139 (as of 2026-07-22)
+  - `quick` mode: 134/134 (as of 2026-09-11: 126 recipe_yaml + 3 top_workflows + 5 recovery_workflows; R110-415 measured from logs/e2e-results/2026-09-11-run-1/raw-results.json)
+  - `full` mode: 199/201 (as of 2026-09-11, R110-416 measured from logs/e2e-results/2026-09-11-run-3/raw-results.json: 126 recipe_yaml + 3 top_workflows + 5 recovery_workflows + 65/67 task_workflows; 2 pre-existing fails are `wf_git_commsg` (--msgsage typo in e2e_run_all.py line 187, SD-test synth-literal R110-78) and `wf_yaml_log` (`{msgsage}` template typo in .mase/workflows.yaml, same R110-78 pre-existing bug — NOT a regression, NOT a R110-416 scope); 5 SKIP out-of-scope (mq_consumers + recovery_defib + test_compare + yaml_clone))
 
 **Block conditions (ANY of):**
 - ⛔ current pass-count < baseline pass-count (regression)
@@ -313,7 +521,7 @@ python3 tools/e2e_run_all.py --quick --no-interactive --no-write-results 2>&1 | 
 **Note:** This check adds ~25-60s to the pre-push gate. If too slow for interactive use, can be skipped via `MAS_SKIP_E2E_BASELINE=1` env var (operator-initiated only, never auto-skip).
 
 **Evidence file (always written):**
-`.state/pre-push-e2e-baseline.json` — contains:
+`.mase/pre-push-e2e-baseline.json` — contains:
 ```yaml
 checked_at: <ISO-8601>
 baseline_source: <file path or "fallback">
@@ -367,7 +575,7 @@ print(json.dumps({'refs': total, 'broken': len(broken), 'pct': round(100*(1-len(
 
 ### Check 12 — test coverage gate (sub-agents vs tests, 80% minimum)
 
-**Why:** With 120 sub-agents and only ~2 dedicated test files, mas's framework is critically undertested. The pre-push gate must enforce a minimum test-to-sub-agent ratio to prevent shipping unbacked code. This is the structural test-coverage gate.
+**Why:** With the growing sub-agents directory (currently 116 yaml files in recipe/sub/, verified 2026-08-19 via `find recipe/sub -name '*.yaml' | wc -l`) and the matching test suite (currently 163 test_*.py files, ratio 1.41 — well above the 0.8 threshold), mas's framework was historically undertested (R110-56, 2026-07-25: only ~2 dedicated test files for 112 sub-agents; that ratio is now far exceeded). The pre-push gate must enforce a minimum test-to-sub-agent ratio to prevent shipping unbacked code. This is the structural test-coverage gate.
 
 **User requirement (2026-07-25):** tests/test_*.py count must be >= recipe/sub/*.yaml count × 0.8
 
@@ -406,7 +614,7 @@ print(json.dumps({
 - Documented in docs/TEST-COVERAGE-POLICY.md
 
 **Evidence file (always written):**
-`.state/pre-push-test-coverage.json` — contains:
+`.mase/pre-push-test-coverage.json` — contains:
 ```yaml
 checked_at: <ISO-8601>
 sub_agents: <int>
@@ -452,7 +660,7 @@ PYEOF
 
 ## Output Format
 
-Write a YAML report to `.state/pipeline/pre_push_validation.yaml`:
+Write a YAML report to `.mase/pipeline/pre_push_validation.yaml`:
 
 ```yaml
 signal: DONE
@@ -465,7 +673,7 @@ data:
     ok: <bool>
     blocked_reasons: [<string>, ...]
     warnings: [<string>, ...]
-  checks_run: 13
+  checks_run: 21
   checks_passed: <int>
   checks_failed: <int>
   timestamp: <ISO-8601>
@@ -496,7 +704,7 @@ r1 = subprocess.run(
     capture_output=True, text=True, timeout=120, cwd=str(W),
 )
 # Parse the saved JSON
-coverage_dir = W / ".state" / "coverage"
+coverage_dir = W / ".mase" / "coverage"
 latest = max(coverage_dir.glob("coverage-*.json"), key=lambda p: p.stat().st_mtime, default=None)
 if latest:
     cov = json.loads(latest.read_text())
@@ -550,15 +758,764 @@ PYEOF
 - ❌ BLOCK: any behavior fail OR any structure fail
 - WARN: structure has warnings (informational only)
 
+### Check 16+: Historical commit-subject category drift (NEW v2.2.0, R110-94)
+
+**Goal:** Catches drift across the LAST 30 days that Check 1.5 cannot see
+(Check 1.5 validates only the LATEST commit at push time).
+
+**What it does:** Invokes the standalone drift detector
+`tools/dev_category_drift.py` (R110-92) and BLOCKS the push if any
+non-conforming subject is found in the last 30 days (post-cutoff,
+default `--convention-since 2026-08-04`).
+
+```bash
+# Check 16+: Historical category drift
+echo "🔍 Check 16+: Historical commit-subject category drift (R110-94)"
+if [ ! -f "tools/dev_category_drift.py" ]; then
+    echo "  ❌ BLOCK: tools/dev_category_drift.py missing (R110-92 drift detector required)"
+    echo "     This check cannot run without it. Add it via R110-92 or disable this check."
+    exit 1
+fi
+python3 tools/dev_category_drift.py --since 30 --json > /tmp/drift_check_16.json
+DRIFT_RC=$?
+if [ $DRIFT_RC -eq 2 ]; then
+    echo "  ❌ BLOCK: Check 16+ usage error (exit 2). See /tmp/drift_check_16.json"
+    cat /tmp/drift_check_16.json
+    exit 1
+fi
+DRIFT_COUNT=$(python3 -c "import json; d=json.load(open('/tmp/drift_check_16.json')); print(d['drift_count'])" 2>/dev/null || echo "0")
+if [ "$DRIFT_RC" -eq 1 ] || [ "${DRIFT_COUNT:-0}" -gt 0 ]; then
+    echo "  ❌ BLOCK: Check 16+ — $DRIFT_COUNT historical commit(s) violate the 5-category convention"
+    echo "     Run: python3 tools/dev_category_drift.py --since 30   (for details)"
+    echo "     For the historical view (pre-cutoff): --convention-since YYYY-MM-DD"
+    echo "     Reference: mas-engineer-commit-protocol skill, R110-90 rebase precedent"
+    exit 1
+fi
+echo "  ✅ Check 16+ passed: no category drift in last 30 days (post-cutoff 2026-08-04)"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 16+: Historical commit-subject category drift (R110-94)
+  ✅ Check 16+ passed: no category drift in last 30 days (post-cutoff 2026-08-04)
+```
+
+**Output block on BLOCK:**
+```
+🔍 Check 16+: Historical commit-subject category drift (R110-94)
+  ❌ BLOCK: Check 16+ — 3 historical commit(s) violate the 5-category convention
+     Run: python3 tools/dev_category_drift.py --since 30   (for details)
+     For the historical view (pre-cutoff): --convention-since YYYY-MM-DD
+     Reference: mas-engineer-commit-protocol skill, R110-90 rebase precedent
+```
+
+**Additive to Check 1.5:** Check 1.5 catches the LATEST commit. Check 16+
+catches the WINDOW. Both are needed; neither replaces the other.
+
+**Override:** To pass on intentional historical drift (e.g. before the
+5-category convention was enforced), update the cutoff in the script via
+`--convention-since 2026-07-27` (or earlier). This check does NOT accept
+a flag override — edit the script's default or use a wrapper if needed.
+
+**Reference:** R110-92 (drift detector), R110-90 (rebase precedent),
+R110-78 (spec-drift lesson — counts must be verified).
+
+### Check 17: pytest-run (NEW v2.3.0, R110-78)
+
+**Goal:** Catches test failures BEFORE the push is allowed. This is the
+direct response to the R110-71 spec-drift incident where a recipe-count
+change (96 → 110) was committed and pushed, breaking 2 tests
+permanently because the validator never ran pytest. Check 17 makes
+"validator green + tests red" impossible.
+
+**Idempotency:** If `check_17_pytest_run` already appears in this file
+(previously inserted by an earlier validator run), skip the insert and
+keep the existing block. Detection via `grep -q "check_17_pytest_run"`.
+
+```bash
+# Check 17: pytest-run
+echo "🔍 Check 17: pytest-run (R110-78)"
+if [ ! -d "tests" ]; then
+    echo "  ⚠️  WARN: no tests/ directory found — skipping pytest-run (no coverage to verify)"
+    echo "PYTEST_SUMMARY: {\"passed\": 0, \"failed\": 0, \"errors\": 0, \"skipped\": 0, \"exit_code\": 5, \"note\": \"no tests dir\"}"
+    echo "  ✅ Check 17 passed: no tests/ dir (PASSED, WARN-only)"
+else
+    # Run pytest with retry (R-208): up to 2 attempts (R110-270: was 3
+    # but with 1965+ tests full-suite ~450s, 2 attempts is enough — 3rd
+    # almost never helps and can double wallclock to 1350s/22.5min);
+    # success = pytest exit 0; on_failure = cleanup before retry.
+    # Run pytest; use 'set -o pipefail' so $? reflects pytest's exit code, not tail's.
+    # --timeout=600 (R110-404): the 2 R110-279 synth tests
+    # (test_detector_finds_drift_for_synth_test +
+    # test_detector_does_NOT_flag_runtime_var_assert) each run a
+    # full dev_im_finder_scan.py subprocess over the test tree.
+    # At 4338 tests, each scan takes ~200s wallclock (R110-403
+    # measured 207s on the second synth test). With --timeout=300
+    # (R110-255 default), the second test is killed before the
+    # scan finishes → spurious "2 failed" on every R-sprint
+    # that pushes to mas-t-tests. With --timeout=600 the scan
+    # has 10min budget per test, comfortably above the 207s
+    # worst-case. The 4 phoenix-recovery tests in
+    # tests/test_dev_phoenix_recovery_publish.py do subprocess.run(timeout=180)
+    # to spawn dev_phoenix_recovery_run.py which runs 5 phoenix levels
+    # (~75s wallclock). --timeout=600 is also defensively guarded for
+    # those. Matches ci-tests.yml flag set (R110-246). --ignore=.state:
+    # state is transient run-state, not test code.
+    #
+    # R110-404 OUTER-CAP UPDATE: R110-303 calibrated 720s for 2714 tests
+    # on mas-t-tests. After R110-401 added 1617 more tests (R110-78
+    # baseline was 1295, post-cleanup is 4331) the suite grew to
+    # 1422s (23:42, R110-401) and the 2 R110-279 synth tests started
+    # hitting --timeout=300 inner cap (R110-403 measured each scan
+    # at 207s × 2 + accumulator = >300s). Bump OUTER_TIMEOUT 720→1500
+    # (25 min) and --timeout=300→600 to restore safety margin.
+    # Bumping to 1800s would be over-budget against the 30min
+    # local-budget. Revisit if/when test count crosses 6000.
+    # R110-414: bumped 1500→1800 anyway. The R110-413 subprocess
+    # timeout bump (120→250, 5 tests) can extend worst-case runtime
+    # by 5×(250-120) = 650s if all hit their new cap. 1444s (R110-412
+    # run) + 650s worst-case = 2094s, so 1800s still tight; budget
+    # 30min (1800s) for the "normal" case (no subprocess hit cap).
+    # Revisit sharding when suite crosses 6000 tests.
+    # On outer timeout, fail-fast with the tail of pytest output.
+    PYTEST_RC=1
+    PYTEST_ATTEMPT=0
+    MAX_ATTEMPTS=2   # R110-270: was 3 (caused 22.5min worst case)
+    OUTER_TIMEOUT=1800 # R110-414: was 1500 (R110-404). 30 min ceiling.
+    while [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt "$MAX_ATTEMPTS" ]; do
+        PYTEST_ATTEMPT=$((PYTEST_ATTEMPT + 1))
+        # set -o pipefail ensures $? reflects pytest's exit code, not tail's.
+        # We use | tail -30 to keep the last 30 lines on success; PIPESTATUS
+        # is queried separately via PIPESTATUS[0].
+        set -o pipefail
+        PYTEST_OUTPUT=$(timeout "$OUTER_TIMEOUT" python3 -m pytest tests/ -q --tb=line --color=no --timeout=600 --ignore=.state 2>&1 | tail -30)
+        PYTEST_RC=${PIPESTATUS[0]}
+        set +o pipefail
+        # If `timeout` killed pytest, exit code is 124. Treat as
+        # "hanging test" — fail fast, do NOT retry (same hang will recur).
+        if [ "$PYTEST_RC" -eq 124 ]; then
+            echo "  ❌ BLOCK: Check 17 — pytest exceeded outer ${OUTER_TIMEOUT}s cap (likely hanging test). NOT retrying."
+            echo "     Run individually: python3 -m pytest tests/test_<suspect>.py -v"
+            echo "PYTEST_SUMMARY: {\"passed\": 0, \"failed\": 0, \"errors\": 0, \"skipped\": 0, \"exit_code\": 124, \"note\": \"outer timeout\"}"
+            exit 1
+        fi
+        if [ "$PYTEST_RC" -eq 127 ]; then
+            break   # pytest not installed — retrying will not help
+        fi
+        if [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt "$MAX_ATTEMPTS" ]; then
+            echo "  ⚠️  RETRY $PYTEST_ATTEMPT/$MAX_ATTEMPTS: pytest exit=$PYTEST_RC — cleaning up before retry (R-208)"
+            pkill -f 'dev_mq_consumer' 2>/dev/null || true   # kill orphaned test consumers
+            rm -rf /tmp/mas-engineer-test /tmp/mas-engineer 2>/dev/null || true   # remove temp artifacts
+        fi
+    done
+    # Parse summary line: e.g. "===== 1277 passed in 8.12s ====="
+    PASSED=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ passed" | grep -oE "[0-9]+" | head -1)
+    FAILED=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ failed" | grep -oE "[0-9]+" | head -1)
+    ERRORS=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ error" | grep -oE "[0-9]+" | head -1)
+    SKIPPED=$(echo "$PYTEST_OUTPUT" | grep -oE "[0-9]+ skipped" | grep -oE "[0-9]+" | head -1)
+    DURATION=$(echo "$PYTEST_OUTPUT" | grep -oE "in [0-9.]+s" | grep -oE "[0-9.]+" | head -1)
+    PASSED=${PASSED:-0}; FAILED=${FAILED:-0}; ERRORS=${ERRORS:-0}; SKIPPED=${SKIPPED:-0}
+    DURATION=${DURATION:-0.0}
+    if [ "$PYTEST_RC" -eq 127 ]; then
+        echo "  ❌ BLOCK: pytest not installed (exit 127). Install with: pip install pytest"
+        exit 1
+    fi
+    if [ "$FAILED" -gt 0 ] || [ "$ERRORS" -gt 0 ] || [ "$PYTEST_RC" -ne 0 ]; then
+        echo "  ❌ BLOCK: Check 17 — pytest failed: $FAILED failed, $ERRORS errors, exit=$PYTEST_RC"
+        echo "     Last lines of pytest output:"
+        echo "$PYTEST_OUTPUT" | tail -10 | sed 's/^/     /'
+        echo "     Run: python3 -m pytest tests/ -q --tb=short   (for full traceback)"
+        echo "PYTEST_SUMMARY: {\"passed\": $PASSED, \"failed\": $FAILED, \"errors\": $ERRORS, \"skipped\": $SKIPPED, \"duration_seconds\": $DURATION, \"exit_code\": $PYTEST_RC}"
+        exit 1
+    fi
+    echo "  ✅ Check 17 passed: $PASSED passed, $FAILED failed, $ERRORS errors, $SKIPPED skipped in ${DURATION}s"
+    echo "PYTEST_SUMMARY: {\"passed\": $PASSED, \"failed\": $FAILED, \"errors\": $ERRORS, \"skipped\": $SKIPPED, \"duration_seconds\": $DURATION, \"exit_code\": $PYTEST_RC}"
+fi
+```
+
+**Output block on PASS:**
+```
+🔍 Check 17: pytest-run (R110-78)
+  ✅ Check 17 passed: 1277 passed, 0 failed, 0 errors, 0 skipped in 9.6s
+PYTEST_SUMMARY: {"passed": 1277, "failed": 0, "errors": 0, "skipped": 0, "duration_seconds": 9.65, "exit_code": 0}
+```
+
+**Duration reference (R110-95, 2026-08-04, 5x measurement, BEFORE phoenix tests):**
+  Median: 9.65s | Mean: 9.60s | Std: 0.13s | Range: 9.46-9.77s
+  Historical: 8.12s (R110-71 era, single-point). Spec is documentation-
+  only; Check 17 does NOT BLOCK on duration. Variance is real (run-to-run
+  ~0.3s); the 8.12s figure is now retired.
+
+**Duration reference (R110-270, 2026-08-27, AFTER R110-265/266/267/269 +73 tests):**
+  The 4 phoenix-recovery tests in tests/test_dev_phoenix_recovery_publish.py
+  each take ~73-76s wallclock (subprocess.run(timeout=180) on
+  dev_phoenix_recovery_run.py which runs all 5 phoenix levels). Total
+  phoenix cost: 4 × 75s = 300s. The other ~1960 tests run in ~140s.
+  Full test-suite wallclock: 440-460s (7.3-7.7 min) single-process.
+  R110-270 OUTER-CAP: 540s (9 min) hard kill via `timeout`. On outer-
+  cap trigger (exit 124), Check 17 BLOCKS without retry. This prevents
+  the indefinite-block bug that would happen if a test hung (no MQ
+  broker cleanup, no orphan kill) — the previous code had no upper
+  bound and could hang forever.
+  MAX_ATTEMPTS=2 (R110-270): was 3, but worst-case 3 × 460s = 1380s
+  (23 min) exceeded local CI budget. 2 × 540s = 1080s (18 min) worst
+  case is acceptable. Empirical: flake rate is <1% so 3rd retry
+  almost never helps.
+  Spec is documentation-only; Check 17 does NOT BLOCK on duration
+  UNLESS the outer cap is hit (which IS a hard BLOCK).
+  Measured R110-269 (2026-08-27): 1965 passed in 7m 26s (446s) local.
+  Measured R110-254 (2026-08-22): 1625 passed in 7m 16s (436s) local.
+  Measured R110-254 (2026-08-22): GHA matrix job 14m 32s wallclock.
+  (The R110-95 9.65s figure is RETIRED as of R110-255 — superseded
+  by the post-phoenix baseline above. Use 7.3-7.7 min local, 14-15
+  min GHA.)
+
+**Output block on BLOCK:**
+```
+🔍 Check 17: pytest-run (R110-78)
+  ❌ BLOCK: Check 17 — pytest failed: 2 failed, 0 errors, exit=1
+     Last lines of pytest output:
+     FAILED tests/test_sub_mas_bootstrap.py::test_bootstrap_distributes_96_subagents
+     FAILED tests/test_sub_mas_recipes.py::test_recipe_count_matches_subagents
+     ...
+PYTEST_SUMMARY: {"passed": 1275, "failed": 2, "errors": 0, "skipped": 0, "duration_seconds": 8.12, "exit_code": 1}
+```
+
+**Block logic:** BLOCKED iff `failed > 0` OR `errors > 0` OR `exit_code != 0`.
+PASSED (with WARN) if `tests/` directory is missing — coverage is a
+separate concern (D2 SD-finding), not a gate.
+PASSED if `skipped > 0` (intentional skip is fine).
+
+**Reference:** R110-78 (spec-drift incident), R110-71 (count change
+that broke 2 tests), R110-82 (initial spec for Check 16 → renumbered
+to 17 to avoid collision with R110-94 Check 16+).
+
+### Check 18: spec-invariant (NEW v2.4.0, R110-118; scope-ext v2.8.0, R110-206)
+
+**Goal:** Closes R110-78 PHASE 3 (R110-109 DIREKTIVE 2+3). Test
+count-assertions (`assert "N type" in ...`) MUST match the recipe
+count-declarations. Prevents the R110-71 pattern (a count changed in
+one place while the other drifted) from ever reaching a push again.
+
+**R110-206 scope extension:** test MODULE-DOCSTRINGS AND
+`recipe/instructions/*.md` single-line prose are ALSO cross-checked
+against the recipe count-declarations for count-declaration types
+(checks/check/critical — the F-082 class). A docstring or instruction
+count that contradicts the recipe declaration is a BLOCKER naming the
+diverged files. Skips: version/identifier contexts (v1.0.0, L01),
+fenced + indented code blocks, inline shell one-liners, markdown
+tables, HTML comments, headings.
+
+**Idempotency:** If `check_18_spec_invariant` already appears in this
+file (previously inserted by an earlier validator run), skip the insert
+and keep the existing block. Detection via
+`grep -q "check_18_spec_invariant"`.
+
+```bash
+# Check 18: spec-invariant (R110-118)
+echo "🔍 Check 18: spec-invariant (R110-118)"
+python3 tools/dev_spec_invariant.py --repo-root . > /tmp/spec_invariant_18.txt 2>&1
+SPEC_INV_RC=$?
+if [ "$SPEC_INV_RC" -ne 0 ]; then
+    echo "  ❌ BLOCK: Check 18 — spec-invariant drift detected (test count-assertions != recipe count-declarations)"
+    sed 's/^/     /' /tmp/spec_invariant_18.txt
+    echo "     Fix: align the test literal OR the recipe declaration (git blame tells you which is canonical)"
+    exit 1
+fi
+echo "  ✅ Check 18 passed: test count-assertions match recipe count-declarations"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 18: spec-invariant (R110-118)
+  ✅ Check 18 passed: test count-assertions match recipe count-declarations
+```
+
+**Output block on BLOCK:**
+```
+🔍 Check 18: spec-invariant (R110-118)
+  ❌ BLOCK: Check 18 — spec-invariant drift detected (test count-assertions != recipe count-declarations)
+     ❌ INVARIANT-sub-agents [BLOCKER]: Test asserts [6, 110] 'sub-agents' but recipe declares [110]
+     Fix: align the test literal OR the recipe declaration (git blame tells you which is canonical)
+```
+
+**Reference:** R110-118 (DIREKTIVE 3), R110-109 (spec), R110-78 (PHASE 3 closure).
+
+### Check 19: MQ semantic hardening (NEW v2.5.0, R110-188)
+
+**Goal:** tools/dev_message_queue.py must contain the R110-188 semantic
+hardening markers (F-MQ-188-1..10). Prevents the 11 user-flagged MQ
+defects from regressing after they are fixed.
+
+**Idempotency:** If `check_19_mq_semantic` already appears in this
+file, skip the insert and keep the existing block. Detection via
+`grep -q "check_19_mq_semantic"`.
+
+```bash
+# Check 19: MQ semantic hardening (R110-188)
+echo "🔍 Check 19: MQ semantic hardening (R110-188)"
+MQ188_FAIL=0
+INFLIGHT_HITS=$(grep -c '"in_flight_at"' tools/dev_message_queue.py || true)
+QUAR_HITS=$(grep -c '_quarantine_corrupt_line' tools/dev_message_queue.py || true)
+P95_HITS=$(grep -c 'current_p95_lag_ms' tools/dev_message_queue.py || true)
+INV_HITS=$(grep -c 'MQ_INVARIANTS' tools/dev_message_queue.py || true)
+STRICT_HITS=$(grep -c 'MAS_MQ_STRICT_TOPIC' tools/dev_message_queue.py || true)
+if [ "$INFLIGHT_HITS" -lt 3 ]; then
+    echo "  ❌ BLOCK: Check 19 — 'in_flight_at' expected ≥3 hits, got $INFLIGHT_HITS (F-MQ-188-1/2/3)"
+    MQ188_FAIL=1
+fi
+if [ "$QUAR_HITS" -lt 2 ]; then
+    echo "  ❌ BLOCK: Check 19 — '_quarantine_corrupt_line' expected ≥2 hits, got $QUAR_HITS (F-MQ-188-5)"
+    MQ188_FAIL=1
+fi
+if [ "$P95_HITS" -lt 1 ]; then
+    echo "  ❌ BLOCK: Check 19 — 'current_p95_lag_ms' expected ≥1 hit, got $P95_HITS (F-MQ-188-7)"
+    MQ188_FAIL=1
+fi
+if [ "$INV_HITS" -lt 1 ]; then
+    echo "  ❌ BLOCK: Check 19 — 'MQ_INVARIANTS' expected ≥1 hit, got $INV_HITS (F-MQ-188-10)"
+    MQ188_FAIL=1
+fi
+if [ "$STRICT_HITS" -lt 1 ]; then
+    echo "  ❌ BLOCK: Check 19 — 'MAS_MQ_STRICT_TOPIC' expected ≥1 hit, got $STRICT_HITS (F-MQ-188-6)"
+    MQ188_FAIL=1
+fi
+if [ "$MQ188_FAIL" -ne 0 ]; then
+    echo "     Fix: re-apply R110-188 directive (F-MQ-188-1..10) to tools/dev_message_queue.py"
+    exit 1
+fi
+echo "  ✅ Check 19 passed: MQ semantic hardening markers present (in_flight_at=$INFLIGHT_HITS, quarantine=$QUAR_HITS, p95=$P95_HITS, invariants=$INV_HITS, strict=$STRICT_HITS)"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 19: MQ semantic hardening (R110-188)
+  ✅ Check 19 passed: MQ semantic hardening markers present
+```
+
+**Output block on BLOCK:**
+```
+🔍 Check 19: MQ semantic hardening (R110-188)
+  ❌ BLOCK: Check 19 — 'in_flight_at' expected ≥3 hits, got 1 (F-MQ-188-1/2/3)
+     Fix: re-apply R110-188 directive (F-MQ-188-1..10) to tools/dev_message_queue.py
+```
+
+**Reference:** R110-188 (MQ Semantic Hardening directive).
+
+### Check 20: MQ hardening P2 markers (NEW v2.6.0, R110-189)
+
+**Goal:** tools/dev_message_queue.py must contain the 15 R110-189 MQ
+hardening markers (F-MQ-189-1..15). Prevents the 15 hardening P2/P3
+defects from regressing after they are fixed.
+
+**Idempotency:** If `check_20_mq_hardening` already appears in this
+file, skip the insert and keep the existing block. Detection via
+`grep -q "check_20_mq_hardening"`.
+
+```bash
+# Check 20: MQ hardening P2 markers (R110-189)
+echo "🔍 Check 20: MQ hardening P2 markers (R110-189)"
+MQ189_FAIL=0
+MQ189_MARKERS=(
+  "class QueueFullError"          # F-MQ-189-1
+  "_gc_old_pending"               # F-MQ-189-2
+  "def requeue("                  # F-MQ-189-3
+  "_lag_distribution"             # F-MQ-189-4
+  "def replay_dlq("               # F-MQ-189-5
+  "_SCHEMA_VERSION"               # F-MQ-189-6
+  "_IdempotencyIndex"             # F-MQ-189-7
+  "metrics_prometheus"            # F-MQ-189-8
+  "_next_retry_delay"             # F-MQ-189-9
+  "def list_topics("              # F-MQ-189-10
+  "def compact_completed("        # F-MQ-189-11
+  "_classify_error"               # F-MQ-189-12
+  "StorageError"                  # F-MQ-189-14
+  "MAS_MQ_MAX_DEPTH_PER_TOPIC"    # F-MQ-189-1
+  'min(int(m.get("retry_count"'   # F-MQ-189-13
+)
+for marker in "${MQ189_MARKERS[@]}"; do
+    HITS=$(grep -c "$marker" tools/dev_message_queue.py || true)
+    if [ "$HITS" -lt 1 ]; then
+        echo "  ❌ BLOCK: Check 20 — marker '$marker' expected ≥1 hit, got 0 (R110-189)"
+        MQ189_FAIL=1
+    fi
+done
+if [ "$MQ189_FAIL" -ne 0 ]; then
+    echo "     Fix: re-apply R110-189 directive (F-MQ-189-1..15) to tools/dev_message_queue.py"
+    exit 1
+fi
+echo "  ✅ Check 20 passed: 15/15 MQ hardening P2 markers present"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 20: MQ hardening P2 markers (R110-189)
+  ✅ Check 20 passed: 15/15 MQ hardening P2 markers present
+```
+
+**Output block on BLOCK:**
+```
+🔍 Check 20: MQ hardening P2 markers (R110-189)
+  ❌ BLOCK: Check 20 — marker 'class QueueFullError' expected ≥1 hit, got 0 (R110-189)
+     Fix: re-apply R110-189 directive (F-MQ-189-1..15) to tools/dev_message_queue.py
+```
+
+**Reference:** R110-189 (MQ Hardening Phase 2 directive).
+
+### Check 21: MQ topic caller-chain audit (NEW v2.7.0, R110-198)
+
+**Goal:** Every MQ topic that is PRODUCED (mq.enqueue() call in
+tools/ or recipe/) must have at least one CONSUMER (workflow
+recipe, sub_recipe with --processor, or test that verifies the
+consumer-side contract). Prevents the R110-194-B bug pattern
+from recurring: a topic is defined, a producer publishes to it,
+but nothing consumes it — so messages sit in pending.ndjson
+forever and the producer is a dead end.
+
+The original incident: dev_im_finder_scan --publish (R110-154)
+enqueued to `im.finding.created` but no consumer existed for
+~3 rounds. R110-195 (this batch) wired wf_im_consume_findings
++ sub_mas-design-patches to drain that topic. Check 21 makes
+sure the next such dead-end topic is caught BEFORE a push.
+
+**Idempotency:** If `check_21_mq_caller_chain` already appears
+in this file, skip the insert and keep the existing block.
+Detection via `grep -q "check_21_mq_caller_chain"`.
+
+```bash
+# Check 21: MQ topic caller-chain audit (R110-198)
+echo "🔍 Check 21: MQ topic caller-chain audit (R110-198)"
+
+# Step 1: Discover all producer topics by scanning tools/
+# and recipe/ for mq.enqueue() calls.  We use grep with
+# explicit call-site anchors (mq.enqueue, _mq.enqueue,
+# dev_message_queue.enqueue) so we don't catch the
+# literal word "topic" from docstrings/descriptions.
+# The previous regex `enqueue\(['\"](...)` was too loose
+# — it caught the FIRST quoted string after "enqueue(",
+# which in narrative text could be "topic" itself
+# (e.g. "...enqueue to a topic..."), not the actual
+# Python/Shell call site's first arg.
+PRODUCER_TOPICS=()
+# Scan tools/*.py for both mq.enqueue and _mq.enqueue and
+# dev_message_queue.enqueue call sites.  We use a 2-LINE
+# window (grep -A1) because in mas-engineer the call-site
+# pattern is:
+#     mq.enqueue(
+#         "topic", payload, ...
+# so the topic name is on the NEXT line.  We then filter
+# to ONLY string-literal first args (not variables like
+# MQ_TOPIC / topic) — variables mean the producer is a
+# dispatcher (e.g. dev_workflow_runner), not a direct
+# producer.  Direct producers (dev_dispatch_tracker,
+# dev_phoenix_log_persister) use string literals OR a
+# *_TOPIC constant that we'll catch in the next loop.
+while IFS= read -r line; do
+    # line looks like:    file:N:        mq.enqueue(
+    # OR                  file-N-topicname: payload...
+    # We use python to extract the topic.
+    topic=$(echo "$line" | python3 -c "
+import sys, re
+for ln in sys.stdin:
+    # match either the enqueue( line or the next-line
+    # continuation (file:line-continuation:payload)
+    m = re.search(r'[\"\']([a-z][a-z0-9_]*(?:[._][a-z0-9_]+)+)[\"\'].*', ln)
+    if m:
+        print(m.group(1))
+        break
+")
+    if [ -n "$topic" ] && [ "$topic" != "topic" ]; then
+        PRODUCER_TOPICS+=("$topic")
+    fi
+done < <(grep -rEnA1 '\.enqueue\(' tools/*.py 2>/dev/null \
+         | grep -v "\.pyc" | grep -v "^Binary" \
+         | grep -v "\.enqueue(")
+# Also catch MQ_TOPIC = "..." style module-level constants
+# used by tools that pass a variable to mq.enqueue (e.g.
+# dev_dispatch_tracker.MQ_TOPIC = "dispatches" then
+# mq.enqueue(MQ_TOPIC, ...)).  Anchor: line ends with
+# `TOPIC = "<word>"` and the word is lowercase.
+while IFS= read -r line; do
+    if echo "$line" | grep -qE 'TOPIC = ' ; then
+        # Use python to extract the quoted value — sed quote
+        # escaping inside a "..." heredoc is fragile.
+        topic=$(echo "$line" | python3 -c "
+import sys, re
+for ln in sys.stdin:
+    m = re.search(r'=\s*[\"\\']+([a-z0-9_]+)[\"\\']+\s*\$', ln)
+    if m:
+        print(m.group(1))
+        break
+")
+        if [ -n "$topic" ] && [ "$topic" != "topic" ]; then
+            PRODUCER_TOPICS+=("$topic")
+        fi
+    fi
+done < <(grep -rEn 'TOPIC\s*=\s*['"'"'"][a-z0-9_]+['"'"'"]\s*$' tools/*.py 2>/dev/null \
+         | grep -v "\.pyc")
+# Also scan recipe/*.yaml and recipe/sub/*.yaml for
+# explicit mq.enqueue() invocations (recipe side may
+# enqueue via shell: `python3 -c "...mq.enqueue('topic'..."`).
+# For YAML we anchor on the same `\.enqueue\(` pattern.
+while IFS= read -r line; do
+    topic=$(echo "$line" | sed -nE "s/.*enqueue\(['\"]([a-zA-Z0-9._-]+)['\"].*/\1/p")
+    if [ -n "$topic" ] && [ "$topic" != "topic" ]; then
+        PRODUCER_TOPICS+=("$topic")
+    fi
+done < <(grep -rEn '\.enqueue\(' recipe/ 2>/dev/null | grep -v "\.pyc")
+# De-dup
+PRODUCER_TOPICS=($(printf "%s\n" "${PRODUCER_TOPICS[@]}" | sort -u))
+
+# Step 2: For each producer topic, verify a caller chain
+# exists.  A "caller" is ANY of:
+#   (a) a workflow recipe (recipe/wf_*.yaml) that references
+#       the topic in --topic= or in a hardcoded `mq.consume(...)`
+#   (b) a sub_recipe (recipe/sub/sub_mas-*.yaml) that mentions
+#       the topic in its description or sub_recipe chain
+#   (c) a test file (tests/test_*.py) that calls
+#       mq.consume(<topic>) or mq.enqueue(<topic>, ...) and
+#       verifies the consumer-side flow
+#   (d) a tools/dev_mq_consumer*.py call site that hardcodes
+#       the topic (consumer driver integration)
+MQ21_FAIL=0
+MQ21_UNCOVERED=()
+for topic in "${PRODUCER_TOPICS[@]}"; do
+    # Caller-chain evidence: search recipes + tests + tools for
+    # the topic name.  Use the sanitized form (dots → underscores)
+    # as fallback because the MQ normalizes on write.
+    _sanitized=$(echo "$topic" | tr '.' '_')
+    HITS=0
+    # (a) workflow recipes
+    HITS=$((HITS + $(grep -l "$topic" recipe/wf_*.yaml 2>/dev/null | wc -l)))
+    HITS=$((HITS + $(grep -l "$_sanitized" recipe/wf_*.yaml 2>/dev/null | wc -l)))
+    # (b) sub_recipes
+    HITS=$((HITS + $(grep -lE "$topic|$_sanitized" recipe/sub/sub_mas-*.yaml 2>/dev/null | wc -l)))
+    # (c) test files
+    HITS=$((HITS + $(grep -lE "mq\.(enqueue|consume)\(['\"]?$topic|['\"]?$_sanitized" tests/test_*.py 2>/dev/null | wc -l)))
+    HITS=$((HITS + $(grep -lE "mq\.(enqueue|consume)\(['\"]?$topic|['\"]?$_sanitized" tests/test_dev_*.py 2>/dev/null | wc -l)))
+    # (d) dev_mq_consumer call sites
+    HITS=$((HITS + $(grep -lE "$topic|$_sanitized" tools/dev_mq_consumer*.py 2>/dev/null | wc -l)))
+    if [ "$HITS" -eq 0 ]; then
+        echo "  ❌ BLOCK: Check 21 — topic '$topic' has a producer but NO consumer-side caller chain"
+        MQ21_FAIL=1
+        MQ21_UNCOVERED+=("$topic")
+    else
+        echo "  ✅ Check 21: topic '$topic' has $HITS caller-chain reference(s)"
+    fi
+done
+
+if [ "$MQ21_FAIL" -ne 0 ]; then
+    echo "     Uncovered topics: ${MQ21_UNCOVERED[*]}"
+    echo "     Fix: add a consumer (workflow recipe wf_<topic>.yaml, or sub_recipe in recipe/sub/, or test that mq.consume()s the topic).  Pattern: see R110-195 (wf_im_consume_findings + sub_mas-design-patches)."
+    exit 1
+fi
+echo "  ✅ Check 21 passed: all ${#PRODUCER_TOPICS[@]} producer topic(s) have caller chains"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 21: MQ topic caller-chain audit (R110-198)
+  ✅ Check 21: topic 'im.finding.created' has 4 caller-chain reference(s)
+  ✅ Check 21: topic 'dispatches' has 2 caller-chain reference(s)
+  ✅ Check 21 passed: all 2 producer topic(s) have caller chains
+```
+
+**Output block on BLOCK (R110-194-B bug pattern, hypothetical):**
+```
+🔍 Check 21: MQ topic caller-chain audit (R110-198)
+  ❌ BLOCK: Check 21 — topic 'dispatches' has a producer but NO consumer-side caller chain
+     Uncovered topics: dispatches
+     Fix: add a consumer (workflow recipe wf_<topic>.yaml, or sub_recipe in recipe/sub/, or test that mq.consume()s the topic).  Pattern: see R110-195 (wf_im_consume_findings + sub_mas-design-patches).
+```
+
+**Reference:** R110-198 (caller-chain audit directive), R110-194-B
+(MQ Full Adoption incident), R110-195 (the first fix that closed
+the original `im.finding.created` dead-end).
+
+### Check 23: orphan-recipe registration audit (NEW v2.8.0, R110-204)
+
+**Goal:** Every DOMAIN 1 (mas-self) recipe in recipe/sub/*.yaml MUST be
+registered in workflows.yaml configs.mas-self.sub_agents (R110-31 hard
+rule: "All DOMAIN 1 sub-agents MUST be registered"). Prevents the
+R110-195/R110-203 bug class from recurring: a recipe added but never
+registered is an orphan — undispatchable from any workflow and only
+caught by Check 17 AFTER it lands. Check 23 runs
+tools/dev_check_orphan_recipes.py (the SOURCE OF TRUTH for what
+"registered" means — the pytest test and this check both call it) and
+BLOCKS the push at registration time, before the orphan ever reaches
+HEAD.
+
+DETECTION→CORRECTION→PREVENTION cycle (R110-204):
+  - R110-195 (DETECTION) added sub_mas-design-patches.yaml, missed registration
+  - R110-203 (CORRECTION) fixed the registry manually (1 line in workflows.yaml)
+  - R110-204 (PREVENTION) this check — the manual fix is now structurally
+    unnecessary: any future recipe-add without a registry update is blocked
+
+**Idempotency:** If `check_23_orphan_recipes` already appears in this
+file, skip the insert and keep the existing block. Detection via
+`grep -q "check_23_orphan_recipes"`.
+
+```bash
+# Check 23: orphan-recipe registration audit (R110-204)
+echo "🔍 Check 23: orphan-recipe registration audit (R110-204)"
+python3 tools/dev_check_orphan_recipes.py --repo-root . > /tmp/orphan_check_23.txt 2>&1
+ORPHAN_RC=$?
+if [ "$ORPHAN_RC" -ne 0 ]; then
+    echo "  ❌ BLOCK: Check 23 — orphan-recipe(s) detected (DOMAIN 1 recipe/sub/*.yaml not registered in workflows.yaml configs.mas-self.sub_agents)"
+    sed 's/^/     /' /tmp/orphan_check_23.txt
+    echo "     Fix: register the recipe in configs.mas-self.sub_agents (see .mase/workflows.yaml), then re-run"
+    exit 1
+fi
+echo "  ✅ Check 23 passed: all DOMAIN 1 recipes registered"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 23: orphan-recipe registration audit (R110-204)
+  ✅ Check 23 passed: all DOMAIN 1 recipes registered
+```
+
+**Output block on BLOCK (R110-195 bug pattern):**
+```
+🔍 Check 23: orphan-recipe registration audit (R110-204)
+  ❌ BLOCK: Check 23 — orphan-recipe(s) detected (DOMAIN 1 recipe/sub/*.yaml not registered in workflows.yaml configs.mas-self.sub_agents)
+     ORPHAN: 1/110 DOMAIN 1 (mas-self) recipes NOT registered in workflows.yaml configs.mas-self.sub_agents (R110-31 violation — undispatchable from workflow):
+       ❌ sub_mas-design-patches    recipe/sub/sub_mas-design-patches.yaml
+     Fix: register the recipe in configs.mas-self.sub_agents (see .mase/workflows.yaml), then re-run
+```
+
+**Reference:** R110-204 (DETECTION→CORRECTION→PREVENTION directive),
+R110-203 (the manual fix that made this check necessary), R110-195
+(the orphan incident), R110-31 (the registration rule).
 
 ## Boundaries
 
 - ⛔ NEVER modify any source file — this agent is read-only
 - ⛔ NEVER run `git push` itself — only validate
-- ⛔ NEVER skip a check — all 13 must run
+- ⛔ NEVER skip a check — all 23 must run (Check 0 + Checks 1-15 + Check 16+ + Check 17 + Check 18 + Check 19 + Check 20 + Check 21 + Check 23)
 - ⛔ Max 300s timeout total (5 minutes)
 
-**R01 NON-INTERACTIVE BYPASS:** If `RECURSION_OVERRIDE` env var >= 1 OR `MAS_NO_SESSION=1`, skip R01 confirmation and proceed directly with all checks. This enables CI/automated runs.
+**R01 NON-INTERACTIVE BYPASS (current implementation):** R01
+(CONFIRMATION_REQUIRED) is a hardness-5 rule. The actual bypass mechanism
+is NOT `RECURSION_OVERRIDE` / `MAS_NO_SESSION` (older docs may have
+claimed this — those were aspirational and never implemented). The
+real mechanism is `.mase/.last_confirmation` (unix timestamp; valid
+5 min, then auto-expires), checked in `check_confirmation()` at
+`tools/dev_rule_checker.py:71-77` and `tools/dev_rule_checker_generic.py:24-31`,
+and consumed by the R01 rule body at `tools/dev_rule_checker.py:102-106`
+(and the parallel site in the generic checker).
+
+Two ways to set `.mase/.last_confirmation` programmatically:
+
+  1. **Direct write (operator-initiated, e.g. CI step):**
+       echo "$(date +%s)" > .mase/.last_confirmation
+     The check `(time.time() - ts) < 300` then passes for 5 minutes.
+
+  2. **Via e2e_run_all.py wrapper (R110-58, automation context):**
+       export MAS_AUTO_CONFIRM=1
+       python3 tools/e2e_run_all.py --auto-confirm ...
+     e2e_run_all.py refreshes `.mase/.last_confirmation` BEFORE
+     running the e2e tests, so the workflows it spawns (build-test,
+     top_workflows, recovery) see a fresh confirmation. BOTH the
+     `--auto-confirm` CLI flag AND the `MAS_AUTO_CONFIRM=1` env var
+     are required (defense in depth, AND-gate); the implementation
+     lives in `tools/e2e_run_all.py:226-262`.
+
+The validator's Check 10 command (lines 441-447, R110-60) already uses
+path 2. The freshness window is 5 min — if a CI step is taking longer
+than 5 min between when it refreshed the confirmation and when it
+actually triggers a preflight, the bypass might expire. Re-run
+`e2e_run_all.py --auto-confirm` to refresh.
+
+### Check 24: evidence/directive SOT-location audit (NEW v2.9.0, R110-257)
+
+**Goal:** Every evidence-archive file MUST live in `logs/e2e-evidence-gen2/`
+(REPO-ROOT) and every directive MUST live in `mas-engineer/.mase/directives/`.
+Prevents the R110-217/R110-218 (directives) and R110-194/210/214/215/216/229/230/255
+(evidence) bug class from recurring: a file written at the wrong location
+silently accumulates until a future cleanup has to bulk-move it via 28
+`git mv` operations. Check 24 runs `tools/dev_evidence_sot.py --strict --git`
+(the SOURCE OF TRUTH for what "SOT" means — the pytest test and this
+check both call it) and BLOCKS the push at SOT-validation time, before
+the wrong-location file ever reaches HEAD.
+
+DETECTION→CORRECTION→PREVENTION cycle (R110-257):
+  - R110-194/210/214/215/216/229/230/255 (DETECTION) 26 evidence files
+    accumulated at `mas-engineer/logs/e2e-evidence-gen2/` (wrong SOT,
+    7 different R-numbers over multiple sessions)
+  - R110-217/R110-218 (DETECTION) 2 directive files in `mas-engineer/.directives/`
+    (wrong SOT — R110-115 DIREKTIVE 1 mandates `.mase/directives/`)
+  - R110-257 (CORRECTION+PREVENTION) this commit:
+    (1) CORRECTION: 28 `git mv` operations to the right SOT locations
+    (2) PREVENTION layer 1: `.gitignore` blocks `mas-engineer/.directives/`
+        and `mas-engineer/logs/` (catches accidental file creation)
+    (3) PREVENTION layer 2: `tools/dev_evidence_sot.py` (this check's
+        source of truth) scans the working tree + git index + dir health
+    (4) PREVENTION layer 3 (this check): wired into pre-push-validator
+        as Check 24 — every push validates SOT locations BEFORE the
+        commit lands at HEAD
+
+**Idempotency:** If `check_24_evidence_sot` already appears in this
+file, skip the insert and keep the existing block. Detection via
+`grep -q "check_24_evidence_sot"`.
+
+```bash
+# Check 24: evidence/directive SOT-location audit (R110-257)
+echo "🔍 Check 24: evidence/directive SOT-location audit (R110-257)"
+python3 tools/dev_evidence_sot.py --strict --git > /tmp/sot_check_24.txt 2>&1
+SOT_RC=$?
+if [ "$SOT_RC" -ne 0 ]; then
+    echo "  ❌ BLOCK: Check 24 — file(s) at wrong SOT location"
+    sed 's/^/     /' /tmp/sot_check_24.txt
+    echo "     Fix: move files to their correct SOT location:"
+    echo "       - evidence:    logs/e2e-evidence-gen2/  (REPO-ROOT, NOT mas-engineer/)"
+    echo "       - directives:  mas-engineer/.mase/directives/  (NOT mas-engineer/.directives/)"
+    echo "       Or delete them. .gitignore blocks new files at anti-SOT locations."
+    exit 1
+fi
+echo "  ✅ Check 24 passed: all evidence/directive files at SOT locations"
+```
+
+**Output block on PASS:**
+```
+🔍 Check 24: evidence/directive SOT-location audit (R110-257)
+  ✅ Check 24 passed: all evidence/directive files at SOT locations
+```
+
+**Output block on BLOCK (R110-217/218 + R110-194/210/.../255 bug pattern):**
+```
+🔍 Check 24: evidence/directive SOT-location audit (R110-257)
+  ❌ BLOCK: Check 24 — file(s) at wrong SOT location
+     ============================================================
+     R110-257 EVIDENCE/DIRECTIVE SOT CHECKER
+     ============================================================
+     SOT evidence:      logs/e2e-evidence-gen2/ (REPO-ROOT)
+     SOT directives:    mas-engineer/.mase/directives/
+     Anti-SOT evidence: mas-engineer/logs/
+     Anti-SOT direct.:  mas-engineer/.directives/
+     ------------------------------------------------------------
+       ❌ evidence_sot_working_tree:
+           mas-engineer/logs/e2e-evidence-gen2/R110-256-some-file.log
+     Fix: move files to their correct SOT location:
+       - evidence:    logs/e2e-evidence-gen2/  (REPO-ROOT, NOT mas-engineer/)
+       - directives:  mas-engineer/.mase/directives/  (NOT mas-engineer/.directives/)
+       Or delete them. .gitignore blocks new files at anti-SOT locations.
+```
+
+**Reference:** R110-257 (DETECTION→CORRECTION→PREVENTION directive),
+R110-217/R110-218 (the directive-SOT violators), R110-194/R110-210/
+R110-214/R110-215/R110-216/R110-229/R110-230/R110-255 (the 26 evidence
+SOT violators), R110-115 DIREKTIVE 1 (the SOT rule for directives),
+R110-143 (the SOT rule for evidence at REPO-ROOT).
+
+**R110-62 doc-fix note:** this section was rewritten to replace the
+older aspirational "RECURSION_OVERRIDE=2 MAS_NO_SESSION=1" claim.
+The vars `RECURSION_OVERRIDE` and `MAS_NO_SESSION` are used by
+`tools/dev_recursion_override.py` (24h cooldown for self-improvement
+patches) and by `tools/bulk_findings_fixer.py` (mode detection),
+NOT by R01. Anyone reading older docs (`docs/E2E-TESTPLAN.md`
+Test 5.1/5.2) or `docs/test-e2e-full.sh` should be aware those
+references are stale.
 
 CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation.
 MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.

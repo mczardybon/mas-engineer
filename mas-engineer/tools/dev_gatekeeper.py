@@ -16,7 +16,7 @@ call: python3 dev_gatekeeper.py --write path --content "..."
 import sys, os, json, subprocess, time, datetime
 
 MAS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STATE_DIR = os.path.join(MAS_DIR, ".state")
+STATE_DIR = os.path.join(MAS_DIR, ".mase")
 CONFIRMATION_file = os.path.join(STATE_DIR, ".last_confirmation")
 AUDIT_file = os.path.join(STATE_DIR, "audit.log.jsonl")
 LOCK_file = os.path.join(STATE_DIR, ".disziplin_lock")
@@ -112,9 +112,9 @@ def check_responsibility_matrix(action_type, filepath=None, cmd=None):
     import yaml
     
     # Matrix-Pathe: current Workspace > Install
-    matrix_path = os.path.join(os.getcwd(), "mas-engineer", ".state", "rules", "responsibility_matrix.yaml")
+    matrix_path = os.path.join(os.getcwd(), "mas-engineer", ".mase", "rules", "responsibility_matrix.yaml")
     if not os.path.exists(matrix_path):
-        matrix_path = os.path.expanduser("~/.config/goose/recipes/../mas-engineer/.state/rules/responsibility_matrix.yaml")
+        matrix_path = os.path.expanduser("~/.config/goose/recipes/../mas-engineer/.mase/rules/responsibility_matrix.yaml")
     
     if not os.path.exists(matrix_path):
         return ("error", None, f"Matrix not found: {matrix_path}")

@@ -12,7 +12,7 @@ Usage:
     # Use:
     ./tools/goose-costed run --recipe foo.yaml
 
-Configuration: reads .mas/config/cost.yaml (same as mas_cost)
+Configuration: reads .mase/config/cost.yaml (same as mas_cost)
 Check semantics: same as `mas_cost check`
 
 Exit codes:
@@ -22,6 +22,7 @@ Exit codes:
     3 = goose itself failed (after cost check passed)
 """
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -62,11 +63,17 @@ def main() -> int:
     print(f"COST-GATE: {msg}")
     if not allowed:
         print(f"❌ REFUSING goose call: {msg}")
-        print(f"   Override: set gate.daily=warn in .mas/config/cost.yaml")
+        print(f"   Override: set gate.daily=warn in .mase/config/cost.yaml")
         print(f"   Or bump budget: mas_cost set daily_budget_usd=10")
         return 1
 
     # Hand off to real goose
+    # Ensure goose-cli is findable even when PATH wasn't set in this shell
+    if not shutil.which("goose"):
+        for guess in ("/root/.local/bin/goose", os.path.expanduser("~/.local/bin/goose"), "/usr/local/bin/goose"):
+            if os.path.isfile(guess) and os.access(guess, os.X_OK):
+                os.environ["PATH"] = os.path.dirname(guess) + os.pathsep + os.environ.get("PATH", "")
+                break
     os.execvp("goose", ["goose"] + sys.argv[1:])
     return 3  # unreachable
 

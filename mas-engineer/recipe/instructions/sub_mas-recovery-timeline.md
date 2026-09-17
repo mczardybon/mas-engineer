@@ -36,7 +36,7 @@ mas_result:
 ## Task FIND_BEST — Automatically find best checkpoint
 
 STEP 1 — Test all checkpoints (most recent first):
-  checkpoint_dir={workspace}/mas-engineer/.state/checkpoints
+  checkpoint_dir={workspace}/mas-engineer/.mase/checkpoints
   best=''
   for d in $(ls -t $checkpoint_dir 2>/dev/null); do
     python3 -c "import yaml; yaml.safe_load(open('$checkpoint_dir/$d/recipe/dev-mas-engineer.yaml'))"
@@ -73,9 +73,9 @@ STEP 2 — Restore:
   rm -rf {workspace}/mas-engineer/recipe
   rm -rf {workspace}/mas-engineer/tools
   rm -rf {workspace}/mas-engineer/docs
-  cp -r {workspace}/mas-engineer/.state/checkpoints/$best/recipe  {workspace}/mas-engineer/
-  cp -r {workspace}/mas-engineer/.state/checkpoints/$best/tools  {workspace}/mas-engineer/
-  cp -r {workspace}/mas-engineer/.state/checkpoints/$best/docs   {workspace}/mas-engineer/
+  cp -r {workspace}/mas-engineer/.mase/checkpoints/$best/recipe  {workspace}/mas-engineer/
+  cp -r {workspace}/mas-engineer/.mase/checkpoints/$best/tools  {workspace}/mas-engineer/
+  cp -r {workspace}/mas-engineer/.mase/checkpoints/$best/docs   {workspace}/mas-engineer/
 
 STEP 3 — Validation + Snapshot:
   python3 -c "import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))"
@@ -90,9 +90,9 @@ STEP 3 — Validation + Snapshot:
 
 STEP 1 — Show timeline:
   echo '=== TIMELINE ==='
-  for d in $(ls -t {workspace}/mas-engineer/.state/checkpoints 2>/dev/null); do
-    label=$(cat {workspace}/mas-engineer/.state/checkpoints/$d/.label 2>/dev/null || echo '?')
-    status=$(python3 -c "import yaml; yaml.safe_load(open('{workspace}/mas-engineer/.state/checkpoints/$d/recipe/dev-mas-engineer.yaml'))" 2>/dev/null && echo '✓' || echo '✗')
+  for d in $(ls -t {workspace}/mas-engineer/.mase/checkpoints 2>/dev/null); do
+    label=$(cat {workspace}/mas-engineer/.mase/checkpoints/$d/.label 2>/dev/null || echo '?')
+    status=$(python3 -c "import yaml; yaml.safe_load(open('{workspace}/mas-engineer/.mase/checkpoints/$d/recipe/dev-mas-engineer.yaml'))" 2>/dev/null && echo '✓' || echo '✗')
     echo '$status $d — $label'
   done
 

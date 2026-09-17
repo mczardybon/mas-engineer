@@ -31,7 +31,7 @@ def build_status(ws):
     ws_abs = os.path.abspath(ws)
     mas_dir = os.path.join(ws_abs, 'mas-engineer')
     fw_dir = os.path.join(ws_abs, 'framework')
-    state_dir = os.path.join(mas_dir, '.state')
+    state_dir = os.path.join(mas_dir, '.mase')
     tools_dir = os.path.join(mas_dir, 'tools')
     sub_dir = os.path.join(mas_dir, 'recipe', 'sub')
     docs_dir = os.path.join(mas_dir, 'docs')

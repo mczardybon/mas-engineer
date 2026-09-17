@@ -29,7 +29,7 @@ except ImportError:
 # ─── constantn ──────────────────────────────────────────────
 WORKSPACE = Path(os.getcwd()).resolve()
 TOOLS_DIR = Path(__file__).parent.resolve()
-STATE_DIR = TOOLS_DIR.parent / ".state"
+STATE_DIR = TOOLS_DIR.parent / ".mase"
 
 def get_framework_path(project_name=None):
     """Determine path to the framework-project (active or named)."""

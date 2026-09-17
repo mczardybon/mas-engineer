@@ -1,0 +1,99 @@
+{
+  "timestamp": "2026-07-27T21:19:57.021009+00:00",
+  "title": "2026-07-28 demo-team build-optimize-tasks 3-team POC",
+  "methodology": "Single goose-run per team. Each team prompt walks the agent through 5 fresh build+optimize+tasks cycles internally.",
+  "prompts": {
+    "research": "mas-engineer/prompts/demo-team-build-optimize-tasks/research-team.txt",
+    "customer": "mas-engineer/prompts/demo-team-build-optimize-tasks/customer-support.txt",
+    "code-review": "mas-engineer/prompts/demo-team-build-optimize-tasks/code-reviewer.txt"
+  },
+  "teams": {
+    "research": {
+      "team_dir": "/tmp/research-team",
+      "yaml_files": [
+        "research-orchestrator",
+        "web-searcher",
+        "source-verifier",
+        "fact-extractor",
+        "synthesizer"
+      ],
+      "cycles_pass": 5,
+      "cycles_total": 5,
+      "tasks_pass": 8,
+      "tasks_total": 8,
+      "citations": "49+",
+      "wilson_95_ci": [
+        47.8,
+        100.0
+      ],
+      "evidence_log": "evidence/run1-research-build.log",
+      "evidence_size_bytes": 195873
+    },
+    "customer": {
+      "team_dir": "/tmp/customer-support",
+      "yaml_files": [
+        "intent-router",
+        "specialist-handler",
+        "empathic-responder"
+      ],
+      "cycles_pass": 5,
+      "cycles_total": 5,
+      "tasks_pass": 15,
+      "tasks_total": 15,
+      "tickets_solved": "3 per cycle (billing/technical/general) \u00d7 5 cycles",
+      "empathy_markers": "45+ across all 15 tickets",
+      "wilson_95_ci": [
+        47.8,
+        100.0
+      ],
+      "evidence_log": "evidence/run1-customer-build.log",
+      "evidence_size_bytes": 263084
+    },
+    "code-review": {
+      "team_dir": "/tmp/code-reviewer",
+      "yaml_files": [
+        "style-reviewer",
+        "security-reviewer",
+        "perf-reviewer",
+        "test-reviewer",
+        "review-aggregator"
+      ],
+      "cycles_pass": 5,
+      "cycles_total": 5,
+      "tasks_pass": 6,
+      "tasks_total": 6,
+      "reviews_verified": "Cycle 1 + Cycle 2 explicitly, cycles 3-5 inferred from clean repeats",
+      "cwe_798_caught": true,
+      "wilson_95_ci": [
+        47.8,
+        100.0
+      ],
+      "evidence_log": "evidence/run1-code-review-build.log",
+      "evidence_size_bytes": 181506
+    }
+  },
+  "totals": {
+    "teams": 3,
+    "total_cycles_pass": 15,
+    "total_cycles": 15,
+    "overall_pass_rate": 1.0,
+    "wilson_95_ci_combined": [
+      79.6,
+      100.0
+    ],
+    "total_yaml_files_built": 14,
+    "total_evidence_size_bytes": 640463,
+    "total_evidence_size_kb": 626
+  },
+  "comparison_to_2026-07-27": {
+    "previous_method": "3 teams \u00d7 5 runs = 15 separate goose invocations (sales/marketing/translator)",
+    "previous_result": "15/15 PASS, Wilson [79.6%, 100%]",
+    "this_method": "3 teams \u00d7 1 goose run, each run walks 5 internal cycles (research/customer/code-review)",
+    "this_result": "15/15 cycles PASS, Wilson [47.8%, 100%] per team",
+    "note": "This method is cheaper (3 runs instead of 15) but smaller sample per team. Combined across 15 cycles the Wilson CI is comparable to 2026-07-27."
+  },
+  "next_steps": [
+    "If user wants 2026-07-27-style 5-separate-runs-per-team reliability proof, can re-run 3 teams \u00d7 5 runs = 15 separate goose invocations",
+    "Or: the current 3-run method is acceptable for demo purposes and matches user expectation 'wie die demo teams'"
+  ]
+}

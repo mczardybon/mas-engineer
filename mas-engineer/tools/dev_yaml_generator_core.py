@@ -76,8 +76,8 @@ def validate_generated(name, generated, current_path):
     for key in ['title', 'description', 'version']:
         if g.get(key) != c.get(key):
             diffs.append(f"  {key}: gen={g.get(key)} != cur={c.get(key)}")
-    gs = g.get('settings', {})
-    cs = c.get('settings', {})
+    gs = g.get('settings') or {}
+    cs = c.get('settings') or {}
     for k in ['timeout', 'max_steps', 'goose_provider', 'goose_model']:
         if gs.get(k) != cs.get(k):
             diffs.append(f"  settings.{k}: gen={gs.get(k)} != cur={cs.get(k)}")

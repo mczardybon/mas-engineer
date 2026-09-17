@@ -1,22 +1,36 @@
 #!/usr/bin/env python3
-"""dev_dashboard_data.py v1.0.0 - Dashboard Data Generator for MCP App
+"""dev_dashboard_data.py v1.1.0 - Dashboard Data Generator for MCP App
 ======================================================================
 Reads Monitoring data and writes JSON for the framework dashboard.
 Will be called via Goose Scheduler every 5 Min OR on User-Refresh.
 
-Output: {workspace}/.mas/dashboards/data.json
-History: {workspace}/.mas/dashboards/history.json
+Output: {workspace}/.mase/dashboards/data.json
+History: {workspace}/.mase/dashboards/history.json
 
 Features:
 - Auto-generates data.json on each run
 - Sends MCP notification for realtime dashboard updates
 - Tracks health trend over time
+- R110-161: Surfaces MQ aggregate (dev_message_queue) as `mq.*` keys
+  in data.json so the dashboard can show queue depth, lag, DLQ count,
+  and per-topic stats without needing a separate MQ-UI page.
 
 call: python3 dev_dashboard_data.py --workspace /path
+
 """
 import json, os, subprocess, glob, sys, re
 from datetime import datetime
 
+# R110-161: dev_message_queue is optional (graceful degradation if
+# the MQ module is missing — the dashboard still renders, just
+# without the `mq` block).
+try:
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+    import dev_message_queue as mq
+    _MQ_AVAILABLE = True
+except ImportError:
+    mq = None
+    _MQ_AVAILABLE = False
 def shell(cmd, timeout=10):
     try:
         r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=timeout)
@@ -28,7 +42,16 @@ def load_json(path, default=None):
     if os.path.exists(path):
         try:
             with open(path) as f:
-                return json.load(f)
+                data = json.load(f)
+            # R110-330-BUG-3: A JSON file containing just `null`
+            # causes json.load to return None. Pre-fix code passed
+            # that None through to the caller, who would then
+            # crash on None[-10:] or None.values() etc. Now we
+            # return the caller's default for None (or any
+            # falsy non-container, to be safe).
+            if data is None:
+                return default if default is not None else {}
+            return data
         except:
             pass
     return default if default is not None else {}
@@ -49,6 +72,119 @@ def get_git_log(path, count=10):
     except:
         return []
 
+def _phase1_topics_summary(topics: dict) -> dict:
+    """R110-166 phase 2.3: per-phase-1-topic summary for the dashboard.
+
+    For each of the 3 phase-1 producer topics, surface the depth,
+    completed count, and a "last_msg" projection (one-line digest
+    of the most recent message payload). Tells the user at a glance
+    what the publishers in phase 1 have been emitting and what the
+    consumers in phase 2.1/2.2 have been processing.
+
+    Always returns a dict with all 3 keys (even when empty), so the
+    dashboard template can iterate safely.
+    """
+    PHASE1 = (
+        "im.finding.created",
+        "monitor.health.degraded",
+        "phoenix.recovery.completed",
+    )
+    # mq.stats() keys topics by the SANITIZED name (dots→underscores).
+    # Reverse that here so we can look up by the logical name.
+    def _safe(t: str) -> str:
+        return "".join(c if c.isalnum() or c in "_-" else "_" for c in t)
+    safe_to_logical = {_safe(t): t for t in PHASE1}
+    out = {}
+    for topic in PHASE1:
+        info = topics.get(_safe(topic)) or {}
+        entry = {
+            "depth": int(info.get("depth", 0)),
+            "completed_total": int(info.get("completed_total", 0)),
+            "lag_p95_ms": int(info.get("current_p95_lag_ms", 0)),
+            "dlq_count": int(info.get("dlq_count_for_topic", 0)),
+            "last_msg": None,
+        }
+        # Try to surface the most recent message on the topic. We look
+        # in the live topic first (status==pending); if none pending,
+        # we read the completed file (status==done) and pick the latest
+        # by acked_at. Best-effort: if anything goes wrong, leave
+        # last_msg=None (we never want the dashboard refresh to fail).
+        try:
+            from pathlib import Path
+            import json as _json
+            import os as _os
+            mq_root_env = _os.environ.get("MAS_MQ_ROOT")
+            if mq_root_env:
+                mq_root = Path(mq_root_env)
+            else:
+                mq_root = Path(".mase/mq")
+            safe = "".join(c if c.isalnum() or c in "_-" else "_" for c in topic)
+            live = mq_root / f"{safe}.ndjson"
+            done = mq_root / f"{safe}.completed.ndjson"
+            last = None
+            if live.exists():
+                with open(live) as f:
+                    for line in f:
+                        try:
+                            d = _json.loads(line)
+                        except Exception:
+                            continue
+                        if d.get("status") == "pending":
+                            last = d  # we keep overwriting → newest pending
+            if last is None and done.exists():
+                # Latest by acked_at
+                candidates = []
+                with open(done) as f:
+                    for line in f:
+                        try:
+                            d = _json.loads(line)
+                        except Exception:
+                            continue
+                        if d.get("status") == "done":
+                            candidates.append(d)
+                if candidates:
+                    candidates.sort(key=lambda d: d.get("acked_at") or "")
+                    last = candidates[-1]
+            if last is not None:
+                payload = last.get("payload") or {}
+                # Topic-specific digest: keep payload small + readable
+                if topic == "im.finding.created":
+                    digest = {
+                        "request_id": payload.get("request_id"),
+                        "findings_total": payload.get("findings_total"),
+                        "by_severity": payload.get("findings_by_severity"),
+                    }
+                elif topic == "monitor.health.degraded":
+                    digest = {
+                        "request_id": payload.get("request_id"),
+                        "has_problem": payload.get("has_problem"),
+                        "issues_found": payload.get("issues_found"),
+                        "command": payload.get("command"),
+                    }
+                elif topic == "phoenix.recovery.completed":
+                    digest = {
+                        "request_id": payload.get("request_id"),
+                        "levels_passed": payload.get("levels_passed"),
+                        "levels_total": payload.get("levels_total"),
+                        "final_status": payload.get("final_status"),
+                    }
+                else:
+                    digest = {"request_id": payload.get("request_id")}
+                entry["last_msg"] = {
+                    "msg_id": last.get("msg_id"),
+                    "consumer_id": last.get("consumer_id"),
+                    "enqueued_at": last.get("enqueued_at"),
+                    "acked_at": last.get("acked_at"),
+                    "status": last.get("status"),
+                    "digest": digest,
+                }
+        except Exception:
+            # Best-effort: never let a broken topic file break the dashboard
+            pass
+        out[topic] = entry
+    return out
+
+
 def generate_data(ws):
     ws_abs = os.path.abspath(ws)
     # Find the mas-engineer workspace (may be ws itself or ws/mas-engineer)
@@ -61,8 +197,8 @@ def generate_data(ws):
     else:
         mas_root = ws_abs
 
-    state_dir = os.path.join(mas_root, '.state')
-    dash_dir = os.path.join(mas_root, '.mas', 'dashboards')
+    state_dir = os.path.join(mas_root, '.mase')
+    dash_dir = os.path.join(mas_root, '.mase', 'dashboards')
     sub_dir = os.path.join(mas_root, 'recipe', 'sub')
     dist_dir = os.path.join(mas_root, 'dist')
     docs_dir = os.path.join(mas_root, 'docs')
@@ -196,6 +332,13 @@ def generate_data(ws):
     history_file = os.path.join(dash_dir, 'history.json')
     history = load_json(history_file, {"health_trend": [], "build_size": []})
 
+    # R110-312: history.json may contain pre-R110-149 entries that
+    # used the legacy 'mas' key (instead of 'score'). Migrate on
+    # load so the dashboard schema test sees 'score' for every entry.
+    for entry in history.get('health_trend', []):
+        if 'mas' in entry and 'score' not in entry:
+            entry['score'] = entry.pop('mas')
+
     now_str = datetime.now().strftime('%H:%M')
     mas_health = 100
     if degraded_count > 0:
@@ -216,9 +359,115 @@ def generate_data(ws):
     # ─── PROJECT NAME ───
     project_name = os.path.basename(ws_abs)
 
+    # ─── MQ (R110-161, R110-166 phase 2.3) ───
+    # Reads dev_message_queue stats and surfaces them as `mq.*` keys.
+    # Graceful: returns an empty stub if MQ module is unavailable or
+    # the .mase/mq/ directory doesn't exist yet (first run).
+    mq_block = {
+        "available": _MQ_AVAILABLE,
+        "generated_at": datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),
+        "depth_total": 0,
+        "lag_p95_ms": 0,
+        "dlq_count": 0,
+        "retry_rate": 0.0,
+        "completed_total": 0,
+        "topic_count": 0,
+        "by_topic": {},
+        # R110-166 phase 2.3: per-phase-1-topic summary so the dashboard
+        # surfaces what the publishers in phase 1 actually emitted and
+        # what the consumers in phase 2.1/2.2 actually processed.
+        "phase1_topics": {},
+        # R110-197: dashboard exposes the MQ's own observability
+        # surface so an operator can see at a glance what topics
+        # exist, which completed-files are getting big (and need
+        # compacting), and a short Prometheus excerpt for scraping
+        # without spinning up dev_mq_consumer as a sidecar.
+        # (1) topics_list — sorted list of live topic names
+        #     (mq.list_topics() excludes .completed.ndjson archives
+        #      and _corrupt.ndjson, so this is the in-flight set)
+        # (2) compactable_topics — list of {topic, lines, threshold}
+        #     for completed-files > default compact threshold
+        #     (10_000 lines — see mq.compact_completed default).
+        #     Operator can run `python3 -m dev_message_queue --compact
+        #     <topic>` per item.
+        # (3) prometheus_excerpt — first 20 lines of mq.metrics_prometheus()
+        #     so the dashboard text-view can show
+        #     `mq_depth{topic="im.finding.created"} 0` etc.
+        #     The full output is in the same shape a Prometheus
+        #     scraper would expect, ready for HTTP exposure.
+        "topics_list": [],
+        "compactable_topics": [],
+        "prometheus_excerpt": [],
+    }
+    if _MQ_AVAILABLE:
+        try:
+            mq_stats = mq.stats()  # see dev_message_queue.stats()
+            topics = mq_stats.get('topics', {})
+            mq_block['by_topic'] = topics
+            mq_block['topic_count'] = len(topics)
+            mq_block['depth_total'] = sum(
+                t.get('depth', 0) for t in topics.values())
+            mq_block['completed_total'] = sum(
+                t.get('completed_total', 0) for t in topics.values())
+            mq_block['dlq_count'] = sum(
+                t.get('dlq_count_for_topic', 0) for t in topics.values())
+            # R110-188: mq.stats() renamed lag_p95_ms→current_p95_lag_ms
+            # and dlq_count→dlq_count_for_topic.  The dashboard keeps its
+            # own output contract (lag_p95_ms/dlq_count keys); mirror the
+            # new keys back so by_topic consumers keep working.
+            for _t in topics.values():
+                _t.setdefault("lag_p95_ms", _t.get("current_p95_lag_ms", 0))
+                _t.setdefault("dlq_count", _t.get("dlq_count_for_topic", 0))
+            # Worst-case lag across topics
+            lags = [t.get('current_p95_lag_ms', 0) for t in topics.values()
+                    if t.get('current_p95_lag_ms', 0) > 0]
+            mq_block['lag_p95_ms'] = max(lags) if lags else 0
+            # Average retry rate across topics
+            rates = [t.get('retry_rate', 0.0) for t in topics.values()]
+            mq_block['retry_rate'] = (
+                round(sum(rates) / len(rates), 4) if rates else 0.0)
+            # Phase-1 topics summary (R110-166 phase 2.3)
+            mq_block['phase1_topics'] = _phase1_topics_summary(topics)
+
+            # R110-197: dashboard observability surface
+            try:
+                # (1) topics_list
+                mq_block['topics_list'] = mq.list_topics()
+                # (2) compactable_topics — completed-files with
+                #     > 10_000 lines (mq.compact_completed default).
+                #     Walk the live topics and check the
+                #     <topic>.completed.ndjson size.  The MQ root
+                #     can be overridden via MAS_MQ_ROOT, so use
+                #     the same lookup mq uses internally.
+                _COMPACT_THRESHOLD = 10000
+                _mq_root = mq._mq_root() if hasattr(mq, "_mq_root") else (
+                    REPO_ROOT / '.mase' / 'mq')
+                for _tn in mq_block['topics_list']:
+                    _cp = _mq_root / f"{_tn}.completed.ndjson"
+                    if _cp.exists():
+                        _lines = sum(1 for _ in open(_cp))
+                        if _lines > _COMPACT_THRESHOLD:
+                            mq_block['compactable_topics'].append({
+                                'topic': _tn,
+                                'lines': _lines,
+                                'threshold': _COMPACT_THRESHOLD,
+                            })
+                # (3) prometheus_excerpt — first 20 lines of the
+                #     full Prometheus textfile output
+                _prom = mq.metrics_prometheus().splitlines()
+                mq_block['prometheus_excerpt'] = _prom[:20]
+            except Exception:
+                # Observability is best-effort (R110-197); never
+                # let a single broken mq.* call break the dashboard.
+                pass
+        except Exception:
+            # MQ is best-effort; never let a broken queue break the
+            # dashboard refresh.
+            pass
+
     # ─── RESULT ───
     return {
-        "version": "1.0.0",
+        "version": "1.1.0",
         "timestamp": datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ'),
         "workspace": ws_abs,
         "mode": mode,
@@ -255,6 +504,14 @@ def generate_data(ws):
             "checks": health_checks,
         },
         "health_trend": history['health_trend'],
+        # R110-330-BUG-2 fix: surface the build_size list (computed
+        # in-memory at lines 344-348) in the returned data so
+        # main() can persist it to history.json. Pre-fix this list
+        # was only in the local `history` dict and never made it
+        # into the return value, so main() wrote the SCALAR
+        # `build['latest_size_kb']` (BUG-1) as a substitute.
+        "build_size_trend": history['build_size'],
+        "mq": mq_block,
     }
 
 
@@ -271,7 +528,7 @@ def send_dashboard_notification(data: dict = None, workspace: str = None):
         # looking for a .mas directory (a MAS-Engineer workspace marker)
         current = os.path.abspath('.')
         while current != os.path.dirname(current):
-            if os.path.isdir(os.path.join(current, '.mas')):
+            if os.path.isdir(os.path.join(current, '.mase')):
                 ws = current
                 break
             current = os.path.dirname(current)
@@ -282,7 +539,7 @@ def send_dashboard_notification(data: dict = None, workspace: str = None):
                 if os.path.isdir(candidate):
                     ws = candidate
                     break
-    flag_dir = os.path.join(ws, '.mas', 'dashboards')
+    flag_dir = os.path.join(ws, '.mase', 'dashboards')
     os.makedirs(flag_dir, exist_ok=True)
     flag_file = os.path.join(flag_dir, '.updated')
     with open(flag_file, 'w') as f:
@@ -301,7 +558,7 @@ def main():
 
     data = generate_data(ws)
     ws_abs = os.path.abspath(ws)
-    dash_dir = os.path.join(ws_abs, '.mas', 'dashboards')
+    dash_dir = os.path.join(ws_abs, '.mase', 'dashboards')
     os.makedirs(dash_dir, exist_ok=True)
 
     data_path = os.path.join(dash_dir, 'data.json')
@@ -310,8 +567,17 @@ def main():
 
     history_path = os.path.join(dash_dir, 'history.json')
     with open(history_path, 'w') as f:
+        # R110-330-BUG-1 fix: pre-fix code wrote
+        #   data.get('build', {}).get('latest_size_kb', [])
+        # which is a SCALAR (int, set at line 296), so history.json
+        # contained {"build_size": 42} instead of a list of
+        # {"time": "12:34", "kb": 42} dicts. On next load,
+        # generate_data() would crash iterating the int.
+        # Post-fix: use the `build_size_trend` list (added in
+        # the return block at R110-330-BUG-2) which is the actual
+        # list of build size entries.
         json.dump({"health_trend": data['health_trend'],
-                   "build_size": data.get('build', {}).get('latest_size_kb', [])}, f, indent=2)
+                   "build_size": data.get('build_size_trend', [])}, f, indent=2)
 
     # Send notification for realtime updates
     send_dashboard_notification(data, workspace=ws_abs)

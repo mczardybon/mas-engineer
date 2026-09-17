@@ -5,12 +5,12 @@ Will be called BEFORE each write/edit/shell action.
 Blocked actions at Hardening 5 without confirmation.
 Exit-Code 0 = OK, Exit-Code 1 = BLOCKED
 
-Generic: No MAS-Dependencies. Loads User-Rulen aus .state/rules/rules.yaml.
+Generic: No MAS-Dependencies. Loads User-Rulen aus .mase/rules/rules.yaml.
 """
 import sys, os, yaml, time, json, argparse
 
-REGEL_DATEI = ".state/rules/rules.yaml"
-CONFIRMATION_DATEI = ".state/.last_confirmation"
+REGEL_DATEI = ".mase/rules/rules.yaml"
+CONFIRMATION_DATEI = ".mase/.last_confirmation"
 
 def load_rules():
     if not os.path.exists(REGEL_DATEI):
@@ -116,7 +116,7 @@ def check_rule(rule, action=""):
             full_path = _os.path.join(cwd, path) if not _os.path.isabs(path) else path
             
             # Check special_agents.yaml (User project)
-            special_path = _os.path.join(cwd, ".state/agents/special_agents.yaml")
+            special_path = _os.path.join(cwd, ".mase/agents/special_agents.yaml")
             if _os.path.exists(special_path):
                 with open(special_path) as _f:
                     special = _yaml.safe_load(_f)
@@ -161,7 +161,7 @@ def cmd_health():
     status = {"status": "healthy", "checks": [], "timestamp": _t.strftime("%Y-%m-%dT%H:%M:%S")}
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
-    reg_path = os.path.join(base, ".state/rules/rules.yaml")
+    reg_path = os.path.join(base, ".mase/rules/rules.yaml")
     if os.path.exists(reg_path):
         status["checks"].append({"name": "rules_exists", "ok": True})
         try:
@@ -172,7 +172,7 @@ def cmd_health():
     else:
         status["checks"].append({"name": "rules_exists", "ok": False})
     
-    conf_path = os.path.join(base, ".state/.last_confirmation")
+    conf_path = os.path.join(base, ".mase/.last_confirmation")
     if os.path.exists(conf_path):
         try:
             ts = int(open(conf_path).read().strip())
@@ -233,7 +233,7 @@ def cmd_undo_last_rule():
     atype = last.get("action_type", "unknown")
     
     # Check if backup exists
-    reg_path = ".state/rules/rules.yaml"
+    reg_path = ".mase/rules/rules.yaml"
     backup_path = reg_path + ".bak.auto"
     
     if os.path.exists(backup_path):
@@ -364,7 +364,7 @@ def analyse_action_type(action):
 
 def generiere_rule(action_type):
     # Rule snapshot: backup before change
-    reg_path = ".state/rules/rules.yaml"
+    reg_path = ".mase/rules/rules.yaml"
     if os.path.exists(reg_path):
         import shutil as _sh
         _sh.copy2(reg_path, reg_path + ".bak.auto")
@@ -381,7 +381,7 @@ def generiere_rule(action_type):
     rid, name, hardness, text = rule_map[action_type]
     
     # Read rules.yaml
-    reg_path = ".state/rules/rules.yaml"
+    reg_path = ".mase/rules/rules.yaml"
     if not os.path.exists(reg_path):
         return
     
@@ -446,7 +446,7 @@ def check_domain_isolation_generic(action):
     with open(reg_path) as f:
         active = f.read().strip()
     
-    registry = os.path.join(os.path.abspath("."), "mas-engineer/.state/domains/registry.yaml")
+    registry = os.path.join(os.path.abspath("."), "mas-engineer/.mase/domains/registry.yaml")
     if not os.path.exists(registry):
         return True, "No registry"
     with open(registry) as f:

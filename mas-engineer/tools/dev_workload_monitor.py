@@ -99,7 +99,7 @@ def deploy_relief_agent(agent_name, base=None):
     """Erzeuge Relief-Agent via SOT + Generator (SOT-konform)."""
     if base is None:
         base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    schema_path = os.path.join(base, ".state/templates/agent_schema.yaml")
+    schema_path = os.path.join(base, ".mase/templates/agent_schema.yaml")
     
     if not os.path.exists(schema_path):
         return f"❌ SOT not found: {schema_path}"

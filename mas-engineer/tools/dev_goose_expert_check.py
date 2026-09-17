@@ -9,8 +9,8 @@ where im-designer proposes reimplementing something Goose already provides.
 Part of R11 GOOSE-EXPERT CONSULTATION (see master-constitution.yaml).
 
 Usage:
-    python3 dev_goose_expert_check.py --findings .state/pipeline/findings.yaml
-    python3 dev_goose_expert_check.py --patches .state/pipeline/patches.yaml
+    python3 dev_goose_expert_check.py --findings .mase/pipeline/findings.yaml
+    python3 dev_goose_expert_check.py --patches .mase/pipeline/patches.yaml
     python3 dev_goose_expert_check.py --check-mechanism "load on demand for agents"
     python3 dev_goose_expert_check.py --list-known-mechanisms
 

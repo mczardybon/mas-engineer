@@ -4,8 +4,8 @@ dev_yaml_generator.py — Generates sub_mas-*.yaml aus agent_schema.yaml (SOT)
 call:
   python3 dev_yaml_generator.py [--mode mas|generic] [--target PFAD] [--validate-only] [--diff] [--write]
   
-  --mode mas (default):  Nutzt .state/templates/agent_schema.yaml, writes after recipe/sub/
-  --mode generic:        Nutzt --target/.state/templates/agent_schema.yaml, writes after --target/sub/
+  --mode mas (default):  Nutzt .mase/templates/agent_schema.yaml, writes after recipe/sub/
+  --mode generic:        Nutzt --target/.mase/templates/agent_schema.yaml, writes after --target/sub/
   --validate-only:       Only validate without writing
   --diff:                Show Unterschiede zwischen generates und current
   --write:               Write generatede YAMLs (Default: only validate)
@@ -13,21 +13,21 @@ call:
 import os, sys, yaml
 from dev_yaml_generator_core import generate_agent_yaml, validate_generated
 
-MAS_SCHEMA = ".state/templates/agent_schema.yaml"
-GEN_SCHEMA = ".state/templates/agent_schema_generic.yaml"
+MAS_SCHEMA = ".mase/templates/agent_schema.yaml"
+GEN_SCHEMA = ".mase/templates/agent_schema_generic.yaml"
 MAS_SUB_DIR = "recipe/sub"
 
 def find_schema(mode, target=None):
     """Finde Schema basierend auf Mode."""
     if mode == "generic" and target:
-        path = os.path.join(target, ".state/templates/agent_schema.yaml")
+        path = os.path.join(target, ".mase/templates/agent_schema.yaml")
         if os.path.exists(path):
             return path
         # Fallback: generic Variante
-        path2 = os.path.join(target, ".state/templates/agent_schema_generic.yaml")
+        path2 = os.path.join(target, ".mase/templates/agent_schema_generic.yaml")
         if os.path.exists(path2):
             return path2
-        print(f"❌ No Schema in {target}/.state/templates/ found")
+        print(f"❌ No Schema in {target}/.mase/templates/ found")
         sys.exit(1)
     elif mode == "generic":
         if os.path.exists(GEN_SCHEMA):

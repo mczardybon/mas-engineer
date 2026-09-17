@@ -112,7 +112,7 @@ When a team request is detected without a keyword, display this hint in the R01 
      - Wait for generic-init result
      - Report final team to user
    - If route = auto-split: continue with steps 1-6 below
-1. ADD finding to `.state/pipeline/findings.yaml`:
+1. ADD finding to `.mase/pipeline/findings.yaml`:
    ```yaml
    findings:
      - id: "nn-{agent}-{timestamp}"
@@ -136,7 +136,7 @@ When a team request is detected without a keyword, display this hint in the R01 
 3. After agent creation: TRIGGER improvement-pipeline:
    ```bash
    # Write CP_TRIGGER signal
-   echo "CP_TRIGGER: improvement-pipeline --task SPLIT_AGENT --agent {name}" >> .state/pipeline/signals.log
+   echo "CP_TRIGGER: improvement-pipeline --task SPLIT_AGENT --agent {name}" >> .mase/pipeline/signals.log
    # Or directly call (if applicable):
    python3 tools/dev_template_generator.py --run-improvement --target {name} --pattern split_into_orchestrator_and_subs
    ```

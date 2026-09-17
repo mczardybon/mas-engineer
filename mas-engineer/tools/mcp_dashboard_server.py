@@ -15,7 +15,7 @@ class DashboardMCP:
     
     def __init__(self, workspace=None):
         self.workspace = workspace or os.environ.get('MAS_WORKSPACE', '.')
-        self.dashboard_dir = os.path.join(self.workspace, '.mas', 'dashboards')
+        self.dashboard_dir = os.path.join(self.workspace, '.mase', 'dashboards')
     
     def get_data(self) -> dict:
         """Get current dashboard data from cache/file"""
@@ -78,4 +78,4 @@ if __name__ == '__main__':
     import sys
     ws = sys.argv[1] if len(sys.argv) > 1 else '.'
     data = get_dashboard_data(ws)
-    print(json.dumps(data, indent=2))
+    print(json.dumps(data, indent=2, ensure_ascii=False))

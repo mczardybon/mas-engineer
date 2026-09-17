@@ -1,0 +1,175 @@
+hardness_levels:
+  extreme:
+    description: Will NEVER be deleted. Blocks on violation.
+    color: 🔴
+    level: 5
+    symbol: ⛔⛔⛔⛔⛔
+    token_reserve: 800
+  normal:
+    description: Can disappear if context is full.
+    color: 🟡
+    level: 2
+    symbol: ⛔
+    token_reserve: 300
+  weak:
+    description: Optional. Only loaded when context has room.
+    color: ⚪
+    level: 1
+    symbol: ⚠️
+    token_reserve: 100
+  strong:
+    description: Stays until turn end. No block, but warning.
+    color: 🟠
+    level: 4
+    symbol: ⛔⛔⛔
+    token_reserve: 500
+last_updated: '2026-06-15T14:47:00'
+rules:
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R09 --action {aktion}
+  hardness: 5
+  id: R09
+  name: MODE_DOMAIN_COUPLING
+  prompt_text: MODE-DOMAIN-COUPLING — Mode determines domain. MAS-ONLY mas-engineer/. Framework-ONLY framework/. Generic-ONLY own domain. Imports forbidden. Read in other domain OK.
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R01 --action {aktion}
+  hardness: 5
+  id: R01
+  name: CONFIRMATION_REQUIRED
+  prompt_text: CONFIRMATION before write/edit — Show plan + WAIT for ✅
+- block: true
+  check: null
+  hardness: 5
+  id: R02
+  name: INVENTORY_CHECK
+  prompt_text: INVENTORY before new build — exists already? User ask
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R04 --action {aktion}
+  hardness: 5
+  id: R04
+  name: GENERAL_IMPROVER_PROTECTION
+  prompt_text: NEVER edit general-improver.yaml (no recursion)
+- block: true
+  check: null
+  hardness: 5
+  id: R05
+  name: AUTO_COMMIT
+  prompt_text: AUTO-COMMIT after Change — git+checkpoint+changes.json+todo
+- block: false
+  check: null
+  hardness: 4
+  id: R06
+  name: SUB_AGENT_CONTAINMENT
+  prompt_text: Sub-Agent = ONLY analysis — Execute shell yourself
+- block: false
+  check: null
+  hardness: 2
+  id: R07
+  name: SIGNAL_CP_DONE
+  prompt_text: CP_DONE after Checkpoint
+- block: false
+  check: null
+  hardness: 2
+  id: R08
+  name: TOKEN_BUDGET
+  prompt_text: Self-Improver max 50K — else User ask
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R18 --action {aktion}
+  hardness: 5
+  id: R18
+  name: DELEGATION DUTY
+  prompt_text: 'DELEGATION DUTY — NEVER shell/write/edit yourself if Sub-Agent exists. Use delegate() INSTEAD of doing it yourself. Exception: cat/grep/ls for orientation.'
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R110-31 --action {aktion}
+  hardness: 5
+  id: R110-31
+  name: SUB_AGENT_REGISTRATION_DOMAIN_SCOPE
+  prompt_text: 'DOMAIN-REGISTRATION RULE (R110-31, R110-30 correction) — sub-agent
+    registration requirements are DOMAIN-SCOPED, not universal. Three domains exist
+    and each has its own registration rule:
+
+    ┌──────────────────────────────────────────────────────────────────────┐
+    │ DOMAIN SCOPING IS COUPLED TO .mas-mode (R14 work_on)!                │
+    │                                                                      │
+    │   work_on=mas      → DOMAIN 1: mas-self sub-agents (you are here)    │
+    │     Where: mas-engineer/.mase/workflows.yaml                        │
+    │            → configs.mas-self.sub_agents.<kategorie>: [agent_names] │
+    │     Rule: ALL sub_mas-*.yaml files in recipe/sub/ MUST be registered│
+    │     Why:  R18 dispatch needs registry to find the agent.            │
+    │            Unregistered agents = silent failure (R110-29 lesson).   │
+    │     Example: sub_mas-yaml-immune registered under .verwaltung       │
+    │                                                                      │
+    │   work_on=framework → DOMAIN 2: mas-generated team                   │
+    │     Where: mas-engineer/recipe/sub/demo-team/ (or workspace)        │
+    │            → 1 orchestrator.yaml + N sub-agents in same dir          │
+    │     Rule: NO registration in mas-self sub_agents. The Orchestrator owns │
+    │           its own instructions.md (e.g. recipe/instructions/demo-team/   │
+    │           code-reviewer.md) declares the sub-agents it orchestrates. │
+    │     Why:  mas-generated teams are MAS OUTPUT not MAS INFRASTRUCTURE.│
+    │           The orchestrator IS the registry for its team.            │
+    │     Example: sub_mas-code-reviewer director orchestrates 3 sub-     │
+    │              agents (synthesizer, reporter, validator)               │
+    │                                                                      │
+    │   work_on=generic → DOMAIN 3: project in framework mode             │
+    │     Where: project workspace (mas is NOT in mas-mode)               │
+    │            → project owns its own workflows.yaml                     │
+    │     Rule: mas-engineer/.mase/workflows.yaml has NOTHING about this. │
+    │           Project defines its own orchestrator + sub-agents.        │
+    │     Why:  mas in framework-mode is a library, not the active agent. │
+    │     Example: a research-team project with its own workflow file     │
+    │                                                                      │
+    │   SET work_on by writing the desired mode into .mas-mode file:     │
+    │     echo "mas" > .mas-mode    # for mas-self work                    │
+    │     echo "framework" > .mas-mode  # for mas-generated teams         │
+    │     echo "generic" > .mas-mode    # for project-only work            │
+    │                                                                      │
+    │   R110-31 enforcement: dev_rule_checker reads .mas-mode FIRST       │
+    │   (authoritative per R14), then falls back to action string        │
+    │   heuristics if .mas-mode is missing.                               │
+    └──────────────────────────────────────────────────────────────────────┘
+
+    CORRECTION OF R110-30: R110-30 said "all sub-agents must be
+    registered in workflows.yaml.sub_agents". That was OVER-GENERALIZED.
+    The actual rule is "all DOMAIN 1 (work_on=mas) sub-agents must be
+    registered". Domains 2 and 3 have their own registration mechanisms
+    AND their own .mas-mode value. To switch domains, change .mas-mode
+    BEFORE doing the write/edit.
+
+    Domain detection priority (enforced by R110-31 in dev_rule_checker):
+    1. .mas-mode file content (authoritative — set by user via R14)
+    2. If .mas-mode missing: action string heuristics
+    3. If still unknown: OK with note (LLM judgment)
+
+    Quick decision aid:
+    - Are you working ON mas-engineer itself (recipe/, tools/, .mase/)?
+      → echo "mas" > .mas-mode  (DOMAIN 1)
+    - Are you generating a team for a user-task (e.g. team-packager)?
+      → echo "framework" > .mas-mode  (DOMAIN 2)
+    - Are you building a project that uses mas as a library only?
+      → echo "generic" > .mas-mode  (DOMAIN 3)
+'
+  text: ⛔⛔⛔⛔⛔ DOMAIN-SCOPED registration — R110-31 lesson
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R10 --action {aktion}
+  hardness: 5
+  id: R10
+  name: CORONASHIELD
+  prompt_text: 'CORONASHIELD (R110-30) — Every YAML must be validated before saving.
+    Applies to ALL yaml save paths (not just mas-workflow). Original enforcement
+    was only via yaml-editor R18 + dev_editor.py, leaving standalone recipe-pack
+    testscripts unprotected → BUG-1 (sub_recipe path resolution failure) went
+    undetected. R110-30 EXTENSION: R10 now triggers on any yaml write/edit, recognizes
+    dev_yaml_immune.py and sub_mas-yaml-immune as valid immune-checks, and degrades
+    gracefully (WARNING not BLOCKED) when tools/dev_yaml_immune.py is missing so
+    mas remains runnable on fresh clones. Use: `python3 tools/dev_yaml_immune.py
+    --strict <file>` (syntax + roundtrip + path + required-fields) or `delegate
+    sub_mas-yaml-immune` (sub-agent version). Note: registration of sub_agents
+    in workflows.yaml is R110-31 (domain-scoped, mas-self only — see R110-31).'
+- block: true
+  check: python3 tools/dev_rule_checker.py --check R55 --action {aktion}
+  hardness: 5
+  id: R55
+  name: IM_TOP_N_ENFORCEMENT
+  prompt_text: IM_TOP_N code-enforced top-N (env var, default 100, max 500) at im-rank step
+  text: ⛔⛔⛔⛔⛔ IM_TOP_N code-enforced top-N selection — R57 user-correction 2026-07-25
+version: 1.0.0

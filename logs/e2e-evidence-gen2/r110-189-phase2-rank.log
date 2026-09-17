@@ -1,0 +1,1113 @@
+Loading recipe: 🔧 IM-Rank
+Description: 📊 Prioritize findings, deduplicate, Art.1-6 check
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260818_49 · /workspace/dev-branch/mas-engineer-cleanup/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ tree
+    path: /workspace/dev-branch/mas-engineer-cleanup/mas-engineer
+    depth: 2
+
+The recipe instructions file exists on disk but isn't registered as a loadable source — reading it directly:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer-cleanup/mas-engineer/recipe/instructions/sub_mas-im-rank.md
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer-cleanup/mas-engineer/recipe/sub/sub_mas-im-rank.yaml
+
+# sub_mas-im-rank — 📊 Prioritize & filter Findings
+Is called by the sub_mas-general-improver orchestrator.
+Sorts and filters Findings for implementation.
+
+╔══════════════════════════════════════════════════════════╗
+║  SOT WORKFLOW CONTROL                                    ║
+║  → workflows.yaml → agents.im-rank                       ║
+║     .task_workflows.RANK                                 ║
+╚══════════════════════════════════════════════════════════╝
+
+## ⛔ STEP 0.5 — GOOSE-EXPERT CONSULTATION (CONDITIONAL)
+
+**When to summon:** ONLY if the input findings contain a `goose_verdict`
+field from im-finder AND the ranking would change because of verdict
+disagreement (e.g. NOT_POSSIBLE findings must be deprioritized).
+
+This is more selective than im-finder/im-designer — im-rank mostly
+delegates to the duckling-constitution (Art.1-6), not goose-expert.
+
+## Pipeline Contract (Stage 2/5)
+
+This agent is **stage 2** of the Improvement-Pipeline.
+It reads the previous stage's output and writes its own.
+
+**Input:**   `.mase/pipeline/findings.yaml` (from im-finder)
+**Output:**  `.mase/pipeline/ranked_findings.yaml`
+**Schema:**  ranked_findings[] with {id, priority, severity, type, file, rank_score, goose_verdict?}
+**Next:**    -> im-designer (reads Output file)
+
+```yaml
+# .mase/pipeline/ranked_findings.yaml — written by im-rank
+stage: 2
+agent: im-rank
+timestamp: <ISO-8601>
+input_file: .mase/pipeline/findings.yaml
+# ranked_findings[] with {id, priority, severity, type, file, rank_score, goose_verdict?}
+```
+
+ ## Input (from Pipeline-Orchestrator)
+- task: RANK
+- request_id: string (UUID)
+- data: {findings: [], scores: {}}
+- **NEW (MM6 fix): severity_ceiling: "high"|"medium"|"low"|"info" (default: "high")**
+  - Set by general-improver when RECYCLING a skipped charge (one band lower
+    than previous ceiling). See TIER C) in sub_mas-general-improver.md.
+  - If severity_ceiling = "medium", filter out findings with severity=high.
+  - If severity_ceiling = "low", filter out high + medium.
+  - If severity_ceiling = "info", include all (no filter).
+
+## STEP 1 — REMOVE DUPLICATES
+1. Group Findings by (type + file + detail)
+2. Keep only the first per group
+3. Count removed duplicates
+
+## STEP 1.4 — APPLY ISSUE-DB STATUS FILTER (R110-177, PHASE 3)
+
+**🚨 NEW IN R110-177: filter against persistent issue-db. 🚨**
+
+Before sorting by severity, consult `.mase/pipeline/issue_db.json` and
+REMOVE any finding whose `issue_hash` is already in the db with
+status=fixed, wontfix, or false_positive.
+
+Procedure:
+1. LOAD:
+   ```bash
+   cd {workspace} && python3 -c "from dev_issue_db import IssueDB; db=IssueDB(); print(','.join(db.list_by_status('fixed')+db.list_by_status('wontfix')+db.list_by_status('false_positive')))"
+   ```
+2. BUILD: set `excluded_hashes = {h for h in db.list_by_status('fixed')} | {h for h in db.list_by_status('wontfix')} | {h for h in db.list_by_status('false_positive')}`
+3. FILTER: for each finding in findings[], if `finding.issue_hash in excluded_hashes`: DROP + log `ISSUE-DB-SKIP: <hash> (<status>)`
+4. LOG: `issue_db_filtered: <count> findings dropped (status=fixed/wontfix/false_positive)` — write this count into the ranked_findings.yaml header (see OUTPUT).
+
+**Why this is correct:**
+- R110-176 had 1690 findings, all "new" (no prior db). After PHASE 7
+  (bulk-import), re-runs see most scanner-emits already in db as open →
+  rank only promotes genuinely NEW issues to top-N.
+- The filter is RANK-TIME, not FINDER-TIME. Finder still records
+  instances for history. Rank just doesn't promote already-resolved
+  issues.
+
+**Edge case: hash missing in db (finder didn't add it).**
+- Defensive: if `finding.issue_hash` is None or empty, KEEP finding
+  (finder will catch on next run after PHASE 2 fully deployed)
+- Log "WARNING: finding without issue_hash, keeping for rank"
+
+**Helper (equivalent, if python available):** use the library directly:
+```python
+from dev_issue_db import IssueDB
+db = IssueDB()
+kept, dropped = db.filter_findings(findings)
+```
+(`db.filter_findings` returns `(kept, dropped)`; findings without
+`issue_hash` are kept with a warning.)
+
+## STEP 1.5 — APPLY SEVERITY CEILING (MM6 fix)
+1. Determine active ceiling: input.severity_ceiling ?? "high"
+2. Define ceiling_order: ["high", "medium", "low", "info"]  (index 0 = strictest)
+3. Filter findings where findings[i].severity is STRICTLY ABOVE the ceiling
+   - ceiling_idx = ceiling_order.index(active_ceiling)
+   - finding_idx = ceiling_order.index(finding.severity)  (assume severity
+     is one of the 4 strings, else treat as "info")
+   - DROP if finding_idx < ceiling_idx (i.e. finding is stricter than ceiling)
+   - Example: ceiling="medium" → drop "high" findings, keep "medium"/"low"/"info"
+   - Example: ceiling="info" → drop nothing (keep all)
+   - Example: ceiling="high" → drop nothing (all severities allowed)
+4. Record filtered count in `ceiling_filtered` field
+5. IF ceiling_filtered > 0 AND remaining findings == 0:
+   → EMIT warning: "severity_ceiling={ceiling} filtered out all {N} findings.
+     Lower ceiling to 'info' or check if findings file is empty."
+   → Set top_N = [] (no design work possible)
+6. ELSE proceed to STEP 2
+
+## STEP 2 — SORT BY SEVERITY
+Sort Findings:
+1. 🔴 high (Impact: System-Stability, Data loss)
+2. 🟡 medium (Impact: Performance, User-Experience)
+3. 🟢 low (Impact: Cosmetics, Documentation)
+4. ℹ️ info (Impact: None, only Information)
+
+**Modifier: if `goose_verdict.verdict == NOT_POSSIBLE`, deprioritize by 1 level.**
+
+## STEP 3 — ART.1-6 CHECK
+Check each Finding against the Constitution:
+- Art.1 (Sovereignty): Changes the Constitution? → BLOCKED
+- Art.2 (Autonomy): Restricts the System-Autonomy? → BLOCKED
+- Art.3 (Security): Generates Security holes? → BLOCKED
+- Art.4 (Stability): Endangers System-Stability? → BLOCKED
+- Art.5 (Transparency): Is User informed? → Always OK
+- Art.6 (Cost-efficiency): Wastes more resources than it saves? → BLOCKED
+
+## STEP 4 — TOP-N SELECTION (configurable, IM_TOP_N env var)
+
+Take the top N Findings by rank_score.
+
+**Configuration via env var IM_TOP_N (R57 user-request 2026-07-25):**
+- `IM_TOP_N=5` (default — backward-compatible)
+- `IM_TOP_N=20` (recommended for cron — ~12 days to clear 1000 findings)
+- `IM_TOP_N=50` (max for deepseek-v4-flash cost-limit)
+
+**Cost/throughput tradeoff:**
+| IM_TOP_N | patches/Run | cost/Run | 1000 findings | cron interval |
+|----------|-------------|----------|---------------|---------------|
+| 5 (default) | 5 | $0.50 | 200 Runs / 50d | 6h |
+| 20 (R57) | 20 | $2.00 | 50 Runs / 12d | 6h |
+| 50 (max) | 50 | $5.00 | 20 Runs / 5d | 6h |
+
+**MUST: Read IM_TOP_N env var at runtime (Stage 2 of every run):**
+
+```python
+import os
+N = int(os.environ.get('IM_TOP_N', '100'))  # R57 user-correction: default 100
+if N < 1: N = 100
+if N > 500: N = 500  # hard cap for cost-safety
+top_N = sorted_findings[:N]
+print(f"[im-rank] IM_TOP_N={N} → selecting top {N} of {len(sorted_findings)} findings")
+```
+
+**REQUIRED log line:** `[im-rank] IM_TOP_N={N} → selecting top {N} of {total} findings`
+
+**VALIDATION:** If env var IM_TOP_N=20, then top_N.length MUST == 20
+(assuming >= 20 ranked findings available). If not, log WARNING and
+fall back to len(available) but log a mismatch.
+
+**Backward compat:** if IM_TOP_N is unset, behavior is identical to
+previous TOP-5 logic (deterministic, no breaking change for existing
+workflows).
+
+## OUTPUT
+As YAML-Struct via stdout:
+- signal: DONE
+- request_id: UUID
+- from: sub_mas-im-rank
+- to: sub_mas-general-improver
+- status: success | error | warning
+- data:
+    ranked_findings: [{id, type, severity, file, rank_score, goose_verdict?}]
+    top_N: [ids]  # length determined by IM_TOP_N env var (default: 5)
+    skipped: [{id, reason}]
+    **ceiling_filtered: int (NEW, MM6 fix — count of findings filtered by severity_ceiling)**
+    **active_ceiling: "high"|"medium"|"low"|"info" (NEW — ceiling that was applied)**
+    **issue_db_filtered: int (NEW, R110-177 — count of findings dropped by issue-db status filter)**
+    **issue_db_status_counts: {fixed: int, wontfix: int, false_positive: int} (NEW, R110-177)**
+    ranked_findings[] entries include `issue_hash` (NEW, R110-177 — pass-through from finder)
+
+⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions.
+dev_rule_checker.py enforces.
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on ✅.
+⛔ R09 DOMAIN — ONLY {target_workspace}. NO domain-overreach.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.name: sub_mas-im-rank
+title: 🔧 IM-Rank
+version: 1.0.0
+constitution: sub_mas-master-constitution.yaml
+prompt: 'I am im-rank (v1.0.0) | MODE-CHECK: mas-engineer | 📊 IM-RANK (v1.0.0) Prioritize
+  and filter Findings. ⛔ ONLY Analysis — no Changes.
+
+  # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune).
+  NO YAML-Save without vorherige Syntax-Check.
+
+  # R10 CORONASHIELD Every YAML must be validated before storing (via sub_mas-recovery-immune).
+  NO YAML-Save without vorherige Syntax-Check.'
+description: 📊 Prioritize findings, deduplicate, Art.1-6 check
+settings:
+  timeout: 600
+  max_turns: 100
+  temperature: 0.3
+  goose_provider: openai
+  goose_model: deepseek-v4-flash
+instructions: '# Extended instructions: recipe/instructions/sub_mas-im-rank.md
+
+
+  Full instructions outsourced to external file for maintainability.
+
+
+  ## Loading
+
+  All detailed workflows, examples, and rules are in the external file. This recipe
+  contains only the role, prompt, and configuration.
+
+
+  ## Read external file FIRST
+
+  Before any action, read: `recipe/instructions/sub_mas-im-rank.md`
+
+  '
+extensions:
+- type: platform
+  name: summon
+- type: builtin
+  name: developer
+  display_name: Developer
+  timeout: 300
+  bundled: true
+response:
+  json_schema:
+    type: object
+    required:
+    - top_N
+    - ranked_findings
+    properties:
+      top_N:
+        type: integer
+      ranked_findings:
+        type: array
+        items:
+          type: object
+          required:
+          - finding_id
+          - priority
+          properties:
+            finding_id:
+              type: string
+            priority:
+              type: number
+            severity:
+              type: stringI've loaded my role definition. Now let me locate the pipeline input files — the findings from im-finder, the issue-db, and check for state/env config:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && find . -maxdepth 4 -type d -name ".mase" 2>/dev/null; echo "---"; find . -maxdepth 5 -path "*/pipeline/*" -name "*.yaml" -o -maxdepth 5 -path "*/pipeline/*" -name "*.json" 2>/dev/null | head -50
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "IM_TOP_N=${IM_TOP_N:-UNSET}"; echo "---"; cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && ls -la .mase 2>/dev/null; ls -la .mase/pipeline 2>/dev/null
+
+./mas-engineer/.mase
+./.mase
+./testproject/.mase
+---
+./.mase/pipeline/round41_findings.json
+./.mase/pipeline/validation_R110-24-pre-framework.yaml
+./.mase/pipeline/findings_R51_consumer.yaml
+./.mase/pipeline/self_audit.yaml
+./.mase/pipeline/round37_findings.json
+./.mase/pipeline/validation_author_fixes.yaml
+./.mase/pipeline/root-workspace_patches.yaml
+./.mase/pipeline/runs/2026-08-17T15-30-41Z-R110-177-directive/SUMMARY.json
+./.mase/pipeline/patches.yaml
+./.mase/pipeline/im_apply_only_log.yaml
+./.mase/pipeline/pre_push_validation.yaml
+./.mase/pipeline/findings_R47_structural.yaml
+./.mase/pipeline/ranked_findings_R110-24-pre-framework.yaml
+./.mase/pipeline/ranked_findings.yaml
+./.mase/pipeline/findings.yaml
+./.mase/pipeline/findings_R49_structural.yaml
+./.mase/pipeline/validation.yaml
+./.mase/pipeline/signal_apply_only_done_20260724_1746.yaml
+./.mase/pipeline/spec_invariant.yaml
+./.mase/pipeline/patches_R110-24-pre-framework.yaml
+./.mase/pipeline/issue_db.json
+./.mase/pipeline/signal_apply_only_done_20260725_0849.yaml
+./.mase/pipeline/round36_findings.json
+./.mase/pipeline/signal_general_improver_done_20260725_0735.yaml
+./.mase/pipeline/findings_R52_threshold.yaml
+./.mase/pipeline/round34_findings.json
+./.mase/pipeline/round33_findings.json
+./.mase/pipeline/findings_R55_goose_expert.yaml
+./.mase/pipeline/signal_general_improver_done_20260725_1223.yaml
+./.mase/pipeline/signal_cp_done_20260724_1602.yaml
+./.mase/pipeline/findings_R110-24-pre-framework.yaml
+./.mase/pipeline/signal_apply_only_done_20260725_0746.yamlIM_TOP_N=20
+---
+total 520
+drwxr-xr-x 20 root root   4096 Aug 18 15:48 .
+drwxr-xr-x 16 root root   4096 Aug 18 16:43 ..
+-rw-r--r--  1 root root      0 Aug 18 15:54 .immune_clean
+-rw-r--r--  1 root root     10 Aug 18 15:48 .last_confirmation
+drwxr-xr-x  6 root root   4096 Aug 18 02:08 backups
+-rw-r--r--  1 root root  11547 Aug 14 15:58 best-practices.yaml
+-rw-r--r--  1 root root    189 Aug 14 15:58 changelog.txt
+-rw-r--r--  1 root root   5145 Aug 14 15:58 changes.archive-2026-07-23.json
+-rw-r--r--  1 root root   3709 Aug 14 15:58 changes.archive-2026-07-24-r37.json
+-rw-r--r--  1 root root   8198 Aug 14 15:58 changes.archive-2026-07-24.json
+-rw-r--r--  1 root root   9202 Aug 14 15:58 changes.archive-2026-08-04.json
+-rw-r--r--  1 root root   1689 Aug 17 05:03 changes.json
+-rw-r--r--  1 root root   2294 Aug 14 15:58 changes.unlimited-archive-20260723-222630.json
+drwxr-xr-x  3 root root   4096 Aug 18 15:48 checkpoints
+drwxr-xr-x  2 root root   4096 Aug 14 15:58 config
+drwxr-xr-x  2 root root   4096 Aug 18 15:48 coverage
+-rw-r--r--  1 root root   9537 Aug 18 15:55 cpdone_consumed.log
+drwxr-xr-x  2 root root   4096 Aug 14 18:14 dashboards
+-rw-r--r--  1 root root    199 Aug 17 16:50 directive_already_applied.json
+drwxr-xr-x  3 root root   4096 Aug 18 16:41 directives
+-rw-r--r--  1 root root   1493 Aug 14 15:58 framework-best-practices.yaml
+-rw-r--r--  1 root root   1439 Aug 14 15:58 goose-defaults.env
+-rw-r--r--  1 root root  33228 Aug 18 15:55 guardian.yaml
+drwxr-xr-x  3 root root   4096 Aug 16 17:43 im
+-rw-r--r--  1 root root      3 Aug 18 15:54 immune_severity
+-rw-r--r--  1 root root      0 Aug 18 15:54 immune_violations.log
+drwxr-xr-x  2 root root   4096 Aug 14 15:58 knowledge
+drwxr-xr-x  3 root root   4096 Aug 15 19:02 mcp
+drwxr-xr-x  3 root root   4096 Aug 18 15:55 mq
+drwxr-xr-x  2 root root   4096 Aug 16 16:13 phoenix_logs
+drwxr-xr-x  3 root root   4096 Aug 18 16:44 pipeline
+-rw-r--r--  1 root root    475 Aug 18 12:28 pre-push-e2e-baseline.json
+-rw-r--r--  1 root root    163 Aug 18 12:28 pre-push-test-coverage.json
+drwxr-xr-x  2 root root   4096 Aug 14 15:58 pre_check_benchmark
+drwxr-xr-x  3 root root   4096 Aug 16 17:43 recovery
+drwxr-xr-x  2 root root   4096 Aug 14 15:58 rules
+-rw-r--r--  1 root root    623 Aug 14 15:58 schedule.yaml
+drwxr-xr-x  8 root root   4096 Aug 14 15:58 skills
+-rw-r--r--  1 root root   1933 Aug 14 15:58 sot_schema.yaml
+drwxr-xr-x  3 root root   4096 Aug 14 15:58 templates
+-rw-r--r--  1 root root    242 Aug 18 15:48 todo.md
+-rw-r--r--  1 root root   1517 Aug 14 15:58 validation.yaml
+drwxr-xr-x  2 root root 176128 Aug 18 15:55 workflow_runs
+-rw-r--r--  1 root root 115121 Aug 18 15:54 workflows.yaml
+total 460
+drwxr-xr-x  3 root root   4096 Aug 18 16:44 .
+drwxr-xr-x 20 root root   4096 Aug 18 15:48 ..
+-rw-r--r--  1 root root   1182 Aug 14 15:58 README.md
+-rw-r--r--  1 root root  29268 Aug 18 16:49 findings.yaml
+-rw-r--r--  1 root root   5071 Aug 14 15:58 findings_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root   2611 Aug 14 15:58 findings_R47_structural.yaml
+-rw-r--r--  1 root root   3030 Aug 14 15:58 findings_R49_structural.yaml
+-rw-r--r--  1 root root   1842 Aug 14 15:58 findings_R51_consumer.yaml
+-rw-r--r--  1 root root   1897 Aug 14 15:58 findings_R52_threshold.yaml
+-rw-r--r--  1 root root    799 Aug 14 15:58 findings_R55_goose_expert.yaml
+-rw-r--r--  1 root root   2050 Aug 14 15:58 im_apply_only_log.yaml
+-rw-r--r--  1 root root 182039 Aug 18 16:44 issue_db.json
+-rw-r--r--  1 root root  13568 Aug 18 12:02 patches.yaml
+-rw-r--r--  1 root root  28528 Aug 14 15:58 patches_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root   2037 Aug 18 12:25 pre_push_validation.yaml
+-rw-r--r--  1 root root   6588 Aug 18 02:00 ranked_findings.yaml
+-rw-r--r--  1 root root   2464 Aug 14 15:58 ranked_findings_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root  23645 Aug 14 15:58 root-workspace_patches.yaml
+-rw-r--r--  1 root root   3906 Aug 14 15:58 round33_findings.json
+-rw-r--r--  1 root root   2138 Aug 14 15:58 round34_findings.json
+-rw-r--r--  1 root root   4183 Aug 14 15:58 round36_findings.json
+-rw-r--r--  1 root root   3258 Aug 14 15:58 round37_findings.json
+-rw-r--r--  1 root root  26820 Aug 14 15:58 round41_findings.json
+drwxr-xr-x  4 root root   4096 Aug 17 17:09 runs
+-rw-r--r--  1 root root   6970 Aug 18 16:45 self_audit.yaml
+-rw-r--r--  1 root root    481 Aug 14 15:58 signal_apply_only_done_20260724_1746.yaml
+-rw-r--r--  1 root root    968 Aug 14 15:58 signal_apply_only_done_20260725_0746.yaml
+-rw-r--r--  1 root root   1018 Aug 14 15:58 signal_apply_only_done_20260725_0849.yaml
+-rw-r--r--  1 root root    436 Aug 14 15:58 signal_cp_done_20260724_1602.yaml
+-rw-r--r--  1 root root    995 Aug 14 15:58 signal_general_improver_done_20260725_0735.yaml
+-rw-r--r--  1 root root   1131 Aug 14 15:58 signal_general_improver_done_20260725_1223.yaml
+-rw-r--r--  1 root root   6278 Aug 14 15:58 signals.log
+-rw-r--r--  1 root root     78 Aug 18 13:47 spec_invariant.yaml
+-rw-r--r--  1 root root   6587 Aug 18 12:02 validation.yaml
+-rw-r--r--  1 root root   2686 Aug 14 15:58 validation_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root   9959 Aug 14 15:58 validation_author_fixes.yamlFound the pipeline state. Let me inspect the current input `findings.yaml` (modified today 16:49), the issue-db, and the previous output header:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer/.mase/pipeline && head -60 findings.yaml; echo "..."; echo "=== TOTAL LINES ==="; wc -l findings.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer/.mase/pipeline && head -30 ranked_findings.yaml; echo "==="; head -c 1500 issue_db.json
+
+stage: 1
+agent: im-finder
+timestamp: '2026-08-18T16:49:01.861976+00:00'
+input_file: 'orchestrator params: standalone FIND round; scanner tools/dev_im_finder_scan.py
+  --issue-db --scope=recipe,sales,marketing,translator; self-audit + spec-invariant
+  (STEP 0.6)'
+goose_expert_delegation: sub_mas-goose-expert summoned via delegate tool for MM9-EXT
+  class (20 findings) - verdict CONFORM/HIGH attached per finding.
+data:
+  findings:
+  - id: F-035
+    type: SD-test_dev_message_queue-1
+    severity: medium
+    file: ./tests/test_dev_message_queue.py:414
+    issue: 'spec_drift: test asserts literal ''THIS IS NOT JSON'' but it is absent
+      from recipe/, tools/, docs/ (literal-only-in-tests = test is stale or recipe
+      was updated without test fix)'
+    impact: Test will fail until the literal is restored or the test is updated to
+      the new value (R110-71/R110-78 pattern)
+    fix: 'Run: grep -rn ''THIS IS NOT JSON'' tests/ recipe/ tools/ docs/ ; if only
+      tests/ matches: update test to current value; if recipe/ matches different value:
+      test is stale'
+    issue_hash: sha256:b3dd858e956ce3813efa581498a3fb5aa60f93f6f2616a52ce601813ef9f462d
+    structural_pattern: SD-test_dev_message_queue-1:test_dev_message_queue.py:414
+    source: dev_im_finder_scan.py (--issue-db)
+    pipeline_stage: 0.0
+  - id: MM9-EXT-001
+    type: MM9-EXT
+    subtype: HARDCODE-CHECKS
+    severity: low
+    file: recipe/instructions/sub_mas-config-auditor.md
+    line: 137
+    issue: 'hardcoded ''13 checks'' without env-var/default/config context (spec-drift:
+      hardcoded literal without env-var/SOT context)'
+    impact: Count literal drifts from actual value when the source-of-truth changes
+      (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+    fix: Reference an env var (e.g. IM_TOP_N), a documented 'default 13' value, or
+      derive the count from the source of truth instead of hardcoding.
+    source: sub_mas-self-audit
+    pipeline_stage: 0.6
+    goose_verdict:
+      verdict: CONFORM
+      confidence: HIGH
+      explanation: 'Instruction-doc text drift only, not a Goose schema question.
+        Goose validates recipe YAML schema, not .md prose; env-var/SOT-derived count
+        references are allowed in instruction docs. No Goose-native mechanism supersedes
+        (recipe parameters/Jinja targets YAML params, GOOSE_SUBAGENT_MAX_TURNS targets
+        turn budgets). Caveat: ${VAR} in .md resolves at agent/pipeline runtime ->
+        use "document default + derive from SOT" Pattern A/B/C. Sources: goose-docs.ai
+        recipes/advanced.'
+  - id: MM9-EXT-002
+    type: MM9-EXT
+    subtype: HARDCODE-CHECKS
+    severity: low
+    file: recipe/instructions/sub_mas-pre-push-validator.md
+    line: 26
+    issue: 'hardcoded ''18 checks'' without env-var/default/config context (spec-drift:
+      hardcoded literal without env-var/SOT context)'
+    impact: Count literal drifts from actual value when the source-of-truth changes
+      (R110-71/R110-78 spec-drift lesson class); docs mislead operators.
+...
+=== TOTAL LINES ===
+542 findings.yamlstage: 2
+agent: im-rank
+version: 1.0.0
+timestamp: '2026-08-18T02:00:47+00:00'
+input_file: .mase/pipeline/findings.yaml
+severity_ceiling: high
+ceiling_filtered: 0
+active_ceiling: high
+issue_db_filtered: 0
+issue_db_status_counts:
+  fixed: 0
+  wontfix: 0
+  false_positive: 0
+top_N:
+- R-209
+- R-210
+- R-201
+- R-202
+- R-203
+- R-204
+- R-207
+- R-208
+- R-211
+- R-212
+skipped:
+- id: F-002
+  reason: 'R04: recipe/sub/sub_mas-general-improver.yaml off-limits (no recursion)'
+- id: R-205
+  reason: 'R04: recipe/sub/sub_mas-general-improver.yaml off-limits (no recursion)'
+rank_score_scheme: severity_base(high=300/medium=200/low=100) + multi-file_breadth(10)
+===
+{
+  "schema_version": "1.0.0",
+  "created_at": "2026-08-18T13:44:39Z",
+  "last_modified_at": "2026-08-18T16:44:23Z",
+  "last_modified_by": "init",
+  "summary": {
+    "total_issues": 82,
+    "by_status": {
+      "open": 82,
+      "fixed": 0,
+      "wontfix": 0,
+      "false_positive": 0
+    },
+    "by_type": {
+      "A2": 2,
+      "NN1": 17,
+      "Q4c": 3,
+      "SD-test_dev_dispatch_tracker_mq_integration-1": 1,
+      "SD-test_dev_issue_db_bulk_import-1": 1,
+      "SD-test_dev_issue_db_bulk_import-2": 1,
+      "SD-test_dev_issue_db_bulk_import-3": 1,
+      "SD-test_dev_issue_db_bulk_import-4": 1,
+      "SD-test_dev_issue_db_bulk_import-5": 1,
+      "SD-test_dev_parallel_backpressure-1": 1,
+      "SD-test_dev_phase2_consumers-1": 1,
+      "SD-test_dev_phase2_consumers-2": 1,
+      "SD-test_dev_phase2_consumers-3": 1,
+      "SD-test_dev_phase2_consumers-4": 1,
+      "SD-test_dev_phase3_phoenix_log-1": 1,
+      "SD-test_dev_phase3_phoenix_log-2": 1,
+      "SD-test_dev_phase3_phoenix_log-3": 1,
+      "SD-test_dev_phoenix_recovery_publish-1": 1,
+      "SD-test_dev_phoenix_recovery_publish-2": 1,
+      "SD-test_dev_phoenix_recovery_publish-3": 1,
+      "SD-test_dev_phoenix_recovery_publish-4": 1,
+      "SD-test_dev_workflow_runner_mq_actions-1": 1,
+      "SD-test_dev_workflow_runner_mq_actions-2": 1,
+      "SD-test_dev_workflow_runner_mq_actions-3": 1,
+      "SD-test_dev_workflow_runner_mq_actions-4": 1,
+      "SD-test_dev_workflow_runner_mq_actions-5": 1,
+      "SD-test_dev_workfInput located: `findings.yaml` (stage 1, im-finder, 2026-08-18T16:49) + `issue_db.json` (82 issues, **all open** — no fixed/wontfix/false_positive). `IM_TOP_N=20`. No `severity_ceiling` passed → default `high` (keep all).
+
+Now running the read-only ranking analysis (dedupe → issue-db filter → ceiling → severity sort → Art.1–6 → top-N):
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer/.mase/pipeline && python3 - <<'EOF'
+import yaml, json, os, hashlib
+
+# --- R10 CORONASHIELD: validate YAML before use ---
+with open("findings.yaml") as f:
+    doc = yaml.safe_load(f)
+assert isinstance(doc, dict) and "data" in doc and "findings" in doc["data"], "findings.yaml invalid shape"
+
+findings = doc["data"]["findings"]
+print(f"stage={doc.get('stage')} agent={doc.get('agent')} ts={doc.get('timestamp')}")
+print(f"raw findings: {len(findings)}")
+
+# --- STEP 1: REMOVE DUPLICATES (type + file + detail) ---
+seen = set(); deduped = []
+for f in findings:
+    key = (f.get("type"), f.get("file"), f.get("issue"))
+    if key in seen: continue
+    seen.add(key); deduped.append(f)
+print(f"after dedupe: {len(deduped)}  (removed {len(findings)-len(deduped)})")
+
+# --- STEP 1.4: ISSUE-DB STATUS FILTER ---
+try:
+    with open("issue_db.json") as f:
+        db = json.load(f)
+    status_map = {i.get("issue_hash"): i.get("status") for i in db.get("issues", [])}
+    ex = {h for h,s in status_map.items() if s in ("fixed","wontfix","false_positive")}
+    kept, dropped = [], []
+    for f in deduped:
+        h = f.get("issue_hash")
+        if h is None or h == "":
+            kept.append(f); print(f"WARNING: finding {f.get('id')} without issue_hash, keeping")
+        elif h in ex:
+            dropped.append(f); print(f"ISSUE-DB-SKIP: {h} ({status_map[h]})")
+        else:
+            kept.append(f)
+    print(f"issue_db_filtered: {len(dropped)} dropped")
+    deduped = kept
+except Exception as e:
+    print(f"issue-db unavailable ({e}); keeping all")
+
+# --- STEP 1.5: SEVERITY CEILING ---
+ceiling = doc.get("data", {}).get("severity_ceiling") or "high"
+order = ["high","medium","low","info"]
+ci = order.index(ceiling) if ceiling in order else 0
+before = len(deduped)
+deduped = [f for f in deduped if order.index(f.get("severity","info") if f.get("severity") in order else "info") >= ci]
+print(f"severity_ceiling={ceiling} ceiling_filtered={before-len(deduped)} remaining={len(deduped)}")
+
+# --- STEP 2: SORT BY SEVERITY (+ NOT_POSSIBLE deprioritize) ---
+sev_val = {"high":300,"medium":200,"low":100,"info":50}
+def keyf(f):
+    s = f.get("severity","info")
+    v = sev_val.get(s, 50)
+    gv = (f.get("goose_verdict") or {}).get("verdict")
+    if gv == "NOT_POSSIBLE": v -= 1
+    # tie-break: breadths/structural, stable by id
+    return (-v, f.get("id",""))
+sorted_f = sorted(deduped, key=keyf)
+
+# --- STEP 3: ART.1-6 CHECK ---
+art_skip = []
+art_keep = []
+for f in sorted_f:
+    t = (f.get("type") or "").lower(); fl = (f.get("file") or "").lower()
+    reason = None
+    if "constitution" in fl or "master-constitution" in t: reason = "Art.1: touches constitution"
+    if "general-improver" in fl: reason = "R04: general-improver off-limits"
+    if reason: art_skip.append((f, reason)); continue
+    art_keep.append(f)
+print(f"Art.1-6/R04 skipped: {len(art_skip)}")
+
+# --- STEP 4: TOP-N ---
+N = int(os.environ.get("IM_TOP_N","100")); 
+if N < 1: N = 100
+if N > 500: N = 500
+top_N = [f.get("id") for f in art_keep[:N]]
+print(f"[im-rank] IM_TOP_N={N} → selecting top {N} of {len(art_keep)} findings")
+
+# --- summary by severity ---
+from collections import Counter
+print("severity counts (rankable):", dict(Counter(f.get("severity","?") for f in art_keep)))
+print("types:", dict(Counter(f.get("type","?") for f in art_keep)))
+print()
+for i, f in enumerate(art_keep[:N], 1):
+    gv = (f.get("goose_verdict") or {}).get("verdict","-")
+    print(f"{i:>2}. {f.get('id'):<14} {f.get('severity','?'):<7} rank~{keyf(f)[0]:>4} type={f.get('type','?'):<38} {f.get('file','?')[:70]}")
+EOF
+
+stage=1 agent=im-finder ts=2026-08-18T16:49:01.861976+00:00
+raw findings: 21
+after dedupe: 14  (removed 7)
+issue-db unavailable ('str' object has no attribute 'get'); keeping all
+severity_ceiling=high ceiling_filtered=0 remaining=14
+Art.1-6/R04 skipped: 0
+[im-rank] IM_TOP_N=20 → selecting top 20 of 14 findings
+severity counts (rankable): {'medium': 1, 'low': 13}
+types: {'SD-test_dev_message_queue-1': 1, 'MM9-EXT': 13}
+
+ 1. F-035          medium  rank~-200 type=SD-test_dev_message_queue-1            ./tests/test_dev_message_queue.py:414
+ 2. MM9-EXT-001    low     rank~-100 type=MM9-EXT                                recipe/instructions/sub_mas-config-auditor.md
+ 3. MM9-EXT-002    low     rank~-100 type=MM9-EXT                                recipe/instructions/sub_mas-pre-push-validator.md
+ 4. MM9-EXT-003    low     rank~-100 type=MM9-EXT                                recipe/instructions/sub_mas-bootstrap.md
+ 5. MM9-EXT-006    low     rank~-100 type=MM9-EXT                                recipe/instructions/sub_mas-config-auditor.md
+ 6. MM9-EXT-008    low     rank~-100 type=MM9-EXT                                recipe/instructions/sub_mas-generic-init.md
+ 7. MM9-EXT-009    low     rank~-100 type=MM9-EXT                                recipe/instructions/sub_mas-im-finder.md
+ 8. MM9-EXT-010    low     rank~-100 type=MM9-EXT                                recipe/instructions/sub_mas-pre-push-validator.md
+ 9. MM9-EXT-011    low     rank~-100 type=MM9-EXT                                recipe/instructions/sub_mas-system-knowledge.md
+10. MM9-EXT-012    low     rank~-100 type=MM9-EXT                                recipe/instructions/sub_mas-team-packager.md
+11. MM9-EXT-013    low     rank~-100 type=MM9-EXT                                recipe/instructions/sub_mas-bootstrap.md
+12. MM9-EXT-016    low     rank~-100 type=MM9-EXT                                recipe/instructions/sub_mas-generic-init.md
+13. MM9-EXT-017    low     rank~-100 type=MM9-EXT                                recipe/instructions/sub_mas-system-knowledge.md
+14. MM9-EXT-020    low     rank~-100 type=MM9-EXT                                recipe/instructions/sub_mas-team-packager.mdYAML parsed cleanly (R10 ✓): 21 raw → 14 after dedupe. But the issue-db filter errored on structure — let me inspect `issue_db.json` and the `dev_issue_db` helper, then re-run the filter properly:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer/.mase/pipeline && python3 -c "
+import json
+db = json.load(open('issue_db.json'))
+print('top-level keys:', list(db.keys()))
+issues = db.get('issues')
+print('issues type:', type(issues).__name__)
+if isinstance(issues, dict):
+    k0 = list(issues.keys())[:3]; print('sample keys:', k0)
+    print('sample value:', json.dumps(issues[k0[0]])[:300])
+elif isinstance(issues, list):
+    print('len:', len(issues)); print('sample:', json.dumps(issues[0])[:400])
+"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && sed -n '1,80p' tools/dev_issue_db.py
+
+top-level keys: ['schema_version', 'created_at', 'last_modified_at', 'last_modified_by', 'summary', 'issues']
+issues type: dict
+sample keys: ['sha256:bea47cab27d74d98388d053fb770d150e414182626ef048c397e271d33e469cb', 'sha256:364463d010ababa8ecf26c6a7e9cbb4f92099c14e06c87bd45a81c1a7a035448', 'sha256:0a3ae545d2c8d992b46b8a7b4d59be0a8c7722478a30ff39d479837620b22a17']
+sample value: {"hash": "sha256:bea47cab27d74d98388d053fb770d150e414182626ef048c397e271d33e469cb", "type": "A2", "severity": "medium", "file": "recipe/dashboard-data-refresh.yaml", "structural_pattern": "A2:dashboard-data-refresh.yaml", "first_seen": "2026-08-18T13:44:39Z", "last_seen": "2026-08-18T16:44:12Z", "in#!/usr/bin/env python3
+"""Persistent Issue-Database for the IM-pipeline (R110-177, PHASE 1).
+
+Issue-centric rewrite of the improvement pipeline: every scanner-emit
+gets a stable `issue_hash = sha256(file|type|structural_pattern)`.
+The db (`.mase/pipeline/issue_db.json`) tracks first_seen / last_seen /
+instances / status (open|fixed|wontfix|false_positive) / past_designs /
+past_validation_outcomes across runs — so re-runs dedup against known
+issues instead of re-emitting the same file-centric noise.
+
+Spec: .mase/directives/R110-177-im-pipeline-issue-db.md (PHASE 1.3-1.8)
+R110-177-ADAPTATION (documented in apply commit): `compute_structural_pattern`
+(originally specified inside dev_im_finder_scan.py, PHASE 2.2) lives HERE so it
+is unit-testable without triggering the scanner's heavy module-level scan.
+The scanner imports it from this module.
+"""
+import contextlib
+import hashlib
+import json
+import os
+from typing import Dict, List, Optional
+
+SCHEMA_VERSION = "1.0.0"
+
+
+def _now_iso() -> str:
+    import datetime
+    return datetime.datetime.now(datetime.timezone.utc).strftime(
+        "%Y-%m-%dT%H:%M:%SZ")
+
+
+def compute_issue_hash(file: str, type: str, structural_pattern: str) -> str:
+    """Stable hash for issue identity.
+
+    structural_pattern: scanner-specific, e.g.:
+      - "missing_try_except:38-42" (K1)
+      - "extra_field:settings.timeout" (Q3)
+      - "no_retry_on_subprocess:14-28" (K3)
+      - "multi_role:5:['analyze','validate']" (NN1)
+      - "hardcoded_count:1277:tests" (HARDCODE-STALE-001)
+      - "stale_literal:'sales':recipe/sub" (STALE-LITERAL)
+
+    Args:
+      file: relativ zum mas-engineer cwd (z.B. "recipe/sub/sub_mas-foo.yaml")
+      type: scanner-type (K1, K3, NN1, etc.)
+      structural_pattern: scanner-emitted pattern (NORMALISIERT, kein random text)
+
+    Returns:
+      "sha256:" + 64-char lowercase hex digest
+
+    Properties:
+      - stable: same (file, type, structural_pattern) -> same hash
+      - file-local: pattern in different file = different hash
+      - line-bucketed: pattern in same line-range = same hash,
+        pattern in different line-range = different hash
+        (BUT: NN1 uses role-list, not line-range, so renames don't reset)
+      - scanner-version-INSENSITIVE: hash MUST NOT include scanner_version
+    """
+    # Normalize file path (resolve symlinks, remove leading ./)
+    norm_file = os.path.normpath(file).lstrip('./')
+    # Structural pattern is already normalized by caller
+    raw = f"{norm_file}|{type}|{structural_pattern}"
+    return "sha256:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def compute_structural_pattern(ftype: str, file: str, **kwargs) -> str:
+    """Generate stable structural pattern per finding-type.
+
+    R110-177-ADAPTATION: specified in PHASE 2.2 as a helper inside
+    dev_im_finder_scan.py; implemented here (dev_issue_db.py) so the
+    scanner and the tests share one importable definition.
+
+    Properties:
+      - line-bucketed types: pattern includes line_range
+      - content-agnostic: same issue after file-edit = same pattern
+      - type-specific: NN1 uses role-list, K1 uses line-range, etc.
+    """
+    if ftype in ('K1', 'K3', 'L1', 'U1'):
+        # line-range-based, scanner already has line numbers
+        return f"{ftype.lower()}:{kwargs.get('line_start', 0)}-{kwargs.get('line_end', 0)}"`issues` is a hash-keyed dict. Let me check the `filter_findings` helper and verify status coverage + hash membership:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && grep -n "def filter_findings" -A 40 tools/dev_issue_db.py
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer/.mase/pipeline && python3 - <<'EOF'
+import json, yaml
+db = json.load(open("issue_db.json"))
+issues = db["issues"]
+statuses = {}
+for h, v in issues.items():
+    s = v.get("status")
+    statuses[s] = statuses.get(s, 0) + 1
+print("status counts:", statuses)
+print("total issues:", len(issues))
+
+doc = yaml.safe_load(open("findings.yaml"))
+findings = doc["data"]["findings"]
+for f in findings:
+    h = f.get("issue_hash")
+    st = issues.get(h, {}).get("status", "NOT-IN-DB")
+    print(f"{f.get('id'):<14} {f.get('severity'):<7} hash-in-db={h in issues} status={st}  type={f.get('type')}")
+EOF
+
+290:    def filter_findings(self, findings: List[Dict]) -> List[Dict]:
+291-        """R110-177 PHASE 3 (im-rank STEP 1.4): drop findings whose
+292-        issue_hash is already fixed / wontfix / false_positive in the db.
+293-
+294-        Defensive: findings without issue_hash are KEPT (finder will catch
+295-        on next run after PHASE 2 fully deployed).
+296-        """
+297-        excluded = set()
+298-        for s in ('fixed', 'wontfix', 'false_positive'):
+299-            excluded |= set(self.list_by_status(s))
+300-        out = []
+301-        dropped = 0
+302-        for f in findings:
+303-            h = f.get('issue_hash')
+304-            if not h:
+305-                out.append(f)  # keep + warn (logged by caller)
+306-                continue
+307-            if h in excluded:
+308-                dropped += 1
+309-                continue
+310-            out.append(f)
+311-        return out, dropped
+312-
+313-    def save(self):
+314-        """Atomic save: write to .tmp, fsync, rename. Updates summary."""
+315-        self._data["last_modified_at"] = _now_iso()
+316-        self._data["summary"] = self._compute_summary()
+317-        tmp_path = self.db_path + ".tmp"
+318-        with open(tmp_path, "w") as f:
+319-            json.dump(self._data, f, indent=2, sort_keys=False)
+320-            f.flush()
+321-            os.fsync(f.fileno())
+322-        os.rename(tmp_path, self.db_path)
+323-
+324-    @contextlib.contextmanager
+325-    def save_with_lock(self, timeout: int = 30):
+326-        """Save with file-locking (fcntl.flock) for concurrent im-finder/rank/validator.
+327-
+328-        Lock strategy: each stage acquires exclusive lock for the duration of
+329-        its read-modify-write. Lock is released automatically on process exit
+330-        (fcntl.flock is held by file-descriptor, closed on exit).status counts: {'open': 82}
+total issues: 82
+F-035          medium  hash-in-db=True status=open  type=SD-test_dev_message_queue-1
+MM9-EXT-001    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-002    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-003    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-004    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-005    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-006    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-007    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-008    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-009    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-010    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-011    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-012    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-013    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-014    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-015    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-016    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-017    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-018    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-019    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXT
+MM9-EXT-020    low     hash-in-db=False status=NOT-IN-DB  type=MM9-EXTIssue-db confirmed: all 82 issues are `open` → **nothing to drop**. F-035's hash is in db (open→keep); the 20 MM9-EXT findings carry **no issue_hash** (self-audit class) → kept per edge-case rule with warning. Goose verdicts are CONFORM/HIGH (not NOT_POSSIBLE) → no deprioritization. Final verification pass with dedup transparency + the library-based filter per spec:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer-cleanup/mas-engineer && PYTHONPATH=tools python3 - <<'EOF'
+import yaml, os, sys
+from dev_issue_db import IssueDB
+
+doc = yaml.safe_load(open(".mase/pipeline/findings.yaml"))
+findings = doc["data"]["findings"]
+
+# --- STEP 1 dedupe with transparency ---
+seen, deduped, dup_log = {}, [], []
+for f in findings:
+    key = (f.get("type"), f.get("file"), f.get("issue"))
+    if key in seen:
+        dup_log.append((f.get("id"), seen[key]))
+        continue
+    seen[key] = f.get("id")
+    deduped.append(f)
+print(f"STEP1 dedupe: {len(findings)} -> {len(deduped)}  removed={[(d,s) for d,s in dup_log]}")
+
+# --- STEP 1.4 issue-db filter via library (spec-compliant) ---
+db = IssueDB(db_path=".mase/pipeline/issue_db.json")
+kept, dropped = db.filter_findings(deduped)
+print(f"STEP1.4 issue_db_filtered: {dropped} dropped, {len(kept)} kept")
+no_hash = [f["id"] for f in kept if not f.get("issue_hash")]
+print(f"  warning: {len(no_hash)} findings without issue_hash kept -> {no_hash}")
+deduped = kept
+
+# --- STEP 1.5 ceiling ---
+ceiling = "high"; order = ["high","medium","low","info"]
+ci = order.index(ceiling)
+before = len(deduped)
+deduped = [f for f in deduped if order.index(f.get("severity","info") if f.get("severity") in order else "info") >= ci]
+print(f"STEP1.5 ceiling={ceiling} ceiling_filtered={before-len(deduped)} remaining={len(deduped)}")
+
+# --- STEP 2 sort ---
+sev_val = {"high":300,"medium":200,"low":100,"info":50}
+def score(f):
+    v = sev_val.get(f.get("severity","info"),50)
+    if ((f.get("goose_verdict") or {}).get("verdict")) == "NOT_POSSIBLE": v -= 1
+    return v
+sorted_f = sorted(deduped, key=lambda f: (-score(f), f.get("id","")))
+
+# --- STEP 3 Art.1-6 ---
+rankable, skipped = [], []
+for f in sorted_f:
+    fl = (f.get("file") or "").lower()
+    if "constitution" in fl: skipped.append({"id": f["id"], "reason":"Art.1 BLOCKED (constitution)"})
+    elif "general-improver" in fl: skipped.append({"id": f["id"], "reason":"R04 off-limits"})
+    else: rankable.append(f)
+print(f"STEP3 Art.1-6: rankable={len(rankable)} skipped={skipped}")
+
+# --- STEP 4 top-N ---
+N = int(os.environ.get("IM_TOP_N","100")); N = 100 if N < 1 else min(N,500)
+top = rankable[:N]
+print(f"[im-rank] IM_TOP_N={N} -> selecting top {N} of {len(rankable)} findings")
+if len(rankable) < N: print(f"WARNING: mismatch — only {len(rankable)} available < IM_TOP_N={N}; fallback to {len(rankable)}")
+
+print()
+print(f"{'#':>2} {'id':<14} {'sev':<7} {'score':>5}  file")
+for i,f in enumerate(top,1):
+    print(f"{i:>2} {f.get('id'):<14} {f.get('severity'):<7} {score(f):>5}  {f.get('file')}")
+
+# JSON for final output
+out = {
+  "top_N": len(top),
+  "ranked_findings": [
+    {"finding_id": f.get("id"), "priority": score(f), "severity": f.get("severity")} for f in top
+  ]
+}
+import json
+print("\n=== FINAL JSON ===")
+print(json.dumps(out, indent=2))
+EOF
+
+STEP1 dedupe: 21 -> 14  removed=[('MM9-EXT-004', 'MM9-EXT-003'), ('MM9-EXT-005', 'MM9-EXT-003'), ('MM9-EXT-007', 'MM9-EXT-006'), ('MM9-EXT-014', 'MM9-EXT-013'), ('MM9-EXT-015', 'MM9-EXT-013'), ('MM9-EXT-018', 'MM9-EXT-017'), ('MM9-EXT-019', 'MM9-EXT-017')]
+STEP1.4 issue_db_filtered: 0 dropped, 14 kept
+  warning: 13 findings without issue_hash kept -> ['MM9-EXT-001', 'MM9-EXT-002', 'MM9-EXT-003', 'MM9-EXT-006', 'MM9-EXT-008', 'MM9-EXT-009', 'MM9-EXT-010', 'MM9-EXT-011', 'MM9-EXT-012', 'MM9-EXT-013', 'MM9-EXT-016', 'MM9-EXT-017', 'MM9-EXT-020']
+STEP1.5 ceiling=high ceiling_filtered=0 remaining=14
+STEP3 Art.1-6: rankable=14 skipped=[]
+[im-rank] IM_TOP_N=20 -> selecting top 20 of 14 findings
+WARNING: mismatch — only 14 available < IM_TOP_N=20; fallback to 14
+
+ # id             sev     score  file
+ 1 F-035          medium    200  ./tests/test_dev_message_queue.py:414
+ 2 MM9-EXT-001    low       100  recipe/instructions/sub_mas-config-auditor.md
+ 3 MM9-EXT-002    low       100  recipe/instructions/sub_mas-pre-push-validator.md
+ 4 MM9-EXT-003    low       100  recipe/instructions/sub_mas-bootstrap.md
+ 5 MM9-EXT-006    low       100  recipe/instructions/sub_mas-config-auditor.md
+ 6 MM9-EXT-008    low       100  recipe/instructions/sub_mas-generic-init.md
+ 7 MM9-EXT-009    low       100  recipe/instructions/sub_mas-im-finder.md
+ 8 MM9-EXT-010    low       100  recipe/instructions/sub_mas-pre-push-validator.md
+ 9 MM9-EXT-011    low       100  recipe/instructions/sub_mas-system-knowledge.md
+10 MM9-EXT-012    low       100  recipe/instructions/sub_mas-team-packager.md
+11 MM9-EXT-013    low       100  recipe/instructions/sub_mas-bootstrap.md
+12 MM9-EXT-016    low       100  recipe/instructions/sub_mas-generic-init.md
+13 MM9-EXT-017    low       100  recipe/instructions/sub_mas-system-knowledge.md
+14 MM9-EXT-020    low       100  recipe/instructions/sub_mas-team-packager.md
+
+=== FINAL JSON ===
+{
+  "top_N": 14,
+  "ranked_findings": [
+    {
+      "finding_id": "F-035",
+      "priority": 200,
+      "severity": "medium"
+    },
+    {
+      "finding_id": "MM9-EXT-001",
+      "priority": 100,
+      "severity": "low"
+    },
+    {
+      "finding_id": "MM9-EXT-002",
+      "priority": 100,
+      "severity": "low"
+    },
+    {
+      "finding_id": "MM9-EXT-003",
+      "priority": 100,
+      "severity": "low"
+    },
+    {
+      "finding_id": "MM9-EXT-006",
+      "priority": 100,
+      "severity": "low"
+    },
+    {
+      "finding_id": "MM9-EXT-008",
+      "priority": 100,
+      "severity": "low"
+    },
+    {
+      "finding_id": "MM9-EXT-009",
+      "priority": 100,
+      "severity": "low"
+    },
+    {
+      "finding_id": "MM9-EXT-010",
+      "priority": 100,
+      "severity": "low"
+    },
+    {
+      "finding_id": "MM9-EXT-011",
+      "priority": 100,
+      "severity": "low"
+    },
+    {
+      "finding_id": "MM9-EXT-012",
+      "priority": 100,
+      "severity": "low"
+    },
+    {
+      "finding_id": "MM9-EXT-013",
+      "priority": 100,
+      "severity": "low"
+    },
+    {
+      "finding_id": "MM9-EXT-016",
+      "priority": 100,
+      "severity": "low"
+    },
+    {
+      "finding_id": "MM9-EXT-017",
+      "priority": 100,
+      "severity": "low"
+    },
+    {
+      "finding_id": "MM9-EXT-020",
+      "priority": 100,
+      "severity": "low"
+    }
+  ]
+}Ranking complete — deterministic, read-only, all pipeline steps executed. Summary:
+
+**Input:** `findings.yaml` (stage 1 · im-finder · 2026-08-18T16:49) — 21 raw findings (1× F-035 + 20× MM9-EXT self-audit class)
+
+| Step | Action | Result |
+|---|---|---|
+| 1 | Dedupe (type+file+issue) | 21 → **14** (7 exact dupes removed: 004/005→003, 007→006, 014/015→013, 018/019→017) |
+| 1.4 | Issue-DB status filter (R110-177) | **0 dropped** — all 82 db issues `open`; F-035 in-db (open→keep); 13 MM9-EXT have no `issue_hash` → kept w/ warning (spec edge case) |
+| 1.5 | Severity ceiling | `high` (default, none passed) → 0 filtered, 14 remain |
+| 2 | Severity sort + goose verdict | F-035 (🔴→🟡 medium, score 200) first; 13× low (100). All verdicts CONFORM/HIGH → **no NOT_POSSIBLE deprioritization** |
+| 3 | Art.1–6 / R04 check | **0 blocked** (no constitution / general-improver files) |
+| 4 | Top-N | `IM_TOP_N=20` → only 14 rankable → **fallback 14** (mismatch warning per spec) |
+
+**Result:** `top_N = 14` — F-035 (medium, `tests/test_dev_message_queue.py:414` literal drift) is the single top priority; the 13 MM9-EXT hardcoded-count doc drifts follow (all low, CONFORM per goose-expert → safe for im-designer, Pattern A/B/C env-var/SOT fix).
+
+Per mode ⛔ analysis-only + R01, no files were written (no `ranked_findings.yaml` save). Handing off to im-designer via final output:
+  ────────────────────────────────────────
+  ▸ final_output recipe
+    top_N: 14
+    ranked_findings:
+        - 
+            finding_id: F-035
+            priority: 200
+            severity: medium
+        - 
+            finding_id: MM9-EXT-001
+            priority: 100
+            severity: low
+        - 
+            finding_id: MM9-EXT-002
+            priority: 100
+            severity: low
+        - 
+            finding_id: MM9-EXT-003
+            priority: 100
+            severity: low
+        - 
+            finding_id: MM9-EXT-006
+            priority: 100
+            severity: low
+        - 
+            finding_id: MM9-EXT-008
+            priority: 100
+            severity: low
+        - 
+            finding_id: MM9-EXT-009
+            priority: 100
+            severity: low
+        - 
+            finding_id: MM9-EXT-010
+            priority: 100
+            severity: low
+        - 
+            finding_id: MM9-EXT-011
+            priority: 100
+            severity: low
+        - 
+            finding_id: MM9-EXT-012
+            priority: 100
+            severity: low
+        - 
+            finding_id: MM9-EXT-013
+            priority: 100
+            severity: low
+        - 
+            finding_id: MM9-EXT-016
+            priority: 100
+            severity: low
+        - 
+            finding_id: MM9-EXT-017
+            priority: 100
+            severity: low
+        - 
+            finding_id: MM9-EXT-020
+            priority: 100
+            severity: low
+
+{"top_N":14,"ranked_findings":[{"finding_id":"F-035","priority":200,"severity":"medium"},{"finding_id":"MM9-EXT-001","priority":100,"severity":"low"},{"finding_id":"MM9-EXT-002","priority":100,"severity":"low"},{"finding_id":"MM9-EXT-003","priority":100,"severity":"low"},{"finding_id":"MM9-EXT-006","priority":100,"severity":"low"},{"finding_id":"MM9-EXT-008","priority":100,"severity":"low"},{"finding_id":"MM9-EXT-009","priority":100,"severity":"low"},{"finding_id":"MM9-EXT-010","priority":100,"severity":"low"},{"finding_id":"MM9-EXT-011","priority":100,"severity":"low"},{"finding_id":"MM9-EXT-012","priority":100,"severity":"low"},{"finding_id":"MM9-EXT-013","priority":100,"severity":"low"},{"finding_id":"MM9-EXT-016","priority":100,"severity":"low"},{"finding_id":"MM9-EXT-017","priority":100,"severity":"low"},{"finding_id":"MM9-EXT-020","priority":100,"severity":"low"}]}

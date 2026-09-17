@@ -3,18 +3,17 @@
 A Multi-Agent System for **developing, improving, monitoring, and operating
 Multi-Agent Systems (MAS)** for the User.
 
-MAS-Engineer itself is a MAS: 96 sub-agents and 57 tools that work together
-to build other MAS frameworks.
+MAS-Engineer itself is a MAS: 112 sub-agents (recipe/sub/sub_mas-*.yaml) and 65 tools (58 Python, 6 Shell, 1 YAML) that work together to build other MAS frameworks.
 
 ## What you get
 
-- 96 specialized sub-agents (designer, finder, rank, validator, health-reporter, ...)
-- 57 tools (50 Python, 6 Shell, 1 YAML)
+- 112 specialized sub-agents (designer, finder, rank, validator, health-reporter, ...)
+- 65 tools (58 Python, 6 Shell, 1 YAML)
 - A complete dashboard (MCP server + 2 HTML webapps — note: requires `npm install` to start; not run during e2e tests)
-- Full audit trail in `.state/`
-- Single-source-of-truth workflows in `.state/workflows.yaml`
+- Full audit trail in `.mase/`
+- Single-source-of-truth workflows in `.mase/workflows.yaml`
 - 8-stage IM-pipeline (S1-S8 with S0 prerequisites; im-session-reader → im-finder → im-rank → im-designer → im-validator → apply → summarize → push)
-- 6 Phoenix Recovery files (5 internal + 1 monitor) — but only 5 are listed in `docs/`; the 6th is `monitor-recovery`
+- 6 Phoenix Recovery files (5 internal + 1 monitor) — but only 5 are listed in `../docs/`; the 6th is `monitor-recovery`
 
 ## Quick start: run the demo
 
@@ -34,25 +33,25 @@ Or just say "Run the demo." in any goose session.
 **Want to write your own MAS-Engineer prompts? See real examples:**
 
 ```
-prompts/
+demos/demo-team/prompts/
 ├── README.md              ← how to write prompts
 └── research-team.txt      ← full working prompt, ready to copy-paste
 ```
 
-The [prompts/research-team.txt](prompts/research-team.txt) file is the
+The [prompts/research-team.txt](../demos/demo-team/prompts/research-team.txt) file is the
 exact prompt that built the 5-agent research team at `/tmp/research-team`.
 Copy it, modify the agents, change the output path, and run it. It
 follows the build pattern: initialize → create agents → wire them →
 dashboard → live test → report (the "6-step pattern" mentioned in some
 docs; this is the runtime observation, not a fixed framework rule).
 
-More prompts: [prompts/README.md](prompts/README.md)
+More prompts: [prompts/README.md](../demos/demo-team/prompts/README.md)
 
 ## Documentation
 
-- [docs/DEMO-RESEARCH-TEAM.md](docs/DEMO-RESEARCH-TEAM.md) — Run the research-team demo
-- [prompts/](prompts/) — Copy-paste prompts to use as templates
-- [prompts/research-team.txt](prompts/research-team.txt) — The full demo prompt
+- [docs/DEMO-RESEARCH-TEAM.md](../docs/DEMO-RESEARCH-TEAM.md) — Run the research-team demo
+- [../demos/demo-team/prompts/](../demos/demo-team/prompts/) — Copy-paste prompts to use as templates
+- [prompts/research-team.txt](../demos/demo-team/prompts/research-team.txt) — The full demo prompt
 
 ## Use MAS-Engineer for your own work
 
@@ -92,7 +91,7 @@ MAS-Engineer supports **two workflows** for building multi-agent teams. Choose w
 If no keyword is found and the description mentions a team, MAS-Engineer
 shows a hint in the plan offering both options before R01 confirmation.
 
-See: [docs/WORKFLOWS.md](docs/WORKFLOWS.md) for the full workflow selection guide.
+See: [docs/WORKFLOWS.md](../docs/WORKFLOWS.md) for the full workflow selection guide.
 
 ## Architecture
 
@@ -109,40 +108,48 @@ dev-mas-engineer  (root orchestrator)
   +-- delegate(generic-init)   create new framework skeleton
   +-- delegate(demo-runner)    run the research-team demo
   +-- delegate(pre-push-validator)  block bad pushes
-  +-- ... 96 sub-agents
+  +-- ... 112 sub-agents
 ```
 
 ## Documentation
 
-- [docs/WORKFLOWS.md](docs/WORKFLOWS.md) - Team creation workflows (AUTO-SPLIT vs INTERACTIVE)
-- [docs/HOWTO-CREATE-AGENT.md](docs/HOWTO-CREATE-AGENT.md) - Create a single agent with intention-parser
-- [docs/HOWTO-IM-PIPELINE.md](docs/HOWTO-IM-PIPELINE.md) - Run the 8-stage improvement pipeline
-- [docs/HOWTO-TEAM-STANDALONE.md](docs/HOWTO-TEAM-STANDALONE.md) - Are created teams standalone-runnable?
-- [docs/HOWTO-PACKAGE-TEAM.md](docs/HOWTO-PACKAGE-TEAM.md) - Package a team for standalone distribution
-- [docs/DEMO-RESEARCH-TEAM.md](docs/DEMO-RESEARCH-TEAM.md) - Run the research-team demo
-- [docs/governance.md](docs/governance.md) - R-rules and decision-making
-- [docs/manifest.md](docs/manifest.md) - What MAS-Engineer is
-- [docs/procedures.md](docs/procedures.md) - Standard operating procedures
-- [docs/lessons-learned.md](docs/lessons-learned.md) - Hard-won knowledge
-- [prompts/](prompts/) - Copy-paste prompts to use as templates
+- [docs/WORKFLOWS.md](../docs/WORKFLOWS.md) - Team creation workflows (AUTO-SPLIT vs INTERACTIVE)
+- [docs/HOWTO-CREATE-AGENT.md](../docs/HOWTO-CREATE-AGENT.md) - Create a single agent with intention-parser
+- [docs/HOWTO-IM-PIPELINE.md](../docs/HOWTO-IM-PIPELINE.md) - Run the 8-stage improvement pipeline
+- [docs/HOWTO-TEAM-STANDALONE.md](../docs/HOWTO-TEAM-STANDALONE.md) - Are created teams standalone-runnable?
+- [docs/HOWTO-PACKAGE-TEAM.md](../docs/HOWTO-PACKAGE-TEAM.md) - Package a team for standalone distribution
+- [docs/DEMO-RESEARCH-TEAM.md](../docs/DEMO-RESEARCH-TEAM.md) - Run the research-team demo
+- [docs/governance.md](../docs/governance.md) - R-rules and decision-making
+- [docs/manifest.md](../docs/manifest.md) - What MAS-Engineer is
+- [docs/procedures.md](../docs/procedures.md) - Standard operating procedures
+- [docs/lessons-learned.md](../docs/lessons-learned.md) - Hard-won knowledge
+- [../demos/demo-team/prompts/](../demos/demo-team/prompts/) - Copy-paste prompts to use as templates
 - [recipe/instructions/](recipe/instructions/) - All sub-agent instructions
 
 ## Project structure
 
 ```
 mas-engineer/
-  recipe/
-    dev-mas-engineer.yaml       # root orchestrator
-    sub/                        # 96 sub-agent recipes
-    instructions/               # detailed instructions per agent
-    setup-dashboard.yaml        # dashboard setup
-    dashboard-data-refresh.yaml # data.json refresher
-    tools/                        # 57 tools (50 Python, 6 Shell, 1 YAML)
-  .mas/mcp/                     # MCP dashboard server
-  .state/                       # SOT, audit trail, findings
-  docs/                         # documentation
-  tests/                        # test suite
-  sub/                          # legacy sub-agents
+  recipe/                       # all agent recipes (YAML)
+    dev-mas-engineer.yaml       # root orchestrator (thin delegator)
+    sub/                        # 112 sub-agent recipes
+    instructions/               # detailed instructions per agent (.md)
+    template/                   # agent + recovery templates
+  .mase/                        # Single Source of Truth (SOT)
+    workflows.yaml              # the SOT: agents, rules, workflows, signals
+    knowledge/                  # 9 knowledge files
+    rules/                      # rule definitions + hardness levels
+    templates/                  # agent schema + guidelines
+    skills/                     # 20 bundled skills (SKILL.md)
+    mcp/                        # MCP dashboard server
+    config/                     # cost.yaml
+    directives/                 # R110-* spec docs
+    pipeline/                   # IM-pipeline outputs
+  tools/                        # 65 tools (58 Python, 6 Shell, 1 YAML)
+  tests/                        # test suite (pytest)
+  scripts/                      # core ops: e2e-test.sh, skills-install.sh, ...
+  ../docs/                      # documentation (repo root)
+  ../logs/                      # central log/evidence destination (repo root)
 ```
 
 ## Rules (always active)
@@ -151,7 +158,7 @@ mas-engineer/
 - **R18**: Delegate to specialized sub-agents (implies Gatekeeper for writes, full audit logging)
 - **R09**: Strict domain separation (MAS != Framework)
 
-All rules: `.state/workflows.yaml` -> `configs.mas-self`
+All rules: `.mase/workflows.yaml` -> `configs.mas-self`
 
 ## Versioning
 

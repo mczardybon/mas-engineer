@@ -13,8 +13,8 @@ MAS-Engineer-internal. Runs YAML-Changes with complete Safety-Kette from. EACH C
 1. python3 -c "import yaml; yaml.safe_load(open('{workspace}/recipes/{file}'))" 2. Result: valid / Error with linesnumber
 
 
-## Procedure MULTI_PATCH — Mehrere Files equalzeitig
-Input: [{file, old, new}, ...] 1. For EACH entry: BACKUP + PATCH + VALIDATE 2. IF all OK: dev_changes.py --add "MULTI_PATCH: {N} Files" 3. IF Error: ROLLBACK the fehlgeschlagenen, andere bleiben 4. SHOW: "✅ {N}/{M} Files successfully" ## Procedure BACKUP
+## Procedure MULTI_PATCH — Multiple Files simultaneously
+Input: [{file, old, new}, ...] 1. For EACH entry: BACKUP + PATCH + VALIDATE 2. IF all OK: dev_changes.py --add "MULTI_PATCH: {N} Files" 3. IF Error: ROLLBACK the failed ones, others stay 4. SHOW: "✅ {N}/{M} Files successfully" ## Procedure BACKUP
 1. cp {workspace}/recipes/{file} {workspace}/.backups/TIMESTAMP/{file}
 
 

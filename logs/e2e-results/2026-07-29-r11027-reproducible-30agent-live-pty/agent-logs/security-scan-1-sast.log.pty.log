@@ -1,0 +1,156 @@
+Script started on 2026-07-29 13:42:34+00:00 [COMMAND="bash -c '/root/.local/bin/goose run --recipe /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/wrappers/security-scan-1-sast.yaml --no-session 2>&1'" <not executed on terminal>]
+[32m[1mLoading recipe:[0m [32mR110-27 wrapper — security-scan-1-sast[0m
+[1mDescription:[0m R110-27 wrapper injecting task for security-scan-1-sast
+
+[35m◒[0m  starting 3 extensions: developer, analyze, summon                            [2K[35m◐[0m  starting 3 extensions: developer, analyze, summon                            [2K[35m◐[0m  starting 2 extensions: developer, analyze                                    [2K[35m◐[0m  starting 1 extensions: developer                                             [2K[35m◐[0m  starting 0 extensions:                                                       [2K]0;🪿 mas-engineer
+  [37m  __( O)>[0m  [32m●[0m [2mnew session[0m [2m·[0m [2mopenai[0m [36mdeepseek-v4-flash[0m
+  [37m \____)[0m  [2m [0m [2m20260729_90[0m [2m· /workspace/dev-branch/mas-engineer[0m
+  [37m   L L[0m  [37m   goose is ready[0m
+
+  [2m────────────────────────────────────────[0m
+  [2m▸[0m [2mread_image[0m
+    [2msource[0m: [32m/workspace/dev-branch/mas-engineer/sample-input/sample_with_bugs.py[0m
+
+
+  [2m────────────────────────────────────────[0m
+  [2m▸[0m [2manalyze[0m
+    [2mpath[0m: [32m/workspace/dev-branch/mas-engineer/sample-input/sample_with_bugs.py[0m
+
+    [2mError: failed to read image file: No such file or directory (os error 2)[0m
+    [2mError: path not found: /workspace/dev-branch/mas-engineer/sample-input/sample_with_bugs.py[0m
+
+  [2m────────────────────────────────────────[0m
+  [2m▸[0m [2mshell[0m
+    [2mcommand[0m: [32mfind /workspace -name "sample_with_bugs.py" 2>/dev/null[0m
+
+    [2m/workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/sample-input/sample_with_bugs.py[0m
+
+  [2m────────────────────────────────────────[0m
+  [2m▸[0m [2mshell[0m
+    [2mcommand[0m: [32mcat /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/sample-input/sample_with_bugs.py[0m
+
+    [2m"""Sample code with intentional bugs for code-review team."""[0m
+    [2mfrom typing import List, Optional[0m
+    [2m[0m
+    [2m[0m
+    [2mdef average(numbers: List[int]) -> int:[0m
+    [2m    """Return the average of a list of integers."""[0m
+    [2m    total = 0[0m
+    [2m    for i in range(len(numbers) + 1):  # BUG: off-by-one[0m
+    [2m        total += numbers[i][0m
+    [2m    return total // len(numbers)  # BUG: ZeroDivisionError on empty list[0m
+    [2m[3m... (24 lines hidden, /toggle to show all)[0m
+    [2mimport threading[0m
+    [2mdef worker():[0m
+    [2m    for _ in range(1000):[0m
+    [2m        counter.increment()[0m
+    [2m[0m
+    [2mif __name__ == "__main__":[0m
+    [2m    threads = [threading.Thread(target=worker) for _ in range(10)][0m
+    [2m    for t in threads: t.start()[0m
+    [2m    for t in threads: t.join()[0m
+    [2m    print(f"Final count: {counter.get()} (expected 10000)")  # race-condition gives wrong answer[0m
+[34m#[0m[37m [0m[34m🕵️ Static Security Analysis: [0m[32m`[0m[32msample_with_bugs.py[0m[32m`[0m
+
+[37mBelow[0m[37m is[0m[37m a[0m[37m thorough[0m[37m analysis[0m[37m of[0m[37m each[0m[37m security[0m[37m-re[0m[37mlevant[0m[37m flaw[0m[37m,[0m[37m mapped[0m[37m to[0m[37m [0m[1;33m**[0m[1;33mCommon Weakness Enumeration (CWE™)[0m[1;33m**[0m[37m references[0m[37m.[0m
+
+[37m---[0m
+
+[34m##[0m[37m [0m[34m🔴 Issue 1: Off-by-One Buffer Over-Read[0m
+
+[1;33m**[0m[1;33mFile:[0m[1;33m**[0m[37m Line[0m[37m [0m[37m7[0m[37m–[0m[37m8[0m[37m  [0m
+[1;33m**[0m[1;33mCode:[0m[1;33m**[0m
+[37m```[0m[38;5;9mpython[0m
+[35mfor[0m[37m [0m[37mi[0m[37m [0m[35min[0m[37m [0m[36mrange[0m[37m([0m[36mlen[0m[37m([0m[37mnumbers[0m[37m)[0m[37m [0m[37m+[0m[37m [0m[38;5;9m1[0m[37m)[0m[37m:[0m[37m  [0m[38;5;8m#[0m[38;5;8m BUG: off-by-one[0m
+[37m    [0m[37mtotal[0m[37m [0m[37m+=[0m[37m [0m[37mnumbers[0m[37m[[0m[37mi[0m[37m][0m
+[37m```[0m
+
+[1;33m**[0m[1;33mProblem:[0m[1;33m**[0m[37m [0m[32m`[0m[32mrange(len(numbers) + 1)[0m[32m`[0m[37m produces[0m[37m indices[0m[37m [0m[32m`[0m[32m0, 1, …, len(numbers)[0m[32m`[0m[37m.[0m[37m On[0m[37m the[0m[37m final[0m[37m iteration[0m[37m,[0m[37m [0m[32m`[0m[32mnumbers[len(numbers)][0m[32m`[0m[37m is[0m[37m out[0m[37m of[0m[37m bounds[0m[37m →[0m[37m [0m[32m`[0m[32mIndexError[0m[32m`[0m[37m is[0m[37m raised[0m[37m.[0m[37m This[0m[37m is[0m[37m the[0m[37m classic[0m[37m [0m[1;33m**[0m[1;33mfencepost error[0m[1;33m**[0m[37m.[0m
+
+[37m|[0m[37m CWE ID      [0m[37m|[0m[37m Title                                                      [0m[37m|[0m
+[37m|[0m[37m-------------[0m[37m|[0m[37m------------------------------------------------------------[0m[37m|[0m
+[37m|[0m[37m [0m[1;33m**[0m[1;33mCWE-193[0m[1;33m**[0m[37m [0m[37m|[0m[37m Off-by-one Error                                           [0m[37m|[0m
+[37m|[0m[37m [0m[1;33m**[0m[1;33mCWE-129[0m[1;33m**[0m[37m [0m[37m|[0m[37m Improper Validation of Array Index                         [0m[37m|[0m
+[37m|[0m[37m [0m[1;33m**[0m[1;33mCWE-787[0m[1;33m**[0m[37m [0m[37m|[0m[37m Out-of-bounds Write [0m[35m*[0m[35m(if the same pattern mutated memory)[0m[35m*[0m[37m [0m[37m|[0m
+[1;33m**[0m[1;33mSeverity:[0m[1;33m**[0m[37m ⚠[0m[37m️[0m[37m Medium[0m[37m —[0m[37m causes[0m[37m runtime[0m[37m crash[0m[37m /[0m[37m denial[0m[37m of[0m[37m service[0m[37m.[0m
+
+[37m---[0m
+
+[34m##[0m[37m [0m[34m🔴 Issue 2: Division by Zero[0m
+
+[1;33m**[0m[1;33mFile:[0m[1;33m**[0m[37m Line[0m[37m [0m[37m10[0m[37m  [0m
+[1;33m**[0m[1;33mCode:[0m[1;33m**[0m
+[37m```[0m[38;5;9mpython[0m
+[35mreturn[0m[37m [0m[37mtotal[0m[37m [0m[37m/[0m[37m/[0m[37m [0m[36mlen[0m[37m([0m[37mnumbers[0m[37m)[0m[37m  [0m[38;5;8m#[0m[38;5;8m BUG: ZeroDivisionError on empty list[0m
+[37m```[0m
+
+[1;33m**[0m[1;33mProblem:[0m[1;33m**[0m[37m An[0m[37m empty[0m[37m input[0m[37m list[0m[37m ([0m[32m`[0m[32m[][0m[32m`[0m[37m)[0m[37m makes[0m[37m [0m[32m`[0m[32mlen(numbers) == 0[0m[32m`[0m[37m,[0m[37m and[0m[37m integer[0m[37m division[0m[37m by[0m[37m zero[0m[37m is[0m[37m undefined[0m[37m.[0m[37m Python[0m[37m raises[0m[37m [0m[32m`[0m[32mZeroDivisionError[0m[32m`[0m[37m.[0m
+
+[37m|[0m[37m CWE ID      [0m[37m|[0m[37m Title                 [0m[37m|[0m
+[37m|[0m[37m-------------[0m[37m|[0m[37m-----------------------[0m[37m|[0m
+[37m|[0m[37m [0m[1;33m**[0m[1;33mCWE-369[0m[1;33m**[0m[37m [0m[37m|[0m[37m Divide By Zero        [0m[37m|[0m
+[37m|[0m[37m [0m[1;33m**[0m[1;33mCWE-682[0m[1;33m**[0m[37m [0m[37m|[0m[37m Incorrect Calculation [0m[37m|[0m
+[1;33m**[0m[1;33mSeverity:[0m[1;33m**[0m[37m ⚠[0m[37m️[0m[37m Medium[0m[37m —[0m[37m un[0m[37mhand[0m[37mled[0m[37m exception[0m[37m crashes[0m[37m the[0m[37m caller[0m[37m.[0m
+
+[37m---[0m
+
+[34m##[0m[37m [0m[34m🔴 Issue 3: Type Confusion — Dict Accessed via Attribute ([0m[32m`[0m[32mu.id[0m[32m`[0m[34m vs [0m[32m`[0m[32mu["id"][0m[32m`[0m[34m)[0m
+
+[1;33m**[0m[1;33mFile:[0m[1;33m**[0m[37m Line[0m[37m [0m[37m14[0m[37m–[0m[37m15[0m[37m  [0m
+[1;33m**[0m[1;33mCode:[0m[1;33m**[0m
+[37m```[0m[38;5;9mpython[0m
+[35mfor[0m[37m [0m[37mu[0m[37m [0m[35min[0m[37m [0m[37musers[0m[37m:[0m
+[37m    [0m[35mif[0m[37m [0m[37mu[0m[37m.[0m[37mid[0m[37m [0m[37m==[0m[37m [0m[37muser_id[0m[37m:[0m[37m  [0m[38;5;8m#[0m[38;5;8m BUG: dict has no .id attribute[0m
+[37m```[0m
+
+[1;33m**[0m[1;33mProblem:[0m[1;33m**[0m[37m [0m[32m`[0m[32musers[0m[32m`[0m[37m is[0m[37m typed[0m[37m [0m[32m`[0m[32mList[dict][0m[32m`[0m[37m,[0m[37m but[0m[37m the[0m[37m code[0m[37m uses[0m[37m attribute[0m[37m access[0m[37m [0m[32m`[0m[32mu.id[0m[32m`[0m[37m instead[0m[37m of[0m[37m key[0m[37m access[0m[37m [0m[32m`[0m[32mu["id"][0m[32m`[0m[37m.[0m[37m Python[0m[37m dict[0m[37ms[0m[37m have[0m[37m no[0m[37m [0m[32m`[0m[32m.id[0m[32m`[0m[37m attribute[0m[37m →[0m[37m [0m[32m`[0m[32mAttributeError[0m[32m`[0m[37m.[0m[37m This[0m[37m is[0m[37m a[0m[37m [0m[1;33m**[0m[1;33mtype confusion[0m[1;33m**[0m[37m /[0m[37m [0m[1;33m**[0m[1;33mtype-mismatch[0m[1;33m**[0m[37m bug[0m[37m.[0m
+
+[37m|[0m[37m CWE ID      [0m[37m|[0m[37m Title                                                         [0m[37m|[0m
+[37m|[0m[37m-------------[0m[37m|[0m[37m---------------------------------------------------------------[0m[37m|[0m
+[37m|[0m[37m [0m[1;33m**[0m[1;33mCWE-843[0m[1;33m**[0m[37m [0m[37m|[0m[37m Access of Resource Using Incompatible Type ('Type Confusion') [0m[37m|[0m
+[37m|[0m[37m [0m[1;33m**[0m[1;33mCWE-628[0m[1;33m**[0m[37m [0m[37m|[0m[37m Function Call with Incorrectly Specified Arguments            [0m[37m|[0m
+[37m|[0m[37m [0m[1;33m**[0m[1;33mCWE-754[0m[1;33m**[0m[37m [0m[37m|[0m[37m Improper Check for Unusual or Exceptional Conditions          [0m[37m|[0m
+[1;33m**[0m[1;33mSeverity:[0m[1;33m**[0m[37m ⚠[0m[37m️[0m[37m Medium[0m[37m —[0m[37m always[0m[37m crashes[0m[37m if[0m[37m a[0m[37m dict[0m[37m reaches[0m[37m this[0m[37m line[0m[37m.[0m
+
+[37m---[0m
+
+[34m##[0m[37m [0m[34m🔴 Issue 4: Race Condition — Unsynchronized Shared Mutable State[0m
+
+[1;33m**[0m[1;33mFile:[0m[1;33m**[0m[37m Lines[0m[37m [0m[37m25[0m[37m–[0m[37m33[0m[37m  [0m
+[1;33m**[0m[1;33mCode:[0m[1;33m**[0m
+[37m```[0m[38;5;9mpython[0m
+[37mcounter[0m[37m [0m[37m=[0m[37m [0m[37mCounter[0m[37m([0m[37m)[0m
+[35mimport[0m[37m [0m[37mthreading[0m
+[35mdef[0m[37m [0m[34mworker[0m[37m([0m[37m)[0m[37m:[0m
+[37m    [0m[35mfor[0m[37m [0m[37m_[0m[37m [0m[35min[0m[37m [0m[36mrange[0m[37m([0m[38;5;9m1000[0m[37m)[0m[37m:[0m
+[37m        [0m[37mcounter[0m[37m.[0m[37mincrement[0m[37m([0m[37m)[0m
+
+[35mif[0m[37m [0m[37m__name__[0m[37m [0m[37m==[0m[37m [0m[37m"[0m[32m__main__[0m[37m"[0m[37m:[0m
+[37m    [0m[37mthreads[0m[37m [0m[37m=[0m[37m [0m[37m[[0m[37mthreading[0m[37m.[0m[37mThread[0m[37m([0m[37mtarget[0m[37m=[0m[37mworker[0m[37m)[0m[37m [0m[35mfor[0m[37m [0m[37m_[0m[37m [0m[35min[0m[37m [0m[36mrange[0m[37m([0m[38;5;9m10[0m[37m)[0m[37m][0m
+[37m    [0m[38;5;9m...[0m
+[37m    [0m[36mprint[0m[37m([0m[35mf[0m[37m"[0m[32mFinal count: [0m[37m{[0m[37mcounter[0m[37m.[0m[37mget[0m[37m([0m[37m)[0m[37m}[0m[32m (expected 10000)[0m[37m"[0m[37m)[0m
+[37m```[0m
+
+[1;33m**[0m[1;33mProblem:[0m[1;33m**[0m[37m Ten[0m[37m threads[0m[37m each[0m[37m call[0m[37m [0m[32m`[0m[32mcounter.increment()[0m[32m`[0m[37m [0m[37m100[0m[37m0[0m[37m times[0m[37m.[0m[37m The[0m[37m [0m[32m`[0m[32mCounter.increment[0m[32m`[0m[37m method[0m[37m ([0m[32m`[0m[32mself.count += 1[0m[32m`[0m[37m)[0m[37m is[0m[37m [0m[1;33m**[0m[1;33mthree bytecode operations[0m[1;33m**[0m[37m ([0m[37mLOAD[0m[37m,[0m[37m ADD[0m[37m,[0m[37m ST[0m[37mORE[0m[37m)[0m[37m —[0m[37m not[0m[37m atomic[0m[37m.[0m[37m Thread[0m[37ms[0m[37m inter[0m[37mleave[0m[37m,[0m[37m so[0m[37m increments[0m[37m are[0m[37m [0m[1;33m**[0m[1;33mlost[0m[1;33m**[0m[37m.[0m[37m Final[0m[37m count[0m[37m will[0m[37m be[0m[37m <[0m[37m [0m[37m10[0m[37m,[0m[37m000[0m[37m ([0m[37moften[0m[37m by[0m[37m a[0m[37m large[0m[37m margin[0m[37m).[0m
+
+[37m|[0m[37m CWE ID      [0m[37m|[0m[37m Title                                                                                       [0m[37m|[0m
+[37m|[0m[37m-------------[0m[37m|[0m[37m---------------------------------------------------------------------------------------------[0m[37m|[0m
+[37m|[0m[37m [0m[1;33m**[0m[1;33mCWE-362[0m[1;33m**[0m[37m [0m[37m|[0m[37m Concurrent Execution Using Shared Resource with Improper Synchronization ('Race Condition') [0m[37m|[0m
+[37m|[0m[37m [0m[1;33m**[0m[1;33mCWE-366[0m[1;33m**[0m[37m [0m[37m|[0m[37m Race Condition within a Thread                                                              [0m[37m|[0m
+[37m|[0m[37m [0m[1;33m**[0m[1;33mCWE-821[0m[1;33m**[0m[37m [0m[37m|[0m[37m Incorrect Synchronization                                                                   [0m[37m|[0m
+[37m|[0m[37m [0m[1;33m**[0m[1;33mCWE-667[0m[1;33m**[0m[37m [0m[37m|[0m[37m Improper Locking                                                                            [0m[37m|[0m
+[1;33m**[0m[1;33mSeverity:[0m[1;33m**[0m[37m 🔴[0m[37m High[0m[37m —[0m[37m non[0m[37m-determ[0m[37min[0m[37mistic[0m[37m data[0m[37m corruption[0m[37m /[0m[37m silent[0m[37m incorrect[0m[37m output[0m[37m.[0m
+
+[37m---[0m
+
+[34m##[0m[37m [0m[34mSummary Table[0m
+
+[37m|[0m[37m # [0m[37m|[0m[37m Line(s) [0m[37m|[0m[37m Vulnerability                     [0m[37m|[0m[37m CWE(s)             [0m[37m|[0m[37m Severity [0m[37m|[0m
+[37m|[0m[37m---[0m[37m|[0m[37m---------[0m[37m|[0m[37m-----------------------------------[0m[37m|[0m[37m--------------------[0m[37m|[0m[37m----------[0m[37m|[0m
+[37m|[0m[37m 1 [0m[37m|[0m[37m 7–8     [0m[37m|[0m[37m Off-by-one buffer over-read       [0m[37m|[0m[37m 193, 129, 787      [0m[37m|[0m[37m Medium   [0m[37m|[0m
+[37m|[0m[37m 2 [0m[37m|[0m[37m 10      [0m[37m|[0m[37m Division by zero                  [0m[37m|[0m[37m 369, 682           [0m[37m|[0m[37m Medium   [0m[37m|[0m
+[37m|[0m[37m 3 [0m[37m|[0m[37m 14–15   [0m[37m|[0m[37m Type confusion (dict attr vs key) [0m[37m|[0m[37m 843, 628, 754      [0m[37m|[0m[37m Medium   [0m[37m|[0m
+[37m|[0m[37m 4 [0m[37m|[0m[37m 25–33   [0m[37m|[0m[37m Race condition (no lock)          [0m[37m|[0m[37m 362, 366, 821, 667 [0m[37m|[0m[37m [0m[1;33m**[0m[1;33mHigh[0m[1;33m**[0m[37m [0m[37m|[0m
+[1;33m**[0m[1;33mTotal: 4 security-relevant issues, spanning 8 distinct CWE IDs.[0m[1;33m**[0m
+
+Script done on 2026-07-29 13:42:51+00:00 [COMMAND_EXIT_CODE="0"]

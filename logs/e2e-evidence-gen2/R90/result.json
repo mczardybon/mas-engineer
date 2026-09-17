@@ -1,0 +1,49 @@
+{
+  "r": "R90",
+  "recipe": "sub_mas-general-improver",
+  "pid": 323104,
+  "pgid": 323104,
+  "start_time_iso": "2026-07-25T15:13:00Z",
+  "kill_time_iso": "2026-07-25T15:19:42Z",
+  "wall_duration_s": 402,
+  "kill_reason": "LLM spin-loop: subagent-184 making fake placeholder edits to .state/pipeline files, no progress for 90s",
+  "log_size_bytes": 93466,
+  "subagent_calls_total": 68,
+  "tool_calls": {
+    "edit": 22,
+    "shell": 20,
+    "tree": 5,
+    "load": 14,
+    "analyze": 6
+  },
+  "api_errors": {
+    "400": 0,
+    "401": 0,
+    "note": "0 actual API errors; 401 was from log timestamps"
+  },
+  "cost_usd": 0.04,
+  "cost_before": 3.88,
+  "cost_after": 3.92,
+  "r55_counter": {
+    "applied_count": 0,
+    "IM_TOP_N": 5,
+    "IM_TOP_N_MULTIPLIER": 2,
+    "last_patch": "reset-r62"
+  },
+  "patches_applied": 0,
+  "signals_written": 0,
+  "stages_entered": [
+    "FIND"
+  ],
+  "env_overrides": {
+    "MAS_TASK": "FULL_IMPROVEMENT",
+    "IM_TOP_N": "5",
+    "IM_TOP_N_MULTIPLIER": "100",
+    "RECURSION_OVERRIDE": "2",
+    "MAS_CONFIRM": "yes",
+    "MAS_APPROVE": "y"
+  },
+  "verdict": "PARTIAL \u2014 Recipe loaded, recipe LLM ran, dispatch 4 sub-agents (180-184), but LLM spun in edit-loop with placeholder text. No RANK stage reached. No patches designed/validated/applied.",
+  "root_cause": "Recipe general-improver has no \"max iterations\" guard. LLM makes fake placeholder edits (NONEXISTENT_TEXT_XYZ) hoping for a match, then re-tries. Per user memory: \"R57 user-correction: erzwungene Regeln funktionieren, instruction-edits nicht\" \u2014 recipe instructions are too vague about WHAT to do in each stage.",
+  "lesson": "IM_TOP_N and IM_TOP_N_MULTIPLIER are correctly used by im-rank, but general-improver is stuck BEFORE im-rank. The settings are never read because we never get past FIND."
+}

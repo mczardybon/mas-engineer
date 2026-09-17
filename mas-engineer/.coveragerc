@@ -1,0 +1,38 @@
+# .coveragerc - R110-308 coverage config for mas-engineer
+# R110-525: re-added after R110-503 accidentally removed it via commit
+# diff that deleted `mas-engineer/.coveragerc` together with the new test
+# file. Without this file, a1_coverage.pth triggers coverage.process_startup()
+# for every subprocess spawned by tests (test_ci_smoke.py subprocess tests),
+# and the missing config file caused:
+#   coverage.exceptions.ConfigError: Couldn't read '.../.coveragerc' as a config file
+# which surfaced as 13 consecutive F's in tests/test_ci_smoke.py
+# (see proc_c8e789e6973f background run).
+
+[run]
+source = tools
+branch = False
+parallel = False
+
+[report]
+show_missing = True
+skip_covered = False
+skip_empty = True
+sort = -Cover
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    \bpass\b
+    \.\.\.
+    ^\s*ap\.add_argument\(
+    ^\s*args = ap\.parse_args\(
+    ^\s*sys\.exit\(
+    noqa
+    type: ignore
+ignore_errors = True
+
+[html]
+directory = .mase/coverage_html
+
+[xml]
+output = .mase/coverage.xml

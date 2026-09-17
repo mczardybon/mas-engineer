@@ -1,0 +1,856 @@
+Loading recipe: 🛡 SUB-MAS-AGENT-GUARDIAN — Agent Monitoring & Anti-Drift (Sub-Agent)
+Description: v1.0.0 | MAS-internal: Monitors all sub-agents for death, drift, loops and degradation
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260801_51 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat recipe/instructions/sub_mas-agent-guardian.md 2>/dev/null || echo "NOT FOUND: recipe/instructions/sub_mas-agent-guardian.md"
+
+
+  ────────────────────────────────────────
+  ▸ tree
+    path: /tmp/mas-engineer-test/mas-engineer
+    depth: 2
+
+# sub_mas-agent-guardian — 🛡️ Agent Guardian (mode-aware v2.0)
+Mode-agnostic. Monitors agents in EVERY mode (MAS/Framework/Generic).
+╔══════════════════════════════════════════════╗
+║  SOT WORKFLOW CONTROL                       ║
+║  → workflows.yaml → agents.agent-guardian   ║
+║     .task_workflows.{TASK}                   ║
+╚══════════════════════════════════════════════╝
+
+⛔ STEP 0 — MODE DETECTION (AUTOMATIC)
+1. DETERMINE DETECTED_MODE via SOT:
+   cat {workspace}/mas-engineer/.mas-mode 2>/dev/null || cat ~/.config/goose/.mas-mode 2>/dev/null
+2. IF "mas" → MAS mode (target = {workspace}/mas-engineer/)
+3. IF "framework" → Framework mode (target = {workspace}/)
+4. IF other string → Generic mode (target = {workspace}/)
+5. SET target_workspace = {workspace}
+6. ALL monitoring actions use {target_workspace} for paths
+7. Agent names are MODE-DEPENDENT: sub_mas-* (MAS) vs sub_{project}-* (Framework/Generic)
+
+Domain knowledge:
+- CHECK: 5 dimensions (Schema/Semantic/Death/Loop/Drift) → guardian.yaml state
+- HEALTH_REPORT: Score 0-100, ranking, trend (better/worse)
+- DRIFT_LOG: Grouped by agent/type/severity + correlation with changes.json
+
+## Input (from Caller)
+```yaml
+guardian_intake:
+  signal: "🟣 HANDOVER"
+  request_id: string
+  from: "{caller}"
+  to: "sub_mas-agent-guardian"
+  task: "CHECK| Max 50K Tokens — at exceedance: save intermediate result in memory and abort"
+  # DEGRADATION (after HEALTH_REPORT):
+  IF degraded_count > 0:
+    signal: "HANDOVER"
+    task: "DEGRADATION"
+    degraded_agents: [agent_names]
+    to: "sub_mas-degradation-handler"
+  HEALTH_REPORT|DRIFT_LOG|CONTEXT_DRIFT"
+  state_path: "{workspace}/.state/guardian.yaml"
+  # Only at CHECK: the last sub-agent result
+  last_result:
+    agent: "sub_{project}-test-runner"  # MODE-DEPENDENT
+    task: "RUN"
+    delegated_at: "2026-06-12T22:14:30Z"
+    result:
+      signal: "🟢 DONE"
+      status: "success"
+      parsed:
+        total: 64
+        passed: 59
+        failed: 3
+        score: "⚠️ 92.2%"
+  # Only at RESURRECT:
+  resurrect:
+    agent: "sub_{project}-session-analyst"  # MODE-DEPENDENT
+    original_task: "CORRELATE"
+    original_intake: "..."  # complete original intake
+    attempt: 1              # 1 or 2
+```
+
+⛔ STEP 0 — LOAD STATE: cat {state_path} 2>/dev/null → yaml.safe_load. If file does not exist: create empty guardian_state.
+
+⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions. dev_rule_checker.py enforces.
+
+## Procedure CHECK
+
+1. RECEIVE last_result from MAS-Engineer
+2. SCHEMA CHECK:
+   a) `signal` existing? → "🟢 DONE"|"🔴 ERROR"|"🟣 HANDOVER"
+   b) `request_id` existing and not empty?
+   c) `status` existing? → "success"|"error"|"timeout"
+   d) `parsed` existing and not `null`/`{}`?
+3. SEMANTIC CHECK (agent-specific):
+   test-runner:
+     - parsed.total = parsed.passed + parsed.failed + parsed.skipped?
+     - score consistent with pass-rate? (100% → "✅", >80% → "⚠️", ≤80% → "❌")
+   config-auditor:
+     - total_checks existing?
+     - passed + failed + warning + info = total_checks?
+   yaml-editor:
+     - file field not "dev-{project}-engineer.yaml" or "sub_{project}-*.yaml"?
+       → ⚠️ SELF-MUTATION ATTEMPT! (Article 2)
+   framework-scanner:
+     - findings list existing?
+   All:
+     - parsed.task in the expected value range?
+4. DEATH CHECK:
+   - `status` is "error" or "timeout" → DEATH
+   - `status` is "success" but `parsed` is empty → SOFT_DEATH
+5. LOOP CHECK:
+   - Last 6. CONTEXT DRIFT CHECK:
+     - Was a framework agent delegated? (executor, planner, controller, starter)
+     - Was a framework output format used? (specialist_result, findings)
+     - Were foreign concepts imported into own domain?
+     At ANY: LOG + inform user (no rollback)
+   - 5 entries in delegation_history search
+   - Same agent + same task 3× consecutively → LOOP
+   - If LOOP: WARNING, skip current task
+6. STATE UPDATE:
+   - Add entry to delegation_history
+   - Update agent_health
+7. VERDICT:
+   ```yaml
+   verdict:
+     schema: "ok|drift"
+     semantic: "ok|inconsistent"
+     death: "alive|dead|soft_dead"
+     loop: "none|warning|critical"
+     action: "none|warn|resurrect|escalate"
+     detail: "..."
+   ```
+
+## Procedure HEALTH_REPORT
+
+1. READ guardian.yaml
+2. For EACH sub-agent (dynamically via ls {workspace}/recipe/sub/):
+   - total_calls, failures, timeouts, schema_drifts
+   - avg_duration_ms, last_seen
+   - status: healthy|degraded|dead
+3. HEALTH SCORE: 0-100 (based on failure-rate, drift-rate, last_seen)
+4. RANKING: healthiest → sickest agent
+5. TREND: last 10 delegation_history entries → better/worse?
+
+## Procedure DRIFT_LOG
+
+1. READ drift_log from guardian.yaml
+2. GROUP by agent, type, severity
+3. SHOW: Top-5 drift types, Top-3 drifting agents
+4. TREND: Drifts increasing or decreasing?
+
+## General-Improver Extension for DRIFT_LOG
+
+IF the intake additionally for_general_improver=true contains:
+5. CORRELATION WITH changes.json:
+   READ {workspace}/.state/changes.json
+   For EACH drift in drift_log:
+     Search change in changes with timestamp ≈ drift.timestamp
+     IF match: "Change {id} ({file}) correlates with {N} drifts"
+     → affecting_changes list in output
+6. TREND EVALUATION:
+   LAST 3 drift logs from guardian_history compare:
+   - decreasing → "improving"
+   - stable → "stable"
+   - increasing → "worsening"
+7. RECOMMENDATION:
+   - "improving" → "self-improvement works — keep going"
+   - "stable" → "business as usual"
+   - "worsening" → "Drift rate increases → max 2 changes per session"
+
+## Output (to Caller)
+```yaml
+mas_result:
+  signal: "🟢 DONE|⚠️ DRIFT|🔴 DEATH|🔄 RESURRECTED"
+  request_id: string
+  from: "sub_mas-agent-guardian"
+  to: "{caller}"
+  status: "success|warning|error"
+  parsed:
+    task: "CHECK|HEALTH_REPORT|DRIFT_LOG"
+
+    # At CHECK:
+    verdict:
+      agent: "sub_{project}-test-runner"  # MODE-DEPENDENT
+      schema: "ok"
+      semantic: "inconsistent"
+      death: "alive"
+      loop: "none"
+      action: "warn"
+      detail: "score ⚠️ but failed=3 — pass-rate 92.2% = ⚠️ correct"
+
+    # At HEALTH_REPORT:
+    health:
+      overall_score: 87
+      agents_healthy: 9
+      agents_degraded: 2
+      agents_dead: 0
+      ranking:
+        - agent: "test-runner"
+          score: 100
+          status: "healthy"
+          calls: 24
+        - agent: "prompt-engineer"
+          score: 75
+          status: "degraded"
+          calls: 3
+          drifts: 1
+          trend: "stable"
+
+    # At DRIFT_LOG:
+    drift_summary:
+      total_drifts: 3
+      top_types:
+        - type: "EMPTY_RESULT"
+          count: 2
+      top_agents:
+        - agent: "prompt-engineer"
+          drifts: 2
+          trend: "improving"
+
+    # At DRIFT_LOG + for_general_improver=true:
+    for_general_improver:
+      drift_trend: "improving|stable|worsening"
+      drift_trend_basis: 3  # Number of compared sessions
+      recommendations:
+        - "Drift rate increases → max 2 changes per session"
+        - "Drift rate stable → business as usual"
+        - "Drift rate decreases → self-improvement works"
+      affecting_changes:
+        - change_id: "ch_005"
+          file: "sub_{project}-test-runner.yaml"  # MODE-DEPENDENT
+          drift_count: 2
+          likely_cause: "max_steps increased → more output variablence"
+```
+
+## Boundaries
+- ⛔ ONLY MONITOR — never edit sub-agents
+- ⛔ Only READ from guardian.yaml
+- ⛔ No notifications without user consent
+- ⛔ goose-docs.ai BEFORE each schema validation (Goose result format)
+
+CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without confirmation.
+MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain overreach. Reading in other domain OK.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.docs/  [6K]
+  ARCHITECTURE-E2E-TESTING.md  [89]
+  BUG-BRIEF-2026-07-23.md  [153]
+  CHANGELOG-2026-07-19-e2e-success.md  [19]
+  CHANGELOG-2026-07-25.md  [1]
+  DEMO-MULTI-ARCH-30.md  [605]
+  DEMO-RESEARCH-TEAM.md  [217]
+  E2E-COMMIT-STRATEGY.md  [71]
+  E2E-DEMO-RESEARCH-TEAM.md  [140]
+  E2E-SELF-IMPROVEMENT-REPORT-2026-07-24.md  [104]
+  E2E-TESTPLAN.md  [478]
+  E2E-UX-BUG-VALIDATION-2026-07-25.md  [31]
+  E2E_TEAMS_SETUP.md  [215]
+  EVIDENCE-R110-16-PTY-RERUN.md  [147]
+  EVIDENCE-R110-19-HEALTH-REPORT-SCORE0.md  [167]
+  HOWTO-CREATE-AGENT.md  [162]
+  HOWTO-IM-PIPELINE.md  [190]
+  HOWTO-PACKAGE-TEAM.md  [244]
+  HOWTO-TEAM-STANDALONE.md  [199]
+  REVIEW-2026-07-18.md  [250]
+  TEST-COVERAGE-POLICY.md  [164]
+  TEST-REPORT-100-PERCENT.md  [176]
+  TEST-REPORT-IM-PIPELINE-V2.md  [237]
+  TEST-REPORT-LIVE-LLM.md  [130]
+  TEST-REPORT-PHASE-1-6.md  [166]
+  WORKFLOWS.md  [153]
+  e2e-final-2026-07-22.json  [195]
+  governance.md  [99]
+  health-report-2026-07-18.md  [145]
+  health-report-2026-07-19.md  [194]
+  health-report-2026-07-21.md  [242]
+  health-report-2026-07-22-final.md  [95]
+  health-report-2026-07-22.md  [1]
+  health-report-2026-07-23.md  [100]
+  health-report-2026-07-29.md  [1]
+  health-report-2026-08-01.md  [1]
+  lessons-learned.md  [273]
+  manifest.md  [62]
+  procedures.md  [78]
+  provider-config.md  [105]
+  test-e2e-full.sh  [577]
+e2e-evidence/  [87]
+  prompt-build.txt  [69]
+  prompt-use-team.txt  [18]
+e2e-evidence-gen2/  [2K]
+  BUG-REPORT-author-schema-mismatch.md  [52]
+  E2E-TEST-REPORT-gen2-R41.md  [50]
+  E2E-TEST-REPORT-gen2.md  [80]
+  R44-R45-EVIDENCE.md  [95]
+  R46-EVIDENCE.md  [62]
+  R47-R48-EVIDENCE.md  [105]
+  R49-EVIDENCE.md  [77]
+  R50-EVIDENCE.md  [66]
+  R51-EVIDENCE.md  [75]
+  R52-EVIDENCE.md  [87]
+  R53-EVIDENCE.md  [77]
+  R54-EVIDENCE.md  [67]
+  R55-EVIDENCE.md  [80]
+  R56-EVIDENCE.md  [99]
+  R57-EVIDENCE.md  [106]
+  R58-EVIDENCE.md  [41]
+  R59-EVIDENCE.md  [17]
+  R60-EVIDENCE.md  [30]
+  R61-EVIDENCE.md  [21]
+  R62-EVIDENCE.md  [21]
+  R63-EVIDENCE.md  [21]
+  R64-EVIDENCE.md  [21]
+  R65-EVIDENCE.md  [21]
+  R66-EVIDENCE.md  [23]
+  R67-EVIDENCE.md  [15]
+  R68-EVIDENCE.md  [15]
+  R69-EVIDENCE.md  [10]
+  R70-EVIDENCE.md  [38]
+  R71-EVIDENCE.md  [18]
+  R72-EVIDENCE.md  [22]
+  R73-EVIDENCE.md  [22]
+  R74-EVIDENCE.md  [29]
+  R89-EVIDENCE-E2E-RUN-001-006.md  [186]
+  TEST-FIX-FAILURES-BUG-REPORT.md  [39]
+  post-flight-audit-R48-7da5618.json  [7]
+  post-flight-audit-R49-872f50f.json  [7]
+  post-flight-audit-R50-8643531.json  [7]
+  post-flight-audit-R51-7adc2d2.json  [7]
+  post-flight-audit-R52-bb5e9a1.json  [7]
+  post-flight-audit-R53-91709e6.json  [7]
+  post-flight-audit-R54-ab5aee5.json  [7]
+  post-flight-audit-R55-ff03562.json  [7]
+  post-flight-audit-R56-d1a40ea.json  [7]
+  post-flight-audit-R57-c0880be.json  [7]
+  post-flight-audit-R74.json  [13]
+  post-flight-audit-R89.json  [7]
+  prompt-test-fix-failures.txt  [17]
+  validation_author_fixes-R51.yaml  [267]
+findings/  [202]
+  F-2026-07-28-1241db8-verification-theater.md  [53]
+  F-2026-07-28-e2e-evidence-inventory.md  [61]
+  F-2026-07-28-goose-e2e-dryrun.md  [88]
+mas-engineer/  [104]
+  docs/  [104]
+    STATUS-2026-07-23.md  [104]
+prompts/  [1K]
+  demo-team/  [131]
+    code-reviewer.txt  [131]
+  demo-team-build-optimize-tasks/  [692]
+    code-reviewer.txt  [263]
+    customer-support.txt  [215]
+    research-team.txt  [214]
+  README.md  [145]
+  content-pipeline.txt  [149]
+  customer-support.txt  [103]
+  data-analyzer.txt  [163]
+  research-team.txt  [100]
+  security-scanner.txt  [195]
+recipe/  [13K]
+  instructions/  [7K]
+    demo-team/  [0]
+    security-scanner.md  [229]
+    static-analyzer.md  [154]
+    sub_mas-agent-guardian.md  [228]
+    sub_mas-bootstrap.md  [126]
+    sub_mas-config-auditor.md  [153]
+    sub_mas-content-writer.md  [76]
+    sub_mas-doc-generator.md  [128]
+    sub_mas-email-campaign-manager.md  [89]
+    sub_mas-framework-knowledge.md  [250]
+    sub_mas-framework-scanner.md  [45]
+    sub_mas-general-improver.md  [554]
+    sub_mas-generic-init.md  [242]
+    sub_mas-goose-expert.md  [37]
+    sub_mas-health-reporter.md  [243]
+    sub_mas-im-designer.md  [348]
+    sub_mas-im-finder.md  [490]
+    sub_mas-im-rank.md  [151]
+    sub_mas-im-session-reader.md  [189]
+    sub_mas-im-validator.md  [200]
+    sub_mas-intention-parser.md  [191]
+    sub_mas-interpreter.md  [22]
+    sub_mas-mas-controller.md  [59]
+    sub_mas-master-constitution-team.md  [93]
+    sub_mas-master-constitution.md  [39]
+    sub_mas-migration-helper.md  [34]
+    sub_mas-pre-push-validator.md  [596]
+    sub_mas-prompt-engineer.md  [36]
+    sub_mas-python-repair.md  [86]
+    sub_mas-recipe-designer.md  [132]
+    sub_mas-recovery-checkpoint.md  [162]
+    sub_mas-recovery-defib.md  [31]
+    sub_mas-recovery-immune.md  [27]
+    sub_mas-recovery-safezone.md  [30]
+    sub_mas-recovery-timeline.md  [136]
+    sub_mas-self-auditor.md  [315]
+    sub_mas-seo-researcher.md  [81]
+    sub_mas-session-analyst.md  [29]
+    sub_mas-social-media-manager.md  [86]
+    sub_mas-summarizer.md  [26]
+    sub_mas-system-knowledge.md  [157]
+    sub_mas-team-packager.md  [405]
+    sub_mas-web-researcher.md  [67]
+    sub_mas-workflow-engine.md  [279]
+    sub_mas-worktree-manager.md  [29]
+    sub_mas-yaml-editor.md  [54]
+    sub_mas-yaml-immune.md  [90]
+  multi-arch-30/  [79]
+    sub/  [0]
+    teams/  [0]
+    template/  [0]
+    test-r11021/  [0]
+    multi-arch-30.yaml  [79]
+  sub/  [6K]
+    demo-team/  [0]
+    legacy/  [0]
+    template/  [0]
+    security-scanner.yaml  [60]
+    static-analyzer.yaml  [80]
+    sub_mas-agent-guardian.yaml  [46]
+    sub_mas-bootstrap.yaml  [47]
+    sub_mas-config-auditor.yaml  [42]
+    sub_mas-content-writer.yaml  [58]
+    sub_mas-dashboard-builder.yaml  [41]
+    sub_mas-dashboard-collector.yaml  [42]
+    sub_mas-dashboard-data-reader.yaml  [41]
+    sub_mas-dashboard-director.yaml  [59]
+    sub_mas-dashboard-generator.yaml  [38]
+    sub_mas-dashboard-refresh.yaml  [65]
+    sub_mas-degradation-analyzer.yaml  [39]
+    sub_mas-degradation-director.yaml  [59]
+    sub_mas-degradation-handler.yaml  [63]
+    sub_mas-degradation-planner.yaml  [39]
+    sub_mas-degradation-reporter.yaml  [39]
+    sub_mas-dev-analyzer.yaml  [41]
+    sub_mas-dev-builder.yaml  [41]
+    sub_mas-dev-director.yaml  [66]
+    sub_mas-dev-observer.yaml  [43]
+    sub_mas-dev-tester.yaml  [41]
+    sub_mas-doc-generator.yaml  [49]
+    sub_mas-doc-writer.yaml  [55]
+    sub_mas-e2e-auto-repair-director.yaml  [62]
+    sub_mas-e2e-auto-repair-runner.yaml  [40]
+    sub_mas-e2e-auto-repair-validator.yaml  [64]
+    sub_mas-e2e-phoenix-fixes-director.yaml  [55]
+    sub_mas-e2e-phoenix-fixes-runner.yaml  [51]
+    sub_mas-e2e-phoenix-fixes-validator.yaml  [56]
+    sub_mas-email-campaign-manager.yaml  [59]
+    sub_mas-framework-audit-agent.yaml  [54]
+    sub_mas-framework-auditor.yaml  [39]
+    sub_mas-framework-finder.yaml  [40]
+    sub_mas-framework-harden-agent.yaml  [50]
+    sub_mas-framework-hardener.yaml  [40]
+    sub_mas-framework-knowledge.yaml  [50]
+    sub_mas-framework-scan-agent.yaml  [59]
+    sub_mas-framework-scanner-director.yaml  [49]
+    sub_mas-framework-scanner.yaml  [49]
+    sub_mas-general-improver.yaml  [74]
+    sub_mas-generic-init.yaml  [49]
+    sub_mas-git-operator.yaml  [221]
+    sub_mas-goose-admin.yaml  [51]
+    sub_mas-goose-expert.yaml  [50]
+    sub_mas-health-reporter.yaml  [48]
+    sub_mas-im-designer.yaml  [46]
+    sub_mas-im-finder.yaml  [46]
+    sub_mas-im-rank.yaml  [44]
+    sub_mas-im-session-reader.yaml  [120]
+    sub_mas-im-session-reader.yaml.llm-backup-r89  [38]
+    sub_mas-im-validator.yaml  [45]
+    sub_mas-intention-parser.yaml  [252]
+    sub_mas-interpreter.yaml  [47]
+    sub_mas-json-utility.yaml  [56]
+    sub_mas-mas-controller.yaml  [59]
+    sub_mas-master-constitution.yaml  [55]
+    sub_mas-migration-helper.yaml  [43]
+    sub_mas-monitor-health.yaml  [35]
+    sub_mas-monitor-recovery.yaml  [36]
+    sub_mas-monitor-runtime.yaml  [35]
+    sub_mas-monitor-session.yaml  [35]
+    sub_mas-pre-push-validator.yaml  [38]
+    sub_mas-prompt-engineer.yaml  [49]
+    sub_mas-python-analyzer.yaml  [44]
+    sub_mas-python-fixer.yaml  [45]
+    sub_mas-python-repair-director.yaml  [49]
+    sub_mas-python-repair.yaml  [49]
+    sub_mas-python-validator.yaml  [45]
+    sub_mas-recipe-designer.yaml  [65]
+    sub_mas-recipe-manager.yaml  [48]
+    sub_mas-recovery-checkpoint.yaml  [59]
+    sub_mas-recovery-defib.yaml  [45]
+    sub_mas-recovery-immune.yaml  [118]
+    sub_mas-recovery-immune.yaml.llm-backup-r89  [51]
+    sub_mas-recovery-safezone.yaml  [49]
+    sub_mas-recovery-timeline.yaml  [61]
+    sub_mas-security-cmd-injection-scanner.yaml  [38]
+    sub_mas-security-deserialize-scanner.yaml  [38]
+    sub_mas-security-secrets-scanner.yaml  [39]
+    sub_mas-security-sqli-scanner.yaml  [38]
+    sub_mas-self-auditor.yaml  [58]
+    sub_mas-seo-researcher.yaml  [55]
+    sub_mas-session-analyst.yaml  [43]
+    sub_mas-signal-generator.yaml  [59]
+    sub_mas-social-media-manager.yaml  [57]
+    sub_mas-summarizer.yaml  [47]
+    sub_mas-system-knowledge.yaml  [42]
+    sub_mas-team-packager-builder.yaml  [44]
+    sub_mas-team-packager-director.yaml  [49]
+    sub_mas-team-packager-validator.yaml  [38]
+    sub_mas-team-packager.yaml  [68]
+    sub_mas-test-agent.yaml  [40]
+    sub_mas-test-director.yaml  [60]
+    sub_mas-test-executor.yaml  [39]
+    sub_mas-test-fix-failures-applier.yaml  [47]
+    sub_mas-test-fix-failures-designer.yaml  [39]
+    sub_mas-test-fix-failures-director.yaml  [62]
+    sub_mas-test-fix-failures-finder.yaml  [38]
+    sub_mas-test-fix-failures-ranker.yaml  [38]
+    sub_mas-test-fix-failures-validator-director.yaml  [53]
+    sub_mas-test-reporter-analyzer.yaml  [38]
+    sub_mas-test-reporter-director.yaml  [50]
+    sub_mas-test-reporter-generator.yaml  [38]
+    sub_mas-test-reporter.yaml  [40]
+    sub_mas-test-runner.yaml  [48]
+    sub_mas-test-scanner.yaml  [40]
+    sub_mas-test-validator.yaml  [39]
+    sub_mas-tff-crossref-validator.yaml  [39]
+    sub_mas-tff-rule-validator.yaml  [40]
+    sub_mas-tff-syntax-validator.yaml  [39]
+    sub_mas-unix-test-runner.yaml  [37]
+    sub_mas-verification-runner.yaml  [40]
+    sub_mas-web-researcher.yaml  [45]
+    sub_mas-workflow-engine.yaml  [50]
+    sub_mas-worktree-manager.yaml  [47]
+    sub_mas-yaml-editor.yaml  [43]
+    sub_mas-yaml-immune.yaml  [50]
+  template/  [12]
+    recovery/  [0]
+    agent_template.yaml  [12]
+  dashboard-data-refresh.yaml  [27]
+  dev-mas-engineer-30agents.yaml  [184]
+  dev-mas-engineer.yaml  [54]
+  e2e-verify-auto-repair.yaml  [29]
+  e2e-verify-phoenix-fixes.yaml  [41]
+  root_recipe.yaml  [27]
+  setup-dashboard.yaml  [14]
+  test-fix-failures.yaml  [40]
+  test-mas-user.yaml  [29]
+sample-input/  [773]
+  data_report.py  [116]
+  order_processor.py  [112]
+  pipeline_runner.py  [92]
+  sample_with_bugs.py  [92]
+  usage_examples.py  [247]
+  user_importer.py  [114]
+sample-output/  [597]
+  data_report.py  [145]
+  order_processor.py  [167]
+  pipeline_runner.py  [114]
+  user_importer.py  [171]
+scripts/  [1K]
+  e2e-full-pipeline.sh  [209]
+  e2e-test.sh  [455]
+  goose-reinstall.sh  [129]
+  mas-reinstall.sh  [144]
+  r11025-third-30agent-re-exec.sh  [121]
+  r11027-reproducible-30agent-live-pty.sh  [294]
+  r11028-r10-validate.py  [111]
+  r11028-team-composition-live-pty.sh  [216]
+  r11043-tool-syntax-check.py  [98]
+template/  [191]
+  recovery/  [191]
+    checkpoint.md  [39]
+    defib.md  [38]
+    immune.md  [37]
+    safezone.md  [39]
+    timeline.md  [38]
+tests/  [13K]
+  __init__.py  [0]
+  conftest.py  [12]
+  debug_mcp.py  [65]
+  manual_mcp_test.py  [208]
+  test_pre_check_benchmark.py  [255]
+  test_recipe_agent_template.py  [80]
+  test_recipe_dashboard_setup.py  [96]
+  test_recipe_dev_mas_engineer.py  [67]
+  test_recipe_instructions.py  [85]
+  test_recipe_other_types.py  [135]
+  test_recipe_registry_consistency.py  [532]
+  test_recipe_root.py  [54]
+  test_recipe_thin_delegators.py  [98]
+  test_sub_mas_agent_guardian.py  [89]
+  test_sub_mas_bootstrap.py  [100]
+  test_sub_mas_config_auditor.py  [82]
+  test_sub_mas_content_writer.py  [115]
+  test_sub_mas_dashboard_builder.py  [82]
+  test_sub_mas_dashboard_collector.py  [84]
+  test_sub_mas_dashboard_data_reader.py  [101]
+  test_sub_mas_dashboard_director.py  [93]
+  test_sub_mas_dashboard_generator.py  [116]
+  test_sub_mas_dashboard_refresh.py  [120]
+  test_sub_mas_degradation_analyzer.py  [86]
+  test_sub_mas_degradation_director.py  [93]
+  test_sub_mas_degradation_handler.py  [99]
+  test_sub_mas_degradation_planner.py  [87]
+  test_sub_mas_degradation_reporter.py  [86]
+  test_sub_mas_dev_analyzer.py  [90]
+  test_sub_mas_dev_builder.py  [93]
+  test_sub_mas_dev_director.py  [97]
+  test_sub_mas_dev_observer.py  [91]
+  test_sub_mas_dev_tester.py  [91]
+  test_sub_mas_doc_generator.py  [85]
+  test_sub_mas_doc_writer.py  [94]
+  test_sub_mas_e2e_auto_repair_director.py  [97]
+  test_sub_mas_e2e_auto_repair_runner.py  [82]
+  test_sub_mas_e2e_auto_repair_validator.py  [83]
+  test_sub_mas_e2e_phoenix_fixes_director.py  [103]
+  test_sub_mas_e2e_phoenix_fixes_runner.py  [90]
+  test_sub_mas_e2e_phoenix_fixes_validator.py  [91]
+  test_sub_mas_framework_audit_agent.py  [105]
+  test_sub_mas_framework_auditor.py  [110]
+  test_sub_mas_framework_finder.py  [89]
+  test_sub_mas_framework_harden_agent.py  [108]
+  test_sub_mas_framework_hardener.py  [105]
+  test_sub_mas_framework_knowledge.py  [107]
+  test_sub_mas_framework_scan_agent.py  [95]
+  test_sub_mas_framework_scanner.py  [96]
+  test_sub_mas_framework_scanner_director.py  [94]
+  test_sub_mas_general_improver.py  [88]
+  test_sub_mas_generic_init.py  [83]
+  test_sub_mas_git_operator.py  [129]
+  test_sub_mas_goose_admin.py  [115]
+  test_sub_mas_goose_expert.py  [127]
+  test_sub_mas_health_reporter.py  [104]
+  test_sub_mas_im_designer.py  [82]
+  test_sub_mas_im_finder.py  [86]
+  test_sub_mas_im_rank.py  [109]
+  test_sub_mas_im_session_reader.py  [81]
+  test_sub_mas_im_validator.py  [81]
+  test_sub_mas_intention_parser.py  [113]
+  test_sub_mas_interpreter.py  [100]
+  test_sub_mas_json_utility.py  [116]
+  test_sub_mas_mas_controller.py  [92]
+  test_sub_mas_master_constitution.py  [91]
+  test_sub_mas_migration_helper.py  [129]
+  test_sub_mas_monitor_health.py  [78]
+  test_sub_mas_monitor_recovery.py  [80]
+  test_sub_mas_monitor_runtime.py  [84]
+  test_sub_mas_monitor_session.py  [82]
+  test_sub_mas_pre_push_validator.py  [107]
+  test_sub_mas_prompt_engineer.py  [120]
+  test_sub_mas_python_analyzer.py  [110]
+  test_sub_mas_python_fixer.py  [107]
+  test_sub_mas_python_repair.py  [114]
+  test_sub_mas_python_repair_director.py  [109]
+  test_sub_mas_python_validator.py  [106]
+  test_sub_mas_recipe_designer.py  [99]
+  test_sub_mas_recipe_manager.py  [89]
+  test_sub_mas_recovery_checkpoint.py  [89]
+  test_sub_mas_recovery_defib.py  [88]
+  test_sub_mas_recovery_immune.py  [98]
+  test_sub_mas_recovery_safezone.py  [91]
+  test_sub_mas_recovery_timeline.py  [90]
+  test_sub_mas_security_cmd_injection_scanner.py  [101]
+  test_sub_mas_security_deserialize_scanner.py  [102]
+  test_sub_mas_security_secrets_scanner.py  [101]
+  test_sub_mas_security_sqli_scanner.py  [100]
+  test_sub_mas_self_auditor.py  [91]
+  test_sub_mas_session_analyst.py  [124]
+  test_sub_mas_signal_generator.py  [98]
+  test_sub_mas_summarizer.py  [102]
+  test_sub_mas_system_knowledge.py  [124]
+  test_sub_mas_team_packager.py  [114]
+  test_sub_mas_team_packager_builder.py  [112]
+  test_sub_mas_team_packager_director.py  [110]
+  test_sub_mas_team_packager_validator.py  [114]
+  test_sub_mas_test_agent.py  [103]
+  test_sub_mas_test_director.py  [106]
+  test_sub_mas_test_executor.py  [102]
+  test_sub_mas_test_fix_failures_applier.py  [100]
+  test_sub_mas_test_fix_failures_designer.py  [110]
+  test_sub_mas_test_fix_failures_director.py  [123]
+  test_sub_mas_test_fix_failures_finder.py  [113]
+  test_sub_mas_test_fix_failures_ranker.py  [126]
+  test_sub_mas_test_fix_failures_validator_director.py  [125]
+  test_sub_mas_test_reporter.py  [103]
+  test_sub_mas_test_reporter_analyzer.py  [106]
+  test_sub_mas_test_reporter_director.py  [109]
+  test_sub_mas_test_reporter_generator.py  [106]
+  test_sub_mas_test_runner.py  [94]
+  test_sub_mas_test_scanner.py  [100]
+  test_sub_mas_test_validator.py  [95]
+  test_sub_mas_tff_crossref_validator.py  [131]
+  test_sub_mas_tff_rule_validator.py  [134]
+  test_sub_mas_tff_syntax_validator.py  [117]
+  test_sub_mas_unix_test_runner.py  [93]
+  test_sub_mas_verification_runner.py  [120]
+  test_sub_mas_web_researcher.py  [124]
+  test_sub_mas_workflow_engine.py  [109]
+  test_sub_mas_worktree_manager.py  [101]
+  test_sub_mas_yaml_editor.py  [80]
+  test_template_recovery.py  [173]
+  test_unix_test_word.py  [194]
+tools/  [22K]
+  pre_check_lib/  [510]
+    __init__.py  [23]
+    auto_repair.py  [203]
+    german.py  [115]
+    phoenix.py  [169]
+  auto-dashboard-v2-update.yaml  [32]
+  bulk_findings_fixer.py  [369]
+  cleanup_repo_v1.sh  [699]
+  coverage_test  [276]
+  dashboard_prd_template.py  [159]
+  dev_agent_doctor.py  [494]
+  dev_analyst.py  [312]
+  dev_app_builder.py  [428]
+  dev_architect.py  [430]
+  dev_architecture_checker.py  [114]
+  dev_audit.py  [111]
+  dev_audit_deps.py  [99]
+  dev_auto_project.py  [32]
+  dev_autobuild.sh  [127]
+  dev_build.sh  [250]
+  dev_changes.py  [290]
+  dev_dashboard_data.py  [325]
+  dev_dashboard_refresh.py  [412]
+  dev_dispatch_live.py  [192]
+  dev_dispatch_tracer.py  [229]
+  dev_dispatch_tracker.py  [195]
+  dev_editor.py  [605]
+  dev_editor_large.py  [64]
+  dev_fast_scan.py  [65]
+  dev_gatekeeper.py  [249]
+  dev_generic_init.py  [1K]
+  dev_goose_db.py  [318]
+  dev_goose_expert_check.py  [244]
+  dev_goose_manager.py  [290]
+  dev_haerte_propagation.py  [72]
+  dev_health_monitor.py  [292]
+  dev_health_report.py  [133]
+  dev_im_finder_scan.py  [611]
+  dev_install.sh  [190]
+  dev_intention_parser.py  [85]
+  dev_mode.sh  [136]
+  dev_observer.py  [432]
+  dev_parallel.py  [425]
+  dev_pattern_apply.py  [55]
+  dev_pytest_hook.py  [51]
+  dev_recipe_manager.py  [335]
+  dev_recursion_override.py  [228]
+  dev_registry_merge.py  [102]
+  dev_rule_checker.py  [840]
+  dev_rule_checker_generic.py  [468]
+  dev_rule_refresh.sh  [102]
+  dev_security_scan.py  [250]
+  dev_self_auditor.py  [501]
+  dev_session_cleanup.sh  [219]
+  dev_session_query.py  [512]
+  dev_template_engine.py  [160]
+  dev_template_generator.py  [901]
+  dev_test_runner.py  [184]
+  dev_tff.py  [305]
+  dev_update_schedule.py  [90]
+  dev_workflow_runner.py  [235]
+  dev_workload_monitor.py  [238]
+  dev_workspace.py  [1K]
+  dev_write_filter.py  [86]
+  dev_yaml_check.py  [351]
+  dev_yaml_generator.py  [127]
+  dev_yaml_generator_core.py  [84]
+  dev_yaml_generator_generic.py  [97]
+  dev_yaml_immune.py  [250]
+  dq_stage3_anomalies.py  [477]
+  e2e_run_all.py  [328]
+  e2e_teams.py  [594]
+  goose-costed  [82]
+  mas_cost  [280]
+  mas_e2e_pty_all.sh  [144]
+  mas_e2e_pty_test.sh  [238]
+  mas_e2e_pty_test_recipes.txt  [134]
+  mcp_dashboard_server.py  [81]
+  pre_check  [176]
+  sessions_rotate  [188]
+  test_subagents  [288]
+.env.example  [28]
+DATA-QUALITY-REPORT.md  [228]
+README.md  [158]
+run_translators.py  [80]
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== MODE DETECTION ==="; cat /tmp/mas-engineer-test/mas-engineer/.mas-mode 2>/dev/null || cat ~/.config/goose/.mas-mode 2>/dev/null || echo "(no .mas-mode found)"; echo; echo "=== WORKSPACE ==="; pwd; echo; echo "=== guardian.yaml locations ==="; ls -la /tmp/mas-engineer-test/.state/ 2>/dev/null; ls -la /tmp/mas-engineer-test/mas-engineer/.state/ 2>/dev/null || echo "(no .state in project dir)"; echo; echo "=== workflows.yaml ==="; find /tmp/mas-engineer-test -maxdepth 3 -name "workflows.yaml" 2>/dev/null
+
+=== MODE DETECTION ===
+mas
+
+=== WORKSPACE ===
+/tmp/mas-engineer-test/mas-engineer
+
+=== guardian.yaml locations ===
+total 20
+drwxr-xr-x  4 root root 4096 Aug  1 10:20 .
+drwxr-xr-x 14 root root 4096 Jul 30 04:16 ..
+drwxr-xr-x  3 root root 4096 Aug  1 07:33 backups
+drwxr-xr-x  2 root root 4096 Aug  1 06:39 pipeline
+-rw-r--r--  1 root root  338 Aug  1 10:20 pre-push-e2e-baseline.json
+total 384
+drwxr-xr-x 12 root root   4096 Aug  1 10:25 .
+drwxr-xr-x 25 root root   4096 Aug  1 08:04 ..
+-rw-r--r--  1 root root      0 Aug  1 10:25 .immune_clean
+-rw-r--r--  1 root root    316 Jul 30 04:39 analysis.json
+drwxr-xr-x  2 root root   4096 Aug  1 06:34 backups
+-rw-r--r--  1 root root  11543 Jul 29 19:02 best-practices.yaml
+-rw-r--r--  1 root root    189 Jul 29 19:02 changelog.txt
+-rw-r--r--  1 root root   5145 Jul 29 19:02 changes.archive-2026-07-23.json
+-rw-r--r--  1 root root   3709 Jul 29 19:02 changes.archive-2026-07-24-r37.json
+-rw-r--r--  1 root root   8198 Jul 29 19:02 changes.archive-2026-07-24.json
+-rw-r--r--  1 root root   1736 Aug  1 10:19 changes.json
+-rw-r--r--  1 root root   2294 Jul 29 19:02 changes.unlimited-archive-20260723-222630.json
+drwxr-xr-x  3 root root   4096 Aug  1 10:25 checkpoints
+drwxr-xr-x  2 root root   4096 Aug  1 07:48 coverage
+-rw-r--r--  1 root root   1493 Jul 29 19:02 framework-best-practices.yaml
+-rw-r--r--  1 root root   1441 Jul 29 19:02 goose-defaults.env
+-rw-r--r--  1 root root      3 Aug  1 10:25 immune_severity
+-rw-r--r--  1 root root      0 Aug  1 10:25 immune_violations.log
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 knowledge
+drwxr-xr-x  2 root root   4096 Jul 30 04:59 logs
+drwxr-xr-x  2 root root   4096 Jul 31 04:55 pipeline
+-rw-r--r--  1 root root    312 Jul 31 04:55 pre-push-e2e-baseline.json
+-rw-r--r--  1 root root    162 Jul 29 20:25 pre-push-test-coverage.json
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 pre_check_benchmark
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 rules
+-rw-r--r--  1 root root    623 Jul 31 04:55 schedule.yaml
+-rw-r--r--  1 root root   1933 Jul 29 19:02 sot_schema.yaml
+drwxr-xr-x  3 root root   4096 Jul 29 19:02 templates
+-rw-r--r--  1 root root    693 Aug  1 10:25 todo.md
+drwxr-xr-x  2 root root  32768 Aug  1 10:25 workflow_runs
+-rw-r--r--  1 root root 111812 Aug  1 10:20 workflows.yaml
+-rw-r--r--  1 root root 107528 Jul 29 19:55 workflows.yaml.backup-r11036-fix
+
+=== workflows.yaml ===
+/tmp/mas-engineer-test/mas-engineer/testproject/workflows.yaml
+/tmp/mas-engineer-test/mas-engineer/.state/workflows.yaml
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== search guardian.yaml ==="; find /tmp/mas-engineer-test -name "guardian*.yaml" -o -name "guardian*.yml" 2>/dev/null | head -20; echo; echo "=== check .state/guardian.yaml ==="; ls -la /tmp/mas-engineer-test/mas-engineer/.state/guardian.yaml 2>/dev/null || echo "(not found at project .state)"; ls -la /tmp/mas-engineer-test/.state/guardian.yaml 2>/dev/null || echo "(not found at workspace .state)"; echo; echo "=== .state listing (tail) ==="; ls /tmp/mas-engineer-test/mas-engineer/.state/ | grep -i guard; ls /tmp/mas-engineer-test/mas-engineer/.state/logs/ 2>/dev/null
+
+=== search guardian.yaml ===
+/tmp/mas-engineer-test/mas-engineer/testproject/.state/guardian.yaml
+
+=== check .state/guardian.yaml ===
+(not found at project .state)
+(not found at workspace .state)
+
+=== .state listing (tail) ===
+cycle-2026-07-30.log

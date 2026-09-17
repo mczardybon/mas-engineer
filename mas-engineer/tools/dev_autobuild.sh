@@ -17,7 +17,7 @@ set -euo pipefail
 WORKSPACE="$(cd "$(dirname "$0")/../.." && pwd)"
 DIST_DIR="$WORKSPACE/dist"
 TOOLS_DIR="$WORKSPACE/mas-engineer/tools"
-CHANGES_FILE="$WORKSPACE/mas-engineer/.state/changes.json"
+CHANGES_FILE="$WORKSPACE/mas-engineer/.mase/changes.json"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; BOLD='\033[1m'; NC='\033[0m'
 ok()   { echo -e "  ${GREEN}✔${NC} $1"; }

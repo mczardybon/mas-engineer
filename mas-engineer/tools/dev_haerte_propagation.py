@@ -15,7 +15,7 @@ import yaml
 
 def get_hard_rules(workspace, min_hardness=4):
     """Load rules above certain hardness level"""
-    rules_file = os.path.join(workspace, "mas-engineer/.state/rules/hard_rules.yaml")
+    rules_file = os.path.join(workspace, "mas-engineer/.mase/rules/hard_rules.yaml")
     with open(rules_file) as f:
         data = yaml.safe_load(f)
     

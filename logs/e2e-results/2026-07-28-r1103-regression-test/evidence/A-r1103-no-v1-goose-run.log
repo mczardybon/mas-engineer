@@ -1,0 +1,276 @@
+=== SCENARIO A: R110-3 FIX (no /v1) ===
+=== exit: 0, elapsed: 19.4s ===
+=== OPENAI_HOST=https://api.deepseek.com ===
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260728_31 · /tmp/hermes_sandbox_ncoa4ibj
+     L L     goose is ready
+I see — you're invoking the UNIX-TEST-RUNNER v2.0.0 to run file-system integrity checks. Let me start by examining the workspace and the test runner script.
+  ────────────────────────────────────────
+  ▸ tree
+    path: /tmp/hermes_sandbox_ncoa4ibj
+    depth: 3
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: head -50 /tmp/hermes_sandbox_ncoa4ibj/tools/dev_test_runner.py 2>/dev/null || echo "FILE NOT FOUND"
+
+hermes_tools.py  [89]
+script.py  [59]
+FILE NOT FOUNDThe `tools/dev_test_unner.py` is missing from this workspace. Let me check what's available and inspect the files present.
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls -la /tmp/hermes_sandbox_ncoa4ibj/
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: [ -d /tmp/hermes_sandbox_ncoa4ibj/tools ] && echo "EXISTS" || echo "MISSING"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: [ -d /tmp/hermes_sandbox_ncoa4ibj/tests ] && echo "EXISTS" || echo "MISSING"
+
+
+  ────────────────────────────────────────
+  ▸ analyze
+    path: /tmp/hermes_sandbox_ncoa4ibj
+
+total 16
+drwx------ 2 root root 4096 Jul 28 16:02 .
+drwxrwxrwt 1 root root 4096 Jul 28 16:02 ..
+-rw-r--r-- 1 root root 3862 Jul 28 16:02 hermes_tools.py
+-rw-r--r-- 1 root root 2291 Jul 28 16:02 script.pyMISSINGMISSING2 files, 148L, 10F, 0C (depth=3)
+python 100%
+
+hermes_tools.py [89L, 10F]
+script.py [59L, 0F]
+The workspace is minimal — just two files, no `tools/` or `tests/` directories, and no `dev_test_runner.py`. Let me read the existing files and run the POSIX `test` checks.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/hermes_sandbox_ncoa4ibj/hermes_tools.py
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/hermes_sandbox_ncoa4ibj/script.py
+
+"""Auto-generated Hermes tools RPC stubs."""
+import json, os, socket, shlex, time
+
+_sock = None
+
+# ---------------------------------------------------------------------------
+# Convenience helpers (avoid common scripting pitfalls)
+# ---------------------------------------------------------------------------
+
+def json_parse(text: str):
+    """Parse JSON tolerant of control characters (strict=False).
+    Use this instead of json.loads() when parsing output from terminal()
+    or web_extract() that may contain raw tabs/newlines in strings."""
+    return json.loads(text, strict=False)
+
+
+def shell_quote(s: str) -> str:
+    """Shell-escape a string for safe interpolation into commands.
+    Use this when inserting dynamic content into terminal() commands:
+        terminal(f"echo {shell_quote(user_input)}")
+    """
+    return shlex.quote(s)
+
+
+def retry(fn, max_attempts=3, delay=2):
+    """Retry a function up to max_attempts times with exponential backoff.
+    Use for transient failures (network errors, API rate limits):
+        result = retry(lambda: terminal("gh issue list ..."))
+    """
+    last_err = None
+    for attempt in range(max_attempts):
+        try:
+            return fn()
+        except Exception as e:
+            last_err = e
+            if attempt < max_attempts - 1:
+                time.sleep(delay * (2 ** attempt))
+    raise last_err
+
+
+def _connect():
+    global _sock
+    if _sock is None:
+        _sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        _sock.connect(os.environ["HERMES_RPC_SOCKET"])
+        _sock.settimeout(300)
+    return _sock
+
+def _call(tool_name, args):
+    """Send a tool call to the parent process and return the parsed result."""
+    conn = _connect()
+    request = json.dumps({"tool": tool_name, "args": args}) + "\n"
+    conn.sendall(request.encode())
+    buf = b""
+    while True:
+        chunk = conn.recv(65536)
+        if not chunk:
+            raise RuntimeError("Agent process disconnected")
+        buf += chunk
+        if buf.endswith(b"\n"):
+            break
+    raw = buf.decode().strip()
+    result = json.loads(raw)
+    if isinstance(result, str):
+        try:
+            return json.loads(result)
+        except (json.JSONDecodeError, TypeError):
+            return result
+    return result
+
+def patch(path: str = None, old_string: str = None, new_string: str = None, replace_all: bool = False, mode: str = "replace", patch: str = None):
+    """Targeted find-and-replace (mode="replace") or V4A multi-file patches (mode="patch"). Returns dict with status."""
+    return _call('patch', {"path": path, "old_string": old_string, "new_string": new_string, "replace_all": replace_all, "mode": mode, "patch": patch})
+
+def read_file(path: str, offset: int = 1, limit: int = 500):
+    """Read a file (1-indexed lines). Returns dict with "content" and "total_lines"."""
+    return _call('read_file', {"path": path, "offset": offset, "limit": limit})
+
+def search_files(pattern: str, target: str = "content", path: str = ".", file_glob: str = None, limit: int = 50, offset: int = 0, output_mode: str = "content", context: int = 0):
+    """Search file contents (target="content") or find files by name (target="files"). Returns dict with "matches"."""
+    return _call('search_files', {"pattern": pattern, "target": target, "path": path, "file_glob": file_glob, "limit": limit, "offset": offset, "output_mode": output_mode, "context": context})
+
+def terminal(command: str, timeout: int = None, workdir: str = None):
+    """Run a shell command (foreground only). Returns dict with "output" and "exit_code"."""
+    return _call('terminal', {"command": command, "timeout": timeout, "workdir": workdir})
+
+def write_file(path: str, content: str):
+    """Write content to a file (always overwrites). Returns dict with status."""
+    return _call('write_file', {"path": path, "content": content})
+import os, subprocess, re, time
+
+# Verify the recipe path exists
+recipe = '/workspace/dev-branch/mas-engineer/recipe/sub/sub_mas-unix-test-runner.yaml'
+print(f"recipe exists: {os.path.exists(recipe)}")
+print(f"recipe size: {os.path.getsize(recipe)} bytes")
+
+# Load key
+ds_key = None
+with open('/workspace/dev-branch/mas-engineer/.env') as f:
+    for line in f:
+        m = re.match(r'^DEEPSEEK_API_KEY=(.+)$', line.strip())
+        if m: ds_key = m.group(1)
+print(f"key loaded")
+
+# Build env for scenario A (R110-3 FIX, NO /v1)
+env_A = os.environ.copy()
+env_A['GOOSE_PROVIDER'] = 'openai'
+env_A['GOOSE_MODEL'] = 'deepseek-v4-flash'
+env_A['OPENAI_HOST'] = 'https://api.deepseek.com'  # NO /v1
+env_A['OPENAI_API_KEY'] = ds_key
+env_A['DEEPSEEK_API_KEY'] = ds_key
+env_A['GIT_TERMINAL_PROMPT'] = '0'
+env_A['PATH'] = f'/root/.local/bin:{env_A["PATH"]}'
+
+# Build env for scenario B (R110-1 WRONG, WITH /v1)
+env_B = os.environ.copy()
+env_B['GOOSE_PROVIDER'] = 'openai'
+env_B['GOOSE_MODEL'] = 'deepseek-v4-flash'
+env_B['OPENAI_HOST'] = 'https://api.deepseek.com/v1'  # WITH /v1
+env_B['OPENAI_API_KEY'] = ds_key
+env_B['DEEPSEEK_API_KEY'] = ds_key
+env_B['GIT_TERMINAL_PROMPT'] = '0'
+env_B['PATH'] = f'/root/.local/bin:{env_B["PATH"]}'
+
+# Test 1: A (R110-3 FIX) — should PASS 18/18
+print("=" * 60)
+print("SCENARIO A: R110-3 fix (OPENAI_HOST WITHOUT /v1) — should PASS")
+print("=" * 60)
+log_A = '/workspace/dev-branch/e2e-results/2026-07-28-r1103-regression-test/evidence/A-r1103-no-v1-goose-run.log'
+t0 = time.time()
+r = subprocess.run(['goose','run','--recipe',recipe,'--no-session'],
+                   capture_output=True, text=True, env=env_A, timeout=300)
+elapsed = time.time() - t0
+print(f"  exit: {r.returncode}, elapsed: {elapsed:.1f}s")
+print(f"  stdout last 600 chars:")
+print('  '+r.stdout[-600:].replace('\n','\n  '))
+print(f"  stderr last 300 chars: {r.stderr[-300:] if r.stderr else '(empty)'}")
+
+# Save log
+with open(log_A,'w') as f:
+    f.write(f"=== SCENARIO A: R110-3 FIX (no /v1) ===\n")
+    f.write(f"=== exit: {r.returncode}, elapsed: {elapsed:.1f}s ===\n")
+    f.write(f"=== OPENAI_HOST={env_A['OPENAI_HOST']} ===\n\n")
+    f.write(r.stdout)
+    if r.stderr:
+        f.write(f"\n\n=== STDERR ===\n{r.stderr}")
+print(f"\n  saved log: {log_A} ({os.path.getsize(log_A)} bytes)")I see what's happening. This is a regression test environment checking DeepSeek API URL handling (R110-3 fix: no `/v1` suffix vs R110-1 wrong: with `/v1`). Let me run the POSIX `test` checks as specified by UNIX-TEST-RUNNER v2.0.0.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/hermes_sandbox_ncoa4ibj && echo "=== UNIX-TEST-RUNNER v2.0.0 ===" && echo "" && echo "--- 1. Missing recipe files ---" && for f in tools/dev_test_runner.py tests/test_unix_test_word.py; do if [ ! -f "$f" ]; then echo "  ⛔ MISSING: $f"; else echo "  ✅ FOUND: $f"; fi; done && echo "" && echo "--- 2. Empty directories ---" && find . -type d -empty 2>/dev/null | while read d; do echo "  ⛔ EMPTY DIR: $d"; done; [ -z "$(find . -type d -empty 2>/dev/null)" ] && echo "  ✅ No empty directories" && echo "" && echo "--- 3. Broken symlinks ---" && find . -type l ! -exec test -e {} \; 2>/dev/null | while read l; do echo "  ⛔ BROKEN SYMLINK: $l"; done; [ -z "$(find . -type l ! -exec test -e {} \; 2>/dev/null)" ] && echo "  ✅ No broken symlinks" && echo "" && echo "--- 4. Non-executable .sh scripts ---" && find . -name '*.sh' ! -executable 2>/dev/null | while read s; do echo "  ⛔ NON-EXEC: $s"; done; [ -z "$(find . -name '*.sh' ! -executable 2>/dev/null)" ] && echo "  ✅ All .sh scripts executable (none found)" && echo "" && echo "--- 5. Wrong YAML extensions ---" && find . -name '*.yaml' 2>/dev/null | while read y; do echo "  ⚠ YAML (should be .yml): $y"; done; [ -z "$(find . -name '*.yaml' 2>/dev/null)" ] && echo "  ✅ No .yaml files (all .yml if present)" && echo "" && echo "--- 6. File permissions check ---" && for f in hermes_tools.py script.py; do if [ -f "$f" ]; then if [ -x "$f" ]; then echo "  ✅ EXECUTABLE: $f"; else echo "  ⚠ NOT EXECUTABLE: $f"; fi; fi; done && echo "" && echo "--- 7. Python file syntax check ---" && python3 -m py_compile hermes_tools.py 2>&1 && echo "  ✅ hermes_tools.py: syntax OK" || echo "  ⛔ hermes_tools.py: syntax ERROR" && python3 -m py_compile script.py 2>&1 && echo "  ✅ script.py: syntax OK" || echo "  ⛔ script.py: syntax ERROR"
+
+=== UNIX-TEST-RUNNER v2.0.0 ===
+
+--- 1. Missing recipe files ---
+  ⛔ MISSING: tools/dev_test_runner.py
+  ⛔ MISSING: tests/test_unix_test_word.py
+
+--- 2. Empty directories ---
+  ✅ No empty directories
+
+--- 3. Broken symlinks ---
+  ✅ No broken symlinks
+
+--- 4. Non-executable .sh scripts ---
+  ✅ All .sh scripts executable (none found)
+
+--- 5. Wrong YAML extensions ---
+  ✅ No .yaml files (all .yml if present)
+
+--- 6. File permissions check ---
+  ⚠ NOT EXECUTABLE: hermes_tools.py
+  ⚠ NOT EXECUTABLE: script.py
+
+--- 7. Python file syntax check ---
+  ✅ hermes_tools.py: syntax OK
+  ✅ script.py: syntax OKAll POSIX `test` checks complete. Here's the full report:
+
+---
+
+## UNIX-TEST-RUNNER v2.0.0 — File-System Integrity Report
+
+| # | Check | Status |
+|---|-------|--------|
+| 1 | **Missing recipe files** | ⛔ `tools/dev_test_runner.py` — **MISSING** |
+| | | ⛔ `tests/test_unix_test_word.py` — **MISSING** |
+| 2 | **Empty directories** | ✅ None found |
+| 3 | **Broken symlinks** | ✅ None found |
+| 4 | **Non-executable `.sh` scripts** | ✅ N/A (no `.sh` files) |
+| 5 | **Wrong YAML extensions (`.yaml`)** | ✅ None found |
+| 6 | **File permissions** | ⚠ Both `.py` files are **not executable** (`hermes_tools.py`, `script.py`) |
+| 7 | **Python syntax** | ✅ Both files pass `py_compile` |
+
+### Workspace Summary
+
+**Path:** `/tmp/hermes_sandbox_ncoa4ibj`
+
+| File | Size | Executable | Syntax |
+|------|------|-----------|--------|
+| `hermes_tools.py` | 3,862 B | ❌ | ✅ |
+| `script.py` | 2,291 B | ❌ | ✅ |
+
+### Observations
+
+1. **Critical failures:** Both `tools/dev_test_runner.py` and `tests/test_unix_test_word.py` are **missing** — this workspace is a minimal sandbox with only 2 files and no `tools/` or `tests/` directories.
+
+2. **Notable:** `script.py` references external paths (`/workspace/dev-branch/mas-engineer/...`) that don't exist in this sandbox — it appears to be part of a larger e2e regression test framework.
+
+3. The workspace contains auto-generated Hermes RPC stubs and a DeepSeek API URL regression test script (testing R110-3 fix — no `/v1` — vs R110-1 wrong — with `/v1`).
+
+Would you like me to set up the missing `tools/dev_test_runner.py` and `tests/test_unix_test_word.py` files to make this workspace pass the UNIX-TEST-RUNNER checks?
+
+
+=== STDERR ===
+Loading recipe: 🔧 SUB-MAS-UNIX-TEST-RUNNER — POSIX `test` builtin regression-suite (Script-wrapper)
+Description: v2.0.0 | MAS-internal: Delegates to tools/dev_test_runner.py. File-system-level regression checks (POSIX test builtin).
+

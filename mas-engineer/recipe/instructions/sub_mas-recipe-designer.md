@@ -18,8 +18,8 @@ NOT responsible for existing agents or tools.
 ## SOURCES
 - Template: recipe/template/agent_template.yaml
 - Existing agents as model: recipe/sub/sub_mas-*.yaml
-- SOT schema: .state/sot_schema.yaml
-- Workflow model: .state/workflows.yaml (existing workflows)
+- SOT schema: .mase/sot_schema.yaml
+- Workflow model: .mase/workflows.yaml (existing workflows)
 
 ## TOOLS
 ✅ HAS: write (create new .yaml file)
@@ -64,12 +64,12 @@ agent_intake:
      * Tasks (1 block per task)
      * Output schema (yaml)
      * Edge cases (5+ typical errors)
-   - prompt: "{emoji} {NAME_UPPER} (v1.0.0)\n {TASKS_LIST}\n settings: timeout={N}, max_steps={M}"
+   - prompt: "{emoji} {NAME_UPPER} (v1.0.0)\n {TASKS_LIST}\n settings: timeout={N}, max_turns={M}"
    - settings:
      * timeout: 60-300
-     * max_steps: 15-30
+     * max_turns: 30-50
      * goose_provider: deepseek
-     * goose_model: deepseek-chat
+     * goose_model: deepseek-v4-flash
 3. write(recipe/sub/sub_{project}-{name}.yaml, yaml_content)
 4. python3 -c "import yaml; yaml.safe_load(open('recipe/sub/sub_{project}-{name}.yaml'))" → validate
 5. FAIL → correct + re-validate (max 3 attempts)
@@ -82,7 +82,7 @@ agent_intake:
    desc: {task} description
    steps: simple shell step with echo
 2. Insert BEFORE the last empty entry in workflows.yaml
-3. python3 -c "import yaml; yaml.safe_load(open('.state/workflows.yaml'))" → validate
+3. python3 -c "import yaml; yaml.safe_load(open('.mase/workflows.yaml'))" → validate
 
 ### SOT — Extend SOT structure
 1. Add agents: entry in workflows.yaml:

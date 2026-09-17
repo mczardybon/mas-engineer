@@ -15,12 +15,12 @@ This agent is the **first stage** of the Improvement-Pipeline.
 It receives data via pipeline-orchestrator params and persists the result.
 
 **Input:**   (none — entry stage, receives data from orchestrator params)
-**Output:**  `.state/pipeline/findings.yaml`
+**Output:**  `.mase/pipeline/findings.yaml`
 **Schema:**  findings[] with {id, type, severity, file, issue, impact, fix, goose_verdict?}
 **Next:**    -> im-rank (reads Output file)
 
 ```yaml
-# .state/pipeline/findings.yaml — written by im-finder
+# .mase/pipeline/findings.yaml — written by im-finder
 stage: 1
 agent: im-finder
 timestamp: <ISO-8601>
@@ -33,10 +33,13 @@ timestamp: <ISO-8601>
 # I am the IM-FINDER. My FIRST action is ALWAYS to run the scanner.
 # I do NOT wait for orchestrator input — the scanner IS my data source.
 
-1. EXECUTE: shell(cmd="cd {workspace} && python3 tools/dev_im_finder_scan.py --scope=recipe,/root/.config/goose/recipes/sales,/root/.config/goose/recipes/marketing,/root/.config/goose/recipes/translator > /tmp/scan_output.txt 2>&1")
+1. EXECUTE: shell(cmd="cd {workspace} && python3 tools/dev_im_finder_scan.py --issue-db --scope=recipe,/root/.config/goose/recipes/sales,/root/.config/goose/recipes/marketing,/root/.config/goose/recipes/translator > /tmp/scan_output.txt 2>&1")
    # IM-005 SCOPE-FIX (2026-07-22): include user-installed demo teams so the
    # im-finder can catch sub_recipes/extensions/prompt issues in those recipes
    # (e.g. marketing-orchestrator was missing sub_recipes block for 2 days).
+   # R110-177-C ISSUE-DB (2026-08-17): --issue-db persists every finding to
+   # .mase/pipeline/issue_db.json (stable issue_hash + structural_pattern).
+   # Use --no-issue-db if you explicitly want stdout-only (NOT recommended).
 2. EXECUTE: shell(cmd="cat /tmp/scan_output.txt")
 3. PARSE the JSON output (look for ---JSON_START--- block)
 4. Use the parsed findings as the input for STEP 0.5 delegation
@@ -91,9 +94,9 @@ findings_dict = {
     "data": {"findings": <list of findings with verdicts>}
 }
 # Write the file
-with open('.state/pipeline/findings.yaml', 'w') as f:
+with open('.mase/pipeline/findings.yaml', 'w') as f:
     yaml.safe_dump(findings_dict, f, default_flow_style=False, sort_keys=False)
-print(f"WRITTEN: .state/pipeline/findings.yaml with {len(findings)} findings")
+print(f"WRITTEN: .mase/pipeline/findings.yaml with {len(findings)} findings")
 ```
 
 **R01 BYPASS FOR findings.yaml:**
@@ -108,7 +111,7 @@ print(f"WRITTEN: .state/pipeline/findings.yaml with {len(findings)} findings")
 ```bash
 python3 -c "
 import yaml
-d = yaml.safe_load(open('.state/pipeline/findings.yaml'))
+d = yaml.safe_load(open('.mase/pipeline/findings.yaml'))
 f = d.get('data', {}).get('findings', [])
 mm8 = sum(1 for x in f if x.get('type') == 'MM8')
 mm9 = sum(1 for x in f if x.get('type') == 'MM9')
@@ -186,6 +189,81 @@ validate the design approach.**
 
 ⛔ FAILING TO SUMMON GOOSE-EXPERT = finding is REJECTED downstream by im-validator.
 
+## ⛔ STEP 0.6 — SELF-AUDIT SPEC-DRIFT CHECK (NEW IN R110-120)
+
+**🚨 THIS IS NOT OPTIONAL. sub_mas-self-audit runs BEFORE writing
+findings.yaml. R110-78 PHASE 3b. 🚨**
+
+After STEP 0.5 (goose-consult) and 0.5b (im-designer liaison), BEFORE
+STEP 0.7 (write findings.yaml), I run sub_mas-self-audit to catch
+spec-drift findings that the scanner does NOT detect.
+
+**Why this is mandatory:**
+- The scanner detects YAML structure issues (MM1-9) but NOT stale
+  count literals in recipe-instructions (e.g. default 96 sub-agents
+  when the actual count is 112 — R110-71/R110-78 lesson).
+- Without STEP 0.6, the im-finder can MISS a whole class of drift
+  that the pre-push validator (Check 18) would later block.
+- This is a CIRCULAR-PROOF gate: every improvement-pipeline run
+  ALSO scans the recipes for drift, not just runs the user-prompted
+  improvement.
+
+**EXECUTE:**
+
+```python
+# 1. Run self-audit
+shell(cmd="cd {workspace} && python3 tools/dev_self_audit.py --scope recipe/instructions/ --repo-root {workspace} --output {workspace}/.mase/pipeline/self_audit.yaml")
+shell(cmd="cd {workspace} && python3 tools/dev_spec_invariant.py --repo-root {workspace} --output {workspace}/.mase/pipeline/spec_invariant.yaml")
+
+# 2. Read both outputs
+import yaml
+sa = yaml.safe_load(open('{workspace}/.mase/pipeline/self_audit.yaml'))
+si = yaml.safe_load(open('{workspace}/.mase/pipeline/spec_invariant.yaml'))
+
+# 3. Convert findings to MM9-EXTENSION entries
+mm9_ext = []
+for finding in sa.get('findings', []):
+    if finding.get('severity') in ('BLOCKER',):
+        # BLOCKER → fail-fast STOP, do NOT write findings.yaml
+        print(f"FATAL: self-audit BLOCKER: {finding['file']}:{finding.get('line','?')} - {finding.get('description','')}")
+        raise SystemExit(1)
+    if finding.get('type','').startswith('HARDCODE') or finding.get('type','').startswith('INVARIANT'):
+        mm9_ext.append({
+            'id': f"MM9-EXT-{len(mm9_ext)+1:03d}",
+            'type': 'MM9-EXT',
+            'subtype': finding.get('type', 'UNKNOWN'),
+            'severity': finding.get('severity', 'WARN'),
+            'file': finding.get('file', ''),
+            'line': finding.get('line', 0),
+            'issue': finding.get('description', '')[:200],
+            'fix': finding.get('suggested_fix', ''),
+            'source': 'sub_mas-self-audit',
+            'pipeline_stage': 0.6
+        })
+
+# 4. Attach to findings list BEFORE STEP 0.7
+findings.extend(mm9_ext)
+print(f"STEP 0.6 ATTACHED: {len(mm9_ext)} MM9-EXT findings (total findings now: {len(findings)})")
+```
+
+**R01 BYPASS FOR self-audit output:**
+- self_audit.yaml + spec_invariant.yaml are the agent's own output,
+  same as findings.yaml (R01 lesson L82-95).
+
+**After this step:**
+- Proceed to STEP 0.7 (write findings.yaml) with the augmented
+  findings list.
+- If a BLOCKER was found, the agent STOPS — do NOT write findings.yaml.
+- If 0 findings → proceed silently (no MM9-EXT attachments).
+
+**Why MM9-EXT (not MM9):**
+- MM9 is the existing type for "YAML field missing". We use MM9-EXT
+  to signal an extension type (spec-drift in instruction text, not
+  YAML structure).
+- This preserves backward compat with the 53 Feature-Type matrix.
+- The scanner does not detect MM9-EXT; only sub_mas-self-audit does.
+- See also: `recipe/instructions/sub_mas-self-audit.md` Pattern A/B/C.
+
  ## Input (from Pipeline-Orchestrator)
 - task: FIND
 - request_id: string (UUID)
@@ -208,7 +286,7 @@ AUTOMATIC_CHECK — Tools:
   Missing? → restricted to continue
 
 ## 37 FEATURE-TYPES (A-KK)
-→ LOAD: sub_mas-im-finder needs IF mode == "mas": load(source: "mas-engineer/.mas/feature_matrix.yaml")
+→ LOAD: sub_mas-im-finder needs IF mode == "mas": load(source: "mas-engineer/.mase/feature_matrix.yaml")
 ELSE: load(source: "{workspace}/feature_matrix.yaml")
 
 ### Type-Matrix (53 Feature-Types A-MM):
@@ -397,11 +475,11 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
 - NN1: **multi_role_agent** — agent prompt lists 3+ distinct roles/tasks with different tools
   - Detection: parse prompt for verbs + tool references, count distinct role clusters
   - **R52 (2026-07-25) Skip-if-recently-split:** if target agent has sub_mas-{name}-director.yaml
-    AND its name is in `.state/pipeline/skip_recently_split.yaml` with `round_count - last_split_round < 5`,
+    AND its name is in `.mase/pipeline/skip_recently_split.yaml` with `round_count - last_split_round < 5`,
     tag finding with `already_split: true` and skip NN1 application
   - Severity: high (impacts maintainability, testability, single-responsibility)
   - Fix: split into orchestrator + N sub-agents, generate pipeline config
-  - Source: `flagged_by: intention-parser` in `.state/pipeline/findings.yaml`
+  - Source: `flagged_by: intention-parser` in `.mase/pipeline/findings.yaml`
 - NN2: **tool_overload** — agent declares 5+ tools/MCPs in extensions
   - Detection: count tools in extensions list
   - Severity: medium
@@ -411,7 +489,7 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
   - Severity: medium
   - Fix: split into domain-specific sub-agents
 - NN4: **flagged_for_split** — agent was created by intention-parser with multi-role flag
-  - Detection: read `.state/pipeline/findings.yaml` for `flagged_by: intention-parser`
+  - Detection: read `.mase/pipeline/findings.yaml` for `flagged_by: intention-parser`
   - Severity: critical (user intent was team, not monolith)
   - Fix: trigger split_into_orchestrator_and_subs pattern
 
@@ -421,7 +499,7 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
    # Read intention-parser flags
    python3 -c "
    import yaml, os
-   flags_file = '.state/pipeline/findings.yaml'
+   flags_file = '.mase/pipeline/findings.yaml'
    if os.path.exists(flags_file):
        data = yaml.safe_load(open(flags_file))
        for f in data.get('findings', []):
@@ -432,7 +510,7 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
 2. For each flagged agent: ANALYZE the agent YAML
 3. IDENTIFY distinct roles (NN1), tool clusters (NN2), domain boundaries (NN3)
 4. EMIT finding with type=NN1/NN2/NN3/NN4, severity, recommended_split
-5. WRITE to `.state/pipeline/findings.yaml` (append, not overwrite)
+5. WRITE to `.mase/pipeline/findings.yaml` (append, not overwrite)
 
 ## Procedure (FIND)
 
@@ -446,7 +524,7 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
    ```
    Any conflict = the finding is REWRITTEN to reference the native Goose mechanism
    instead of proposing a custom implementation.
-6. WRITE findings to .state/pipeline/findings.yaml
+6. WRITE findings to .mase/pipeline/findings.yaml
 7. RETURN signal=DONE with summary {total: int, by_type: dict, by_severity: dict, with_goose_verdict: int}
 
 ## Severity Levels
@@ -456,7 +534,7 @@ ELSE: load(source: "{workspace}/feature_matrix.yaml")
 
 ## Output Format
 
-Write to `.state/pipeline/findings.yaml`:
+Write to `.mase/pipeline/findings.yaml`:
 ```yaml
 stage: 1
 agent: im-finder
@@ -468,7 +546,7 @@ data:
       type: A1
       severity: 🔴 high
       file: recipe/sub/sub_mas-im-validator.yaml
-      issue: timeout=120s too low for 47 sub-agents to validate
+      issue: timeout=120s too low for 47 sub-agents to validate <!-- (historical, 2026-07-18: example finding F-001 from 87322ec — count was 47 at writing; NOT the current mas-self registry count 112) -->
       impact: validator times out → improvement cycle breaks
       fix: set timeout=300
       goose_verdict:  # only if STEP 0.5 triggered

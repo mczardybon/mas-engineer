@@ -1,0 +1,681 @@
+=== A-legacy-no-v1 | R109 legacy (was RICHTIG) ===
+=== OPENAI_HOST=https://api.deepseek.com ===
+=== exit_code=0, elapsed=22.1s ===
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260728_29 · /tmp/hermes_sandbox_es6cp5ct
+     L L     goose is ready
+Let me check the workspace and run the UNIX-TEST-RUNNER.
+  ────────────────────────────────────────
+  ▸ tree
+    path: /tmp/hermes_sandbox_es6cp5ct
+    depth: 3
+
+hermes_tools.py  [89]
+script.py  [89]
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls -la /tmp/hermes_sandbox_es6cp5ct/
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: find /tmp/hermes_sandbox_es6cp5ct -name "dev_test_runner.py" -o -name "test_unix_test_word.py" 2>/dev/null
+
+total 16
+drwx------ 2 root root 4096 Jul 28 15:55 .
+drwxrwxrwt 1 root root 4096 Jul 28 15:55 ..
+-rw-r--r-- 1 root root 3862 Jul 28 15:55 hermes_tools.py
+-rw-r--r-- 1 root root 3564 Jul 28 15:55 script.py(no output)
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /tmp/hermes_sandbox_es6cp5ct/hermes_tools.py
+
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /tmp/hermes_sandbox_es6cp5ct/script.py
+
+Error: unsupported image format; supported formats are png, jpeg, gif, and webpError: unsupported image format; supported formats are png, jpeg, gif, and webp
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/hermes_sandbox_es6cp5ct/hermes_tools.py
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /tmp/hermes_sandbox_es6cp5ct/script.py
+
+"""Auto-generated Hermes tools RPC stubs."""
+import json, os, socket, shlex, time
+
+_sock = None
+
+# ---------------------------------------------------------------------------
+# Convenience helpers (avoid common scripting pitfalls)
+# ---------------------------------------------------------------------------
+
+def json_parse(text: str):
+    """Parse JSON tolerant of control characters (strict=False).
+    Use this instead of json.loads() when parsing output from terminal()
+    or web_extract() that may contain raw tabs/newlines in strings."""
+    return json.loads(text, strict=False)
+
+
+def shell_quote(s: str) -> str:
+    """Shell-escape a string for safe interpolation into commands.
+    Use this when inserting dynamic content into terminal() commands:
+        terminal(f"echo {shell_quote(user_input)}")
+    """
+    return shlex.quote(s)
+
+
+def retry(fn, max_attempts=3, delay=2):
+    """Retry a function up to max_attempts times with exponential backoff.
+    Use for transient failures (network errors, API rate limits):
+        result = retry(lambda: terminal("gh issue list ..."))
+    """
+    last_err = None
+    for attempt in range(max_attempts):
+        try:
+            return fn()
+        except Exception as e:
+            last_err = e
+            if attempt < max_attempts - 1:
+                time.sleep(delay * (2 ** attempt))
+    raise last_err
+
+
+def _connect():
+    global _sock
+    if _sock is None:
+        _sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        _sock.connect(os.environ["HERMES_RPC_SOCKET"])
+        _sock.settimeout(300)
+    return _sock
+
+def _call(tool_name, args):
+    """Send a tool call to the parent process and return the parsed result."""
+    conn = _connect()
+    request = json.dumps({"tool": tool_name, "args": args}) + "\n"
+    conn.sendall(request.encode())
+    buf = b""
+    while True:
+        chunk = conn.recv(65536)
+        if not chunk:
+            raise RuntimeError("Agent process disconnected")
+        buf += chunk
+        if buf.endswith(b"\n"):
+            break
+    raw = buf.decode().strip()
+    result = json.loads(raw)
+    if isinstance(result, str):
+        try:
+            return json.loads(result)
+        except (json.JSONDecodeError, TypeError):
+            return result
+    return result
+
+def patch(path: str = None, old_string: str = None, new_string: str = None, replace_all: bool = False, mode: str = "replace", patch: str = None):
+    """Targeted find-and-replace (mode="replace") or V4A multi-file patches (mode="patch"). Returns dict with status."""
+    return _call('patch', {"path": path, "old_string": old_string, "new_string": new_string, "replace_all": replace_all, "mode": mode, "patch": patch})
+
+def read_file(path: str, offset: int = 1, limit: int = 500):
+    """Read a file (1-indexed lines). Returns dict with "content" and "total_lines"."""
+    return _call('read_file', {"path": path, "offset": offset, "limit": limit})
+
+def search_files(pattern: str, target: str = "content", path: str = ".", file_glob: str = None, limit: int = 50, offset: int = 0, output_mode: str = "content", context: int = 0):
+    """Search file contents (target="content") or find files by name (target="files"). Returns dict with "matches"."""
+    return _call('search_files', {"pattern": pattern, "target": target, "path": path, "file_glob": file_glob, "limit": limit, "offset": offset, "output_mode": output_mode, "context": context})
+
+def terminal(command: str, timeout: int = None, workdir: str = None):
+    """Run a shell command (foreground only). Returns dict with "output" and "exit_code"."""
+    return _call('terminal', {"command": command, "timeout": timeout, "workdir": workdir})
+
+def write_file(path: str, content: str):
+    """Write content to a file (always overwrites). Returns dict with status."""
+    return _call('write_file', {"path": path, "content": content})
+import os, subprocess, re, time, json
+
+env_path = '/workspace/dev-branch/mas-engineer/.env'
+ds_key = None
+with open(env_path) as f:
+    for line in f:
+        m = re.match(r'^DEEPSEEK_API_KEY=(.+)$', line.strip())
+        if m: ds_key = m.group(1)
+
+recipe = '/workspace/dev-branch/mas-engineer/recipe/sub/sub_mas-unix-test-runner.yaml'
+ev_dir = '/workspace/dev-branch/e2e-results/2026-07-28-r1101-pty-verification/evidence'
+os.makedirs(ev_dir, exist_ok=True)
+
+# Starte mit: was die goose config aktuell sagt (OHNE /v1 = legacy R109 state)
+# Dann: was R110-1 angeblich gefixt hat (MIT /v1 = der "fix")
+# Plus: was der R110-1 commit-msg behauptet
+
+scenarios = [
+    ('A-legacy-no-v1',  'https://api.deepseek.com',      'R109 legacy (was RICHTIG)'),
+    ('B-r1101-with-v1', 'https://api.deepseek.com/v1',   'R110-1 fix (BROKEN, doppeltes /v1)'),
+]
+
+results = {}
+for label, host, desc in scenarios:
+    env = os.environ.copy()
+    env['OPENAI_HOST'] = host
+    env['OPENAI_API_KEY'] = ds_key
+    env['GOOSE_MODEL'] = 'deepseek-v4-flash'
+    env['GOOSE_PROVIDER'] = 'openai'
+    env['GOOSE_TELEMETRY_ENABLED'] = 'false'
+    env['PATH'] = '/root/.local/bin:' + env.get('PATH','')
+    env['TERM'] = 'xterm-256color'
+    env['MAS_NO_SESSION'] = '1'
+
+    log_path = f'{ev_dir}/{label}-goose-run.log'
+    print(f"\n=== SCENARIO {label} ({desc}) ===")
+    print(f"  OPENAI_HOST={host}")
+    print(f"  recipe: {recipe}")
+    print(f"  log: {log_path}")
+    print(f"  running... (timeout 60s)")
+
+    t0 = time.time()
+    try:
+        r = subprocess.run(
+            ['goose', 'run', '--recipe', recipe, '--no-session'],
+            capture_output=True, text=True, env=env, timeout=60
+        )
+        elapsed = time.time() - t0
+        out = r.stdout + r.stderr
+        # Secret-redact for display
+        out_red = re.sub(r'sk-[a-f0-9]+', 'sk-***REDACTED***', out)
+        # Write FULL log (unredacted) to file (not displayed)
+        with open(log_path, 'w') as f:
+            f.write(f"=== {label} | {desc} ===\n")
+            f.write(f"=== OPENAI_HOST={host} ===\n")
+            f.write(f"=== exit_code={r.returncode}, elapsed={elapsed:.1f}s ===\n\n")
+            f.write(out)
+        # Count signals
+        n_401 = out.count('401')
+        n_404 = out.count('404')
+        n_pass = len(re.findall(r'\bpass(ed|ing)?\b', out, re.IGNORECASE))
+        n_fail = len(re.findall(r'\b(fail(ed|ing)?|error)\b', out, re.IGNORECASE))
+        n_18 = '18' in out and ('passed' in out.lower() or 'pass' in out.lower())
+        # Last 30 lines for display
+        last_lines = out_red.strip().split('\n')[-30:]
+        print(f"  exit_code: {r.returncode}")
+        print(f"  elapsed:   {elapsed:.1f}s")
+        print(f"  401 count: {n_401}")
+        print(f"  404 count: {n_404}")
+        print(f"  pass mentions: {n_pass}, fail mentions: {n_fail}")
+        print(f"  --- last 30 lines ---")
+        for ln in last_lines:
+            print(f"    {ln[:200]}")
+        results[label] = {
+            'host': host, 'desc': desc, 'exit': r.returncode, 'elapsed': elapsed,
+            'n_401': n_401, 'n_404': n_404, 'n_pass': n_pass, 'n_fail': n_fail,
+            'log_size': len(out)
+        }
+    except subprocess.TimeoutExpired:
+        elapsed = time.time() - t0
+        with open(log_path, 'w') as f:
+            f.write(f"TIMEOUT after {elapsed:.1f}s\n")
+        print(f"  TIMEOUT after {elapsed:.1f}s")
+        results[label] = {'host': host, 'desc': desc, 'exit': 'TIMEOUT', 'elapsed': elapsed}
+
+print("\n\n=== SUMMARY ===")
+for k, v in results.items():
+    print(f"  {k}: {v}")Let me check the broader workspace structure to find the test runner and test files.
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls /workspace/dev-branch/mas-engineer/ 2>/dev/null || echo "Not found"
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: find /workspace -name "dev_test_runner.py" -o -name "test_unix_test_word.py" 2>/dev/null
+
+README.md
+docs
+e2e-evidence
+e2e-evidence-gen2
+e2e-results
+findings
+mas-engineer
+prompts
+recipe
+run_translators.py
+scripts
+template
+testproject
+tests
+tools/workspace/mas-engineer-src/mas-engineer/tools/dev_test_runner.py
+/workspace/mas-engineer-src/mas-engineer/tests/test_unix_test_word.py
+/workspace/dev-branch/mas-engineer/tools/dev_test_runner.py
+/workspace/dev-branch/mas-engineer/tests/test_unix_test_word.pyFound them. Let me inspect both files to understand the test setup.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/tools/dev_test_runner.py
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/tests/test_unix_test_word.py
+
+#!/usr/bin/env python3
+"""
+dev_test_runner.py — replaces sub_mas-test-runner, sub_mas-verification-runner, sub_mas-unix-test-runner.
+
+Single script that handles all test-execution patterns used by the MAS-Engineer:
+
+  RUN          — execute pytest (or specified command) in a workspace
+  CHECK_DEPS   — verify pytest + tests/ dir are available
+  COMPARE      — diff current RUN result against a baseline (regression detection)
+  VERIFY       — post-commit verification: run, parse, optionally fix, max 3 retries
+
+Replaces 3 recipes + 3 instruction files with a single deterministic tool.
+Called from recipes via `bash` extension as:
+  python3 tools/dev_test_runner.py <command> [args...]
+
+Output: JSON to stdout (machine-readable) + summary to stderr (human-readable).
+Exit code: 0 on PASS, 1 on FAIL, 2 on error/dep-missing.
+"""
+import json
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Optional, Tuple
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def run_pytest(workspace: str, scope: str = "all") -> Tuple[int, str]:
+    """Execute pytest in workspace. Returns (exit_code, output)."""
+    os.chdir(workspace)
+    if not Path("tests").exists():
+        return 2, "No tests/-Directory in workspace"
+    r = subprocess.run(
+        [sys.executable, "-m", "pytest", scope, "-v", "--tb=short", "--no-header", "-q"],
+        capture_output=True, text=True, timeout=600,
+    )
+    return r.returncode, r.stdout + r.stderr
+
+
+def check_deps(workspace: str) -> dict:
+    """Verify pytest + tests/ are present."""
+    result = {"workspace": workspace, "pytest_available": False, "tests_dir_exists": False}
+    r = subprocess.run([sys.executable, "-m", "pytest", "--version"],
+                       capture_output=True, text=True, timeout=10)
+    result["pytest_available"] = r.returncode == 0
+    result["pytest_version"] = r.stdout.strip() if r.returncode == 0 else None
+    result["tests_dir_exists"] = Path(workspace, "tests").exists()
+    result["ok"] = result["pytest_available"] and result["tests_dir_exists"]
+    return result
+
+
+def parse_pytest_output(output: str) -> dict:
+    """Extract pass/fail/error counts from pytest output."""
+    import re
+    summary = {"passed": 0, "failed": 0, "errors": 0, "skipped": 0, "warnings": 0, "total": 0}
+    # Match lines like "5 passed, 2 failed, 1 error in 1.23s" or "18 passed in 0.94s"
+    for line in output.splitlines():
+        line = line.strip()
+        if not (("passed" in line or "failed" in line) and (" in " in line or "=" in line)):
+            continue
+        for key in ("passed", "failed", "error", "skipped", "warning"):
+            m = re.search(rf"(\d+)\s+{key}s?", line)
+            if m:
+                count = int(m.group(1))
+                if key == "error":
+                    summary["errors"] = count
+                elif key == "warning":
+                    summary["warnings"] = count
+                else:
+                    summary[key] = count
+        # Stop at first summary line
+        if any(c.isdigit() for c in line) and ("passed" in line or "failed" in line):
+            break
+    summary["total"] = summary["passed"] + summary["failed"] + summary["errors"]
+    return summary
+
+
+def run(workspace: str, scope: str = "all") -> dict:
+    """RUN: execute pytest + return parsed result."""
+    start = time.time()
+    exit_code, output = run_pytest(workspace, scope)
+    duration = time.time() - start
+    summary = parse_pytest_output(output)
+    return {
+        "command": "RUN",
+        "workspace": workspace,
+        "scope": scope,
+        "exit_code": exit_code,
+        "duration_s": round(duration, 2),
+        "summary": summary,
+        "passed": exit_code == 0,
+        "output_tail": output[-2000:] if len(output) > 2000 else output,
+    }
+
+
+def compare(workspace: str, baseline_path: str, scope: str = "all") -> dict:
+    """COMPARE: run + diff against baseline JSON (regression detection)."""
+    current = run(workspace, scope)
+    if not os.path.exists(baseline_path):
+        return {"command": "COMPARE", "error": f"baseline not found: {baseline_path}", "current": current}
+    with open(baseline_path) as f:
+        baseline = json.load(f)
+    base_sum = baseline.get("summary", {})
+    cur_sum = current["summary"]
+    regressions = []
+    for key in ("failed", "errors"):
+        if cur_sum.get(key, 0) > base_sum.get(key, 0):
+            regressions.append(f"{key}: {base_sum.get(key,0)} -> {cur_sum.get(key,0)}")
+    if cur_sum.get("passed", 0) < base_sum.get("passed", 0):
+        regressions.append(f"passed: {base_sum.get('passed',0)} -> {cur_sum.get('passed',0)}")
+    return {
+        "command": "COMPARE",
+        "workspace": workspace,
+        "current": current,
+        "baseline": baseline,
+        "regressions": regressions,
+        "regression_detected": len(regressions) > 0,
+    }
+
+
+def verify(workspace: str, test_command: str, max_attempts: int = 3) -> dict:
+    """VERIFY: post-commit verification with retry logic (replaces verification-runner)."""
+    attempts = []
+    for attempt in range(1, max_attempts + 1):
+        r = subprocess.run(test_command, shell=True, capture_output=True, text=True,
+                          cwd=workspace, timeout=600)
+        result = {
+            "attempt": attempt,
+            "exit_code": r.returncode,
+            "passed": r.returncode == 0,
+            "output_tail": (r.stdout + r.stderr)[-1000:],
+        }
+        attempts.append(result)
+        if r.returncode == 0:
+            return {
+                "command": "VERIFY",
+                "workspace": workspace,
+                "passed": True,
+                "attempts": attempts,
+                "final_status": "verifying_passed",
+            }
+    return {
+        "command": "VERIFY",
+        "workspace": workspace,
+        "passed": False,
+        "attempts": attempts,
+        "final_status": "VERIFICATION_FAILED",
+        "max_attempts_reached": True,
+    }
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "usage: dev_test_runner.py <RUN|CHECK_DEPS|COMPARE|VERIFY> [args]"}))
+        sys.exit(2)
+
+    cmd = sys.argv[1].upper()
+    if cmd == "CHECK_DEPS":
+        workspace = sys.argv[2] if len(sys.argv) > 2 else str(REPO_ROOT)
+        result = check_deps(workspace)
+    elif cmd == "RUN":
+        workspace = sys.argv[2] if len(sys.argv) > 2 else str(REPO_ROOT)
+        scope = sys.argv[3] if len(sys.argv) > 3 else "all"
+        result = run(workspace, scope)
+    elif cmd == "COMPARE":
+        workspace = sys.argv[2] if len(sys.argv) > 2 else str(REPO_ROOT)
+        baseline = sys.argv[3] if len(sys.argv) > 3 else ""
+        scope = sys.argv[4] if len(sys.argv) > 4 else "all"
+        result = compare(workspace, baseline, scope)
+    elif cmd == "VERIFY":
+        workspace = sys.argv[2] if len(sys.argv) > 2 else str(REPO_ROOT)
+        test_cmd = sys.argv[3] if len(sys.argv) > 3 else "python3 -m pytest -q"
+        result = verify(workspace, test_cmd)
+    else:
+        result = {"error": f"unknown command: {cmd}"}
+
+    print(json.dumps(result, indent=2))
+    sys.exit(0 if result.get("passed", True) or cmd == "CHECK_DEPS" else 1)
+
+
+if __name__ == "__main__":
+    main()"""
+test_unix_test_word.py — POSIX `test` builtin e2e regression-suite.
+
+The "unix test word" is the POSIX `test` builtin (also written as `[`).
+This test file USES the real POSIX `test` command (via subprocess) to verify
+file-system integrity of the mas-engineer workspace.
+
+These are the EXACT checks that sub_mas-unix-test-runner would perform when
+called by the mas-engineer. So running this test is equivalent to e2e-testing
+the unix-test-runner.
+
+Run with:
+    python3 -m pytest tests/test_unix_test_word.py -v
+"""
+import subprocess
+import os
+import yaml
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).parent.parent.resolve()
+
+
+def _test(check: str) -> bool:
+    """Run a POSIX `test` expression. Returns True if check passes."""
+    r = subprocess.run(["test"] + check.split(), capture_output=True, text=True)
+    return r.returncode == 0
+
+
+def test_workspace_exists():
+    """Sanity: REPO_ROOT must exist as a directory."""
+    assert _test(f"-d {REPO_ROOT}"), f"workspace not a dir: {REPO_ROOT}"
+
+
+def test_recipe_sub_dir_exists():
+    assert _test(f"-d {REPO_ROOT}/recipe/sub"), "recipe/sub missing"
+
+
+def test_recipe_instructions_dir_exists():
+    assert _test(f"-d {REPO_ROOT}/recipe/instructions"), "recipe/instructions missing"
+
+
+def test_tools_dir_exists():
+    assert _test(f"-d {REPO_ROOT}/tools"), "tools missing"
+
+
+def test_tests_dir_exists():
+    assert _test(f"-d {REPO_ROOT}/tests"), "tests missing"
+
+
+def test_core_recipe_general_improver_exists():
+    assert _test(f"-f {REPO_ROOT}/recipe/sub/sub_mas-general-improver.yaml"), \
+        "core recipe missing"
+
+
+def test_core_recipe_master_constitution_exists():
+    assert _test(f"-f {REPO_ROOT}/recipe/sub/sub_mas-master-constitution.yaml"), \
+        "constitution missing"
+
+
+def test_test_runner_recipe_exists():
+    assert _test(f"-f {REPO_ROOT}/recipe/sub/sub_mas-test-runner.yaml"), \
+        "test-runner recipe missing"
+
+
+def test_unix_test_runner_recipe_exists():
+    """The new unix-test-runner recipe (added in this e2e test) must exist."""
+    assert _test(f"-f {REPO_ROOT}/recipe/sub/sub_mas-unix-test-runner.yaml"), \
+        "unix-test-runner recipe missing"
+
+
+def test_all_recipe_files_non_empty():
+    """Every yaml in recipe/sub/ must be non-empty (test -s = exists and size > 0)."""
+    recipe_dir = REPO_ROOT / "recipe" / "sub"
+    failures = []
+    for f in sorted(recipe_dir.glob("*.yaml")):
+        if not _test(f"-s {f}"):
+            failures.append(str(f.relative_to(REPO_ROOT)))
+    assert not failures, f"Empty recipe files: {failures}"
+
+
+def test_sub_recipe_count_at_least_50():
+    """mas-engineer should have >=50 sub-recipes per docs."""
+    recipe_dir = REPO_ROOT / "recipe" / "sub"
+    yaml_files = list(recipe_dir.glob("*.yaml"))
+    n = len(yaml_files)
+    assert n >= 50, f"sub-recipe count = {n}, expected >= 50"
+
+
+def test_sub_recipe_count_at_least_55():
+    """Per docs/HOWTO-PACKAGE-TEAM and README: ~56 sub-recipes (as of 2026-07-22).
+    We allow >=55 to account for additions (e.g. new test recipes). The exact
+    count should be tracked in docs/manifest.md, not hardcoded in tests.
+    """
+    recipe_dir = REPO_ROOT / "recipe" / "sub"
+    n = len(list(recipe_dir.glob("*.yaml")))
+    assert n >= 55, f"sub-recipe count = {n}, expected >=55 (was 56 per docs/manifest.md)"
+
+
+def test_sub_recipe_count_matches_manifest():
+    """If docs/manifest.md mentions a count, it should match reality (or be >= reality)."""
+    manifest = (REPO_ROOT / "docs" / "manifest.md").read_text()
+    recipe_dir = REPO_ROOT / "recipe" / "sub"
+    n = len(list(recipe_dir.glob("*.yaml")))
+    # Find any "N sub-recipes" or "(N)" pattern
+    import re
+    matches = re.findall(r'\b(\d+)\s+sub-recipes?\b', manifest)
+    if matches:
+        claimed = int(matches[0])
+        assert n == claimed or n == claimed + 1, \
+            f"actual={n}, docs claim {claimed} — manifest.md may be stale (off by 1?)"
+
+
+def test_all_yaml_files_have_yaml_extension():
+    """No misnamed files: every recipe file in recipe/sub/ must end in .yaml."""
+    recipe_dir = REPO_ROOT / "recipe" / "sub"
+    for f in sorted(recipe_dir.glob("*.yaml")):
+        if f.is_file():
+            assert f.suffix == ".yaml", f"Wrong extension: {f.name}"
+
+
+def test_all_recipe_files_are_valid_yaml():
+    """Every yaml in recipe/sub/ must be parseable (R10 CORONASHIELD)."""
+    recipe_dir = REPO_ROOT / "recipe" / "sub"
+    failures = []
+    for f in sorted(recipe_dir.glob("*.yaml")):
+        try:
+            with open(f) as fh:
+                yaml.safe_load(fh)
+        except yaml.YAMLError as e:
+            failures.append(f"{f.name}: {e}")
+    assert not failures, f"Invalid YAML: {failures}"
+
+
+def test_every_recipe_references_constitution():
+    """Every recipe must declare its constitution (R10 traceability)."""
+    recipe_dir = REPO_ROOT / "recipe" / "sub"
+    failures = []
+    for f in sorted(recipe_dir.glob("*.yaml")):
+        with open(f) as fh:
+            data = yaml.safe_load(fh)
+        if isinstance(data, dict):
+            if "constitution" not in data:
+                failures.append(f.name)
+    assert not failures, f"Recipes without constitution: {failures}"
+
+
+def test_every_recipe_has_name_and_version():
+    """Required fields per constitution. Some legacy recipes (e.g. team-packager)
+    may still be missing fields — they are tracked as exceptions, not blockers.
+    This test reports them but does not fail unless >10% of recipes are affected.
+    """
+    recipe_dir = REPO_ROOT / "recipe" / "sub"
+    failures = []
+    for f in sorted(recipe_dir.glob("*.yaml")):
+        with open(f) as fh:
+            data = yaml.safe_load(fh)
+        if isinstance(data, dict):
+            if "name" not in data or "version" not in data:
+                failures.append(f.name)
+    # Soft-fail: only fail if >10% of recipes are non-conformant
+    total = len(list(recipe_dir.glob("*.yaml")))
+    threshold = max(1, total // 10)
+    assert len(failures) <= threshold, \
+        f"Too many recipes missing name/version ({len(failures)}/{total} > {threshold}): {failures}"
+
+
+def test_test_command_is_posix_builtin():
+    """The `test` command we use must be the POSIX builtin, not external.
+    Use `command -v test` which is POSIX-portable, or `which test`.
+    """
+    # Use `command -v` (POSIX) via shell=True so we hit the shell builtin
+    r = subprocess.run("command -v test && type test", shell=True,
+                      executable="/bin/bash", capture_output=True, text=True)
+    assert r.returncode == 0, f"`command -v test` failed: stderr={r.stderr}"
+    # 'test is a shell builtin' or 'test is /usr/bin/test'
+    assert "test" in r.stdout, f"unexpected output: {r.stdout!r}"Found everything. Now let me run the UNIX-TEST-RUNNER as specified.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /workspace/dev-branch/mas-engineer && python3 tools/dev_test_runner.py RUN /workspace/dev-branch/mas-engineer tests/test_unix_test_word.py
+    timeout_secs: 120
+
+{
+  "command": "RUN",
+  "workspace": "/workspace/dev-branch/mas-engineer",
+  "scope": "tests/test_unix_test_word.py",
+  "exit_code": 0,
+  "duration_s": 1.11,
+  "summary": {
+    "passed": 18,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "warnings": 0,
+    "total": 18
+  },
+  "passed": true,
+  "output_tail": "============================= test session starts ==============================\ncollected 18 items\n\ntests/test_unix_test_word.py ..................                          [100%]\n\n============================== 18 passed in 0.87s ==============================\n"
+}## ✅ UNIX-TEST-RUNNER v2.0.0 — RESULTS
+
+**Command:** `python3 tools/dev_test_runner.py RUN /workspace/dev-branch/mas-engineer tests/test_unix_test_word.py`
+
+| Metric | Value |
+|--------|-------|
+| **Tests passed** | **18 / 18** ✅ |
+| Tests failed | 0 |
+| Errors | 0 |
+| Skipped | 0 |
+| Duration | 1.11s |
+| Exit code | 0 (PASS) |
+
+### All 18 POSIX `test` checks passed:
+
+1. `test_workspace_exists` — ✅ `test -d REPO_ROOT`
+2. `test_recipe_sub_dir_exists` — ✅ `test -d recipe/sub`
+3. `test_recipe_instructions_dir_exists` — ✅ `test -d recipe/instructions`
+4. `test_tools_dir_exists` — ✅ `test -d tools`
+5. `test_tests_dir_exists` — ✅ `test -d tests`
+6. `test_core_recipe_general_improver_exists` — ✅ `test -f sub_mas-general-improver.yaml`
+7. `test_core_recipe_master_constitution_exists` — ✅ `test -f sub_mas-master-constitution.yaml`
+8. `test_test_runner_recipe_exists` — ✅ `test -f sub_mas-test-runner.yaml`
+9. `test_unix_test_runner_recipe_exists` — ✅ `test -f sub_mas-unix-test-runner.yaml`
+10. `test_all_recipe_files_non_empty` — ✅ `test -s` on all recipe files
+11. `test_sub_recipe_count_at_least_50` — ✅ count ≥ 50
+12. `test_sub_recipe_count_at_least_55` — ✅ count ≥ 55
+13. `test_sub_recipe_count_matches_manifest` — ✅ matches manifest docs
+14. `test_all_yaml_files_have_yaml_extension` — ✅ no wrong extensions
+15. `test_all_recipe_files_are_valid_yaml` — ✅ all YAML parseable
+16. `test_every_recipe_references_constitution` — ✅ constitution traceability
+17. `test_every_recipe_has_name_and_version` — ✅ <10% non-conformant threshold
+18. `test_test_command_is_posix_builtin` — ✅ `test` is shell builtin
+
+**No regressions detected.** All file-system integrity checks pass.
+Loading recipe: 🔧 SUB-MAS-UNIX-TEST-RUNNER — POSIX `test` builtin regression-suite (Script-wrapper)
+Description: v2.0.0 | MAS-internal: Delegates to tools/dev_test_runner.py. File-system-level regression checks (POSIX test builtin).
+

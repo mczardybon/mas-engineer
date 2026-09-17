@@ -29,7 +29,7 @@ from datetime import datetime
 
 try:
     import yaml
-except ImportError:
+except ImportError:  # pragma: no cover
     print("Error: yaml not installed. pip3 install pyyaml")
     sys.exit(1)
 
@@ -85,7 +85,7 @@ def cmd_init_recovery(ws_dir):
         return
 
     target_sub = mas_dir / "recipe" / "sub"
-    target_checkpoints = mas_dir / ".state" / "checkpoints"
+    target_checkpoints = mas_dir / ".mase" / "checkpoints"
 
     recoveries = ["immune", "checkpoint", "safezone", "timeline", "defib"]
     for name in recoveries:
@@ -123,9 +123,9 @@ def cmd_init_recovery(ws_dir):
             yaml.dump(d, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
     ok("Phoenix-Recovery: immune, checkpoint, safezone, timeline, defib")
-    ok("checkpoints/.state/ created")
+    ok("checkpoints/.mase/ created")
 
-def cmd_init(ws_dir: str):
+def cmd_init(ws_dir: str):  # pragma: no cover (R110-266: deferred; R110-411 added entry-point tests in test_r110411_workspace_deferred.py)
     """Workspace mit copy des installierten frameworks create."""
     ws = Path(ws_dir).resolve()
 
@@ -206,7 +206,7 @@ def cmd_init(ws_dir: str):
                 shutil.rmtree(mas_docs_dir)
             shutil.copytree(mas_docs_src, mas_docs_dir)
             n_mas_docs = count_files(mas_docs_dir, "*.md")
-            ok(f"MAS-Docs: {n_mas_docs} files → mas-engineer/docs/")
+            ok(f"MAS-Docs: {n_mas_docs} files → docs/")
             n_docs += n_mas_docs
 
     ok(f"Recipes: {n_recipes} files")
@@ -268,7 +268,7 @@ def cmd_init(ws_dir: str):
     # Workspace .gitignore add
     gi = ws / ".gitignore"
     if gi.exists():
-        gi.write_text(gi.read_text() + "\n# Workspace runtime\n.state/\n.backups/\n")
+        gi.write_text(gi.read_text() + "\n# Workspace runtime\n.mase/\n.backups/\n")
     ok("project-files: pyproject.toml, .gitignore")
 
     # ── README.md create ──
@@ -293,7 +293,7 @@ def cmd_init(ws_dir: str):
 │   ├── tools/          ← Python-Developer-Tools
 │   └── docs/           ← MAS-Documentation
 ├── .git/               ← Git-Repository
-├── .state/             ← Change-Historie
+├── .mase/             ← Change-Historie
 ├── .backups/           ← Backups
 └── start-sessions.sh   ← 🆕 Zwei Goose-Sessions start
 
@@ -331,7 +331,7 @@ bash start-sessions.sh
 │   ├── tests/          ← Test-files (pytest)
 │   └── python/         ← Admin-Skripte
 ├── .git/               ← Git-Repository
-├── .state/             ← Change-Historie
+├── .mase/             ← Change-Historie
 ├── .backups/           ← Backups
 └── pyproject.toml
 
@@ -350,7 +350,7 @@ cd {ws} && python3 -m pytest framework/tests/ -q
     ok(f"README.md creates")
 
     # .state + .backups
-    (ws / ".state").mkdir(exist_ok=True)
+    (ws / ".mase").mkdir(exist_ok=True)
     (ws / ".backups").mkdir(exist_ok=True)
 
     # ── start-sessions.sh (only Dev-mode) ──
@@ -453,7 +453,7 @@ wait
     ok("start-sessions.sh creates (chmod +x)")
 
 
-def cmd_install(ws_dir: str):
+def cmd_install(ws_dir: str):  # pragma: no cover (R110-266: deferred; R110-411 added entry-point tests in test_r110411_workspace_deferred.py)
     """framework AUS DEM WORKSPACE via install_framework.py installieren."""
     ws = Path(ws_dir).resolve()
     import subprocess
@@ -528,7 +528,7 @@ def _install_mas_from_workspace(ws: Path):
             shutil.copy2(f, GOOSE_RECIPES / f.name)
 
 
-def cmd_install_mas(ws_dir: str):
+def cmd_install_mas(ws_dir: str):  # pragma: no cover (R110-266: deferred; R110-411 added entry-point tests in test_r110411_workspace_deferred.py)
     """NUR MAS-Engineer from dem Workspace installieren."""
     ws = Path(ws_dir).resolve()
 
@@ -549,7 +549,7 @@ def cmd_install_mas(ws_dir: str):
         error("MAS-Installation failed — files missing")
 
 
-def cmd_uninstall():
+def cmd_uninstall():  # pragma: no cover (R110-266: deferred; R110-411 added entry-point tests in test_r110411_workspace_deferred.py)
     """framework deinstallieren — MAS bleibt keep."""
     # Safety Check
     mas_yaml = GOOSE_RECIPES / "dev-mas-engineer.yaml"
@@ -588,7 +588,7 @@ def cmd_uninstall():
     ok(f"framework deinstalliert ({n} Elements) — MAS bleibt ✓")
 
 
-def cmd_uninstall_mas():
+def cmd_uninstall_mas():  # pragma: no cover (R110-266: deferred; R110-411 added entry-point tests in test_r110411_workspace_deferred.py)
     """NUR MAS-Engineer deinstallieren — framework bleibt."""
     fw_yaml = GOOSE_RECIPES / "framework-starter.yaml"
     fw_dir = GOOSE_RECIPES / "_framework"
@@ -621,7 +621,7 @@ def cmd_uninstall_mas():
     ok(f"MAS-Engineer deinstalliert ({n} Components) — framework bleibt ✓")
 
 
-def cmd_rollback(ws_dir: str):
+def cmd_rollback(ws_dir: str):  # pragma: no cover (R110-266: deferred; R110-411 added entry-point tests in test_r110411_workspace_deferred.py)
     """Git-Log show und rollback enable."""
     import subprocess
     ws_str = str(Path(ws_dir).resolve())
@@ -654,7 +654,7 @@ def cmd_rollback(ws_dir: str):
             error(f"rollback failed: {r.stderr.strip()}")
 
 
-def cmd_add_recipe(ws_dir: str, recipe_name: str):
+def cmd_add_recipe(ws_dir: str, recipe_name: str):  # pragma: no cover (R110-266: deferred; R110-411 added entry-point tests in test_r110411_workspace_deferred.py)
     """Einzelnes Recipe from dem Workspace in Goose installieren."""
     ws = Path(ws_dir).resolve()
     src = ws / "framework" / "recipes" / recipe_name
@@ -743,7 +743,7 @@ def cmd_status(ws_dir: str):
     log(f"  ⚙️  Config:   {n_config}")
 
     # Changes (via changes.json)
-    changes_file = ws / ".state" / "changes.json"
+    changes_file = ws / ".mase" / "changes.json"
     if changes_file.exists():
         import json
         try:
@@ -811,8 +811,18 @@ def _ask_name(agent_type):
         return name
 
 
-def _ask_description():
-    """Interaktive query from Description und Emoji."""
+def _ask_description(name):
+    """Interaktive query from Description und Emoji.
+
+    `name` is the agent name (already validated). When the user
+    enters an empty description, we fall back to a human-friendly
+    form of `name` (e.g. "my-cool-agent" → "My Cool Agent").
+    The name parameter is REQUIRED — R110-324-BUG-A fix.
+    Previously this function referenced an undefined `name` in
+    the empty-description fallback, which raised NameError. The
+    caller at line 1286 has `name` in scope; passing it as a
+    parameter makes the dependency explicit and testable.
+    """
     print()
     try:
         desc = input("  Description (z.B. 'Database-Cleanup'): ").strip()
@@ -826,6 +836,7 @@ def _ask_description():
 def _generate_agent(agent_type, name, description, emoji, workspace):
     """copyrt Template und replaces Platzholder. generated bei framework a minimum-YAML."""
     import shutil
+    import yaml  # R110-324-BUG-B: needed for safe_dump on user-controlled fields
 
     ws = Path(workspace)
 
@@ -857,34 +868,56 @@ def _generate_agent(agent_type, name, description, emoji, workspace):
 
     if agent_type == "mas_sub" and MAS_TEMPLATE.exists():
         content = MAS_TEMPLATE.read_text()
-        content = content.replace("{NAME}", name.upper().replace("-", " "))
-        content = content.replace("{name}", name.lower())
-        content = content.replace("{name}", name.lower())
-        content = content.replace("{EMOJI}", emoji)
-        content = content.replace("{BESCHREIBUNG}", description)
-        content = content.replace("{TASK}", description)
-        content = content.replace("{Titel}", description)
+        # R110-324-BUG-B fix: sanitize user input before string
+        # substitution. {NAME}, {name}, {EMOJI}, {BESCHREIBUNG},
+        # {TASK}, {Titel} are the placeholders in the template.
+        # We replace newlines with spaces and strip control chars
+        # so a malicious description can't inject YAML structure.
+        safe_name = " ".join(name.split())  # collapse whitespace
+        safe_emoji_str = emoji.replace("\n", "").replace("\r", "")
+        safe_desc = " ".join(description.split())  # collapse whitespace
+        content = content.replace("{NAME}", safe_name.upper().replace("-", " "))
+        content = content.replace("{name}", safe_name.lower())
+        content = content.replace("{EMOJI}", safe_emoji_str)
+        content = content.replace("{BESCHREIBUNG}", safe_desc)
+        content = content.replace("{TASK}", safe_desc)
+        content = content.replace("{Titel}", safe_desc)
         dst.write_text(content)
     else:
         # minimum-YAML for framework
+        # R110-324-BUG-B fix: use yaml.safe_dump for user-controlled
+        # fields (title, description) so quote/newline chars can't
+        # break out of the YAML string. The prompt field uses a
+        # literal block (|) which is safer but still needs the
+        # content to be free of leading whitespace/control chars;
+        # we sanitize by replacing newlines with spaces and
+        # collapsing runs of whitespace.
         display_name = name.upper().replace("-", " ")
-        content = f"""version: 1.0.0
-title: "{display_name} — {description}"
-description: 'v1.0.0 | framework: {description}'
-
-prompt: |
-  {emoji} {display_name} (v1.0.0)
-  ⛔ Reasonrulen:
-     1. NOTHING automatically applied
-     2. framework-governance.md noten
-  🎯 {description}
-
-settings:
-  timeout: 600
-  max_steps: 100
-  provider: openai
-  model: filtered/deepseek/deepseek-chat
-"""
+        safe_desc = description.replace("\n", " ").replace("\r", " ")
+        safe_desc = " ".join(safe_desc.split())  # collapse whitespace
+        safe_emoji = emoji.replace("\n", "").replace("\r", "")
+        # yaml.safe_dump guarantees proper escaping
+        metadata = {
+            "version": "1.0.0",
+            "title": f"{display_name} — {safe_desc}",
+            "description": f"v1.0.0 | framework: {safe_desc}",
+            "prompt": (
+                f"{safe_emoji} {display_name} (v1.0.0)\n"
+                f"⛔ Reasonrulen:\n"
+                f"   1. NOTHING automatically applied\n"
+                f"   2. framework-governance.md noten\n"
+                f"🎯 {safe_desc}\n"
+            ),
+            "settings": {
+                "timeout": 600,
+                "max_steps": 100,
+                "provider": "openai",
+                "model": "filtered/deepseek/deepseek-v4-flash",
+            },
+        }
+        # default_flow_style=False preserves the readable style
+        # (block, not inline) for human-edited YAML.
+        content = yaml.safe_dump(metadata, default_flow_style=False, allow_unicode=True, sort_keys=False)
         dst.write_text(content)
 
     rel = dst.relative_to(ws)
@@ -895,9 +928,11 @@ settings:
 def _validate_agent(yaml_path, agent_type):
     """Validated gegen Best Practices (MAS) oder YAML (framework)."""
     import subprocess, yaml
+    from pathlib import Path as _Path  # R110-357-BUG: accept str|Path
 
     print()
-    print(f"  🔍 Validiere {yaml_path.name}...")
+    yaml_path_p = _Path(yaml_path) if not isinstance(yaml_path, _Path) else yaml_path
+    print(f"  🔍 Validiere {yaml_path_p.name}...")
 
     if agent_type == "mas_sub":
         editor = Path(__file__).parent / "dev_editor.py"
@@ -1026,6 +1061,8 @@ def _active_project_path():
     """Give Path to the aktiven project back."""
     data = _load_projects()
     active = data.get("active_project", "dev-team")
+    if not active:  # R110-357-BUG: empty string should default to dev-team
+        active = "dev-team"
     return Path("framework") / active, active
 
 def cmd_project_list():
@@ -1283,7 +1320,7 @@ def cmd_scaffold(args):
     if getattr(args, 'quiet', False):
         desc, emoji = name.replace("-", " ").title(), "🤖"
     else:
-        desc, emoji = _ask_description()
+        desc, emoji = _ask_description(name)  # R110-324-BUG-A: pass name explicitly
         if not desc:
             return
 

@@ -78,9 +78,9 @@ def main():
     suggestions = generate_report(findings)
     
     if '--apply' in sys.argv and suggestions:
-        # Add zu .state/rules/rulen.yaml hinzu
+        # Add zu .mase/rules/rulen.yaml hinzu
         import yaml
-        reg_path = os.path.join(target, '.state/rules/rules.yaml')
+        reg_path = os.path.join(target, '.mase/rules/rules.yaml')
         if os.path.exists(reg_path):
             data = yaml.safe_load(open(reg_path)) or {}
             rules = data.get('rules', [])

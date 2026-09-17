@@ -1,0 +1,199 @@
+# R110-27 live log: code-review-correctness
+# Started:    2026-07-29T13:38:38Z
+# Walltime:   20.92s
+# RC:         0
+# Bytes:      7196
+# Timed_out:  False
+# Error:      none
+# Wrapper:    /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/wrappers/code-review-correctness.yaml
+# Task-file:  /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/tasks.yaml
+# ======================================================================
+
+Script started on 2026-07-29 13:38:38+00:00 [COMMAND="bash -c '/root/.local/bin/goose run --recipe /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/wrappers/code-review-correctness.yaml --no-session 2>&1'" <not executed on terminal>]
+Loading recipe: R110-27 wrapper — code-review-correctness
+Description: R110-27 wrapper injecting task for code-review-correctness
+
+◒  starting 3 extensions: developer, analyze, summon                            
+◐  starting 3 extensions: developer, analyze, summon                            
+◐  starting 2 extensions: developer, summon                                     
+◐  starting 1 extensions: summon                                                
+◐  starting 0 extensions:                                                       
+]0;🪿 mas-engineer
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260729_81 · /workspace/dev-branch/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/dev-branch/mas-engineer/sample-input/sample_with_bugs.py
+
+    Error: failed to read image file: No such file or directory (os error 2)
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls /workspace/dev-branch/mas-engineer/sample-input/
+
+    ls: cannot access '/workspace/dev-branch/mas-engineer/sample-input/': No such file or directory
+    
+    Command exited with code 2
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls /workspace/dev-branch/mas-engineer/
+
+    README.md
+    docs
+    e2e-evidence
+    e2e-evidence-gen2
+    e2e-results
+    findings
+    mas-engineer
+    prompts
+    recipe
+    run_translators.py
+    scripts
+    template
+    testproject
+    tests
+    tools
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: find /workspace/dev-branch/mas-engineer -type d -name "sample-input" 2>/dev/null
+
+    /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/sample-input
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: ls /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/sample-input/
+
+    data.csv
+    perf_critical.py
+    sample_with_bugs.py
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat -n /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/sample-input/sample_with_bugs.py
+
+         1	"""Sample code with intentional bugs for code-review team."""
+         2	from typing import List, Optional
+         3	
+         4	
+         5	def average(numbers: List[int]) -> int:
+         6	    """Return the average of a list of integers."""
+         7	    total = 0
+         8	    for i in range(len(numbers) + 1):  # BUG: off-by-one
+         9	        total += numbers[i]
+        10	    return total // len(numbers)  # BUG: ZeroDivisionError on empty list
+    ... (24 lines hidden, /toggle to show all)
+        35	import threading
+        36	def worker():
+        37	    for _ in range(1000):
+        38	        counter.increment()
+        39	
+        40	if __name__ == "__main__":
+        41	    threads = [threading.Thread(target=worker) for _ in range(10)]
+        42	    for t in threads: t.start()
+        43	    for t in threads: t.join()
+        44	    print(f"Final count: {counter.get()} (expected 10000)")  # race-condition gives wrong answer
+## Bug Report: `sample_with_bugs.py`
+
+Here's a complete list of bugs found in the file, ordered by line number:
+
+---
+
+### Bug 1 — Line 8: Off-by-one → `IndexError`
+
+```python
+for i in range(len(numbers) + 1):  # BUG: off-by-one
+    total += numbers[i]
+```
+
+**Problem:** `range(len(numbers) + 1)` produces indices `0, 1, ..., len(numbers)`. The last index (`len(numbers)`) is out of bounds, since valid list indices are `0` through `len(numbers) - 1`. This will raise an **`IndexError`** on any non-empty list.
+
+**Fix:** Use `range(len(numbers))` instead. Better yet, iterate directly:
+```python
+for n in numbers:
+    total += n
+```
+
+---
+
+### Bug 2 — Line 10: `ZeroDivisionError` on empty list
+
+```python
+return total // len(numbers)  # BUG: ZeroDivisionError on empty list
+```
+
+**Problem:** If `numbers` is an empty list, `len(numbers)` is `0`, causing a **`ZeroDivisionError`**.
+
+**Fix:** Guard against the empty list and return a sensible default (e.g., `0` or `None`, or use `float` division for a non-integer result):
+```python
+if not numbers:
+    return 0
+return total // len(numbers)
+```
+
+---
+
+### Bug 3 — Line 16: Wrong attribute access on a `dict`
+
+```python
+def find_user(user_id: int, users: List[dict]) -> Optional[dict]:
+    for u in users:
+        if u.id == user_id:  # BUG: dict has no .id attribute
+```
+
+**Problem:** `u` is a `dict` (type hint says `List[dict]`), but the code uses `u.id` (attribute access) instead of `u["id"]` (key lookup). This will raise an **`AttributeError`**.
+
+**Fix:** Use dictionary key access:
+```python
+if u.get("id") == user_id:
+```
+(`u.get("id")` safely handles missing keys by returning `None`.)
+
+---
+
+### Bug 4 — Lines 34–44: Race condition (no thread synchronization)
+
+```python
+counter = Counter()
+# ...
+def worker():
+    for _ in range(1000):
+        counter.increment()
+
+threads = [threading.Thread(target=worker) for _ in range(10)]
+```
+
+**Problem:** Ten threads each call `counter.increment()` 1000 times without any lock. The operation `self.count += 1` is a **read-modify-write** that is not atomic — two threads can read the same value, increment it, and write it back, causing lost updates. The expected result of **10000** is almost never achieved; the actual output is typically less and varies per run.
+
+**Fix:** Add a `threading.Lock` to protect the increment:
+```python
+class Counter:
+    def __init__(self):
+        self.count = 0
+        self.lock = threading.Lock()
+
+    def increment(self) -> int:
+        with self.lock:
+            self.count += 1
+            return self.count
+
+    def get(self) -> int:
+        with self.lock:
+            return self.count
+```
+
+---
+
+### Summary Table
+
+| # | Line(s) | Bug                     | Exception / Symptom       | Severity  |
+|---|---------|-------------------------|---------------------------|-----------|
+| 1 | 8       | Off-by-one in `range`   | `IndexError`              | 🔴 High   |
+| 2 | 10      | Division by zero        | `ZeroDivisionError`       | 🔴 High   |
+| 3 | 16      | `dict` attribute access | `AttributeError`          | 🔴 High   |
+| 4 | 34–44   | Race condition          | Lost updates, wrong count | 🟡 Medium |
+
+Script done on 2026-07-29 13:38:59+00:00 [COMMAND_EXIT_CODE="0"]

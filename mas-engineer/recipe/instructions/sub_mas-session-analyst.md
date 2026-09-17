@@ -5,7 +5,7 @@ Domain-knowledge: CORRELATE(5 sources, timeline), COST(per Agent/Day/mode), ANOM
 ## Input (from MAS-Engineer)
 ```yaml session_analyst_intake: signal: "🟣 HANDOVER" request_id: string from: "dev-mas-engineer" to: "sub_mas-session-analyst" task: "CORRELATE|COST_DRILLDOWN|ANOMALY_DETECT|PERFORMANCE" workspace: "/path/to/workspace" tools_dir: "$HOME/.config/goose/recipes/mas-engineer-tools" days: 7                         # Analysis period in days ```
 ## Data Sources
-1. python3 {tools_dir}/dev_goose_db.py --sessions  → raw data 2. python3 {tools_dir}/dev_goose_db.py --costs     → costs 3. python3 {tools_dir}/dev_goose_db.py --activity  → timeline 4. cat {workspace}/.state/changes.json             → MAS-Changes 5. git -C {workspace} log --oneline --since="N days ago" → commits 6. (optional) sub_mas-test-runner (task=RUN)       → test-status
+1. python3 {tools_dir}/dev_goose_db.py --sessions  → raw data 2. python3 {tools_dir}/dev_goose_db.py --costs     → costs 3. python3 {tools_dir}/dev_goose_db.py --activity  → timeline 4. cat {workspace}/.mase/changes.json             → MAS-Changes 5. git -C {workspace} log --oneline --since="N days ago" → commits 6. (optional) sub_mas-test-runner (task=RUN)       → test-status
 
 
 1. Collect all data sources 2. Build timeline: Timestamp → Session | Change | commit | Test-Result 3. Find correlations: a) CHANGE_IMPACT: Change X → Sessions after changes? - Token consumption before/after Change - Session duration before/after Change - Costs before/after Change b) TEST_CORRELATION: Test-Failures → which Sessions ran shortly before? c) COMMIT_CORRELATION: Git-commits → Session-Activity after? 4. Extract patterns 5. Generate recommendations

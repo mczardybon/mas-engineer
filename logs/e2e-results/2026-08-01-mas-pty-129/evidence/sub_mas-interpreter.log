@@ -1,0 +1,337 @@
+Loading recipe: 🧠 SUB-MAS-INTERPRETER — Result-Interpretation (Sub-Agent)
+Description: v1.0.0 | MAS-internal: Interprets results
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260801_103 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat recipe/instructions/sub_mas-interpreter.md 2>/dev/null || echo "FILE NOT FOUND"; echo "---PWD---"; pwd; echo "---LS---"; ls -la
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat .state/mode.state 2>/dev/null; echo "---"; ls .state 2>/dev/null; echo "---"; ls mas-engineer 2>/dev/null
+
+# sub_interpreter — PLANNER-internal Intent-Parser
+╔══════════════════════════════════════════════╗ ║  SOT WORKFLOW CONTROL                     ║ ║  → workflows.yaml → agents.interpreter      ║ ║     .task_workflows.INTERPRET               ║ ╚══════════════════════════════════════════════╝
+Analyze user input. Parse intent, task type, scope. Ask ONLY follow-ups if essential info is missing.
+## Tools - `read`: Read files (codebase context) - `grep`: package.json, Cargo.toml, pyproject.toml - `glob`: README.md, project metadata
+## Procedure 1. **SLASH-COMMAND DETECT:** /analyze, /plan, /dispatch, /mode <name>, /status, /summary, /stop, /models, /set-parallelism <n>, /guidelines, /tools, /worktrees
+2. **DETERMINE TASK TYPE:** security_audit, bug_fix, feature, standard, minimal, standard, full_autonomy, minimal, standard, ci_cd, question
+3. **DETERMINE SCOPE:** - Explicit: "File X", "Folder Y", "moduleseees Z" - Implicit: derive from task type - Unknown: glob project structure → suggest
+4. **LOAD PROJECT CONTEXT:** grep "name\|description" package.json pyproject.toml Cargo.toml 2>/dev/null → language, framework, project name
+5. **FOLLOW-UPS (only if needed):** - project path unknown? - Target of session unclear? - mode preference? - Constraints (files, time)?
+## GUI-Output ``` print("🤖 sub_interpreter started — Parse user intent") ```
+## Result ```yaml specialist_result: signal: "🟢 DONE" from: "interpreter" to: "PLANNER" parsed: slash_command: "{command}"         # or null task_type: "{type}" scope_paths: ["src/auth/", ...] mode_hint: "{mode}"               # or null project: name: "{name}" language: "{lang}" framework: "{fw}" questions: ["Ask 1", ...]       # [] if all clear ```
+
+## GUI-Output
+## Detailed output (visible on expand) Report each work step with print():
+print("  ── Steps...") print("  ✅ Done")
+⛔ ALL BOUNDARIES IN SOT: cat workflows.yaml → configs.mas-self.restrictions. dev_rule_checker.py enforces. CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation. MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.
+---PWD---
+/tmp/mas-engineer-test/mas-engineer
+---LS---
+total 156
+drwxr-xr-x 25 root root  4096 Aug  1 08:04 .
+drwxr-xr-x 14 root root  4096 Jul 30 04:16 ..
+drwxr-xr-x  4 root root  4096 Aug  1 10:19 .backups
+drwxr-xr-x  4 root root  4096 Jul 30 04:56 .dev-team
+-rw-------  1 root root   735 Jul 29 19:12 .env
+-rw-r--r--  1 root root  1333 Jul 29 19:02 .env.example
+drwxr-xr-x  2 root root  4096 Aug  1 09:45 .git
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 .githooks
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 .github
+-rw-r--r--  1 root root  1644 Jul 29 19:02 .gitignore
+-rw-r--r--  1 root root   467 Jul 29 19:02 .goosehints
+drwxr-xr-x  5 root root  4096 Jul 29 20:12 .mas
+-rw-r--r--  1 root root     4 Jul 29 19:02 .mas-mode
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 .pytest_cache
+drwxr-xr-x 12 root root  4096 Aug  1 10:25 .state
+-rw-r--r--  1 root root 13566 Jul 29 19:02 DATA-QUALITY-REPORT.md
+-rw-r--r--  1 root root  6368 Jul 29 19:02 README.md
+drwxr-xr-x  2 root root  4096 Aug  1 10:18 docs
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 e2e-evidence
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 e2e-evidence-gen2
+drwxr-xr-x 48 root root  4096 Aug  1 10:25 e2e-results
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 findings
+drwxr-xr-x  4 root root  4096 Jul 29 19:02 mas-engineer
+drwxr-xr-x  4 root root  4096 Jul 29 19:02 prompts
+drwxr-xr-x  6 root root  4096 Aug  1 10:20 recipe
+-rw-r--r--  1 root root  2413 Jul 29 19:02 run_translators.py
+drwxr-xr-x  2 root root  4096 Jul 29 20:10 sample-input
+drwxr-xr-x  2 root root  4096 Jul 29 20:10 sample-output
+drwxr-xr-x  2 root root  4096 Jul 30 03:57 scripts
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 template
+drwxr-xr-x  6 root root  4096 Aug  1 10:20 testproject
+drwxr-xr-x  3 root root 12288 Aug  1 10:35 tests
+drwxr-xr-x  4 root root  4096 Aug  1 10:37 tools---
+analysis.json
+backups
+best-practices.yaml
+changelog.txt
+changes.archive-2026-07-23.json
+changes.archive-2026-07-24-r37.json
+changes.archive-2026-07-24.json
+changes.json
+changes.unlimited-archive-20260723-222630.json
+checkpoints
+coverage
+framework-best-practices.yaml
+goose-defaults.env
+immune_severity
+immune_violations.log
+knowledge
+logs
+pipeline
+pre-push-e2e-baseline.json
+pre-push-test-coverage.json
+pre_check_benchmark
+rules
+schedule.yaml
+sot_schema.yaml
+templates
+todo.md
+workflow_runs
+workflows.yaml
+workflows.yaml.backup-r11036-fix
+---
+docs
+  ────────────────────────────────────────
+  ▸ shell
+    command: grep -n -A 40 "interpreter" .state/workflows.yaml | head -80
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat .mas-mode; echo "---"; ls recipe/instructions/; echo "---"; cat .state/todo.md 2>/dev/null | head -30
+
+387:      - sub_mas-interpreter
+388-      - sub_mas-migration-helper
+389-      generierung:
+390-      - sub_mas-doc-generator
+391-      - sub_mas-degradation-handler
+392-      - sub_mas-dashboard-refresh
+393-      - sub_mas-dashboard-builder
+394-      - sub_mas-dashboard-collector
+395-      - sub_mas-dashboard-data-reader
+396-      - sub_mas-dashboard-director
+397-      - sub_mas-dashboard-generator
+398-      workflow:
+399-      - sub_mas-workflow-engine
+400-      - sub_mas-signal-generator
+401-      intention:
+402-      - sub_mas-intention-parser
+403-      improvement:
+404-      - sub_mas-general-improver
+405-      - sub_mas-master-constitution
+406-      - sub_mas-test-runner
+407-      - sub_mas-im-session-reader
+408-      - sub_mas-im-rank
+409-      - sub_mas-im-finder
+410-      - sub_mas-im-designer
+411-      - sub_mas-im-validator
+412-      - sub_mas-bootstrap
+413-      - sub_mas-self-auditor
+414-      git:
+415-      - sub_mas-git-operator
+416-      - sub_mas-pre-push-validator
+417-      python:
+418-      - sub_mas-python-repair
+419-      - sub_mas-python-analyzer
+420-      - sub_mas-python-fixer
+421-      - sub_mas-python-repair-director
+422-      - sub_mas-python-validator
+423-      doku:
+424-      - sub_mas-doc-writer
+425-      json:
+426-      - sub_mas-json-utility
+427-      design:
+--
+778:  interpreter:
+779-    tier: balanced
+780-    token_budget: 10000
+781-    task_workflows:
+782-      INTERPRET: wf_interpret_run
+783-  summarizer:
+784-    tier: balanced
+785-    token_budget: 10000
+786-    task_workflows:
+787-      SUMMARIZE: wf_summarize_run
+788-  general-improver:
+789-    tier: reasoning
+790-    token_budget: 50000
+791-    task_workflows:
+792-      FULL_IMPROVEMENT: wf_pipeline_full
+793-      REVIEW: wf_pipeline_review
+794-      COST_ANALYSIS: wf_pipeline_cost
+795-      ERROR_PATTERN: wf_pipeline_errors
+796-      CORRECTION_LOG: wf_pipeline_corrections
+797-      USAGE_PATTERN: wf_pipeline_usage
+798-      RECURSION_OVERRIDE: wf_pipeline_full
+799-  im-session-reader:
+800-    tier: balanced
+801-    token_budget: 30000
+802-    task_workflows:
+803-      ANALYZE: wf_im_read_sessions
+804-      ANALYZE_WITH_MSGS: wf_im_read_sessions_with_msgsagit
+805-  im-finder:
+806-    tier: powerful
+807-    token_budget: 40000
+808-    task_workflows:
+809-      FIND: wf_im_find_feature
+810-  im-rank:
+811-    tier: balanced
+812-    token_budget: 10000
+813-    task_workflows:
+814-      RANK: wf_im_rank_findings
+815-  im-designer:mas
+---
+demo-team
+security-scanner.md
+static-analyzer.md
+sub_mas-agent-guardian.md
+sub_mas-bootstrap.md
+sub_mas-config-auditor.md
+sub_mas-content-writer.md
+sub_mas-doc-generator.md
+sub_mas-email-campaign-manager.md
+sub_mas-framework-knowledge.md
+sub_mas-framework-scanner.md
+sub_mas-general-improver.md
+sub_mas-generic-init.md
+sub_mas-goose-expert.md
+sub_mas-health-reporter.md
+sub_mas-im-designer.md
+sub_mas-im-finder.md
+sub_mas-im-rank.md
+sub_mas-im-session-reader.md
+sub_mas-im-validator.md
+sub_mas-intention-parser.md
+sub_mas-interpreter.md
+sub_mas-mas-controller.md
+sub_mas-master-constitution-team.md
+sub_mas-master-constitution.md
+sub_mas-migration-helper.md
+sub_mas-pre-push-validator.md
+sub_mas-prompt-engineer.md
+sub_mas-python-repair.md
+sub_mas-recipe-designer.md
+sub_mas-recovery-checkpoint.md
+sub_mas-recovery-defib.md
+sub_mas-recovery-immune.md
+sub_mas-recovery-safezone.md
+sub_mas-recovery-timeline.md
+sub_mas-self-auditor.md
+sub_mas-seo-researcher.md
+sub_mas-session-analyst.md
+sub_mas-social-media-manager.md
+sub_mas-summarizer.md
+sub_mas-system-knowledge.md
+sub_mas-team-packager.md
+sub_mas-web-researcher.md
+sub_mas-workflow-engine.md
+sub_mas-worktree-manager.md
+sub_mas-yaml-editor.md
+sub_mas-yaml-immune.md
+---
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+SI $(date)
+  ────────────────────────────────────────
+  ▸ shell
+    command: grep -n -B2 -A 15 "wf_interpret_run" .state/workflows.yaml | head -40; echo "===PROJECT==="; for f in pyproject.toml package.json Cargo.toml; do [ -f "$f" ] && echo "--- $f ---" && grep -i "name\|description" "$f" | head -5; done
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: grep -rn -m2 "INTERPRET\|interpreter" README.md 2>/dev/null | head; echo "---STATE---"; ls -la .state/pipeline 2>/dev/null | head; echo "---LOGS---"; tail -5 .state/logs/*.log 2>/dev/null | head -20
+
+780-    token_budget: 10000
+781-    task_workflows:
+782:      INTERPRET: wf_interpret_run
+783-  summarizer:
+784-    tier: balanced
+785-    token_budget: 10000
+786-    task_workflows:
+787-      SUMMARIZE: wf_summarize_run
+788-  general-improver:
+789-    tier: reasoning
+790-    token_budget: 50000
+791-    task_workflows:
+792-      FULL_IMPROVEMENT: wf_pipeline_full
+793-      REVIEW: wf_pipeline_review
+794-      COST_ANALYSIS: wf_pipeline_cost
+795-      ERROR_PATTERN: wf_pipeline_errors
+796-      CORRECTION_LOG: wf_pipeline_corrections
+797-      USAGE_PATTERN: wf_pipeline_usage
+--
+2753-      cmd: 'echo ''verify: {inputs.task_id}'''
+2754-      timeout: 60
+2755:  wf_interpret_run:
+2756-    desc: Interpretation
+2757-    steps:
+2758-    - id: run
+2759-      action: shell
+2760-      cmd: 'echo ''interpret: {inputs.result}'''
+2761-      timeout: 30
+2762-  wf_summarize_run:
+2763-    desc: Summary
+2764-    steps:
+2765-    - id: run
+2766-      action: shell
+2767-      cmd: 'echo ''summarize: {inputs.data}'''
+2768-      timeout: 30
+2769-  wf_intention_create:
+2770-    desc: Intention output
+===PROJECT===
+
+Command exited with code 1---STATE---
+total 296
+drwxr-xr-x  2 root root  4096 Jul 31 04:55 .
+drwxr-xr-x 12 root root  4096 Aug  1 10:25 ..
+-rw-r--r--  1 root root  1183 Jul 29 19:02 README.md
+-rw-r--r--  1 root root 85332 Jul 31 05:07 findings.yaml
+-rw-r--r--  1 root root  5071 Jul 29 19:02 findings_R110-24-pre-framework.yaml
+-rw-r--r--  1 root root  2611 Jul 29 19:02 findings_R47_structural.yaml
+-rw-r--r--  1 root root  3030 Jul 29 19:02 findings_R49_structural.yaml
+-rw-r--r--  1 root root  1843 Jul 29 19:02 findings_R51_consumer.yaml
+-rw-r--r--  1 root root   799 Jul 29 19:02 findings_R55_goose_expert.yaml
+---LOGS---
+{"timestamp": "2026-07-30T04:59:36.577975+00:00", "event": "recovery_attempt", "details": {"agent": "unknown", "attempt": 1}}
+{"timestamp": "2026-07-30T04:59:48.834160+00:00", "event": "{\"event\": \"session_start\", \"version\": \"2.0.0\", \"mode\": \"mas-engineer\", \"type\": \"FW-MONITOR-SESSION\"}", "details": {}}

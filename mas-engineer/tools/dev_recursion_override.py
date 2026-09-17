@@ -3,15 +3,15 @@
 dev_recursion_override.py — IM-006 RECURSION-OVERRIDE tool
 
 Operator-triggered single-shot patch application.
-Reads .state/pipeline/validation.yaml, applies CONFORM patches idempotently.
-Skips 24h self-loop cooldown. Logs to .state/changes.json with stage="apply_only".
+Reads .mase/pipeline/validation.yaml, applies CONFORM patches idempotently.
+Skips 24h self-loop cooldown. Logs to .mase/changes.json with stage="apply_only".
 
 Usage:
     RECURSION_OVERRIDE=1 python3 dev_recursion_override.py --workspace /path/to/mas-engineer
     # or
     python3 dev_recursion_override.py --workspace /path/to/mas-engineer
 
-Design: see .state/pipeline/IM-006.yaml
+Design: see .mase/pipeline/IM-006.yaml
 """
 import argparse
 import json
@@ -33,7 +33,7 @@ DEFAULT_COST_CONFIG = {
     "per_session_max_usd": 0.50,
     "gate": {"daily": "block", "per_run": "block", "per_session": "warn"},
     "cost_source": {
-        "db_path": "mas-engineer/.mas/data/goose/sessions.db",
+        "db_path": "mas-engineer/.mase/data/goose/sessions.db",
         "table": "sessions",
         "cost_column": "accumulated_cost",
         "timestamp_column": "created_at",
@@ -42,8 +42,8 @@ DEFAULT_COST_CONFIG = {
 
 
 def load_cost_config(workspace: Path) -> dict:
-    """Load cost-control config from .mas/config/cost.yaml. Falls back to defaults."""
-    cfg_path = workspace / ".mas" / "config" / "cost.yaml"
+    """Load cost-control config from .mase/config/cost.yaml. Falls back to defaults."""
+    cfg_path = workspace / ".mase" / "config" / "cost.yaml"
     if not cfg_path.exists():
         return DEFAULT_COST_CONFIG
     try:
@@ -64,7 +64,7 @@ def check_cost_gate(workspace: Path, config: dict) -> tuple:
     """Check cost gate. Returns (allowed: bool, reason: str, cost_today: float, budget: float)."""
     import sqlite3 as sqlite
     src = config.get("cost_source", {})
-    db_path = workspace / src.get("db_path", "mas-engineer/.mas/data/goose/sessions.db")
+    db_path = workspace / src.get("db_path", "mas-engineer/.mase/data/goose/sessions.db")
     if not db_path.exists():
         return True, "no_db", 0.0, config.get("daily_budget_usd", 5.00)
     try:
@@ -91,11 +91,11 @@ def check_cost_gate(workspace: Path, config: dict) -> tuple:
 
 
 def load_validation(workspace: Path) -> list:
-    """Load validation details from .state/pipeline/validation.yaml.
+    """Load validation details from .mase/pipeline/validation.yaml.
 
     Returns list of detail dicts each with: file, verdict, find, replace, patch_id, notes.
     """
-    val_path = workspace / ".state" / "pipeline" / "validation.yaml"
+    val_path = workspace / ".mase" / "pipeline" / "validation.yaml"
     if not val_path.exists():
         print(f"ERROR: validation.yaml not found at {val_path}", file=sys.stderr)
         sys.exit(1)
@@ -111,7 +111,7 @@ def load_validation(workspace: Path) -> list:
 
 def already_applied(workspace: Path, file_rel: str) -> bool:
     """Check if a patch with this file_rel was already applied today via RECURSION_OVERRIDE."""
-    changes = workspace / ".state" / "changes.json"
+    changes = workspace / ".mase" / "changes.json"
     if not changes.exists():
         return False
     try:
@@ -150,7 +150,7 @@ def apply_patch(workspace: Path, file_rel: str, find: str, replace: str) -> tupl
 
 
 def log_change(workspace: Path, applied: list, refused: list) -> None:
-    path = workspace / ".state" / "changes.json"
+    path = workspace / ".mase" / "changes.json"
     if not path.exists():
         path.write_text("[]\n")
     try:
@@ -192,7 +192,7 @@ def main() -> int:
     print(f"COST-GATE: ${cost_today:.2f}/${budget:.2f} daily ({len(ws.name)} chars workspace)")
     if not allowed:
         print(f"❌ COST-GATE BLOCKED: {reason}")
-        print(f"   Adjust limit: edit {ws}/.mas/config/cost.yaml")
+        print(f"   Adjust limit: edit {ws}/.mase/config/cost.yaml")
         print(f"   Or set gate.daily: warn in cost.yaml to allow with warning")
         return 1
     details = load_validation(ws)

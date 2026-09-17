@@ -9,8 +9,8 @@ MAS = autonomous Developer. framework = production system.
 MAS knows the framework. The framework does NOT know MAS.
 
 ## ARCHITECTURE
-You have 96 MAS sub-agents (sub_mas-*) in 9 categories, 57 tools (50 Python + 6 Shell + 1 YAML), 11 active hard rules (R01-R18 framework, R03+R12-R17 reserved).
-The framework has 52 specialists + 44 sub-agents + 4 core recipes.
+You have 116 MAS sub-agents (sub_mas-*) in 9 categories, 80 tools (69 dev_*.py + 10 *.sh + 1 *.yaml), 11 active hard rules (R01-R18 framework, R03+R12-R17 reserved) — verified 2026-08-19. (historical, 2026-07-25 snapshot: 112 sub-agents / 58 tools / 51+6+1)
+The framework has 52 specialists + 44 sub-agents + 4 core recipes. <!-- (historical, 2026-07-18: the "44" sub-agents = legacy sub_* prefix grouping (FW-Subs, see below), NOT the mas-self registry — registry = 112 sub_mas-*.yaml, canonical 2026-08-04) -->
 Domain separation: MAS writes in mas-engineer/, framework in framework/.
 Enforced via R09 (MODE-DOMAIN-COUPLING) + registry.yaml.
 
@@ -41,7 +41,7 @@ Management (5): pre-push-validator, verification-runner,
 dashboard-refresh, signal-generator, session-analyst
 Testing & E2E (24): test-director, test-runner, test-agent,
 test-scanner, test-reporter, unix-test-runner, prompt-engineer,
-4× e2e-auto-repair, 4× e2e-german-fixes, 3× e2e-phoenix-fixes,
+4× e2e-auto-repair, 3× e2e-phoenix-fixes,
 7× test-fix-failures (director, designer, finder, ranker,
 applier, validator, validator-director)
 Special (11): master-constitution, generic-init, web-researcher,
@@ -112,7 +112,7 @@ This keeps the framework always up-to-date.
 
 ## RECOVERY SYSTEM (5 stages, always available)
 1. IMMUNE: YAML-Prevention (Coronashield)
-2. CHECKPOINT: Git-similar Snapshots in .state/checkpoints/
+2. CHECKPOINT: Git-similar Snapshots in .mase/checkpoints/
 3. SAFEZONE: Fork-Workspace (work in parallel)
 4. TIMELINE: Automatically find best checkpoint
 5. DEFIB: Emergency-Resuscitation (Minimal-Configuration)
@@ -128,9 +128,9 @@ Installation targets:
   Cores: dev-mas-engineer, executor, planner, controller, starter
    Specialists: 52 specialist_*.yaml (legacy — see Framework category in 9-cat breakdown)
   FW-Subs: 44 sub_*.yaml (legacy — sub_* prefix)
-  MAS-Subs: 96 sub_mas-*.yaml + 2 (security-scanner, static-analyzer) in sub/
+  MAS-Subs: 116 sub_mas-*.yaml + 2 (security-scanner, static-analyzer) in sub/ (historical, 2026-07-25: 112)
   core/: specialist-constitution.yaml
-   mas-engineer-tools/: 57 Tools (50 dev_*.py + 6 *.sh + 1 *.yaml)
+   mas-engineer-tools/: 80 Tools (69 dev_*.py + 10 *.sh + 1 *.yaml) (historical, 2026-07-25: 58)
 /develop              → Standard Dialog
 /develop --scan       → Analyze framework
 /develop --audit      → Deep analysis
@@ -140,14 +140,14 @@ Installation targets:
 /status               → Show status
 /changes              → Last Changes
 
-Detailed knowledge in .state/knowledge/:
+Detailed knowledge in .mase/knowledge/:
 01-architecture.md   → Complete Architecture
 02-communication.md  → Communication flow + Signals
 03-installation.md   → ZIP structure + Target locations
 04-recovery.md       → 5-stage Recovery detailed
 05-rules.md          → R01-R18 with Explanations
-06-tools.md          → All 57 Tools with Descriptions
-07-agents.md         → All 96 MAS Agents + framework
+06-tools.md          → All 80 Tools with Descriptions (historical, 2026-07-25: 58)
+07-agents.md         → All 116 MAS Agents + framework (historical, 2026-07-25: 112)
 08-build.md          → Build System detailed
 
 ## SOT RULES (apply to ALL operations)

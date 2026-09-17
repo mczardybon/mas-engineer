@@ -1,0 +1,346 @@
+Loading recipe: 📦 SUB-MAS-RECOVERY-TIMELINE — Automatic Best-Point Search (Sub-Agent)
+Description: v1.0.0 | MAS-internal: Automatically finds the best checkpoint, restores, analyzes damage.
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260801_125 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /dev/null
+
+Error: unsupported image format; supported formats are png, jpeg, gif, and webp
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat recipe/instructions/sub_mas-recovery-timeline.md 2>/dev/null || find / -name "sub_mas-recovery-timeline.md" -not -path "*/node_modules/*" 2>/dev/null | head -5
+
+⛔ INVENTORY-CHECK: → Check whether Sub-Agent/Tool/Function already exists → Use existing, build ONLY if nothing suitable exists
+
+# sub_mas-recovery-timeline — Time-travel system
+
+MAS-Engineer-internal. Analyzes ALL Checkpoints for YAML validity. Finds the BEST (most recent valid) Checkpoint automatically. Combines checkpoint data + changes.json + YAML health.
+
+╔══════════════════════════════════════════════╗
+  ║  SOT WORKFLOW CONTROL                     ║
+  ║  → workflows.yaml → agents.recovery-timeline║
+  ║     .task_workflows.FIND_BEST               ║
+╚══════════════════════════════════════════════╝
+
+## Input
+```yaml
+timeline_intake:
+  signal: 'HANDOVER'
+  request_id: string
+  from: 'dev-mas-engineer'
+  to: 'sub_mas-recovery-timeline'
+  task: 'FIND_BEST|RESTORE_BEST|SHOW_PATH|ANALYZE'
+  workspace: string
+```
+
+## Output
+```yaml
+mas_result:
+  signal: 'DONE'|'ERROR'|'HANDOVER'
+  observations:
+    - severity: 'P1'|'P2'|'P3'
+      title: string
+      description: string
+  best_checkpoint: string
+  score: int
+```
+
+## Task FIND_BEST — Automatically find best checkpoint
+
+STEP 1 — Test all checkpoints (most recent first):
+  checkpoint_dir={workspace}/mas-engineer/.state/checkpoints
+  best=''
+  for d in $(ls -t $checkpoint_dir 2>/dev/null); do
+    python3 -c "import yaml; yaml.safe_load(open('$checkpoint_dir/$d/recipe/dev-mas-engineer.yaml'))"
+    2>/dev/null
+    if [ $? -eq 0 ]; then
+      best=$d
+      break
+    fi
+  done
+
+STEP 2 — Result:
+  if [ -n "$best" ]; then
+    label=$(cat $checkpoint_dir/$best/.label 2>/dev/null || echo 'no label')
+    signal='DONE': 'Best checkpoint: $best — $label'
+  else
+    signal='DONE': 'No valid Checkpoint — Search in .backups/'
+    # Fallback: Search Backups
+    for d in $(ls -t {workspace}/mas-engineer/.backups 2>/dev/null); do
+      for f in {workspace}/mas-engineer/.backups/$d/*dev-mas-engineer*; do
+        python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null && echo "$f" && break 2
+      done
+    done
+  fi
+
+### Edge Cases FIND_BEST
+- No Checkpoints → 'INFO' info + backup search
+- All Checkpoints corrupt → 'ERROR' error + Defib recommended
+- checkpoint_dir missing → mkdir + 'INFO' info
+
+## Task RESTORE_BEST — Restore
+
+STEP 1 — Find best (see FIND_BEST)
+STEP 2 — Restore:
+  rm -rf {workspace}/mas-engineer/recipe
+  rm -rf {workspace}/mas-engineer/tools
+  rm -rf {workspace}/mas-engineer/docs
+  cp -r {workspace}/mas-engineer/.state/checkpoints/$best/recipe  {workspace}/mas-engineer/
+  cp -r {workspace}/mas-engineer/.state/checkpoints/$best/tools  {workspace}/mas-engineer/
+  cp -r {workspace}/mas-engineer/.state/checkpoints/$best/docs   {workspace}/mas-engineer/
+
+STEP 3 — Validation + Snapshot:
+  python3 -c "import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))"
+  delegate to sub_mas-recovery-checkpoint (task=SNAPSHOT, label='after_restore_best')
+  signal='DONE': 'Restored to $best — New snapshot: after_restore_best'
+
+### Edge Cases RESTORE_BEST
+- No best Checkpoint → 'ERROR' error + 'Defib recommended'
+- Restoration failed → 'ERROR' error + suggest manual rollback
+
+## Task SHOW_PATH — You are here
+
+STEP 1 — Show timeline:
+  echo '=== TIMELINE ==='
+  for d in $(ls -t {workspace}/mas-engineer/.state/checkpoints 2>/dev/null); do
+    label=$(cat {workspace}/mas-engineer/.state/checkpoints/$d/.label 2>/dev/null || echo '?')
+    status=$(python3 -c "import yaml; yaml.safe_load(open('{workspace}/mas-engineer/.state/checkpoints/$d/recipe/dev-mas-engineer.yaml'))" 2>/dev/null && echo '✓' || echo '✗')
+    echo '$status $d — $label'
+  done
+
+STEP 2 — Current Position:
+  current=$(python3 -c "import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))" 2>/dev/null && echo '✓' || echo '✗')
+  echo '$current CURRENT (here)'
+  if echo "$current" | grep -q '✗'; then
+    echo 'Recommendation: recovery --restore-best'
+  else
+    echo 'System running — Checkpoint recommended for next change'
+  fi
+
+## Task ANALYZE — Damage analysis
+
+STEP 1 — 7-check diagnosis:
+  Q1: [ -d {workspace} ]                         || echo 'XX Workspace missing'
+  Q2: [ -d {workspace}/mas-engineer ]             || echo 'XX MAS missing'
+  Q3: [ -f {workspace}/mas-engineer/recipe/dev-mas-engineer.yaml ] || echo 'XX Main recipe missing'
+  Q4: [ -d {workspace}/mas-engineer/recipe/sub ]  || echo 'XX Sub recipes missing'
+  Q5: [ -d {workspace}/mas-engineer/tools ]       || echo 'XX Tools missing'
+  Q6: [ -d {workspace}/mas-engineer/.state ]      || echo 'XX State missing'
+  Q7: python3 -c "import yaml; yaml.safe_load(open('{workspace}/mas-engineer/recipe/dev-mas-engineer.yaml'))" 2>&1 || echo 'XX Main corrupt'
+
+STEP 2 — Damage level:
+  0 Errors: '✓' — 'No damage'
+  1-3 Errors: '⚠' — 'Partial corruption — restore-best'
+  4-5 Errors: '🔴' — 'Severe damage — resurrect'
+  6-7 Errors: '💀' — 'Total damage — defib + --init'
+
+STEP 3 — Recommendation:
+  signal='✓' or '⚠' or '🔴' depending on damage level
+  'Diagnosis: {error}/7 Errors — Recommendation: {action}'
+
+CONFIRMATION REQUIREMENT (R01) Before write/edit/shell PLAN+WAIT for NEVER without Confirmation.
+MODE-DOMAIN COUPLING (R09) ONLY {target_workspace} — NO domain-overreach. Reading in other domain OK.
+
+## SOT RULES (apply to ALL operations)
+⛔ R01 CONFIRMATION — Before write/edit/shell PLAN+WAIT on user ✅.
+⛔ R04 GENERAL-IMPROVER — NEVER edit general-improver.yaml (no recursion).
+⛔ R09 DOMAIN — Stay within the target workspace. NO cross-domain writes.
+⛔ R10 CORONASHIELD — Validate each YAML (yaml.safe_load) before storage.
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== PWD ===" && pwd && echo && echo "=== TOP LEVEL ===" && ls -la /tmp/mas-engineer-test/ 2>/dev/null && echo && echo "=== MAS-ENGINEER DIR ===" && ls -la /tmp/mas-engineer-test/mas-engineer/ 2>/dev/null && echo && echo "=== STATE ===" && ls -la /tmp/mas-engineer-test/mas-engineer/.state/ 2>/dev/null && echo && echo "=== CHECKPOINTS ===" && ls -lt /tmp/mas-engineer-test/mas-engineer/.state/checkpoints/ 2>/dev/null | head -20 && echo && echo "=== BACKUPS ===" && ls -lt /tmp/mas-engineer-test/mas-engineer/.backups/ 2>/dev/null | head -10
+
+=== PWD ===
+/tmp/mas-engineer-test/mas-engineer
+
+=== TOP LEVEL ===
+total 352
+drwxr-xr-x 14 root root   4096 Jul 30 04:16 .
+drwxrwxrwt  1 root root  12288 Aug  1 10:47 ..
+drwxr-xr-x  8 root root   4096 Aug  1 10:42 .git
+-rw-r--r--  1 root root   3809 Jul 29 19:02 .gitignore
+drwxr-xr-x  3 root root   4096 Jul 29 19:02 .mas
+-rw-r--r--  1 root root      4 Jul 29 19:02 .mas-mode
+drwxr-xr-x  3 root root   4096 Jul 30 04:16 .pytest_cache
+drwxr-xr-x  4 root root   4096 Aug  1 10:20 .state
+-rw-r--r--  1 root root  34523 Jul 29 19:02 LICENSE
+-rw-r--r--  1 root root  26356 Jul 29 19:02 README.md
+-rw-r--r--  1 root root  22603 Jul 29 19:02 ai_agent_saas_marketing_report.md
+-rw-r--r--  1 root root  13895 Jul 29 19:02 code-review-report.json
+drwxr-xr-x  2 root root   4096 Aug  1 10:25 dist
+drwxr-xr-x  2 root root   4096 Aug  1 10:20 docs
+drwxr-xr-x  3 root root   4096 Jul 29 19:02 e2e-evidence-gen2
+drwxr-xr-x 38 root root   4096 Jul 29 19:02 e2e-results
+-rwxr-xr-x  1 root root  14364 Jul 29 19:02 install.sh
+drwxr-xr-x 25 root root   4096 Aug  1 08:04 mas-engineer
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 outputs
+-rw-r--r--  1 root root   4978 Jul 29 19:02 recipe_live_test.yaml
+-rw-r--r--  1 root root   3353 Jul 29 19:02 recipe_live_test_FINAL.yaml
+-rw-r--r--  1 root root   9995 Jul 29 19:02 run_security_scanner.py
+-rw-r--r--  1 root root   9447 Jul 29 19:02 run_static_analyzer.py
+-rw-r--r--  1 root root   6974 Jul 29 19:02 security-scan-report.json
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 seo-research-output
+-rw-r--r--  1 root root 118272 Jul 29 19:02 static-analysis-report.json
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 tools
+
+=== MAS-ENGINEER DIR ===
+total 156
+drwxr-xr-x 25 root root  4096 Aug  1 08:04 .
+drwxr-xr-x 14 root root  4096 Jul 30 04:16 ..
+drwxr-xr-x  4 root root  4096 Aug  1 10:19 .backups
+drwxr-xr-x  4 root root  4096 Jul 30 04:56 .dev-team
+-rw-------  1 root root   735 Jul 29 19:12 .env
+-rw-r--r--  1 root root  1333 Jul 29 19:02 .env.example
+drwxr-xr-x  2 root root  4096 Aug  1 09:45 .git
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 .githooks
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 .github
+-rw-r--r--  1 root root  1644 Jul 29 19:02 .gitignore
+-rw-r--r--  1 root root   467 Jul 29 19:02 .goosehints
+drwxr-xr-x  5 root root  4096 Jul 29 20:12 .mas
+-rw-r--r--  1 root root     4 Jul 29 19:02 .mas-mode
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 .pytest_cache
+drwxr-xr-x 12 root root  4096 Aug  1 10:25 .state
+-rw-r--r--  1 root root 13566 Jul 29 19:02 DATA-QUALITY-REPORT.md
+-rw-r--r--  1 root root  6368 Jul 29 19:02 README.md
+drwxr-xr-x  2 root root  4096 Aug  1 10:18 docs
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 e2e-evidence
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 e2e-evidence-gen2
+drwxr-xr-x 48 root root  4096 Aug  1 10:25 e2e-results
+drwxr-xr-x  2 root root  4096 Jul 29 19:02 findings
+drwxr-xr-x  4 root root  4096 Jul 29 19:02 mas-engineer
+drwxr-xr-x  4 root root  4096 Jul 29 19:02 prompts
+drwxr-xr-x  6 root root  4096 Aug  1 10:20 recipe
+-rw-r--r--  1 root root  2413 Jul 29 19:02 run_translators.py
+drwxr-xr-x  2 root root  4096 Jul 29 20:10 sample-input
+drwxr-xr-x  2 root root  4096 Jul 29 20:10 sample-output
+drwxr-xr-x  2 root root  4096 Jul 30 03:57 scripts
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 template
+drwxr-xr-x  6 root root  4096 Aug  1 10:20 testproject
+drwxr-xr-x  3 root root 12288 Aug  1 10:35 tests
+drwxr-xr-x  4 root root  4096 Aug  1 10:37 tools
+
+=== STATE ===
+total 384
+drwxr-xr-x 12 root root   4096 Aug  1 10:25 .
+drwxr-xr-x 25 root root   4096 Aug  1 08:04 ..
+-rw-r--r--  1 root root      0 Aug  1 10:25 .immune_clean
+-rw-r--r--  1 root root    316 Aug  1 10:37 analysis.json
+drwxr-xr-x  2 root root   4096 Aug  1 06:34 backups
+-rw-r--r--  1 root root  11543 Jul 29 19:02 best-practices.yaml
+-rw-r--r--  1 root root    189 Jul 29 19:02 changelog.txt
+-rw-r--r--  1 root root   5145 Jul 29 19:02 changes.archive-2026-07-23.json
+-rw-r--r--  1 root root   3709 Jul 29 19:02 changes.archive-2026-07-24-r37.json
+-rw-r--r--  1 root root   8198 Jul 29 19:02 changes.archive-2026-07-24.json
+-rw-r--r--  1 root root   1736 Aug  1 10:19 changes.json
+-rw-r--r--  1 root root   2294 Jul 29 19:02 changes.unlimited-archive-20260723-222630.json
+drwxr-xr-x  3 root root   4096 Aug  1 10:25 checkpoints
+drwxr-xr-x  2 root root   4096 Aug  1 07:48 coverage
+-rw-r--r--  1 root root   1493 Jul 29 19:02 framework-best-practices.yaml
+-rw-r--r--  1 root root   1441 Jul 29 19:02 goose-defaults.env
+-rw-r--r--  1 root root      3 Aug  1 10:25 immune_severity
+-rw-r--r--  1 root root      0 Aug  1 10:25 immune_violations.log
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 knowledge
+drwxr-xr-x  2 root root   4096 Aug  1 10:44 logs
+drwxr-xr-x  2 root root   4096 Jul 31 04:55 pipeline
+-rw-r--r--  1 root root    312 Jul 31 04:55 pre-push-e2e-baseline.json
+-rw-r--r--  1 root root    162 Jul 29 20:25 pre-push-test-coverage.json
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 pre_check_benchmark
+drwxr-xr-x  2 root root   4096 Jul 29 19:02 rules
+-rw-r--r--  1 root root    623 Jul 31 04:55 schedule.yaml
+-rw-r--r--  1 root root   1933 Jul 29 19:02 sot_schema.yaml
+drwxr-xr-x  3 root root   4096 Jul 29 19:02 templates
+-rw-r--r--  1 root root    693 Aug  1 10:25 todo.md
+drwxr-xr-x  2 root root  32768 Aug  1 10:25 workflow_runs
+-rw-r--r--  1 root root 111812 Aug  1 10:20 workflows.yaml
+-rw-r--r--  1 root root 107528 Jul 29 19:55 workflows.yaml.backup-r11036-fix
+
+=== CHECKPOINTS ===
+total 4
+drwxr-xr-x 2 root root 4096 Aug  1 10:25 si_20260801_102514
+
+=== BACKUPS ===
+total 8
+drwxr-xr-x 2 root root 4096 Aug  1 10:19 1785579561
+drwxr-xr-x 2 root root 4096 Jul 29 20:13 1785355998
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== CHECKPOINT DETAILS ===" && ls -la /tmp/mas-engineer-test/mas-engineer/.state/checkpoints/si_20260801_102514/ && echo && cat /tmp/mas-engineer-test/mas-engineer/.state/checkpoints/si_20260801_102514/.label 2>/dev/null && echo && echo "=== CHECKPOINT RECIPE ===" && ls -la /tmp/mas-engineer-test/mas-engineer/.state/checkpoints/si_20260801_102514/recipe/ 2>/dev/null && echo && echo "=== BACKUP DETAILS ===" && ls -la /tmp/mas-engineer-test/mas-engineer/.backups/1785579561/ /tmp/mas-engineer-test/mas-engineer/.backups/1785355998/ 2>/dev/null
+
+=== CHECKPOINT DETAILS ===
+total 8
+drwxr-xr-x 2 root root 4096 Aug  1 10:25 .
+drwxr-xr-x 3 root root 4096 Aug  1 10:25 ..
+
+
+Command exited with code 1
+  ────────────────────────────────────────
+  ▸ shell
+    command: echo "=== BACKUP 1785579561 ===" && ls -la /tmp/mas-engineer-test/mas-engineer/.backups/1785579561/ && echo && echo "=== BACKUP 1785355998 ===" && ls -la /tmp/mas-engineer-test/mas-engineer/.backups/1785355998/ && echo && echo "=== CURRENT RECIPE ===" && ls -la /tmp/mas-engineer-test/mas-engineer/recipe/ && echo && echo "=== MAIN RECIPE HEAD ===" && head -30 /tmp/mas-engineer-test/mas-engineer/recipe/dev-mas-engineer.yaml 2>/dev/null && echo && echo "=== YAML VALIDITY CHECK ===" && python3 -c "import yaml; yaml.safe_load(open('/tmp/mas-engineer-test/mas-engineer/recipe/dev-mas-engineer.yaml')); print('VALID')" 2>&1
+
+=== BACKUP 1785579561 ===
+total 8
+drwxr-xr-x 2 root root 4096 Aug  1 10:19 .
+drwxr-xr-x 4 root root 4096 Aug  1 10:19 ..
+
+=== BACKUP 1785355998 ===
+total 8
+drwxr-xr-x 2 root root 4096 Jul 29 20:13 .
+drwxr-xr-x 4 root root 4096 Aug  1 10:19 ..
+
+=== CURRENT RECIPE ===
+total 76
+drwxr-xr-x  6 root root  4096 Aug  1 10:20 .
+drwxr-xr-x 25 root root  4096 Aug  1 08:04 ..
+-rw-r--r--  1 root root  1020 Jul 29 19:02 dashboard-data-refresh.yaml
+-rw-r--r--  1 root root  8468 Jul 31 04:55 dev-mas-engineer-30agents.yaml
+-rw-r--r--  1 root root  1581 Aug  1 10:20 dev-mas-engineer.yaml
+-rw-r--r--  1 root root  1099 Jul 29 19:02 e2e-verify-auto-repair.yaml
+-rw-r--r--  1 root root  1272 Jul 29 19:02 e2e-verify-phoenix-fixes.yaml
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 instructions
+drwxr-xr-x  6 root root  4096 Jul 31 04:55 multi-arch-30
+-rw-r--r--  1 root root   872 Jul 29 19:02 root_recipe.yaml
+-rw-r--r--  1 root root  3600 Jul 29 19:02 setup-dashboard.yaml
+drwxr-xr-x  5 root root 12288 Aug  1 10:20 sub
+drwxr-xr-x  3 root root  4096 Jul 29 19:02 template
+-rw-r--r--  1 root root  1299 Jul 29 19:02 test-fix-failures.yaml
+-rw-r--r--  1 root root   995 Jul 29 19:02 test-mas-user.yaml
+
+=== MAIN RECIPE HEAD ===
+name: DEV-MAS-ENGINEER
+version: 1.0.0
+constitution: sub_mas-master-constitution.yaml
+title: 🦆 DEV-MAS-ENGINEER — Multi-Agent System Developer (delegator)
+description: 'v1.0.0 | Fully autonomous. Thin delegator that routes to sub_mas-dev-director.
+
+  Demo recipes (runnable end-to-end): - docs/DEMO-RESEARCH-TEAM.md — 5-agent research
+  team (intro demo) - docs/DEMO-MULTI-ARCH-30.md — 30-agent multi-arch team (stress-test
+  demo). Drive it via the bundled recipe: recipe/dev-mas-engineer-30agents.yaml'
+instructions: '## STEP 0 — MODE-CHECK
+
+  Verify working directory is within mas-engineer project scope.
+
+  If not in mas-engineer context, abort with clear message.
+
+
+  ## STEP 1 — DELEGATE TO DIRECTOR
+
+  Delegate all dev-mas-engineer tasks to sub_mas-dev-director.
+
+  This recipe is a thin delegator only — it does not contain logic directly.
+
+  Load sub_mas-dev-director and execute its instructions.
+
+
+  ## STEP 2 — COLLECT RESULTS
+
+  Collect results from sub_mas-dev-director and return to caller.
+
+  '
+
+=== YAML VALIDITY CHECK ===
+VALID

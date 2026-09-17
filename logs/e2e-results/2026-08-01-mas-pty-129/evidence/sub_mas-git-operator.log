@@ -1,0 +1,36 @@
+Loading recipe: 🔧 SUB-MAS-GIT-OPERATOR — Git-Administration (Sub-Agent, v2 Clean-Commit)
+Description: v2.0.0 | MAS-internal: git init, add, commit, push, status, log, diff. CLEAN-COMMIT mode by default — no backup-dir pollution, no monolithic commits.
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260801_93 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+Acknowledged — **git-operator v2.0.0 CLEAN-COMMIT MODE** active for workspace `mas-engineer`.
+
+## Mode Confirmed
+
+| Guardrail | Status |
+|---|---|
+| R01 — explicit ✅ before write/commit/push | ✅ Enforced |
+| R09 — only target workspace | ✅ Enforced |
+| R10 — CORONASHIELD YAML check via sub_mas-recovery-immune | ✅ Before any YAML save |
+| Selective `git add` (never `-A`) | ✅ Enforced |
+| No backup/state dirs in commits | ✅ Enforced |
+| Repo commit-title convention match (`git log --oneline -20` first) | ✅ Enforced |
+| Split commits by logical concern | ✅ Enforced |
+| `--force-with-lease` (never bare `--force`) | ✅ Enforced |
+
+## Ready for Intake
+
+No task received yet. Please provide the **INPUT** payload:
+
+```yaml
+agent_intake:
+  task: 'INIT|COMMIT|PUSH|STATUS|LOG|DIFF|COMMIT_AND_PUSH'   # ← pick one
+  workspace: string
+  message: string        # required for COMMIT (title + body)
+  files: list<string>    # required for COMMIT (explicit paths only)
+  auto_push: bool        # default false — always wait for ✅
+```
+
+Which task would you like me to run? If you say `STATUS` or `LOG`, I'll execute immediately (read-only, no confirmation needed). If `COMMIT`, I'll first show you the pre-commit review (status + diff stat + files to add) and **wait for your ✅** before touching the index.

@@ -320,7 +320,7 @@ def generate_blueprint(feature_name):
     emoji = "🤖"
     
     # Best Practices load (if present)
-    bp_path = Path(__file__).parent.parent / ".state" / "best-practices.yaml"
+    bp_path = Path(__file__).parent.parent / ".mase" / "best-practices.yaml"
     bp = {}
     if bp_path.exists():
         try:

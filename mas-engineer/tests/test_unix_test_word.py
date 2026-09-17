@@ -19,6 +19,27 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.resolve()
 
+# Files that are deliberately excluded from the "every recipe" checks below.
+# These are auto-generated test artifacts and are NOT deployable agents.
+# They are ephemeral working-tree files: e2e_run_all.py cleanup step
+# (line 244-258) deletes them, but pytest may see them before cleanup
+# runs. See R110-34 commit for context.
+# R110-232: removed "sub_mas-clone.yaml" from RECIPE_EXCLUDE because
+# the e2e cycle that re-generated it has been broken (wf_yaml_clone
+# is now in SKIP_WORKFLOWS, see tools/e2e_run_all.py). sub_mas-clone
+# is permanently removed; the e2e sample no longer re-introduces it.
+RECIPE_EXCLUDE = {
+    "sub_test-agent.yaml",  # auto-generated test artifact (0 bytes)
+    # R110-315: sub_-.yaml is a 0-byte fixture left behind by some test
+    # runs (specifically test_r110261_tools_coverage which uses it as a
+    # negative test case). Pre-R110-315, this file would cause
+    # test_all_recipe_files_non_empty to fail whenever it appeared in
+    # the working tree after a pytest run. Like sub_test-agent.yaml,
+    # this is NOT a deployable recipe — it is a test-side-effect.
+    # See R110-313 cleanup attempt for the prior history.
+    "sub_-.yaml",  # 0-byte test fixture, see R110-315
+}
+
 
 def _test(check: str) -> bool:
     """Run a POSIX `test` expression. Returns True if check passes."""
@@ -69,10 +90,14 @@ def test_unix_test_runner_recipe_exists():
 
 
 def test_all_recipe_files_non_empty():
-    """Every yaml in recipe/sub/ must be non-empty (test -s = exists and size > 0)."""
+    """Every yaml in recipe/sub/ must be non-empty (test -s = exists and size > 0).
+
+    Excludes ephemeral test/clone artifacts (see RECIPE_EXCLUDE)."""
     recipe_dir = REPO_ROOT / "recipe" / "sub"
     failures = []
     for f in sorted(recipe_dir.glob("*.yaml")):
+        if f.name in RECIPE_EXCLUDE:
+            continue
         if not _test(f"-s {f}"):
             failures.append(str(f.relative_to(REPO_ROOT)))
     assert not failures, f"Empty recipe files: {failures}"
@@ -98,7 +123,7 @@ def test_sub_recipe_count_at_least_55():
 
 def test_sub_recipe_count_matches_manifest():
     """If docs/manifest.md mentions a count, it should match reality (or be >= reality)."""
-    manifest = (REPO_ROOT / "docs" / "manifest.md").read_text()
+    manifest = (REPO_ROOT.parent / "docs" / "manifest.md").read_text()
     recipe_dir = REPO_ROOT / "recipe" / "sub"
     n = len(list(recipe_dir.glob("*.yaml")))
     # Find any "N sub-recipes" or "(N)" pattern
@@ -132,10 +157,14 @@ def test_all_recipe_files_are_valid_yaml():
 
 
 def test_every_recipe_references_constitution():
-    """Every recipe must declare its constitution (R10 traceability)."""
+    """Every recipe must declare its constitution (R10 traceability).
+
+    Excludes ephemeral test/clone artifacts (see RECIPE_EXCLUDE)."""
     recipe_dir = REPO_ROOT / "recipe" / "sub"
     failures = []
     for f in sorted(recipe_dir.glob("*.yaml")):
+        if f.name in RECIPE_EXCLUDE:
+            continue
         with open(f) as fh:
             data = yaml.safe_load(fh)
         if isinstance(data, dict):

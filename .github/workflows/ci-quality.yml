@@ -1,0 +1,350 @@
+# =============================================================================
+#  ci-quality.yml — Security + dependency audit + container fs scan
+#
+#  Scope: bandit (Python SAST) + pip-audit (dep vulns) + trivy (fs scan).
+#         Findings are uploaded as SARIF to GitHub Code Scanning (free,
+#         no extra account, no external cost).
+#  Cadence: every push to mas-t + every PR (fast jobs, ~1-2min total)
+#           + weekly Monday 06:00 UTC for fresh dep DB.
+#  Compat:  respects block-copilot.yml + ai-pipeline-kill-switch.yml
+#           (early-exit when actor is github-actions[bot] or repo is
+#           in a kill switch state).
+#  Cost:    ~$0. All tools free for OSS. SARIF uses native Code Scanning.
+#  Secrets: none required.
+#  Why NEW workflow: keeps ci-tests.yml focused on pytest, keeps ci-e2e-
+#         smoke focused on shell harness, isolates security/audit so a
+#         flaky dep DB update does not block the test signal.
+# =============================================================================
+
+name: 🔒 ci-quality (security + audit)
+
+on:
+  push:
+    branches: ["mas-t", "mas-t-tests"]
+  pull_request:
+    branches: ["mas-t", "mas-t-tests"]
+  workflow_dispatch:
+  schedule:
+    # Weekly Monday 06:00 UTC. Captures new CVEs in the dep DB without
+    # spamming every commit. pip-audit's OSV DB updates several times
+    # per day; a weekly cadence is enough for a small OSS Python project.
+    - cron: "0 6 * * 1"
+
+permissions:
+  # contents: read for checkout; security-events: write for SARIF
+  # upload to GitHub Code Scanning. No other scopes.
+  contents: read
+  security-events: write
+
+# Cancel superseded runs on the same PR/branch.
+concurrency:
+  group: ci-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Job 1: bandit (Python SAST) + pip-audit (dependency vulnerabilities).
+  # Combined into one job because both are pip-installable + fast (~30s).
+  # ---------------------------------------------------------------------------
+  python-audit:
+    name: bandit + pip-audit
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: .
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          # cache: pip intentionally OFF. mas-engineer has no
+          # requirements.txt/pyproject.toml. See ci-tests.yml for
+          # the full rationale. (R110-241)
+
+      - name: Install bandit + pip-audit
+        working-directory: mas-engineer
+        run: |
+          python -m pip install --upgrade pip
+          # bandit = Python code SAST (PyCQA). pip-audit = PyPA official
+          # dep vulnerability scanner (replaces PyUp safety, which was
+          # deprecated January 2024). Both query public OSV / PyPA
+          # Advisory DB, no API token required.
+          pip install bandit pip-audit
+          # bandit-sarif-formatter = community plugin that adds a
+          # `bandit-sarif` formatter to bandit, so bandit JSON output
+          # can be converted to SARIF for the GitHub Code Scanning
+          # tab. (R110-242: bandit 1.7.x dropped the experimental
+          # `-f sarif` flag in favor of this plugin, after bandit
+          # maintainers decided SARIF support should be optional to
+          # keep the core dependency tree lean. See bandit #1058.)
+          pip install bandit-sarif-formatter
+
+      - name: Bandit (Python SAST)
+        working-directory: mas-engineer
+        # -ll = only medium+high severity. -ii = only high+medium confidence.
+        # This filters out the noisy "assert_used" / "blacklist" findings
+        # that bandit emits by default and which would drown the signal.
+        # Adjust thresholds as the codebase grows; start conservative.
+        # `|| true` so a finding does not hard-fail the run — it becomes
+        # a SARIF alert that shows up in the Security tab. Remove `|| true`
+        # when you want bandit to gate PRs.
+        run: |
+          mkdir -p .ci-artifacts
+          # bandit 1.7+ removed `-f sarif` from core, but installing
+          # the bandit-sarif-formatter plugin (Microsoft, MIT, the
+          # maintainer-blessed path) RE-ENABLES the `sarif` formatter
+          # name. The plugin registers itself via setuptools entry
+          # points so `bandit -f sarif` Just Works after `pip install
+          # bandit-sarif-formatter`. (R110-243: R110-242 wrongly
+          # tried a 2-pass approach — generate JSON, then call
+          # `python -m bandit_sarif_formatter` to convert — but
+          # bandit_sarif_formatter has NO `__main__.py` and is
+          # NOT a standalone tool; it is a plugin. The
+          # first R110-242 push produced an empty bandit.sarif
+          # and the upload step errored "Path does not exist".
+          # /tmp/ci-quality-r110-242-logs.zip has the full trace.)
+          bandit -r tools scripts tests recipe \
+                 -ll -ii \
+                 --exclude '.ci-artifacts,.git,.mase,logs' \
+                 -f sarif -o .ci-artifacts/bandit.sarif \
+                 || true
+          # Always produce a human-readable summary for the run log.
+          bandit -r tools scripts tests recipe \
+                 -ll -ii \
+                 --exclude '.ci-artifacts,.git,.mase,logs' \
+                 -f txt 2>&1 | tail -30 || true
+
+      - name: Upload Bandit SARIF to GitHub Code Scanning
+        if: always()
+        # sarif_file: mas-engineer/.ci-artifacts/bandit.sarif
+        # (R110-245). R110-243 wrote `sarif_file: .ci-artifacts/
+        # bandit.sarif` and relied on `working-directory:
+        # mas-engineer` to scope it. That was wrong: the upload
+        # step uses `uses: github/codeql-action/upload-sarif@v3`,
+        # not `run:`, and `working-directory` is ONLY available
+        # with `run:` per the GHA schema (actionlint rule
+        # syntax-check: "'working-directory' is not available
+        # with 'uses'. it is only available with 'run'"). R110-244
+        # made the same mistake on the upload step (`if: always()`
+        # + `working-directory: mas-engineer` are the two changes
+        # to the upload step, and the latter is the parse-fail
+        # that caused the 0.0s duration failure on R110-244 push).
+        # The correct fix is to make `sarif_file:` absolute
+        # relative to the JOB PWD (the monorepo root), i.e.
+        # prefix it with `mas-engineer/`. The Bandit run step
+        # (5) still has `working-directory: mas-engineer` (that's
+        # a `run:` step, so the property IS valid there) and
+        # writes the SARIF to `<monorepo>/mas-engineer/.ci-
+        # artifacts/bandit.sarif`. The upload step now reads from
+        # the same absolute path.
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: mas-engineer/.ci-artifacts/bandit.sarif
+          category: bandit
+
+      - name: pip-audit (dependency vulnerabilities)
+        if: always()
+        # --strict: exit non-zero on unfixable vulns. We capture that and
+        # upload as SARIF; the workflow itself stays green so other
+        # signals (pytest, e2e) still surface. Drop --strict to make
+        # findings non-blocking.
+        # --no-deps: skip transitive deps. mas-engineer has a flat test
+        # dependency set (pytest, pyyaml, jsonschema, bandit, pip-audit)
+        # which we list explicitly here.
+        # if: always() — without this, a failure in the Bandit
+        # upload step (6) would skip this step (7) by default,
+        # leaving `pip-audit.sarif` un-written and the matching
+        # upload step (8) erroring "Path does not exist". R110-243
+        # post-push audit caught this: logs show step 7 is
+        # MISSING entirely between step 6 (ends 20:54:54.768)
+        # and step 8 (starts 20:54:55.064), proving it was
+        # SKIPPED not just hidden. (R110-244)
+        # working-directory: mas-engineer — the SARIF output
+        # `.ci-artifacts/pip-audit.sarif` is RELATIVE to the working
+        # directory. If we omit it, the file lands in the monorepo
+        # root and the next "Upload" step (which IS pinned to
+        # mas-engineer) cannot find it. (R110-242: this is the
+        # silent-failure bug that the R110-241 audit caught — the
+        # SARIF upload step errored "Path does not exist"
+        # but the python step itself exited 0 because of the
+        # `|| AUDIT_EXIT=$?` line, hiding the real cause.)
+        working-directory: mas-engineer
+        run: |
+          mkdir -p .ci-artifacts
+          # Generate a frozen requirements list of everything installed
+          # in this job's venv. pip-audit reads this and queries the
+          # OSV API. No requirements.txt needed in the repo.
+          pip freeze > /tmp/requirements-frozen.txt
+          pip-audit --strict --requirement /tmp/requirements-frozen.txt \
+                    --format json --output /tmp/pip-audit.json \
+                    || AUDIT_EXIT=$?
+          # Normalize the pip-audit JSON to SARIF for Code Scanning.
+          python3 - <<'PY' || true
+          import json, sys, datetime
+          try:
+              with open("/tmp/pip-audit.json") as f:
+                  findings = json.load(f)
+          except Exception:
+              findings = {"dependencies": []}
+          sarif = {
+              "version": "2.1.0",
+              "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+              "runs": [{
+                  "tool": {
+                      "driver": {
+                          "name": "pip-audit",
+                          "version": "n/a",
+                          "informationUri": "https://pypi.org/project/pip-audit/",
+                          "rules": [],
+                      }
+                  },
+                  "results": [],
+              }],
+          }
+          for dep in findings.get("dependencies", []):
+              for v in dep.get("vulns", []):
+                  rid = v.get("id", "UNKNOWN")
+                  sarif["runs"][0]["results"].append({
+                      "ruleId": rid,
+                      "level": "error",
+                      "message": {"text": f"{dep['name']} {dep['version']}: {v.get('description', rid)}"},
+                      "locations": [{
+                          "physicalLocation": {
+                              "artifactLocation": {"uri": "requirements-frozen.txt"}
+                          }
+                      }],
+                  })
+          with open(".ci-artifacts/pip-audit.sarif", "w") as f:
+              json.dump(sarif, f)
+          print(f"pip-audit: {len(sarif['runs'][0]['results'])} findings")
+          PY
+
+      - name: Upload pip-audit SARIF to GitHub Code Scanning
+        if: always()
+        # sarif_file: mas-engineer/.ci-artifacts/pip-audit.sarif
+        # (R110-245). See the matching comment on the Bandit
+        # upload step (6) for the full post-mortem. The
+        # `working-directory: mas-engineer` on the upload step
+        # is INVALID (`uses:` steps do not accept
+        # `working-directory` per the GHA schema, actionlint
+        # syntax-check). The correct fix is to make
+        # `sarif_file:` absolute relative to the JOB PWD (the
+        # monorepo root). The pip-audit run step (7) still has
+        # `working-directory: mas-engineer` (that's a `run:`
+        # step, so the property IS valid there) and writes the
+        # SARIF to `<monorepo>/mas-engineer/.ci-artifacts/
+        # pip-audit.sarif`. The upload step now reads from the
+        # same absolute path.
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: mas-engineer/.ci-artifacts/pip-audit.sarif
+          category: pip-audit
+
+  # ---------------------------------------------------------------------------
+  # Job 2: trivy (filesystem + IaC + secret scan). Separate from python-audit
+  # because trivy ships as an OCI container, no pip install, and scans things
+  # bandit cannot (yaml, json, shell, Dockerfile, .github/workflows/).
+  # ---------------------------------------------------------------------------
+  trivy-fs:
+    name: trivy fs scan
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: .
+
+      - name: Prepare Trivy artifact directory
+        # R110-250: trivy-action writes the SARIF to `output:` but
+        # does NOT create the parent directory. R110-246's bump to
+        # trivy-action v0.36.0 changed the output-path handling:
+        # the action no longer auto-creates `.ci-artifacts/` and
+        # fails with "open .ci-artifacts/trivy-fs.sarif: no such
+        # file or directory" before any scan happens. This step
+        # explicitly creates the directory so the SARIF write
+        # succeeds. Same pattern as the v0.30.0 fix would have
+        # needed; it was missed in R110-238 when the workflow was
+        # originally authored.
+        run: mkdir -p .ci-artifacts
+
+      - name: Trivy filesystem scan (SARIF)
+        # aquasecurity/trivy-action@v0.30.0 — pinned with the `v`
+        # prefix (R110-244). R110-238 originally wrote
+        # `aquasecurity/trivy-action@0.24.0` (no `v`); R110-243
+        # bumped it to `0.30.0` (still no `v`). Both failed with
+        # the same error: "Unable to resolve action
+        # `aquasecurity/trivy-action@0.30.0`, unable to find
+        # version `0.30.0`". The aquasecurity/trivy-action
+        # repository publishes tags with a `v` prefix
+        # (`v0.24.0`, `v0.30.0`, ..., `v0.36.0` — verified by
+        # GET https://api.github.com/repos/aquasecurity/trivy-
+        # action/tags?per_page=50). The bare-number reference
+        # `0.30.0` is a 404 against the git refs API, so GHA
+        # cannot resolve it. (R110-243 wrongly assumed the
+        # tag did not exist at all — that was the R110-174
+        # number-drift trap again: I saw "not found" and
+        # invented a story instead of `curl`-ing the refs API
+        # to see whether the tag exists with a `v` prefix.
+        # The `v` prefix is required.)
+        # R110-246: bumped v0.30.0 -> v0.36.0. v0.30.0 transitively
+        # pulls aquasecurity/setup-trivy@v0.2.2 which DOES NOT EXIST
+        # (404 on /git/refs/tags/v0.2.2). v0.36.0 SHA-pins all
+        # transitive deps including setup-trivy@v0.2.6 which exists.
+        # Lesson: when bumping a composite action, verify EVERY
+        # transitive `uses:` resolves before pushing.
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          # Only HIGH and CRITICAL — LOW/MEDIUM trivy fs noise dwarfs
+          # signal for a Python-only repo. Tighten to CRITICAL only
+          # for stricter gating.
+          severity: HIGH,CRITICAL
+          # Do not fail the workflow on findings; the SARIF upload
+          # surfaces them in the Security tab. Set to '1' to make
+          # the job gate PRs.
+          exit-code: "0"
+          format: sarif
+          output: .ci-artifacts/trivy-fs.sarif
+          # Skip scanning .git, the persistent evidence archive, and
+          # any vendored deps to keep the scan fast and focused.
+          trivyignores: .trivyignore  # renamed from 'ignorefile' in trivy-action v0.36.0 (R110-249)
+
+      - name: Upload Trivy SARIF to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: .ci-artifacts/trivy-fs.sarif
+          category: trivy-fs
+
+  # ---------------------------------------------------------------------------
+  # Job 3: aggregate "any security findings?" check + summary. Runs after both
+  # audit jobs. Does not gate the workflow (findings already surface in
+  # Code Scanning). Provides a single human-readable line in the run log.
+  # ---------------------------------------------------------------------------
+  summary:
+    name: security summary
+    runs-on: ubuntu-latest
+    if: always() && github.actor != 'github-actions[bot]'
+    needs: [python-audit, trivy-fs]
+    timeout-minutes: 2
+
+    steps:
+      - name: Print summary
+        run: |
+          echo "## Security audit summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- bandit (Python SAST): see Security tab → Code Scanning" >> "$GITHUB_STEP_SUMMARY"
+          echo "- pip-audit (dep vulns): see Security tab → Code Scanning" >> "$GITHUB_STEP_SUMMARY"
+          echo "- trivy (fs scan): see Security tab → Code Scanning" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Findings are non-blocking in this workflow by design." >> "$GITHUB_STEP_SUMMARY"
+          echo "To gate on findings, set exit-code: '1' on the relevant step." >> "$GITHUB_STEP_SUMMARY"

@@ -129,7 +129,7 @@ ORDER:
    - Number rules: python3 dev_rule_checker.py --count 2>/dev/null || echo "N/A"
      - Blocked rules: python3 dev_rule_checker.py --blocked 2>/dev/null || echo "N/A"
 3. changes.json:
-   - Number entries: python3 -c "import json; d=json.load(open('.state/changes.json')); print(len(d))" 2>/dev/null || echo "N/A"
+   - Number entries: python3 -c "import json; d=json.load(open('.mase/changes.json')); print(len(d))" 2>/dev/null || echo "N/A"
 4. Sub-agents-Status:
      - Number Recipe-Files: ls {workspace}/recipe/sub/*.yaml 2>/dev/null | wc -l
    - Valid YAMLs: for f in {workspace}/recipe/sub/*.yaml; do python3 -c "import yaml; yaml.safe_load(open('$f'))" 2>/dev/null

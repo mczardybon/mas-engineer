@@ -28,7 +28,7 @@ VERSION = "1.0.0"
 MAS_CONFIG = os.path.expanduser("~/.config/goose/recipes")
 MAS_SUBS = os.path.join(MAS_CONFIG, "sub")
 MAS_TOOLS = os.path.join(MAS_CONFIG, "mas-engineer-tools")
-MAS_STATE = os.path.join(MAS_CONFIG, ".state")
+MAS_STATE = os.path.join(MAS_CONFIG, ".mase")
 WORKSPACE = os.environ.get('MAS_WORKSPACE',
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -37,8 +37,8 @@ if os.path.exists(os.path.join(WORKSPACE, "mas-engineer")):
     MAS_DIR = os.path.join(WORKSPACE, "mas-engineer")
 else:
     MAS_DIR = WORKSPACE
-STATE_TEMPLATES = os.path.join(MAS_DIR, ".state", "templates")
-STATE_RULES = os.path.join(MAS_DIR, ".state", "rules")
+STATE_TEMPLATES = os.path.join(MAS_DIR, ".mase", "templates")
+STATE_RULES = os.path.join(MAS_DIR, ".mase", "rules")
 MAS_TOOLS = os.path.join(WORKSPACE, "tools")  # actual location of dev_*.py tools
 
 # Colors
@@ -120,7 +120,7 @@ def create_project_config(project_path, project_name, dry_run=False):
         "structure": {
             "tools": "symlink (no copy)",
             "agents": "selbst creates (dev_template_generator.py --create)",
-            "rules": ".state/rules/rules.yaml",
+            "rules": ".mase/rules/rules.yaml",
             "templates": "recipe/template/agent_template.yaml",
         },
     }
@@ -132,7 +132,7 @@ def create_project_config(project_path, project_name, dry_run=False):
 
 def create_rules(project_path, dry_run=False):
     """Creates empty rule system — never overwrites existing."""
-    rules_dir = os.path.join(project_path, ".state", "rules")
+    rules_dir = os.path.join(project_path, ".mase", "rules")
     rules_file = os.path.join(rules_dir, "rules.yaml")
     template_file = os.path.join(STATE_TEMPLATES, "user_rules_template.yaml")
 
@@ -260,7 +260,6 @@ def create_bp_checklist(project_path, dry_run=False):
     bp_template = os.path.join(STATE_TEMPLATES, 'bp_checklist.md')
     if os.path.exists(bp_template):
         if not dry_run:
-            import shutil
             shutil.copy2(bp_template, bp_target)
         ok(f"BP-CHECKLIST.md (Template, {os.path.getsize(bp_template)} bytes)")
         return
@@ -419,7 +418,7 @@ def create_tests(project_path, dry_run=False):
             with open(test_file, "w") as f:
                 f.write('''"""Test: YAML-Syntax allr Agenten."""
 import os
-import yaml
+import yaml  # noqa: F401  -- used by scaffolded test below
 
 SUBS_DIR = os.path.join(os.path.dirname(__file__), "..", "recipe", "sub")
 
@@ -484,7 +483,7 @@ __pycache__/
 dist/
 .backups/
 *.bak
-.state/checkpoints/
+.mase/checkpoints/
 .tmp/
 """
         if not dry_run:
@@ -505,9 +504,9 @@ dist/
 
 def create_dashboard_scaffold(project_path, dry_run=False):
     """Creates Dashboard-Data-Directory + initiale data.json."""
-    dash_dir = os.path.join(project_path, '.mas', 'dashboards')
+    dash_dir = os.path.join(project_path, '.mase', 'dashboards')
     if dry_run:
-        info(f"[DRY-RUN] .mas/dashboards/ mit data.json + history.json")
+        info(f"[DRY-RUN] .mase/dashboards/ mit data.json + history.json")
         return
     os.makedirs(dash_dir, exist_ok=True)
     from datetime import datetime
@@ -532,25 +531,25 @@ def create_dashboard_scaffold(project_path, dry_run=False):
     with open(os.path.join(dash_dir, 'data.json'), 'w') as f:
         json.dump(initial_data, f, indent=2, ensure_ascii=False)
     with open(os.path.join(dash_dir, 'history.json'), 'w') as f:
-        json.dump({"health_trend": [], "build_size": []}, f, indent=2)
-    ok(".mas/dashboards/ (data.json + history.json)")
+        json.dump({"health_trend": [], "build_size": []}, f, indent=2, ensure_ascii=False)
+    ok(".mase/dashboards/ (data.json + history.json)")
 
-    mcp_dir = os.path.join(project_path, '.mas', 'mcp')
+    mcp_dir = os.path.join(project_path, '.mase', 'mcp')
     if os.path.exists(os.path.join(mcp_dir, 'package.json')):
         if dry_run:
-            info(f"[DRY-RUN] npm install in .mas/mcp/")
+            info(f"[DRY-RUN] npm install in .mase/mcp/")
         else:
             try:
                 r = subprocess.run(['npm', 'install'], cwd=mcp_dir,
                                    capture_output=True, text=True, timeout=60)
                 if r.returncode == 0:
-                    ok(".mas/mcp/ npm install")
+                    ok(".mase/mcp/ npm install")
                 else:
-                    warn(f".mas/mcp/ npm install: {r.stderr.strip()[:80]}")
+                    warn(f".mase/mcp/ npm install: {r.stderr.strip()[:80]}")
             except FileNotFoundError:
-                warn(".mas/mcp/ npm: Node.js not installed — npm install skipped")
+                warn(".mase/mcp/ npm: Node.js not installed — npm install skipped")
             except Exception as e:
-                warn(f".mas/mcp/ npm install failed: {str(e)[:80]}")
+                warn(f".mase/mcp/ npm install failed: {str(e)[:80]}")
 
 
 def create_mas_mode(project_path, project_name_clean, dry_run=False):
@@ -579,10 +578,10 @@ def resolve_components(comp_str):
 def copy_rules_full(project_path, dry_run=False):
     """copyrt all MAS-Rule-files (R01-R18 + Haerte-Leveln + Responsibility-Matrix)."""
     if dry_run:
-        info("[DRY-RUN] .state/rules/: 6 files (rulen, hard_rules, rulen_2/4/5_extrem, responsibility_matrix)")
+        info("[DRY-RUN] .mase/rules/: 6 files (rulen, hard_rules, rulen_2/4/5_extrem, responsibility_matrix)")
         return
-    mas_rules = os.path.join(MAS_CONFIG, "..", "mas-engineer", ".state", "rules")
-    dest_rules = os.path.join(project_path, ".state", "rules")
+    mas_rules = os.path.join(MAS_CONFIG, "..", "mas-engineer", ".mase", "rules")
+    dest_rules = os.path.join(project_path, ".mase", "rules")
     os.makedirs(dest_rules, exist_ok=True)
     rule_files = ["rules.yaml", "hard_rules.yaml", "rules_2_normal.yaml",
                   "rules_4_strong.yaml", "rules_5_extreme.yaml", "responsibility_matrix.yaml"]
@@ -598,16 +597,16 @@ def copy_rules_full(project_path, dry_run=False):
 def create_state_files(project_path, dry_run=False):
     """Creates empty/initiale State-files for das Projekt."""
     if dry_run:
-        info("[DRY-RUN] .state/: changes.json, guardian.yaml, schedule.yaml, audit.log, health, checkpoints/")
+        info("[DRY-RUN] .mase/: changes.json, guardian.yaml, schedule.yaml, audit.log, health, checkpoints/")
         return
     from datetime import datetime
     import time
-    state_dir = os.path.join(project_path, ".state")
+    state_dir = os.path.join(project_path, ".mase")
     os.makedirs(state_dir, exist_ok=True)
 
     # changes.json: emptys Array
     with open(os.path.join(state_dir, "changes.json"), 'w') as f:
-        json.dump([], f, indent=2)
+        json.dump([], f, indent=2, ensure_ascii=False)
 
     # guardian.yaml: empty Guardian-Struktur mit drift_log
     guardian = {
@@ -622,8 +621,7 @@ def create_state_files(project_path, dry_run=False):
         }
     }
     with open(os.path.join(state_dir, "guardian.yaml"), 'w') as f:
-        import yaml as _y
-        _y.dump(guardian, f, default_flow_style=False, allow_unicode=True)
+        yaml.dump(guardian, f, default_flow_style=False, allow_unicode=True)
 
     # schedule.yaml: empty Verbetterungs-Historie
     schedule = {
@@ -631,8 +629,7 @@ def create_state_files(project_path, dry_run=False):
         "history": [], "metrics": {}, "recommendation": {"status": "ready"}
     }
     with open(os.path.join(state_dir, "schedule.yaml"), 'w') as f:
-        import yaml as _y
-        _y.dump(schedule, f, default_flow_style=False, allow_unicode=True)
+        yaml.dump(schedule, f, default_flow_style=False, allow_unicode=True)
 
     # audit.log.jsonl: empty
     audit = os.path.join(state_dir, "audit.log.jsonl")
@@ -646,10 +643,10 @@ def create_state_files(project_path, dry_run=False):
     # health-report.json + health-history.json
     hr = {"checks": [], "score": 0, "timestamp": None}
     with open(os.path.join(state_dir, "health-report.json"), 'w') as f:
-        json.dump(hr, f, indent=2)
+        json.dump(hr, f, indent=2, ensure_ascii=False)
     hh = [{"timestamp": datetime.now().isoformat(), "score": 0}]
     with open(os.path.join(state_dir, "health-history.json"), 'w') as f:
-        json.dump(hh, f, indent=2)
+        json.dump(hh, f, indent=2, ensure_ascii=False)
 
     # checkpoints Directory
     os.makedirs(os.path.join(state_dir, "checkpoints"), exist_ok=True)
@@ -659,10 +656,10 @@ def create_state_files(project_path, dry_run=False):
 
 def copy_knowledge_base(project_path, dry_run=False):
     """copyrt all 9 Knowledge-files ins Projekt."""
-    src_knowledge = os.path.join(os.path.dirname(MAS_CONFIG), "mas-engineer", ".state", "knowledge")
-    dst_knowledge = os.path.join(project_path, ".state", "knowledge")
+    src_knowledge = os.path.join(os.path.dirname(MAS_CONFIG), "mas-engineer", ".mase", "knowledge")
+    dst_knowledge = os.path.join(project_path, ".mase", "knowledge")
     if dry_run:
-        info(f"[DRY-RUN] .state/knowledge/: 9 files")
+        info(f"[DRY-RUN] .mase/knowledge/: 9 files")
         return
     if not os.path.exists(src_knowledge):
         info("Knowledge-Source not found — skipped")
@@ -673,19 +670,19 @@ def copy_knowledge_base(project_path, dry_run=False):
         if f.endswith(".md"):
             shutil.copy2(os.path.join(src_knowledge, f), os.path.join(dst_knowledge, f))
             count += 1
-    ok(f"Knowledge: {count} files after .state/knowledge/")
+    ok(f"Knowledge: {count} files after .mase/knowledge/")
 
 
 def copy_constitution(project_path, dry_run=False):
     """copyrt die MAS-Constitution als template ins Projekt."""
     src = os.path.join(os.path.dirname(MAS_CONFIG), "mas-engineer", "recipe", "sub", "sub_mas-master-constitution.yaml")
-    dst = os.path.join(project_path, ".state", "constitution.yaml")
+    dst = os.path.join(project_path, ".mase", "constitution.yaml")
     if dry_run:
-        info("[DRY-RUN] .state/constitution.yaml (11 Artikel)")
+        info("[DRY-RUN] .mase/constitution.yaml (11 Artikel)")
         return
     if os.path.exists(src):
         shutil.copy2(src, dst)
-        ok("Constitution: .state/constitution.yaml (11 Artikel)")
+        ok("Constitution: .mase/constitution.yaml (11 Artikel)")
     else:
         info("Constitution-template not found — skipped")
 
@@ -711,18 +708,18 @@ def copy_recovery_templates(project_path, dry_run=False):
 
 def copy_monitoring_files(project_path, dry_run=False):
     """Creates Monitoring-Infrastruktur-files."""
-    state_dir = os.path.join(project_path, ".state")
+    state_dir = os.path.join(project_path, ".mase")
     if dry_run:
-        info("[DRY-RUN] .state/health-report.json + health-history.json")
+        info("[DRY-RUN] .mase/health-report.json + health-history.json")
         return
     os.makedirs(state_dir, exist_ok=True)
     hr = {"checks": [], "score": 0, "timestamp": None}
     with open(os.path.join(state_dir, "health-report.json"), 'w') as f:
-        json.dump(hr, f, indent=2)
+        json.dump(hr, f, indent=2, ensure_ascii=False)
     import datetime as _dt
     hh = [{"timestamp": _dt.datetime.now().isoformat(), "score": 0}]
     with open(os.path.join(state_dir, "health-history.json"), 'w') as f:
-        json.dump(hh, f, indent=2)
+        json.dump(hh, f, indent=2, ensure_ascii=False)
     ok("Monitoring: health-report.json + health-history.json")
 
 
@@ -882,7 +879,7 @@ def cmd_init(project_name, dry_run=False, components="minimal"):
         ok("tools/ → Symlink to MAS installation")
         info("Analyse: remote via sub_mas-im-pipeline")
         info("Distribution: dev_build.sh --project → standalone ZIP")
-        info("Dashboard: .mas/dashboards/ mit data.json for MCP App")
+        info("Dashboard: .mase/dashboards/ mit data.json for MCP App")
         info(".mas-mode:  mode file with project name")
         info("Setup:  goose run --recipe setup-dashboard.yaml (1x after Init)")
         print()
@@ -890,7 +887,7 @@ def cmd_init(project_name, dry_run=False, components="minimal"):
         info("  1. Create Agenten mit dev_template_generator.py --create")
         info("  2. Optimiere mit sub_mas-im-pipeline (task=FULL_IMPROVEMENT)")
         info("  3. Distribuiere mit dev_build.sh --project")
-        info("  4. Dashboard: goose session --with-extension 'node .mas/mcp/server.js'")
+        info("  4. Dashboard: goose session --with-extension 'node .mase/mcp/server.js'")
         info("  5. Install components: --components rules,state,knowledge,constitution,recovery,monitoring")
     return True
 
@@ -905,8 +902,8 @@ def cmd_bootstrap(project_name, dry_run=False, web_research=False):
         info("[DRY-RUN] Step 2: recipe/sub/ (47 Agenten copyren)")
         info("[DRY-RUN] Step 3: recipe/dev-mas-engineer.yaml")
         info("[DRY-RUN] Step 4: tools/ (50 Tools copyren)")
-        info("[DRY-RUN] Step 5: .mas/mcp/ (Dashboard MCP Server)")
-        info("[DRY-RUN] Step 6: docs/ + .state/ Configuration")
+        info("[DRY-RUN] Step 5: .mase/mcp/ (Dashboard MCP Server)")
+        info("[DRY-RUN] Step 6: docs/ + .mase/ Configuration")
         return True
 
     # Step 0: Web-Recherche-Note
@@ -964,8 +961,8 @@ def cmd_bootstrap(project_name, dry_run=False, web_research=False):
     ok(f"{count} Tools after tools/")
 
     header("Step 5: MCP Server portieren")
-    mas_mcp = os.path.join(mas_source, ".mas", "mcp")
-    dest_mcp = os.path.join(project_path, ".mas", "mcp")
+    mas_mcp = os.path.join(mas_source, ".mase", "mcp")
+    dest_mcp = os.path.join(project_path, ".mase", "mcp")
     if os.path.exists(mas_mcp):
         os.makedirs(dest_mcp, exist_ok=True)
         for f in ["server.js", "dashboard.html", "package.json"]:
@@ -973,12 +970,12 @@ def cmd_bootstrap(project_name, dry_run=False, web_research=False):
             if os.path.exists(src):
                 shutil.copy2(src, os.path.join(dest_mcp, f))
         ok("Dashboard MCP Server portiert")
-        # npm install try
+        # npm install try (R110-334: bare except → narrow except)
         try:
             subprocess.run(['npm', 'install'], cwd=dest_mcp, capture_output=True, text=True, timeout=60)
-            ok("npm install in .mas/mcp/")
-        except:
-            warn("npm install failed — manuell execute")
+            ok("npm install in .mase/mcp/")
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as e:
+            warn(f"npm install failed ({type(e).__name__}) — manuell execute")
 
     header("Step 6: Recovery-Templates + Docs")
     mas_recovery = os.path.join(mas_source, "recipe", "template", "recovery")

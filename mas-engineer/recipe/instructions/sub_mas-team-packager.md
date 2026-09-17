@@ -13,18 +13,18 @@ team elsewhere, you must package it.
 TEAM-PACKAGER produces a directory like:
 
 ```
-sales-team/
+dev-team/
 ├── recipe/
-│   ├── sales-root.yaml                # standalone root (no MAS-Engineer deps)
+│   ├── dev-root.yaml                  # standalone root (no MAS-Engineer deps)
 │   ├── sub/
-│   │   ├── sub_mas-sales-director.yaml
-│   │   ├── sub_mas-sales-prospector.yaml
-│   │   ├── sub_mas-sales-proposal.yaml
-│   │   ├── sub_mas-sales-pipeline.yaml
-│   │   ├── sub_mas-sales-analyst.yaml
-│   │   └── sub_mas-sales-crm.yaml
+│   │   ├── sub_mas-dev-director.yaml
+│   │   ├── sub_mas-dev-analyzer.yaml
+│   │   ├── sub_mas-dev-builder.yaml
+│   │   ├── sub_mas-dev-observer.yaml
+│   │   ├── sub_mas-dev-tester.yaml
+│   │   └── ... (one per agent)
 │   └── sub_mas-master-constitution.yaml
-├── .state/
+├── .mase/
 │   ├── workflows.yaml                  # team-local SOT
 │   └── knowledge/
 │       ├── 01-rules.md                 # R01, R09, R10 (minimum)
@@ -34,14 +34,14 @@ sales-team/
 ├── install.sh                          # standalone install
 ├── uninstall.sh                        # remove from goose
 ├── README.md                           # team documentation
-└── .mas-mode                           # mode = sales
+└── .mas-mode                           # mode = dev
 ```
 
 After `./install.sh`, the team is registered in goose at
-`~/.config/goose/recipes/sales-root.yaml`. Run it with:
+`~/.config/goose/recipes/dev-root.yaml`. Run it with:
 
 ```bash
-goose run --recipe ~/.config/goose/recipes/sales-root.yaml
+goose run --recipe ~/.config/goose/recipes/dev-root.yaml
 ```
 
 ## WHY THIS EXISTS
@@ -56,13 +56,14 @@ of MAS-Engineer. The directory contains everything the team needs:
 
 - Its own root recipe.
 - Its own sub-agents.
-- Its own SOT (`.state/workflows.yaml`).
+- Its own SOT (`.mase/workflows.yaml`).
 - Its own minimum knowledge base.
 - Install and uninstall scripts.
 
 ## DIFFERENCE FROM BOOTSTRAP
 
-- `sub_mas-bootstrap` (DEPLOY): copies all 96 MAS-Engineer sub-agents + 57 tools
+- `sub_mas-bootstrap` (DEPLOY): copies all sub-agents + tools (current 116/80,
+  2026-08-19; (historical, 2026-07-25: 112 MAS-Engineer sub-agents + 58 tools))
   into a new directory. Result is a full MAS-Engineer instance.
 - `sub_mas-team-packager` (PACKAGE_TEAM): copies ONLY the team agents
   (typically 3-7 files). Result is a lightweight team package.
@@ -79,7 +80,7 @@ agent_intake:
   from: 'sub_mas-intention-parser' | 'sub_mas-generic-init'
   to: 'sub_mas-team-packager'
   task: 'PACKAGE_TEAM'
-  team_name: string                    # e.g. "sales"
+  team_name: string                    # e.g. "dev"
   output_path: string                  # e.g. "/tmp"
   root_recipe: string                  # path to team root
   sub_recipes: list of strings         # paths to team agents
@@ -122,7 +123,7 @@ Create `{output_path}/{team_name}/recipe/{team_name}-root.yaml`.
 This file MUST NOT reference:
 
 - `~/.config/goose/recipes/mas-engineer/`
-- `.state/knowledge/` (other than the team-local one)
+- `.mase/knowledge/` (other than the team-local one)
 - `tools/dev_rule_checker.py`
 - `sub_mas-master-constitution.yaml` (use a self-contained constitution instead)
 - `sub_mas-general-improver.yaml` (NEVER edit / never reference)
@@ -142,13 +143,13 @@ For each path in sub_recipes, copy the file to
 `{output_path}/{team_name}/recipe/sub/`. Keep the original filename.
 
 If a sub-agent YAML references MAS-Engineer-specific paths
-(`.state/knowledge/05-rules.md`, `tools/dev_rule_checker.py`), warn the
+(`.mase/knowledge/05-rules.md`, `tools/dev_rule_checker.py`), warn the
 user but do not modify the file. The warning is logged in the output
 summary.
 
 ## STEP 5 — CREATE TEAM-LOCAL SOT
 
-Create `{output_path}/{team_name}/.state/workflows.yaml`:
+Create `{output_path}/{team_name}/.mase/workflows.yaml`:
 
 ```yaml
 version: 1.0.0
@@ -271,7 +272,7 @@ fi
 # Create directories
 mkdir -p "$GOOSE_RECIPES"
 mkdir -p "$GOOSE_SUB"
-mkdir -p "$GOOSE_RECIPES/.state/knowledge"
+mkdir -p "$GOOSE_RECIPES/.mase/knowledge"
 
 # Copy root recipe
 cp "$TEAM_DIR/recipe/$TEAM_NAME-root.yaml" "$GOOSE_RECIPES/"
@@ -281,10 +282,10 @@ cp "$TEAM_DIR/recipe/sub/"*.yaml "$GOOSE_SUB/"
 
 # Copy team SOT
 mkdir -p "$GOOSE_RECIPES/.state"
-cp "$TEAM_DIR/.state/workflows.yaml" "$GOOSE_RECIPES/.state/"
+cp "$TEAM_DIR/.mase/workflows.yaml" "$GOOSE_RECIPES/.mase/"
 
 # Copy knowledge base
-cp "$TEAM_DIR/.state/knowledge/"*.md "$GOOSE_RECIPES/.state/knowledge/"
+cp "$TEAM_DIR/.mase/knowledge/"*.md "$GOOSE_RECIPES/.mase/knowledge/"
 
 # Set mode
 echo "$TEAM_NAME" > "$GOOSE_RECIPES/.mas-mode"
@@ -361,11 +362,11 @@ Return the mas_result with:
 - DEEPSEEK_API_KEY not set: warn, do not block
 - Multiple teams with same name: append -2, -3, ...
 - Team has 0 sub-agents: error, cannot package empty team
-- Team has more than 20 sub-agents: warn, large team, may be slow
+- Team has more than 20 sub-agents: warn, large team, may be slow <!-- (threshold, update to 112 if mas-team-typical-size increases) -->
 
 ## INVOCATION EXAMPLE
 
-After intention-parser creates a sales team:
+After intention-parser creates a dev team:
 
 ```yaml
 # Caller (intention-parser) sends to team-packager:
@@ -374,27 +375,26 @@ agent_intake:
   from: 'sub_mas-intention-parser'
   to: 'sub_mas-team-packager'
   task: 'PACKAGE_TEAM'
-  team_name: 'sales'
+  team_name: 'dev'
   output_path: '/tmp'
-  root_recipe: 'recipe/sub/sub_mas-sales-director.yaml'
+  root_recipe: 'recipe/sub/sub_mas-dev-director.yaml'
   sub_recipes:
-    - 'recipe/sub/sub_mas-sales-prospector.yaml'
-    - 'recipe/sub/sub_mas-sales-proposal.yaml'
-    - 'recipe/sub/sub_mas-sales-pipeline.yaml'
-    - 'recipe/sub/sub_mas-sales-analyst.yaml'
-    - 'recipe/sub/sub_mas-sales-crm.yaml'
+    - 'recipe/sub/sub_mas-dev-analyzer.yaml'
+    - 'recipe/sub/sub_mas-dev-builder.yaml'
+    - 'recipe/sub/sub_mas-dev-observer.yaml'
+    - 'recipe/sub/sub_mas-dev-tester.yaml'
 
 # team-packager returns:
 mas_result:
   signal: 'DONE'
   status: 'success'
   data:
-    package_path: '/tmp/sales-team'
-    team_name: 'sales'
-    agent_count: 6
-    install_command: 'cd /tmp/sales-team && ./install.sh'
-    run_command: 'goose run --recipe ~/.config/goose/recipes/sales-root.yaml'
-  summary: 'Packaged sales team (6 agents) at /tmp/sales-team'
+    package_path: '/tmp/dev-team'
+    team_name: 'dev'
+    agent_count: 5
+    install_command: 'cd /tmp/dev-team && ./install.sh'
+    run_command: 'goose run --recipe ~/.config/goose/recipes/dev-root.yaml'
+  summary: 'Packaged dev team (5 agents) at /tmp/dev-team'
 ```
 
 ## RELATION TO OTHER AGENTS

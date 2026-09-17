@@ -3,9 +3,9 @@
 dev_template_generator.py v2.0.0 — Generates & refreshed Agent-YAMLs aus SOT + Best-Practices + Improvement-Plan
 
 Sources:
-  1. .state/workflows.yaml → configs.mas-self (restrictions, enforcement, recovery, signals)
-  2. .state/best-practices.yaml → 27 auto_apply Rulen
-  3. .state/improvement-plan.json → open improvements
+  1. .mase/workflows.yaml → configs.mas-self (restrictions, enforcement, recovery, signals)
+  2. .mase/best-practices.yaml → 27 auto_apply Rulen
+  3. .mase/improvement-plan.json → open improvements
   4. recipe/template/agent_template.yaml → Reaelseruktur
 
 Modes:
@@ -45,9 +45,9 @@ SOT_RESTRICTION_KEYS = [
     "verbote", "verstoesse"
 ]
 DEFAULT_TIMEOUT = 600    # BP-S-001: Sweet-Spot
-DEFAULT_MAX_STEPS = 100  # BP-S-002: 20-80% Auslastung
+DEFAULT_MAX_TURNS = 100  # BP-S-002: 20-80% Auslastung
 DEFAULT_PROVIDER = "openai"
-DEFAULT_MODEL = "filtered/deepseek/deepseek-chat"
+DEFAULT_MODEL = "filtered/deepseek/deepseek-v4-flash"
 
 # ──────────────────────────────────────────────
 # QUELLEN-LADER
@@ -100,21 +100,21 @@ def load_all_sources(workspace: str) -> Dict:
     base = workspace or os.getcwd()
     
     # SOT
-    raw_sot = load_yaml(os.path.join(base, ".state/workflows.yaml"))
+    raw_sot = load_yaml(os.path.join(base, ".mase/workflows.yaml"))
     sot = raw_sot.get("configs", {}).get("mas-self", {})
     
     # Best-Practices
-    bp = load_yaml(os.path.join(base, ".state/best-practices.yaml"))
+    bp = load_yaml(os.path.join(base, ".mase/best-practices.yaml"))
     
     # Improvement-Plan
-    improvement = load_json(os.path.join(base, ".state/improvement-plan.json"))
+    improvement = load_json(os.path.join(base, ".mase/improvement-plan.json"))
     plan_items = improvement.get("plan", []) if isinstance(improvement, dict) else []
     
     # Template
     template = load_text(os.path.join(base, "recipe/template/agent_template.yaml"))
     
     # Schema
-    schema = load_yaml(os.path.join(base, ".state/templates/agent_schema.yaml"))
+    schema = load_yaml(os.path.join(base, ".mase/templates/agent_schema.yaml"))
     
     sources = {
         "sot": sot,
@@ -137,6 +137,22 @@ def load_all_sources(workspace: str) -> Dict:
 # REGEL-PAKET BAUER
 # ──────────────────────────────────────────────
 
+def _truncate_value(s: str, maxlen: int) -> str:
+    """R110-328-BUG-1: Truncate a value to a single line + "...".
+
+    A multiline value would otherwise break the YAML-comment block
+    (because each line of the value would become a separate comment
+    line). The fix: take only the first line, truncate to maxlen,
+    and add "..." if truncated. This is the same pattern the
+    nested-dict branch had at line 147-149 (pre-fix); now it's
+    extracted to a helper and used in all 3 branches.
+    """
+    s = s.split("\n", 1)[0]  # first line only
+    if len(s) > maxlen:
+        s = s[:maxlen - 3] + "..."
+    return s
+
+
 def _format_dict_block(data: Dict, prefix: str = "# ", indent: str = "") -> str:
     """Formatiert a Dict als YAML-commentblock."""
     lines = []
@@ -144,19 +160,15 @@ def _format_dict_block(data: Dict, prefix: str = "# ", indent: str = "") -> str:
         if isinstance(value, dict):
             lines.append(f"{indent}{prefix}{key}:")
             for sk, sv in value.items():
-                s = str(sv)[:120]
-                if "\n" in s:
-                    s = s.split("\n")[0] + "..."
-                lines.append(f"{indent}  {prefix}{sk}: {s}")
+                lines.append(f"{indent}  {prefix}{sk}: {_truncate_value(str(sv), 120)}")
         elif isinstance(value, list):
             lines.append(f"{indent}{prefix}{key}:")
             for item in value[:5]:
-                s = str(item)[:100]
-                lines.append(f"{indent}  {prefix}- {s}")
+                lines.append(f"{indent}  {prefix}- {_truncate_value(str(item), 100)}")
             if len(value) > 5:
                 lines.append(f"{indent}  {prefix}... +{len(value)-5} mehr")
         else:
-            lines.append(f"{indent}{prefix}{key}: {str(value)[:120]}")
+            lines.append(f"{indent}{prefix}{key}: {_truncate_value(str(value), 120)}")
     return "\n".join(lines)
 
 def _format_bp_rules(bp: Dict, section_keys: List[str]) -> str:
@@ -176,7 +188,12 @@ def _format_bp_rules(bp: Dict, section_keys: List[str]) -> str:
         for rule in rules:
             if isinstance(rule, dict) and rule.get("auto_apply"):
                 rid = rule.get("id", "?")
-                rtext = rule.get("rule", "")[:150]
+                # R110-328-BUG-2 fix: rule["rule"] can be any YAML scalar
+                # (int, None, dict, list, str). The pre-fix code did
+                # `rule.get("rule", "")[:150]` which crashed with
+                # TypeError on non-string types. str() wrapper makes
+                # the slice safe.
+                rtext = str(rule.get("rule", ""))[:150]
                 lines.append(f"  • [{rid}] {rtext}")
     
     return "\n".join(lines)
@@ -269,7 +286,7 @@ def build_rule_package(sources: Dict) -> Dict:
     # ── Default Settings ──
     standard_settings = {
         "timeout": DEFAULT_TIMEOUT,
-        "max_steps": DEFAULT_MAX_STEPS,
+        "max_turns": DEFAULT_MAX_TURNS,
         "goose_provider": DEFAULT_PROVIDER,
         "goose_model": DEFAULT_MODEL
     }
@@ -319,18 +336,20 @@ prompt: '{EMOJI} {NAME} (v1.0.0)
 {SOT_RESTRICTIONS}'
 settings:
   timeout: 600
-  max_steps: 100
+  max_turns: 100
   goose_provider: openai
-  goose_model: filtered/deepseek/deepseek-chat"""
+  goose_model: filtered/deepseek/deepseek-v4-flash"""
 
     titel = f"sub_mas-{name} — {_shorten(task, 60)}"
     
     # Statische placeholder
+    # R110-328: removed duplicate "{TASK}" entry (was a no-op since
+    # Python takes the last value, but a code smell — same anti-pattern
+    # we fixed in R110-326 BUG-B in dev_workspace.py).
     replacements = {
         "{NAME}": name.upper(),
         "{name}": name.lower() if name else name,
         "{EMOJI}": emoji,
-        "{TASK}": task,
         "{TASK}": task,
         "{DESCRIPTION}": _shorten(task, 80),
         "{Titel}": titel,
@@ -361,12 +380,21 @@ settings:
         else:
             unreplaced.append(placeholder)
     
-    # Nicht-replacese placeholder (aus Template, not in replacements?) 
-    # -> Als empty String replace
-    all_found = re.findall(r"\{[A-Z_]+\}", result)
+    # R110-328-BUG-3: Find any {placeholder} in the result that wasn't
+    # in `replacements`. Pre-fix regex was r"\{[A-Z_]+\}" which missed
+    # lowercase + mixed-case placeholders (e.g. {name}, {Mixed_Case},
+    # {unknown_lower}), so they were silently kept in the output.
+    # New regex r"\{[^}]+\}" matches any non-empty braces content.
+    # Pre-fix warning message also misnamed these as "Nicht-replacese"
+    # (mixing in unused-replacements and unfilled-template placeholders
+    # with different semantic meanings). Now we separate them:
+    #   unused_in_template: in replacements but template didn't use it
+    #   unfilled_in_output: in result but not in replacements (was silent)
+    unfilled_in_output = []
+    all_found = re.findall(r"\{[^}]+\}", result)
     for ph in all_found:
         if ph not in replacements:
-            unreplaced.append(ph)
+            unfilled_in_output.append(ph)
             result = result.replace(ph, "")
     
     # Aufraeumen: Emptylines mit only Whitespace remove (max 1 Durchlauf)
@@ -374,8 +402,19 @@ settings:
         result = result.replace("\n\n\n", "\n\n")
     
     if unreplaced:
-        print(f"  ℹ️  Nicht-replacese placeholder: {', '.join(unreplaced)}")
-    
+        # R110-328-BUG-3: Distinguish "unused in template" (placeholder
+        # in replacements but template didn't use it — informational)
+        # from "unfilled in output" (placeholder in template but not in
+        # replacements — was a silent bug pre-fix, now a warning).
+        print(f"  ℹ️  Unused replacements (template did not use): "
+              f"{', '.join(unreplaced)}")
+    if unfilled_in_output:
+        # This is the one that was silent pre-fix. Now we WARN so the
+        # user knows they have a placeholder in the template that wasn't
+        # provided a value.
+        print(f"  ⚠️  Unfilled placeholders in template (replaced with ''): "
+              f"{', '.join(unfilled_in_output)}")
+
     return result
 
 # ──────────────────────────────────────────────
@@ -401,7 +440,7 @@ def build_yaml(filled: str, rules: Dict, name: str, emoji: str, task: str) -> Di
     
     settings = dict(rules.get("standard_settings", {}))
     settings.setdefault("timeout", DEFAULT_TIMEOUT)
-    settings.setdefault("max_steps", DEFAULT_MAX_STEPS)
+    settings.setdefault("max_turns", DEFAULT_MAX_TURNS)
     settings.setdefault("goose_provider", DEFAULT_PROVIDER)
     settings.setdefault("goose_model", DEFAULT_MODEL)
     
@@ -422,7 +461,7 @@ def build_yaml(filled: str, rules: Dict, name: str, emoji: str, task: str) -> Di
 
 def _update_changes_json(workspace: str, action: str, description: str):
     """Fuegt a entry in changes.json hinzu."""
-    changes_path = os.path.join(workspace, ".state/changes.json")
+    changes_path = os.path.join(workspace, ".mase/changes.json")
     entry = {
         "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
         "action": action,
@@ -445,7 +484,7 @@ def _update_changes_json(workspace: str, action: str, description: str):
 
 def _add_sot_entry(workspace: str, name: str, task: str):
     """Fuegt Agent-entry in workflows.yaml → agents hinzu."""
-    wf_path = os.path.join(workspace, ".state/workflows.yaml")
+    wf_path = os.path.join(workspace, ".mase/workflows.yaml")
     if not os.path.exists(wf_path):
         print(f"  ⚠️  SOT not found: {wf_path}")
         return False
@@ -523,7 +562,7 @@ def write_agent(yaml_data: Dict, name: str, agent_type: str, workspace: str, no_
     
     # Backup falls present
     if os.path.exists(out_path):
-        backup_dir = os.path.join(base, ".state/backups")
+        backup_dir = os.path.join(base, ".mase/backups")
         os.makedirs(backup_dir, exist_ok=True)
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_path = os.path.join(backup_dir, f"{ts}_{agent_key}.yaml")
@@ -637,7 +676,7 @@ def refresh_agent(agent_name: str, dry_run: bool, workspace: str, sources: Optio
     chk = _check_field(agent_data, "settings.timeout", DEFAULT_TIMEOUT, "timeout")
     if chk: issues.append(chk)
     
-    chk = _check_field(agent_data, "settings.max_steps", DEFAULT_MAX_STEPS, "max_steps")
+    chk = _check_field(agent_data, "settings.max_turns", DEFAULT_MAX_TURNS, "max_turns")
     if chk: issues.append(chk)
     
     # ── Content-Checks ──
@@ -696,11 +735,11 @@ def refresh_agent(agent_name: str, dry_run: bool, workspace: str, sources: Optio
                 agent_data["settings"] = {}
             if agent_data["settings"].get("timeout") != DEFAULT_TIMEOUT:
                 agent_data["settings"]["timeout"] = DEFAULT_TIMEOUT
-            if agent_data["settings"].get("max_steps") != DEFAULT_MAX_STEPS:
-                agent_data["settings"]["max_steps"] = DEFAULT_MAX_STEPS
+            if agent_data["settings"].get("max_turns") != DEFAULT_MAX_TURNS:
+                agent_data["settings"]["max_turns"] = DEFAULT_MAX_TURNS
         
         # Backup + Write
-        backup_path = os.path.join(base, ".state/backups", f"pre_refresh_{agent_name}.yaml")
+        backup_path = os.path.join(base, ".mase/backups", f"pre_refresh_{agent_name}.yaml")
         os.makedirs(os.path.dirname(backup_path), exist_ok=True)
         try:
             with open(agent_path) as f_src, open(backup_path, "w") as f_dst:
@@ -711,7 +750,7 @@ def refresh_agent(agent_name: str, dry_run: bool, workspace: str, sources: Optio
         with open(agent_path, "w", encoding="utf-8") as f:
             yaml.dump(agent_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
         
-        _update_changes_json(base, "REFRESH", f"Settings corrected in {agent_name}: timeout/max_steps to default")
+        _update_changes_json(base, "REFRESH", f"Settings corrected in {agent_name}: timeout/max_turns to default")
         print(f"  ✅ {agent_name} gefixed")
     
     return {

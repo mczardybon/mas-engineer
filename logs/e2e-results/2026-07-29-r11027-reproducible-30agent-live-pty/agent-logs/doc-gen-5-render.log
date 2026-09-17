@@ -1,0 +1,694 @@
+# R110-27 live log: doc-gen-5-render
+# Started:    2026-07-29T13:56:24Z
+# Walltime:   38.16s
+# RC:         0
+# Bytes:      27185
+# Timed_out:  False
+# Error:      none
+# Wrapper:    /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/wrappers/doc-gen-5-render.yaml
+# Task-file:  /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/tasks.yaml
+# ======================================================================
+
+Script started on 2026-07-29 13:56:24+00:00 [COMMAND="bash -c '/root/.local/bin/goose run --recipe /workspace/dev-branch/mas-engineer/e2e-results/2026-07-29-r11027-reproducible-30agent-live-pty/wrappers/doc-gen-5-render.yaml --no-session 2>&1'" <not executed on terminal>]
+Loading recipe: R110-27 wrapper — doc-gen-5-render
+Description: R110-27 wrapper injecting task for doc-gen-5-render
+
+◒  starting 3 extensions: developer, analyze, summon                            
+◐  starting 3 extensions: developer, analyze, summon                            
+◐  starting 2 extensions: developer, analyze                                    
+◐  starting 1 extensions: developer                                             
+◐  starting 0 extensions:                                                       
+]0;🪿 mas-engineer
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260729_114 · /workspace/dev-branch/mas-engineer
+     L L     goose is ready
+Let me first examine the sample file and understand its structure.
+  ────────────────────────────────────────
+  ▸ tree
+    path: /workspace/dev-branch/mas-engineer
+    depth: 3
+
+    docs/  [6K]
+      ARCHITECTURE-E2E-TESTING.md  [89]
+      BUG-BRIEF-2026-07-23.md  [153]
+      CHANGELOG-2026-07-19-e2e-success.md  [19]
+      CHANGELOG-2026-07-25.md  [1]
+      DEMO-MULTI-ARCH-30.md  [605]
+      DEMO-RESEARCH-TEAM.md  [217]
+      E2E-COMMIT-STRATEGY.md  [71]
+      E2E-DEMO-RESEARCH-TEAM.md  [140]
+      E2E-SELF-IMPROVEMENT-REPORT-2026-07-24.md  [104]
+    ... (604 lines hidden, /toggle to show all)
+      goose-costed  [82]
+      mas_cost  [280]
+      mcp_dashboard_server.py  [81]
+      pre_check  [176]
+      sessions_rotate  [188]
+      test_subagents  [288]
+    .env.example  [28]
+    DATA-QUALITY-REPORT.md  [228]
+    README.md  [158]
+    run_translators.py  [80]
+
+  ────────────────────────────────────────
+  ▸ read_image
+    source: /workspace/dev-branch/mas-engineer/sample-input/sample_with_bugs.py
+
+    Error: unsupported image format; supported formats are png, jpeg, gif, and webp
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat -n /workspace/dev-branch/mas-engineer/sample-input/sample_with_bugs.py
+
+         1	"""Sample code with intentional bugs for code-review team."""
+         2	
+         3	from typing import List, Optional
+         4	
+         5	
+         6	def average(numbers: List[int]) -> int:
+         7	    """Return the average of a list of integers.
+         8	
+         9	    Args:
+        10	        numbers: A list of integers to average.
+    ... (72 lines hidden, /toggle to show all)
+        83	        counter.increment()
+        84	
+        85	
+        86	if __name__ == "__main__":
+        87	    threads = [threading.Thread(target=worker) for _ in range(10)]
+        88	    for t in threads:
+        89	        t.start()
+        90	    for t in threads:
+        91	        t.join()
+        92	    print(f"Final count: {counter.get()} (expected 10000)")  # race-condition gives wrong answer
+Now let me look at the doc-gen pipeline agents to understand the expected rendering format (skeleton → examples → crosslinks).
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/recipe/multi-arch-30/sub/doc-gen-2-skeleton.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/recipe/multi-arch-30/sub/doc-gen-3-examples.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/recipe/multi-arch-30/sub/doc-gen-4-crosslink.yaml
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/recipe/multi-arch-30/sub/doc-gen-5-render.yaml
+
+    # TEAM 6: doc-gen-team [PIPELINE] — Stage 2: Skeleton
+    name: doc-gen-2-skeleton
+    description: "Stage 2 -- generate doc skeletons"
+    title: "doc-gen-2-skeleton — Agent in multi-arch-30 MAS"
+    version: 1.0.0
+    role: pipeline-stage-2
+    
+    instructions: |
+      You are Stage 2 of a 5-stage documentation generation pipeline.
+      Take the API map from Stage 1 and generate doc skeletons:
+      - Module docstring with overview
+      - Class docstrings with attribute descriptions
+      - Function/method docstrings with Args/Returns/Raises
+      - Type annotations formatted in docs
+      Pass skeletons to doc-gen-3-examples.
+    # TEAM 6: doc-gen-team [PIPELINE] — Stage 3: Examples
+    name: doc-gen-3-examples
+    description: "Stage 3 -- add usage examples"
+    title: "doc-gen-3-examples — Agent in multi-arch-30 MAS"
+    version: 1.0.0
+    role: pipeline-stage-3
+    
+    instructions: |
+      You are Stage 3 of a 5-stage documentation generation pipeline.
+      Take doc skeletons from Stage 2 and add usage examples:
+      - Basic usage examples for each public function
+      - Common usage patterns
+      - Edge case examples
+      - Error handling examples
+      - Code blocks in appropriate format
+      Pass enriched docs to doc-gen-4-crosslink.
+    # TEAM 6: doc-gen-team [PIPELINE] — Stage 4: Cross-link
+    name: doc-gen-4-crosslink
+    description: "Stage 4 -- cross-link related symbols"
+    title: "doc-gen-4-crosslink — Agent in multi-arch-30 MAS"
+    version: 1.0.0
+    role: pipeline-stage-4
+    
+    instructions: |
+      You are Stage 4 of a 5-stage documentation generation pipeline.
+      Take docs with examples from Stage 3 and add cross-references:
+      - Link related functions/classes between modules
+      - Add "See also" sections
+      - Reference external resources and standards
+      - Add navigation links for multi-page docs
+      - Index terms and concepts
+      Pass cross-linked docs to doc-gen-5-render.
+    # TEAM 6: doc-gen-team [PIPELINE] — Stage 5: Render
+    name: doc-gen-5-render
+    description: "Stage 5 -- final markdown/HTML render"
+    title: "doc-gen-5-render — Agent in multi-arch-30 MAS"
+    version: 1.0.0
+    role: pipeline-stage-5
+    
+    instructions: |
+      You are Stage 5 of a 5-stage documentation generation pipeline.
+      Take cross-linked docs from Stage 4 and render final output:
+      - Markdown documentation with proper formatting
+      - Table of contents
+      - Code syntax highlighting
+      - Consistent style
+      - Badges and metadata
+      Output the complete documentation in final format.
+Let me also check the other sample files and the usage examples for crosslink material.
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/sample-input/usage_examples.py
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/sample-input/data_report.py
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/sample-input/order_processor.py
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/sample-input/pipeline_runner.py
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/sample-input/user_importer.py
+
+    """Usage examples for the public API in sample_with_bugs.py.
+    
+    This module demonstrates the intended usage of each public function and
+    class defined in ``sample_with_bugs.py``.  Known bugs in the source are
+    documented alongside the examples so consumers can anticipate the actual
+    (sometimes incorrect) behaviour.
+    
+    .. caution::
+    
+       The source file contains intentional bugs.  These examples show the
+    ... (227 lines hidden, /toggle to show all)
+        print("\n=== find_user() examples ===")
+        examples_find_user()
+    
+        print("\n=== Counter examples ===")
+        examples_counter()
+    
+        print("\n=== Race condition demo ===")
+        examples_race_condition()
+    
+        example_workflow()
+    """Report generator — builds HTML/Markdown reports from raw data."""
+    import json
+    from collections import Counter
+    from datetime import date, datetime
+    from pathlib import Path
+    from typing import Any
+    
+    
+    def generate_report(data_path: str, report_type: str, output_path: str) -> dict[str, Any]:
+        """Load data, analyze, format, and write a report."""
+    ... (96 lines hidden, /toggle to show all)
+                "total_value": total_value,
+                "priorities": dict(priorities),
+                "assignees": dict(assignees),
+            }, indent=2)
+        else:
+            return {"success": False, "error": f"Unknown report type: {report_type}"}
+    
+        # Write
+        Path(output_path).write_text(content)
+        return {"success": True, "path": output_path, "type": report_type}
+    """Order processing — applies discounts, calculates totals, sends notifications."""
+    import json
+    import smtplib
+    from dataclasses import dataclass, field
+    from decimal import Decimal
+    from typing import Any
+    
+    
+    @dataclass
+    class OrderItem:
+    ... (92 lines hidden, /toggle to show all)
+        smtp = db.get("smtp_server", "localhost")
+        smtp_port = db.get("smtp_port", 25)
+        try:
+            with smtplib.SMTP(smtp, smtp_port) as server:
+                sender = db.get("from_email", "orders@shop.example")
+                server.sendmail(sender, [order.customer_email], msg)
+        except Exception as e:
+            return {"success": False, "error": f"Order saved but email failed: {e}"}
+    
+        return {"success": True, "order_id": order.id, "total": str(total)}
+    """ML pipeline — loads, transforms, trains, evaluates, deploys."""
+    import json
+    import os
+    import pickle
+    import shutil
+    from pathlib import Path
+    from typing import Any
+    
+    
+    class Pipeline:
+    ... (72 lines hidden, /toggle to show all)
+            shutil.copytree(self.model_dir, str(deploy_dir))
+            deploy_marker = deploy_dir / "deployed.txt"
+            deploy_marker.write_text(f"Deployed at {__import__('datetime').datetime.now().isoformat()}")
+    
+            return {
+                "accuracy": acc,
+                "model_path": model_path,
+                "result_path": result_path,
+                "deploy_path": str(deploy_dir),
+            }
+    """User import pipeline — processes CSV user data."""
+    import csv
+    import hashlib
+    import re
+    from datetime import datetime
+    from pathlib import Path
+    from typing import Any
+    
+    
+    def import_users(csv_path: str, output_dir: str, dry_run: bool = False) -> dict[str, Any]:
+    ... (94 lines hidden, /toggle to show all)
+        # Summary log
+        summary_path = out_dir / "import_summary.txt"
+        summary = (
+            f"Import completed at {datetime.now().isoformat()}\n"
+            f"Total: {len(rows)}, Valid: {len(valid)}, Errors: {len(errors)}\n"
+        )
+        summary_path.write_text(summary)
+        result["output_files"].append(str(summary_path))
+    
+        return result
+Let me also read the doc-gen-1-analyze stage to complete the pipeline picture:
+  ────────────────────────────────────────
+  ▸ shell
+    command: cat /workspace/dev-branch/mas-engineer/recipe/multi-arch-30/sub/doc-gen-1-analyze.yaml
+
+    # TEAM 6: doc-gen-team [PIPELINE] — Stage 1: Analyze
+    name: doc-gen-1-analyze
+    description: "Stage 1 -- parse code, find public API"
+    title: "doc-gen-1-analyze — Agent in multi-arch-30 MAS"
+    version: 1.0.0
+    role: pipeline-stage-1
+    
+    instructions: |
+      You are Stage 1 of a 5-stage documentation generation pipeline.
+      Analyze the source code and identify:
+      - All public functions, classes, methods
+      - Module-level exports and public API surface
+      - Parameters, return types, exceptions
+      - Module purpose and dependencies
+      Pass the API map to doc-gen-2-skeleton.
+Now I have a complete understanding of the file and its ecosystem. Let me render the final documentation.
+
+---
+
+# `sample_with_bugs.py` — API Reference
+
+> **Module:** `sample_input.sample_with_bugs`  
+> **Purpose:** Demonstrates common Python bugs (off-by-one, attribute access, race conditions) for use by the **code-review team** and **documentation pipeline**.  
+> **Status:** ⚠️ _Contains intentional bugs_ — see [Known Issues](#known-issues) below.
+
+---
+
+## Table of Contents
+
+- [Module Overview](#module-overview)
+- [Functions](#functions)
+  - [`average()`](#1-average)
+  - [`find_user()`](#2-find_user)
+- [Classes](#classes)
+  - [`Counter`](#3-counter)
+- [Module-Level Objects](#module-level-objects)
+  - [`counter`](#4-counter-global-instance)
+  - [`worker()`](#5-worker)
+- [Examples](#examples)
+- [Cross-References](#cross-references)
+- [Known Issues](#known-issues)
+
+---
+
+## Module Overview
+
+This module provides a minimal set of intentionally buggy Python code designed
+to exercise code-review tools, static analyzers, and documentation pipelines.
+It includes:
+
+- A mathematical utility (`average`) with an **off-by-one loop bug**.
+- A data-lookup function (`find_user`) using **wrong attribute access** on a dict.
+- A thread-unsafe `Counter` class demonstrating a **classic race condition**.
+
+The companion module [`usage_examples.py`](#usage_examplespy) shows the
+_intended_ behaviour beside the actual buggy output.
+
+---
+
+## Functions
+
+### 1. `average()`
+
+```python
+def average(numbers: List[int]) -> int:
+```
+
+Calculate the integer floor of the arithmetic mean of a list of integers.
+
+**Parameters:**
+
+| Parameter | Type        | Description                    |
+|-----------|-------------|--------------------------------|
+| `numbers` | `List[int]` | A list of integers to average. |
+**Returns:**
+
+| Type  | Description                                      |
+|-------|--------------------------------------------------|
+| `int` | The integer floor of the average of the numbers. |
+**Raises:**
+
+| Exception           | Condition                                                                          |
+|---------------------|------------------------------------------------------------------------------------|
+| `ZeroDivisionError` | If the input list is empty.                                                        |
+| `IndexError`        | **Bug:** off-by-one causes index out of range (see [Known Issues](#known-issues)). |
+**Logic:**
+
+```python
+total = 0
+for i in range(len(numbers) + 1):  # ← bug: should be range(len(numbers))
+    total += numbers[i]
+return total // len(numbers)
+```
+
+**Related:** See [`usage_examples.examples_average()`](#examples_average) for demonstration.
+
+---
+
+### 2. `find_user()`
+
+```python
+def find_user(user_id: int, users: List[dict]) -> Optional[dict]:
+```
+
+Search a list of user dictionaries by numeric ID.
+
+**Parameters:**
+
+| Parameter | Type         | Description                                    |
+|-----------|--------------|------------------------------------------------|
+| `user_id` | `int`        | The unique identifier of the user to find.     |
+| `users`   | `List[dict]` | A list of user dictionaries to search through. |
+**Returns:**
+
+| Type             | Description                                           |
+|------------------|-------------------------------------------------------|
+| `Optional[dict]` | The matching user dictionary, or `None` if not found. |
+**Raises:**
+
+| Exception        | Condition                                                                      |
+|------------------|--------------------------------------------------------------------------------|
+| `AttributeError` | **Bug:** uses `u.id` instead of `u["id"]` (see [Known Issues](#known-issues)). |
+**Logic:**
+
+```python
+for u in users:
+    if u.id == user_id:  # ← bug: dict has no .id attribute
+        return u
+return None
+```
+
+**Related:** See [`usage_examples.examples_find_user()`](#examples_find_user) for demonstration.  
+**See also:** [`user_importer.py`](#user_importerpy) for a correct CSV-to-dict user-import pipeline.
+
+---
+
+## Classes
+
+### 3. `Counter`
+
+```python
+class Counter:
+```
+
+A simple thread-unsafe integer counter.
+
+**Attributes:**
+
+| Attribute | Type  | Default | Description              |
+|-----------|-------|---------|--------------------------|
+| `count`   | `int` | `0`     | The current count value. |
+**Note:** This class is **not thread-safe**. Concurrent access from multiple
+threads may produce incorrect results due to a missing lock.
+
+---
+
+#### `Counter.__init__()`
+
+```python
+def __init__(self):
+```
+
+Initialize the counter with a starting value of `0`.
+
+---
+
+#### `Counter.increment()`
+
+```python
+def increment(self) -> int:
+```
+
+Increment the counter by one and return the new value.
+
+**Returns:**
+
+| Type  | Description                           |
+|-------|---------------------------------------|
+| `int` | The updated count after incrementing. |
+**Thread-safety:** This method is **not atomic** — the `self.count += 1`
+operation is a read-modify-write that can interleave between threads.
+
+---
+
+#### `Counter.get()`
+
+```python
+def get(self) -> int:
+```
+
+Return the current value of the counter without modifying it.
+
+**Returns:**
+
+| Type  | Description        |
+|-------|--------------------|
+| `int` | The current count. |
+---
+
+## Module-Level Objects
+
+### 4. `counter` (Global Instance)
+
+```python
+counter = Counter()  # module-level, shared across threads
+```
+
+A module-level `Counter` instance used by [`worker()`](#5-worker) and the
+`__main__` block. Because there is **no lock**, this object is subject to
+race conditions when accessed from multiple threads.
+
+**See also:** [`usage_examples.examples_race_condition()`](#examples_race_condition)
+for a demonstration of the observed drift from the expected `10 000`.
+
+---
+
+### 5. `worker()`
+
+```python
+def worker():
+```
+
+Increment the global `counter` 1000 times.
+
+**Intended use:** Target function for `threading.Thread`. When 10 threads run
+`worker()` concurrently, the expected final count is `10 × 1000 = 10 000`,
+but the actual result is almost always **less** due to the missing lock.
+
+**Related:** See [`usage_examples.worker()`](#examples_worker) for a parallel
+definition in the examples module.
+
+---
+
+## Examples
+
+### `examples_average()` <a id="examples_average"></a>
+
+Demonstrates `average()` with normal, empty, and edge-case inputs.  Every call
+is wrapped in a `try/except` to catch the known `IndexError` and
+`ZeroDivisionError`.
+
+```python
+# Normal:   average([1,2,3,4,5]) → IndexError (off-by-one)
+# Empty:    average([])          → IndexError
+# Negative: average([-5,0,5])    → IndexError
+```
+
+**File:** [`sample-input/usage_examples.py`](#usage_examplespy), function
+`examples_average()`.
+
+---
+
+### `examples_find_user()` <a id="examples_find_user"></a>
+
+Demonstrates `find_user()` with a realistic user dataset, catching the
+`AttributeError` caused by the `u.id` vs `u["id"]` bug.
+
+```python
+users = [
+    {"id": 1, "name": "Alice"},
+    {"id": 2, "name": "Bob"},
+]
+
+# find_user(1, users) → AttributeError (u.id not found on dict)
+# find_user(99, users) → AttributeError (same root cause)
+# find_user(1, [])     → AttributeError
+```
+
+**File:** [`sample-input/usage_examples.py`](#usage_examplespy), function
+`examples_find_user()`.
+
+---
+
+### `examples_counter()` <a id="examples_counter"></a>
+
+Demonstrates `Counter` in single-threaded usage (the only safe context).
+
+```python
+c = Counter()
+c.increment()         # 0 → 1
+c.increment()         # 1 → 2
+c.get()               # 2
+```
+
+**File:** [`sample-input/usage_examples.py`](#usage_examplespy), function
+`examples_counter()`.
+
+---
+
+### `examples_race_condition()` <a id="examples_race_condition"></a>
+
+Reproduces the race condition by spawning 10 threads that each call
+`counter.increment()` 1000 times. The result is **nearly always < 10 000**.
+
+```python
+threads = [threading.Thread(target=worker) for _ in range(10)]
+# start all, join all, then:
+print(f"count = {counter.get()}  (expected 10000)")
+# Typical output: count = 4371  (expected 10000)
+```
+
+**File:** [`sample-input/usage_examples.py`](#usage_examplespy), function
+`examples_race_condition()`.
+
+---
+
+### `example_workflow()` <a id="example_workflow"></a>
+
+A real-world-style scenario tying together `find_user`, `average`, and `Counter`.
+
+```python
+# 1. Build user list with scores
+# 2. find_user(10, ...) → AttributeError caught
+# 3. average(scores)    → IndexError caught
+# 4. Counter tracks processed users
+```
+
+**File:** [`sample-input/usage_examples.py`](#usage_examplespy), function
+`example_workflow()`.
+
+---
+
+## Cross-References
+
+### Within the Same Module
+
+| Symbol     | Used by                        | Notes                        |
+|------------|--------------------------------|------------------------------|
+| `Counter`  | `counter` (global), `worker()` | Shared mutable state         |
+| `counter`  | `__main__` block               | 10 threads × 1000 iterations |
+| `worker()` | `__main__` block               | Thread target                |
+### Across Sample Modules
+
+| Module                                       | Key Symbols                                                                                                 | Relationship                                                                                             |
+|----------------------------------------------|-------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|
+| [`usage_examples.py`](./usage_examples.py)   | `examples_average`, `examples_find_user`, `examples_counter`, `examples_race_condition`, `example_workflow` | **Callers** of every public symbol in `sample_with_bugs`. Documents intended vs actual behaviour.        |
+| [`data_report.py`](./data_report.py)         | `generate_report()`                                                                                         | Uses `collections.Counter` (stdlib, unrelated) — demonstrates how a **correct** aggregate counter works. |
+| [`order_processor.py`](./order_processor.py) | `process_order()`, `Order`, `OrderItem`                                                                     | Demonstrates **thread-unsafe** patterns in a different domain (global `db` dict).                        |
+| [`pipeline_runner.py`](./pipeline_runner.py) | `Pipeline.run()`                                                                                            | Serial ML pipeline — no threading issues, contrasts with `Counter` race condition.                       |
+| [`user_importer.py`](./user_importer.py)     | `import_users()`                                                                                            | Shows correct **dict access** (`row.get("email")`), contrasting with `find_user`'s `u.id` bug.           |
+### External References
+
+| Reference                                 | Link                                                                |
+|-------------------------------------------|---------------------------------------------------------------------|
+| Python `threading` docs                   | https://docs.python.org/3/library/threading.html                    |
+| `threading.Lock` (fix for race condition) | https://docs.python.org/3/library/threading.html#lock-objects       |
+| Off-by-one errors (Wikipedia)             | https://en.wikipedia.org/wiki/Off-by-one_error                      |
+| Python `dict` access patterns             | https://docs.python.org/3/tutorial/datastructures.html#dictionaries |
+---
+
+## Known Issues
+
+| # | Symbol                | Bug                                                  | Impact                                  | Suggested Fix                                                        |
+|---|-----------------------|------------------------------------------------------|-----------------------------------------|----------------------------------------------------------------------|
+| 1 | `average()`           | `range(len(numbers) + 1)` — off-by-one in loop bound | `IndexError` on every non-empty list    | Change to `range(len(numbers))`                                      |
+| 2 | `average()`           | No guard for empty list before `//`                  | `ZeroDivisionError`                     | Add `if not numbers: return 0` (or raise `ValueError`)               |
+| 3 | `find_user()`         | Uses `u.id` instead of `u["id"]`                     | `AttributeError` on any call            | Replace `u.id` with `u["id"]`                                        |
+| 4 | `Counter` / `counter` | No `threading.Lock` around shared state              | Race condition — final count < expected | Add a `threading.Lock` and `acquire`/`release` (or use `with lock:`) |
+**Severity legend:**  
+🔴 **Crash** (bug 1–3) — raises an exception on every invocation.  
+🟡 **Incorrect result** (bug 4) — silently produces wrong output under concurrency.
+
+---
+
+## Quick Reference Card
+
+```
+sample_with_bugs.py
+├── average(numbers)              → int        ⚠️ IndexError, ZeroDivisionError
+├── find_user(user_id, users)     → dict|None  ⚠️ AttributeError
+├── Counter
+│   ├── __init__()                → None
+│   ├── increment()               → int        ⚠️ not thread-safe
+│   └── get()                     → int
+├── counter                       → Counter    # module-level singleton
+└── worker()                      → None       # thread target
+
+usage_examples.py (companion)
+├── examples_average()
+├── examples_find_user()
+├── examples_counter()
+├── examples_race_condition()
+│   └── worker()                  # local copy for isolation
+└── example_workflow()
+```
+
+---
+
+*Generated by `doc-gen-5-render` pipeline — Stage 5 of 5.*  
+*Source: `sample-input/sample_with_bugs.py`*  
+*Cross-references: `usage_examples.py`, `data_report.py`, `order_processor.py`, `pipeline_runner.py`, `user_importer.py`*
+
+Script done on 2026-07-29 13:57:03+00:00 [COMMAND_EXIT_CODE="0"]

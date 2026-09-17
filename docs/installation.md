@@ -38,10 +38,10 @@ The `install.sh` script:
 2. **Backs up** any existing installation to `.backups/TIMESTAMP/`
 3. **Copies** files to `~/.config/goose/`:
    - Main recipe → `~/.config/goose/recipes/dev-mas-engineer.yaml`
-   - 96 sub-agents → `~/.config/goose/recipes/sub/`
-   - 57 tools (50 Python, 6 Shell, 1 YAML) → `~/.config/goose/recipes/mas-engineer-tools/`
+   - 112 sub-agents → `~/.config/goose/recipes/sub/`
+   - 65 tools (58 Python, 6 Shell, 1 YAML) → `~/.config/goose/recipes/mas-engineer-tools/`
    - Docs → `~/.config/goose/docs/mas-engineer/`
-   - Knowledge + SOT → `~/.config/goose/.state/`
+   - Knowledge + SOT (from `.mase/`) → `~/.config/goose/.state/`
 4. **Sets** `.mas-mode = framework`
 5. **Validates** the installation
 
@@ -51,16 +51,16 @@ The installer auto-detects the directory structure:
 flowchart LR
     subgraph SOURCE["Distribution (mas-engineer/)"]
         S1["recipe/\ndev-mas-engineer.yaml"]
-        S2["recipe/sub/\nsub_mas-*.yaml (96)"]
-        S3["tools/\ndev_*.py/.sh (57: 50 .py + 6 .sh + 1 YAML)"]
-        S4[".state/workflows.yaml\nknowledge/\n rules/"]
+        S2["recipe/sub/\nsub_mas-*.yaml (112)"]
+        S3["tools/\ndev_*.py/.sh (65: 58 .py + 6 .sh + 1 YAML)"]
+        S4[".mase/workflows.yaml\nknowledge/\n rules/"]
         S5["docs/\n*.md"]
     end
     subgraph DEST["Installed (~/.config/goose/)"]
         D1["recipes/\ndev-mas-engineer.yaml"]
         D2["recipes/sub/\nsub_mas-*.yaml"]
         D3["recipes/mas-engineer-tools/\ndev_*.py/.sh"]
-        D4[".state/\nworkflows.yaml\nknowledge/ rules/"]
+        D4[".mase/\nworkflows.yaml\nknowledge/ rules/"]
         D5["docs/mas-engineer/\n*.md"]
     end
 
@@ -77,7 +77,7 @@ mas-engineer/                         mas-engineer/
 ├── recipe/dev-mas-engineer.yaml      ├── recipe/dev-mas-engineer.yaml
 ├── recipe/sub/sub_mas-*.yaml         ├── recipe/sub/sub_mas-*.yaml
 ├── tools/dev_*.py                    ├── tools/dev_*.py
-└── .state/workflows.yaml            └── .state/workflows.yaml
+└── .mase/workflows.yaml            └── .mase/workflows.yaml
 ```
 
 ## Start MAS-Engineer
@@ -105,7 +105,7 @@ goose run --recipe recipe/setup-dashboard.yaml
 
 This will:
 
-1. Install npm dependencies in `.mas/mcp/`
+1. Install npm dependencies in `.mase/mcp/`
 2. Register a Goose extension in `~/.config/goose/config.yaml`
 3. Set up a scheduler for data refresh (every 5 minutes)
 4. Generate initial dashboard data
@@ -120,7 +120,7 @@ goose run --recipe dev-mas-engineer
 "Create a standalone distribution of MAS-Engineer named my-mas"
 ```
 
-The Engineer delegates to `sub_mas-bootstrap` which copies all 96 sub-agents, 57 tools, dashboard, and recovery templates into a new directory.
+The Engineer delegates to `sub_mas-bootstrap` which copies all 112 sub-agents, 65 tools, dashboard, and recovery templates into a new directory.
 
 Then on the target machine:
 

@@ -1,0 +1,156 @@
+Loading recipe: 📊 FW-MONITOR-SESSION — Session Logging (Script-wrapper)
+Description: v2.0.0 | CONTROLLER-internal: Cycle log + session report. Delegates to tools/dev_health_monitor.py LOG_SESSION.
+
+
+    __( O)>  ● new session · openai deepseek-v4-flash
+   \____)    20260801_111 · /tmp/mas-engineer-test/mas-engineer
+     L L     goose is ready
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_health_monitor.py --help 2>&1 | head -50
+
+{
+  "error": "unknown command: --HELP"
+}
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_health_monitor.py 2>&1 | head -30
+
+{"error": "usage: dev_health_monitor.py <CHECK_HEALTH|CHECK_RUNTIME|LOG_SESSION|RECOVER> [args]"}
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && rg -n "LOG_SESSION|def log_session|VALID|EVENTS|event" tools/dev_health_monitor.py | head -40
+
+9:  LOG_SESSION    — write cycle log entry + session report (was monitor-session)
+203:def log_session(event: str, details: dict = None, log_dir: str = None) -> dict:
+205:    LOG_SESSION: write a cycle-log entry + session report.
+207:    Appends to .state/logs/cycle-{YYYY-MM-DD}.log with timestamp + event.
+216:        "event": event,
+223:        "command": "LOG_SESSION",
+225:        "event": event,
+262:        print(json.dumps({"error": "usage: dev_health_monitor.py <CHECK_HEALTH|CHECK_RUNTIME|LOG_SESSION|RECOVER> [args]"}))
+272:    elif cmd == "LOG_SESSION":
+273:        event = sys.argv[2] if len(sys.argv) > 2 else "unspecified"
+275:        result = log_session(event, details)
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && sed -n 195,290p tools/dev_health_monitor.py
+
+        "stale_sessions": stale,
+        "crashes": crashes,
+        "arch_violations": arch_violations,
+        "issues_found": issues,
+        "signal": "🔴 ISSUES" if issues else "🟢 OK",
+    }
+
+
+def log_session(event: str, details: dict = None, log_dir: str = None) -> dict:
+    """
+    LOG_SESSION: write a cycle-log entry + session report.
+
+    Appends to .state/logs/cycle-{YYYY-MM-DD}.log with timestamp + event.
+    """
+    logs = Path(log_dir) if log_dir else LOG_DIR
+    logs.mkdir(parents=True, exist_ok=True)
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    log_file = logs / f"cycle-{today}.log"
+
+    entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "event": event,
+        "details": details or {},
+    }
+    with open(log_file, "a") as f:
+        f.write(json.dumps(entry) + "\n")
+
+    return {
+        "command": "LOG_SESSION",
+        "log_file": str(log_file),
+        "event": event,
+        "logged": True,
+    }
+
+
+def recover(agent: str, attempt: int = 1, max_attempts: int = 3) -> dict:
+    """
+    RECOVER: restart an agent that died/timed-out/looped.
+
+    Tracks attempt count. After max_attempts, signals escalation.
+    """
+    if attempt > max_attempts:
+        return {
+            "command": "RECOVER",
+            "agent": agent,
+            "attempt": attempt,
+            "escalate": True,
+            "max_attempts_reached": True,
+            "signal": "🔴 ESCALATE",
+        }
+
+    # Recovery = trigger re-dispatch via goose. In a real CLI we'd shell out,
+    # but for a deterministic tool we just record the attempt.
+    log_session("recovery_attempt", {"agent": agent, "attempt": attempt})
+
+    return {
+        "command": "RECOVER",
+        "agent": agent,
+        "attempt": attempt,
+        "max_attempts": max_attempts,
+        "escalate": False,
+        "signal": "🟡 RECOVERING",
+    }
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "usage: dev_health_monitor.py <CHECK_HEALTH|CHECK_RUNTIME|LOG_SESSION|RECOVER> [args]"}))
+        sys.exit(2)
+
+    cmd = sys.argv[1].upper()
+    if cmd == "CHECK_HEALTH":
+        recipes = sys.argv[2] if len(sys.argv) > 2 else str(RECIPES_DIR)
+        result = check_health(recipes)
+    elif cmd == "CHECK_RUNTIME":
+        state = sys.argv[2] if len(sys.argv) > 2 else str(REPO_ROOT / ".state")
+        result = check_runtime(state)
+    elif cmd == "LOG_SESSION":
+        event = sys.argv[2] if len(sys.argv) > 2 else "unspecified"
+        details = json.loads(sys.argv[3]) if len(sys.argv) > 3 else {}
+        result = log_session(event, details)
+    elif cmd == "RECOVER":
+        agent = sys.argv[2] if len(sys.argv) > 2 else "unknown"
+        attempt = int(sys.argv[3]) if len(sys.argv) > 3 else 1
+        max_attempts = int(sys.argv[4]) if len(sys.argv) > 4 else 3
+        result = recover(agent, attempt, max_attempts)
+    else:
+        result = {"error": f"unknown command: {cmd}"}
+
+    print(json.dumps(result, indent=2))
+    # Exit code: 0=OK, 1=issues found
+    if result.get("issues_found") or result.get("findings") or result.get("escalate"):
+        sys.exit(1)
+    sys.exit(0)
+
+
+  ────────────────────────────────────────
+  ▸ shell
+    command: cd /tmp/mas-engineer-test/mas-engineer && python3 tools/dev_health_monitor.py LOG_SESSION monitor_session '{"version": "2.0.0", "mode": "mas-engineer", "role": "FW-MONITOR-SESSION", "mode_check": true}'
+
+{
+  "command": "LOG_SESSION",
+  "log_file": "/tmp/mas-engineer-test/mas-engineer/.state/logs/cycle-2026-08-01.log",
+  "event": "monitor_session",
+  "logged": true
+}✅ **Session logged** — no changes made (R01/R09 respected).
+
+```
+LOG_SESSION monitor_session
+├── log_file: .state/logs/cycle-2026-08-01.log
+├── event:    monitor_session
+└── logged:   true
+```
+
+**Details recorded:** `{version: 2.0.0, mode: mas-engineer, role: FW-MONITOR-SESSION, mode_check: true}`
+
+Monitor-session v2.0.0 wrapper active — ready for further session-logging events (`LOG_SESSION <event> [json_details]`) or `CHECK_HEALTH` / `CHECK_RUNTIME` if needed. Standing by. 🟢
