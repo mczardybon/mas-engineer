@@ -185,7 +185,11 @@ history = subprocess.run(
 # R110-545: 🧪 added for test-coverage sprints (R110-506/507/508/509/510).
 # Semantic is "test-coverage expansion" — distinct from 🔧 (code/config),
 # 🧹 (cleanup), and 📚 (docs). All 3 sources must agree.
-ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊', '🧹', '⚡', '📋', '🧪'}
+# R110-583: 🐛 added — semantic is "bug fix" (deprecation warnings, race
+# conditions, regression fixes). Historically used in 3 prior commits
+# (R110-262, R110-326 FIX deepseek-chat) — exempt-by-hash before. Now
+# canonicalized across all 3 sources.
+ALLOWED_EMOJIS = {'🔧', '📝', '📚', '📊', '🧹', '⚡', '📋', '🧪', '🐛'}
 
 # 3. Build set of historically-used emojis (for diagnostics only)
 EMOJI_RE = re.compile(r'[\U0001F000-\U0001FFFF\U00002600-\U000027BF]')
@@ -234,8 +238,8 @@ allowed_patterns = [
     # the alignment test only verifies that SOME pattern
     # starts with the conventional form, not the full
     # grammar. The full grammar lives in the validator.
-    r'^[🔧📝📚📊] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?: R\d+-\S+ — ',
-    r'^[🔧📝📚📊] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert): R\d+-\S+ — ',
+    r'^[🔧📝📚📊🧹⚡📋🧪🐛] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert)(\([^)]+\))?: R\d+-\S+ — ',
+    r'^[🔧📝📚📊🧹⚡📋🧪🐛] (fix|feat|chore|docs|test|refactor|arch|perf|style|build|ci|revert): R\d+-\S+ — ',
 ]
 # Conventional commits with allowed emojis (the 4 in repo history)
 for allowed in ALLOWED_EMOJIS:

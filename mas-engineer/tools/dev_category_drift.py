@@ -87,7 +87,8 @@ CONVENTIONAL_COMMIT_RE = re.compile(
 # passed the validator, so the detector must also accept it.
 # R110-545: 🧪 added for test-coverage sprints (R110-506/507/508/509/510)
 # — must mirror validator's ALLOWED_EMOJIS set below.
-ALLOWED_EMOJI_PREFIXES = ("🔧", "📝", "📚", "📊", "🧹", "⚡", "📋", "🧪")
+# R110-583: 🐛 added — semantic is "bug fix". Mirrors validator's set.
+ALLOWED_EMOJI_PREFIXES = ("🔧", "📝", "📚", "📊", "🧹", "⚡", "📋", "🧪", "🐛")
 
 # R-sprint round-up prefix (R110-304): the no-emoji `R<round>-<num>:
 # <topic> — desc` form. Used in R110-303 (3 commits: 627d67a, e69bfbf,
@@ -356,6 +357,22 @@ EXEMPT_HASHES = frozenset({
     "1d4b53e",  # 2026-09-16 21:39 IDE auto-commit trap (R110-388): empty file `recipe/sub/sub_-.yaml` (0 bytes) committed with subject `[]`. Root-cause being fixed by adding placeholder content to the file so future IDE commits have a real diff.
     "a32593f",  # 2026-09-16 21:55 🔧 R110-583: add 35d2e40 to EXEMPT_HASHES (Check 1.5 false-positive) (self-commit: 119-char subject with colon instead of em-dash, doesn't match validator 9-pattern ALLOWED_PATTERNS; smoke-test skip via R110-370 EXEMPT mechanism)
     "a5d3b75",  # 2026-09-16 22:00 🔧 R110-583: add a32593f to EXEMPT_HASHES + fill empty sub_-.yaml root-cause fix (self-commit: same 119-char colon-style anti-pattern; recursive fix)
+    # R110-583: 2 Revert commits (R110-583 baseline-investigation, before
+    # the REAL-CI-baseline fix a4171fc landed). Git-generated `Revert "..."`
+    # format with nested quotes is not in the 9-pattern ALLOWED_PATTERNS,
+    # but the underlying commits were already corrected (see e03fea5 +
+    # a4171fc history). Immutable per R110-281.
+    "e87667e",  # 2026-09-17 Revert "🔧 R110-583 — bump ci-tests duration regression threshold from 30% to 50%" (R110-583 failed-investigation, superseded by REAL-CI-baseline a4171fc)
+    "5ff5f26",  # 2026-09-17 Revert "🔧 R110-583 — bump durations baseline for IM publisher enqueue test" (R110-583 failed-investigation, superseded by REAL-CI-baseline a4171fc)
+    # R110-583: 🐛 emoji's first canary commit (57cff97) accidentally has
+    # `fixup` in subject (`🐛 R110-583 fixup — silence ...`) instead of the
+    # canonical `R110-583 follow-up —` or `R110-583 —` form. The validator
+    # regex `R\d+-[\w/-]+( follow-up)? — ` doesn't match `R\d+-NN fixup —`
+    # because `fixup` is a git-am artefact, not a documented convention.
+    # Immutable per R110-281; the canonical 🐛 form is locked in for all
+    # future commits via the validator / detector / smoke-test / SKILL.md /
+    # INDEX 5-source lockstep.
+    "57cff97",  # 2026-09-17 🐛 R110-583 fixup — silence 6 DeprecationWarning: invalid escape sequence (R110-583 first 🐛 canary, subject has anti-pattern `fixup` modifier; canonical form is `🐛 R110-583 — <title>`)
 })
 
 
