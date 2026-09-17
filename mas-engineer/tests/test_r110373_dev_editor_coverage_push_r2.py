@@ -37,6 +37,71 @@ TOOL = REPO_ROOT / "tools" / "dev_editor.py"
 
 
 # -----------------------------------------------------------------------------
+# R55 path-redirect helper (R110-583)
+# -----------------------------------------------------------------------------
+# Production code (tools/dev_editor.py L163,286) uses a HARDCODED path
+# /workspace/mas-engineer-src/mas-engineer for the R55 session counter.
+# This path only exists on a specific developer's local machine and is
+# NOT writable on CI. We monkeypatch Path's mkdir/write_text/read_text/
+# unlink/glob methods so any Path() operation targeting that hardcoded
+# prefix transparently redirects to a tmp_path surrogate. The test code
+# itself does NOT need to know about this — Path("/workspace/...") keeps
+# working as before, just to a different root.
+_R55_HARDCODED_PREFIX = "/workspace/mas-engineer-src/mas-engineer"
+
+
+def _r55_redirect(monkeypatch, tmp_path):
+    """Patch Path operations targeting the R55 hardcoded prefix so they
+    land in tmp_path/fake_mas/ instead. Call this at the start of any
+    test that exercises production code's R55 counter paths."""
+    fake_root = tmp_path / "fake_mas"
+    fake_root.mkdir(parents=True, exist_ok=True)
+
+    def _resolve(self):
+        s = str(self)
+        if s.startswith(_R55_HARDCODED_PREFIX):
+            rel = s[len(_R55_HARDCODED_PREFIX):].lstrip("/")
+            return fake_root / rel
+        return self
+
+    orig_mkdir = Path.mkdir
+    orig_write = Path.write_text
+    orig_read = Path.read_text
+    orig_unlink = Path.unlink
+    orig_glob = Path.glob
+
+    def fake_mkdir(self, *a, **kw):
+        target = _resolve(self)
+        if target is not self:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            return None
+        return orig_mkdir(self, *a, **kw)
+
+    def fake_write(self, *a, **kw):
+        target = _resolve(self)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        return orig_write(target, *a, **kw)
+
+    def fake_read(self, *a, **kw):
+        target = _resolve(self)
+        return orig_read(target, *a, **kw)
+
+    def fake_unlink(self, *a, **kw):
+        target = _resolve(self)
+        return orig_unlink(target, *a, **kw)
+
+    def fake_glob(self, pattern, *a, **kw):
+        target = _resolve(self)
+        return orig_glob(target, pattern, *a, **kw)
+
+    monkeypatch.setattr(Path, "mkdir", fake_mkdir)
+    monkeypatch.setattr(Path, "write_text", fake_write)
+    monkeypatch.setattr(Path, "read_text", fake_read)
+    monkeypatch.setattr(Path, "unlink", fake_unlink)
+    monkeypatch.setattr(Path, "glob", fake_glob)
+
+
+# -----------------------------------------------------------------------------
 # Sandbox load — mirrors R110-303 / R110-347 / R110-372 pattern
 # -----------------------------------------------------------------------------
 @pytest.fixture(scope="module")
@@ -686,6 +751,9 @@ class TestDoPatchCounterException:
     def test_r55_counter_write_fails(self, mod, ws, file_in_ws, monkeypatch, tmp_path):
         """Counter write raises → L302-303 catch (warn) → do_patch still
         returns success."""
+        # R55 design uses hardcoded /workspace/mas-engineer-src/mas-engineer.
+        # Redirect Path mkdir/write/read to tmp_path so the test runs on CI.
+        _r55_redirect(monkeypatch, tmp_path)
         # Make Path.write_text raise ONLY for r55 counter path
         original_write_text = Path.write_text
 
@@ -714,6 +782,7 @@ class TestDoPatchCounterException:
         """If a pre-existing r55 counter file exists with 'data' key, it
         is loaded and incremented. Covers L165-172 (the .exists() branch
         that L171-172 catches from)."""
+        _r55_redirect(monkeypatch, tmp_path)
         # Create the hardcoded counter file
         r55_dir = Path("/workspace/mas-engineer-src/mas-engineer/.mase/pipeline")
         r55_dir.mkdir(parents=True, exist_ok=True)
@@ -737,6 +806,7 @@ class TestDoPatchCounterException:
     def test_r55_counter_no_data_key_creates(self, mod, ws, file_in_ws, monkeypatch, tmp_path, capsys):
         """If counter file exists but has no 'data' key, L296 creates it.
         Covers L295-296."""
+        _r55_redirect(monkeypatch, tmp_path)
         r55_dir = Path("/workspace/mas-engineer-src/mas-engineer/.mase/pipeline")
         r55_dir.mkdir(parents=True, exist_ok=True)
         r55_file = r55_dir / "r55_session_count.yaml"
@@ -756,6 +826,7 @@ class TestDoPatchCounterException:
     def test_r55_counter_yaml_load_fails_cd_resets(self, mod, ws, file_in_ws, monkeypatch, tmp_path, capsys):
         """If yaml.safe_load fails (corrupt file), L293-294 catch resets
         cd={} so L295-296 creates data key."""
+        _r55_redirect(monkeypatch, tmp_path)
         r55_dir = Path("/workspace/mas-engineer-src/mas-engineer/.mase/pipeline")
         r55_dir.mkdir(parents=True, exist_ok=True)
         r55_file = r55_dir / "r55_session_count.yaml"
