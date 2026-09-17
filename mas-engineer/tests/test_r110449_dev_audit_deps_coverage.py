@@ -37,6 +37,10 @@ import tools.dev_audit_deps as ad  # noqa: E402
 # ─────────────────────────────────────────────────────────────────────
 # Constants
 # ─────────────────────────────────────────────────────────────────────
+
+# R110-583: absolute tool path to avoid cwd-fragility on CI.
+TOOL = Path(__file__).resolve().parents[1] / "tools/dev_audit_deps.py"
+
 class TestConstants:
     def test_blocked_imports(self):
         assert "subprocess" in ad.BLOCKED_IMPORTS
@@ -202,7 +206,7 @@ class TestMainExec:
     def _run(self, *args):
         import subprocess
         result = subprocess.run(
-            ['python3', 'tools/dev_audit_deps.py'] + list(args),
+            ['python3', str(TOOL)] + list(args),
             capture_output=True, text=True,
             cwd=os.getcwd())
         return result.returncode, result.stdout, result.stderr

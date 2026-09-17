@@ -32,6 +32,10 @@ import tools.dashboard_prd_template as dpt  # noqa: E402
 # ─────────────────────────────────────────────────────────────────────
 # Workspace resolution
 # ─────────────────────────────────────────────────────────────────────
+
+# R110-583: absolute tool path to avoid cwd-fragility on CI.
+TOOL = Path(__file__).resolve().parents[1] / "tools/dashboard_prd_template.py"
+
 class TestResolveWorkspace:
     def test_explicit_env(self, tmp_path, monkeypatch):
         monkeypatch.setenv("MAS_WORKSPACE", str(tmp_path))
@@ -246,7 +250,7 @@ class TestMain:
         self._setup(tmp_path, with_status=False)
         monkeypatch.setenv("MAS_WORKSPACE", str(tmp_path))
         r = subprocess.run(
-            ['python3', 'tools/dashboard_prd_template.py'],
+            ['python3', str(TOOL)],
             capture_output=True, text=True,
             cwd=os.getcwd())
         assert r.returncode == 1
@@ -256,7 +260,7 @@ class TestMain:
         self._setup(tmp_path, with_signal=False)
         monkeypatch.setenv("MAS_WORKSPACE", str(tmp_path))
         r = subprocess.run(
-            ['python3', 'tools/dashboard_prd_template.py'],
+            ['python3', str(TOOL)],
             capture_output=True, text=True,
             cwd=os.getcwd())
         assert r.returncode == 1
@@ -266,7 +270,7 @@ class TestMain:
         d_dir = self._setup(tmp_path)
         monkeypatch.setenv("MAS_WORKSPACE", str(tmp_path))
         r = subprocess.run(
-            ['python3', 'tools/dashboard_prd_template.py'],
+            ['python3', str(TOOL)],
             capture_output=True, text=True,
             cwd=os.getcwd())
         assert r.returncode == 0

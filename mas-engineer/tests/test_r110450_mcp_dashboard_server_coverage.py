@@ -38,6 +38,10 @@ import tools.mcp_dashboard_server as ds  # noqa: E402
 # ─────────────────────────────────────────────────────────────────────
 # __init__
 # ─────────────────────────────────────────────────────────────────────
+
+# R110-583: absolute tool path to avoid cwd-fragility on CI.
+TOOL = Path(__file__).resolve().parents[1] / "tools/mcp_dashboard_server.py"
+
 class TestInit:
     def test_explicit_workspace(self):
         h = ds.DashboardMCP(workspace="/tmp/foo")
@@ -200,7 +204,7 @@ class TestMain:
         d.mkdir(parents=True)
         (d / "data.json").write_text(json.dumps({"hello": "world"}))
         r = subprocess.run(
-            ['python3', 'tools/mcp_dashboard_server.py', str(tmp_path)],
+            ['python3', str(TOOL), str(tmp_path)],
             capture_output=True, text=True,
             cwd=os.getcwd())
         assert r.returncode == 0
@@ -211,7 +215,7 @@ class TestMain:
         # Run with no arg → defaults to '.', prints fallback (likely
         # import-error dict since dev_dashboard_data isn't on path).
         r = subprocess.run(
-            ['python3', 'tools/mcp_dashboard_server.py'],
+            ['python3', str(TOOL)],
             capture_output=True, text=True,
             cwd=os.getcwd())
         assert r.returncode == 0

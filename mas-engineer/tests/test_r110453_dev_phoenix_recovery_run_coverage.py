@@ -40,6 +40,10 @@ import tools.dev_phoenix_recovery_run as prr  # noqa: E402
 # ─────────────────────────────────────────────────────────────────────
 # Module-level constants
 # ─────────────────────────────────────────────────────────────────────
+
+# R110-583: absolute tool path to avoid cwd-fragility on CI.
+TOOL = Path(__file__).resolve().parents[1] / "tools/dev_phoenix_recovery_run.py"
+
 class TestConstants:
     def test_levels_constant(self):
         assert prr.LEVELS == ["immune", "checkpoint", "safezone",
@@ -303,7 +307,7 @@ class TestMainCli:
     def test_help(self):
         # Just verify the script runs with --help
         r = subprocess.run(
-            ['python3', 'tools/dev_phoenix_recovery_run.py', '--help'],
+            ['python3', str(TOOL), '--help'],
             capture_output=True, text=True, timeout=10,
             cwd=os.getcwd())
         assert r.returncode == 0

@@ -32,6 +32,13 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import tools.dev_write_filter as wf  # noqa: E402
 
+# R110-583: resolve tool path absolutely to avoid cwd-fragility on CI.
+# CI may run pytest from a directory where the relative path
+# 'tools/dev_write_filter.py' cannot be resolved (e.g. when tmp_path
+# leaks into cwd or pytest is invoked from a different rootdir).
+# Using an absolute path eliminates the cwd dependency entirely.
+TOOL = Path(__file__).resolve().parents[1] / "tools" / "dev_write_filter.py"
+
 
 # ─────────────────────────────────────────────────────────────────────
 # check_target
@@ -180,7 +187,7 @@ class TestCheckDuplicates:
 class TestMain:
     def test_no_args(self):
         r = subprocess.run(
-            ['python3', 'tools/dev_write_filter.py'],
+            ['python3', str(TOOL)],
             capture_output=True, text=True, timeout=10,
             cwd=os.getcwd())
         assert r.returncode == 1
@@ -188,7 +195,7 @@ class TestMain:
 
     def test_no_file(self):
         r = subprocess.run(
-            ['python3', 'tools/dev_write_filter.py',
+            ['python3', str(TOOL),
              '--content', 'x'],
             capture_output=True, text=True, timeout=10,
             cwd=os.getcwd())
@@ -198,7 +205,7 @@ class TestMain:
     def test_no_content_or_stdin(self, tmp_path):
         target = str(Path(wf.MAS_DIR) / "x.yaml")
         r = subprocess.run(
-            ['python3', 'tools/dev_write_filter.py',
+            ['python3', str(TOOL),
              '--file', target],
             capture_output=True, text=True, timeout=10,
             cwd=os.getcwd())
@@ -208,7 +215,7 @@ class TestMain:
     def test_success_yaml(self):
         target = str(Path(wf.MAS_DIR) / "x.yaml")
         r = subprocess.run(
-            ['python3', 'tools/dev_write_filter.py',
+            ['python3', str(TOOL),
              '--file', target,
              '--content', 'foo: bar'],
             capture_output=True, text=True, timeout=10,
@@ -219,7 +226,7 @@ class TestMain:
     def test_success_with_stdin(self):
         target = str(Path(wf.MAS_DIR) / "x.yaml")
         r = subprocess.run(
-            ['python3', 'tools/dev_write_filter.py',
+            ['python3', str(TOOL),
              '--file', target,
              '--stdin'],
             input="foo: bar",
@@ -231,7 +238,7 @@ class TestMain:
     def test_target_fails(self, tmp_path):
         target = str(tmp_path / "outside.yaml")
         r = subprocess.run(
-            ['python3', 'tools/dev_write_filter.py',
+            ['python3', str(TOOL),
              '--file', target,
              '--content', 'foo: bar'],
             capture_output=True, text=True, timeout=10,
@@ -242,7 +249,7 @@ class TestMain:
     def test_invalid_yaml(self):
         target = str(Path(wf.MAS_DIR) / "x.yaml")
         r = subprocess.run(
-            ['python3', 'tools/dev_write_filter.py',
+            ['python3', str(TOOL),
              '--file', target,
              '--content', 'foo: bar\n  bad: - x'],
             capture_output=True, text=True, timeout=10,
@@ -253,7 +260,7 @@ class TestMain:
     def test_skip_yaml(self):
         target = str(Path(wf.MAS_DIR) / "x.yaml")
         r = subprocess.run(
-            ['python3', 'tools/dev_write_filter.py',
+            ['python3', str(TOOL),
              '--file', target,
              '--content', 'this is not yaml {{{}',
              '--skip-yaml'],
@@ -265,7 +272,7 @@ class TestMain:
         # Non-yaml file doesn't trigger yaml check anyway
         target = str(Path(wf.MAS_DIR) / "x.txt")
         r = subprocess.run(
-            ['python3', 'tools/dev_write_filter.py',
+            ['python3', str(TOOL),
              '--file', target,
              '--content', 'anything'],
             capture_output=True, text=True, timeout=10,
@@ -276,7 +283,7 @@ class TestMain:
         target = str(Path(wf.MAS_DIR) / "x.yaml")
         content = "- name: a\n- name: a"
         r = subprocess.run(
-            ['python3', 'tools/dev_write_filter.py',
+            ['python3', str(TOOL),
              '--file', target,
              '--content', content],
             capture_output=True, text=True, timeout=10,
@@ -289,7 +296,7 @@ class TestMain:
         # `for j in range(...)` loop concatenates them)
         target = str(Path(wf.MAS_DIR) / "x.yaml")
         r = subprocess.run(
-            ['python3', 'tools/dev_write_filter.py',
+            ['python3', str(TOOL),
              '--file', target,
              '--content', 'foo:', 'bar', '--skip-yaml'],
             capture_output=True, text=True, timeout=10,

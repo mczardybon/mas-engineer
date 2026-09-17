@@ -43,6 +43,10 @@ import tools.dev_phoenix_log_persister as plp  # noqa: E402
 # ─────────────────────────────────────────────────────────────────────
 # _log_dir
 # ─────────────────────────────────────────────────────────────────────
+
+# R110-583: absolute tool path to avoid cwd-fragility on CI.
+TOOL = Path(__file__).resolve().parents[1] / "tools/dev_phoenix_log_persister.py"
+
 class TestLogDir:
     def test_env_override(self, tmp_path, monkeypatch):
         monkeypatch.setenv("MAS_PHOENIX_LOG_DIR", str(tmp_path))
@@ -331,7 +335,7 @@ class TestMain:
     def test_stdin_empty(self):
         # Empty stdin → payload={} → unknown status
         r = subprocess.run(
-            ['python3', 'tools/dev_phoenix_log_persister.py'],
+            ['python3', str(TOOL)],
             input="", capture_output=True, text=True,
             cwd=os.getcwd())
         assert r.returncode == 0
@@ -350,7 +354,7 @@ class TestMain:
         }
         msg = {"msg_id": "m", "topic": "t", "payload": payload}
         r = subprocess.run(
-            ['python3', 'tools/dev_phoenix_log_persister.py'],
+            ['python3', str(TOOL)],
             input=json.dumps(msg),
             capture_output=True, text=True,
             cwd=os.getcwd())
