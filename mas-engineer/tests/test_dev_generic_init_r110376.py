@@ -869,25 +869,37 @@ class TestCmdBootstrap:
         still proceed (it's a fire-and-forget bootstrap), but the test
         documents the actual contract.
 
-        R110-583: on CI, the cwd-leak from pytest 9.1.1 causes
-        `cmd_init` → `cmd_bootstrap` chain to expand a hardcoded-like
-        tmpdir path with PermissionError on `/nonexistent-proj-xyz`.
-        Bypassed by mocking cmd_init entirely and short-circuiting
-        cmd_bootstrap's filesystem interactions to tmp_path.
+        R110-583: on CI the test process runs with cwd=/ (no chdir by
+        default for pytest 9.1.1 in this runner image), so
+        os.path.abspath("nonexistent-proj-xyz") resolves to
+        "/nonexistent-proj-xyz" — a literal absolute path under /, which
+        os.makedirs() cannot create (PermissionError). Locally pytest is
+        launched from the mas-engineer repo root, so abspath resolves to
+        a user-writable subdir. Pin cwd to tmp_path for the duration of
+        the test so abspath resolves to a writable path.
         """
-        with patch.object(gi, "MAS_CONFIG", "/nonexistent"):
-            with patch.object(gi, "MAS_SUBS", "/nonexistent"):
-                with patch.object(gi, "MAS_TOOLS", "/nonexistent"):
-                    with patch.object(gi, "cmd_init", return_value=False):
-                        with patch("os.path.expanduser", return_value="/nonexistent"):
-                            with patch("os.path.exists", return_value=False):
-                                with patch("os.listdir", return_value=[]):
-                                    with patch("shutil.copytree"):
-                                        with patch("shutil.copy2"):
-                                            with patch("subprocess.run"):
-                                                result = gi.cmd_bootstrap("nonexistent-proj-xyz", dry_run=False)
-        # Result is implementation-defined; we just check it returns a bool
-        assert isinstance(result, bool)
+        import os as _os
+        old_cwd = _os.getcwd()
+        try:
+            _os.chdir(str(tmp_path))
+            with patch.object(gi, "MAS_CONFIG", "/nonexistent"):
+                with patch.object(gi, "MAS_SUBS", "/nonexistent"):
+                    with patch.object(gi, "MAS_TOOLS", "/nonexistent"):
+                        with patch.object(gi, "cmd_init", return_value=False):
+                            with patch("os.path.expanduser", return_value="/nonexistent"):
+                                with patch("os.path.exists", return_value=False):
+                                    with patch("os.listdir", return_value=[]):
+                                        with patch("shutil.copytree"):
+                                            with patch("shutil.copy2"):
+                                                with patch("subprocess.run"):
+                                                    result = gi.cmd_bootstrap("nonexistent-proj-xyz", dry_run=False)
+            # Result is implementation-defined; we just check it returns a bool
+            assert isinstance(result, bool)
+        finally:
+            try:
+                _os.chdir(old_cwd)
+            except OSError:
+                pass
 
     def test_creates_bootstrap_project(self, tmp_path):
         # cmd_bootstrap is fire-and-forget; we mock cmd_init to avoid deep chain.
