@@ -373,6 +373,12 @@ EXEMPT_HASHES = frozenset({
     # future commits via the validator / detector / smoke-test / SKILL.md /
     # INDEX 5-source lockstep.
     "57cff97",  # 2026-09-17 🐛 R110-583 fixup — silence 6 DeprecationWarning: invalid escape sequence (R110-583 first 🐛 canary, subject has anti-pattern `fixup` modifier; canonical form is `🐛 R110-583 — <title>`)
+    # R110-583 followup: IDE auto-commit again (same pattern as a5d3b75
+    # in commit 80138c28). Subject `[]` is the IDE-injected empty form
+    # when patching with `apply edits`. Immutable per R110-281 (force-push
+    # verboten). The 8 lines in this commit were the xfail-text update for
+    # `test_findings_proxy_returns_list_after_reload` (XPASS, marker kept).
+    "ca988d4",  # 2026-09-17 [] — xfail-text update for test_r110470_dev_im_finder_scan_coverage.py (R110-583, no canonical subject because IDE auto-staged; ca988d4 is an R110-583 xfail-text commit)
 })
 
 
