@@ -69,6 +69,7 @@ def _r55_redirect(monkeypatch, tmp_path):
     orig_read = Path.read_text
     orig_unlink = Path.unlink
     orig_glob = Path.glob
+    orig_exists = Path.exists
 
     def fake_mkdir(self, *a, **kw):
         target = _resolve(self)
@@ -94,11 +95,21 @@ def _r55_redirect(monkeypatch, tmp_path):
         target = _resolve(self)
         return orig_glob(target, pattern, *a, **kw)
 
+    def fake_exists(self, *a, **kw):
+        # R110-583: production code checks counter_path.exists() before
+        # reading. Without this patch the hardcoded path is queried on CI
+        # and returns False, bypassing the loaded-file branch.
+        target = _resolve(self)
+        if target is not self:
+            return orig_exists(target, *a, **kw)
+        return orig_exists(self, *a, **kw)
+
     monkeypatch.setattr(Path, "mkdir", fake_mkdir)
     monkeypatch.setattr(Path, "write_text", fake_write)
     monkeypatch.setattr(Path, "read_text", fake_read)
     monkeypatch.setattr(Path, "unlink", fake_unlink)
     monkeypatch.setattr(Path, "glob", fake_glob)
+    monkeypatch.setattr(Path, "exists", fake_exists)
 
 
 # -----------------------------------------------------------------------------
