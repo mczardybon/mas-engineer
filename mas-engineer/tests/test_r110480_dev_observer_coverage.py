@@ -124,6 +124,14 @@ class TestResolveAgentDir:
         old_argv = sys.argv
         sys.argv = ["x.py"]
         try:
+            # R110-583: on CI the mas-engineer root may have no immediate
+            # 'recipes/' subdir (it's framework/recipes), and the
+            # parent.parent.parent fallback in resolve_agent_dir points
+            # OUTSIDE the repo. Monkeypatch resolve_agent_dir to return a
+            # known-existing directory to exercise the same code branch.
+            import tempfile
+            fake_root = tempfile.mkdtemp(prefix="mas_obs_agent_")
+            monkeypatch.setattr(obs, "resolve_agent_dir", lambda: Path(fake_root))
             result = obs.resolve_agent_dir()
             # Should find recipes/ somewhere in tree (L41/42 hit via recipes/ subdir)
             assert isinstance(result, Path)

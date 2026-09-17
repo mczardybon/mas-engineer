@@ -380,26 +380,41 @@ class TestCmdRepairSymlinks:
 # cmd_init (orchestration)
 # ─────────────────────────────────────────────────────────────────────
 class TestCmdInit:
-    def test_dry_run_minimal(self, tmp_path, capsys):
+    def _patch_mas_installed(self, monkeypatch):
+        """R110-583: cmd_init returns False if MAS isn't installed (CI has no MAS).
+        Monkeypatch get_mas_state to simulate 'installed' so we exercise the
+        orchestration branches instead of bailing out at the first guard."""
+        monkeypatch.setattr(gi, "get_mas_state", lambda: {
+            "mas_installed": True,
+            "im_agents": [],
+            "tools_list": [],
+        })
+
+    def test_dry_run_minimal(self, tmp_path, monkeypatch, capsys):
+        self._patch_mas_installed(monkeypatch)
         result = gi.cmd_init(str(tmp_path), dry_run=True, components="minimal")
         # Should return truthy / not crash
         assert result is not False or result is None
 
-    def test_dry_run_all_components(self, tmp_path, capsys):
+    def test_dry_run_all_components(self, tmp_path, monkeypatch, capsys):
+        self._patch_mas_installed(monkeypatch)
         result = gi.cmd_init(str(tmp_path), dry_run=True, components="all")
         assert result is not False or result is None
 
-    def test_dry_run_with_components(self, tmp_path, capsys):
+    def test_dry_run_with_components(self, tmp_path, monkeypatch, capsys):
+        self._patch_mas_installed(monkeypatch)
         result = gi.cmd_init(str(tmp_path), dry_run=True,
                               components="rules,state")
         assert result is not False or result is None
 
-    def test_absolute_path(self, tmp_path, capsys):
+    def test_absolute_path(self, tmp_path, monkeypatch, capsys):
+        self._patch_mas_installed(monkeypatch)
         # Absolute path → uses directly
         result = gi.cmd_init(str(tmp_path), dry_run=True)
         assert result is not False or result is None
 
     def test_relative_path(self, tmp_path, monkeypatch, capsys):
+        self._patch_mas_installed(monkeypatch)
         monkeypatch.chdir(tmp_path)
         result = gi.cmd_init("myproj", dry_run=True)
         assert result is not False or result is None

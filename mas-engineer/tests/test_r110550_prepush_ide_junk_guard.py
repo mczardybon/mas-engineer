@@ -122,6 +122,17 @@ def test_hook_pattern_in_hook_matches_python_version():
 
 def test_hook_blocks_junk_file():
     """End-to-end: create a force-added junk commit, hook must BLOCK."""
+    # R110-583: on CI the git author identity is not configured. Set a
+    # dummy identity in the repo's local config (matches CI git env).
+    env_setup = subprocess.run(
+        ["git", "config", "user.email", "r110550@local"],
+        cwd=REPO_ROOT, capture_output=True, text=True,
+    )
+    env_setup2 = subprocess.run(
+        ["git", "config", "user.name", "r110550"],
+        cwd=REPO_ROOT, capture_output=True, text=True,
+    )
+
     # Save current HEAD so we can restore it after the test
     head_before = subprocess.run(
         ["git", "rev-parse", "HEAD"],
