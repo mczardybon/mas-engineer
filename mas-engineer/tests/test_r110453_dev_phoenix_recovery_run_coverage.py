@@ -25,6 +25,7 @@ Targets:
 """
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -304,7 +305,7 @@ class TestMainCli:
         r = subprocess.run(
             ['python3', 'tools/dev_phoenix_recovery_run.py', '--help'],
             capture_output=True, text=True, timeout=10,
-            cwd='/workspace/dev-branch/mas-engineer-cleanup/mas-engineer')
+            cwd=os.getcwd())
         assert r.returncode == 0
         assert "--request_id" in r.stdout
         assert "--dry-run" in r.stdout

@@ -202,7 +202,7 @@ class TestMain:
         r = subprocess.run(
             ['python3', 'tools/mcp_dashboard_server.py', str(tmp_path)],
             capture_output=True, text=True,
-            cwd='/workspace/dev-branch/mas-engineer-cleanup/mas-engineer')
+            cwd=os.getcwd())
         assert r.returncode == 0
         data = json.loads(r.stdout)
         assert data == {"hello": "world"}
@@ -213,7 +213,7 @@ class TestMain:
         r = subprocess.run(
             ['python3', 'tools/mcp_dashboard_server.py'],
             capture_output=True, text=True,
-            cwd='/workspace/dev-branch/mas-engineer-cleanup/mas-engineer')
+            cwd=os.getcwd())
         assert r.returncode == 0
         # Either fresh generator succeeded, or import-error fallback
         data = json.loads(r.stdout)

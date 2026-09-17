@@ -333,7 +333,7 @@ class TestMain:
         r = subprocess.run(
             ['python3', 'tools/dev_phoenix_log_persister.py'],
             input="", capture_output=True, text=True,
-            cwd='/workspace/dev-branch/mas-engineer-cleanup/mas-engineer')
+            cwd=os.getcwd())
         assert r.returncode == 0
         data = json.loads(r.stdout)
         assert "log_written" in data
@@ -353,7 +353,7 @@ class TestMain:
             ['python3', 'tools/dev_phoenix_log_persister.py'],
             input=json.dumps(msg),
             capture_output=True, text=True,
-            cwd='/workspace/dev-branch/mas-engineer-cleanup/mas-engineer')
+            cwd=os.getcwd())
         assert r.returncode == 0
         data = json.loads(r.stdout)
         assert data["final_status"] == "ok"

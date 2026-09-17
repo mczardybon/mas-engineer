@@ -56,7 +56,7 @@ def fake_repo(tmp_path, monkeypatch):
     # we copy the pytest_sessionstart function from production.
 
     # Load the PRODUCTION conftest so we test the real hook code
-    real_conftest = Path("/workspace/dev-branch/mas-engineer-cleanup/mas-engineer/tests/conftest.py")
+    real_conftest = Path(__file__).resolve().parent / "conftest.py"
     spec = importlib.util.spec_from_file_location("conftest_fake", real_conftest)
     conftest = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(conftest)

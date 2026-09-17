@@ -248,7 +248,7 @@ class TestMain:
         r = subprocess.run(
             ['python3', 'tools/dashboard_prd_template.py'],
             capture_output=True, text=True,
-            cwd='/workspace/dev-branch/mas-engineer-cleanup/mas-engineer')
+            cwd=os.getcwd())
         assert r.returncode == 1
         assert "ERROR" in r.stdout
 
@@ -258,7 +258,7 @@ class TestMain:
         r = subprocess.run(
             ['python3', 'tools/dashboard_prd_template.py'],
             capture_output=True, text=True,
-            cwd='/workspace/dev-branch/mas-engineer-cleanup/mas-engineer')
+            cwd=os.getcwd())
         assert r.returncode == 1
         assert "ERROR" in r.stdout
 
@@ -268,7 +268,7 @@ class TestMain:
         r = subprocess.run(
             ['python3', 'tools/dashboard_prd_template.py'],
             capture_output=True, text=True,
-            cwd='/workspace/dev-branch/mas-engineer-cleanup/mas-engineer')
+            cwd=os.getcwd())
         assert r.returncode == 0
         assert "MAS-FRAMEWORK-HUB" in r.stdout
         # PRD was written to dashboard_prd_current.txt

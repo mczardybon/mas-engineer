@@ -204,7 +204,7 @@ class TestMainExec:
         result = subprocess.run(
             ['python3', 'tools/dev_audit_deps.py'] + list(args),
             capture_output=True, text=True,
-            cwd='/workspace/dev-branch/mas-engineer-cleanup/mas-engineer')
+            cwd=os.getcwd())
         return result.returncode, result.stdout, result.stderr
 
     def test_no_target_exits_1(self):
