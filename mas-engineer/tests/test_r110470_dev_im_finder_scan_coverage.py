@@ -288,14 +288,14 @@ class TestImportGuards:
     @pytest.mark.xfail(
         strict=False,
         reason=(
-            "R110-493 followup: PEP 562 module-level __getattr__ "
-            "for `findings` resets to a new list each test collection "
-            "(module-level binding, not instance attr). PASSES in "
-            "isolated runs (e.g. proc_bd72fd1f6647), fails when other "
-            "tests in the same collection have rebound `cli.findings` "
-            "via mod.findings = [] (which goes through ModuleType."
-            "__setattr__ to module __dict__, not __getattr__). "
-            "Acceptable test-ordering flake for now; fix in R110-493."
+            "R110-583 Drill #14: xfail kept for backwards compat. The "
+            "`mod.findings = []` reset-via-globals issue was structurally "
+            "fixed somewhere between R110-470 and R110-583 (likely the "
+            "add_finding() sync-from-globals dance at line 191-196). The "
+            "test now XPASSes consistently (242 tests combined + 1 xpass). "
+            "Removing the xfail marker is the right call but is deferred to "
+            "R110-585 to keep this R110-583 commit minimal (emoji-drift fix "
+            "scope only)."
         ),
     )
     def test_findings_proxy_returns_list_after_reload(self):
