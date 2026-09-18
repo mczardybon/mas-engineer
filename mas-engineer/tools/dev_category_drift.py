@@ -379,6 +379,7 @@ EXEMPT_HASHES = frozenset({
     # verboten). The 8 lines in this commit were the xfail-text update for
     # `test_findings_proxy_returns_list_after_reload` (XPASS, marker kept).
     "ca988d4",  # 2026-09-17 [] — xfail-text update for test_r110470_dev_im_finder_scan_coverage.py (R110-583, no canonical subject because IDE auto-staged; ca988d4 is an R110-583 xfail-text commit)
+    "87c640c",  # 2026-09-18 [] — cwd-fragility hardening for test_r110528_dev_yaml_immune_coverage.py (R110-585, add cwd=str(REPO_ROOT) to _run_cli to match test_guardian_scan pattern; no canonical subject because IDE auto-staged; per R110-281 force-push verboten, immutable)
 })
 
 
