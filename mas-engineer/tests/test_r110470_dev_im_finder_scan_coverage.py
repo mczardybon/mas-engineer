@@ -285,19 +285,6 @@ class TestImportGuards:
         # behind if __name__ == '__main__' now per R110-411b)
         assert callable(cli.run_yaml_scan)
 
-    @pytest.mark.xfail(
-        strict=False,
-        reason=(
-            "R110-583 Drill #14: xfail kept for backwards compat. The "
-            "`mod.findings = []` reset-via-globals issue was structurally "
-            "fixed somewhere between R110-470 and R110-583 (likely the "
-            "add_finding() sync-from-globals dance at line 191-196). The "
-            "test now XPASSes consistently (242 tests combined + 1 xpass). "
-            "Removing the xfail marker is the right call but is deferred to "
-            "R110-585 to keep this R110-583 commit minimal (emoji-drift fix "
-            "scope only)."
-        ),
-    )
     def test_findings_proxy_returns_list_after_reload(self):
         # Reload module → fresh state
         import importlib
