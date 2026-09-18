@@ -286,8 +286,14 @@ class TestImportGuards:
         assert callable(cli.run_yaml_scan)
 
     def test_findings_proxy_returns_list_after_reload(self):
-        # Reload module → fresh state
+        # Reload module → fresh state.
+        # R110-587: in full pytest sweeps, prior tests (e.g. test_r110309,
+        # test_r110347, test_r110349) pop 'dev_im_finder_scan' from
+        # sys.modules. importlib.reload() requires sys.modules to
+        # contain the module under its spec.name; re-register it before
+        # reload to keep this test order-independent.
         import importlib
+        sys.modules[cli.__spec__.name] = cli
         importlib.reload(cli)
         # After fresh import, cli.findings should still be readable
         f = cli.findings
