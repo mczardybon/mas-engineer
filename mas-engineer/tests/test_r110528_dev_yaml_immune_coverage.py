@@ -427,9 +427,16 @@ def test_required_fields_empty_title(tmp_path):
 # ================================ main() ===========================
 
 def _run_cli(*args, timeout=30):
+    # R110-585: pass cwd=REPO_ROOT so this is robust against earlier tests
+    # that do monkeypatch.chdir(tmp_path). The default cwd=None inherits
+    # pytest's cwd, which can be left in a tmp dir if a prior test's
+    # monkeypatch fixture leaks (e.g. on crash before restore). Absolute
+    # tool path is already used (str(TOOL)); cwd=REPO_ROOT is the second
+    # half of the R110-389/R110-392 / test_guardian_scan._run_scan pattern.
     return subprocess.run(
         ["python3", str(TOOL), *args],
         capture_output=True, text=True, timeout=timeout,
+        cwd=str(REPO_ROOT),
     )
 
 
