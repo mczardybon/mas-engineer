@@ -640,6 +640,14 @@ checked = 0
 for pattern in ['recipe/sub/*.yaml', 'recipe/sub/demo-team/*.yaml']:
     for f in glob.glob(pattern):
         if 'master-constitution' in f: continue
+        # R110-590: skip the R110-388 IDE-trap placeholder `recipe/sub/sub_-.yaml`.
+        # That file is intentionally minimal (R110-315 / R110-399 history) so the
+        # YAML parsers fail or return None; it is NOT a real sub-agent recipe and
+        # is fixture-managed by tests/test_r110318_session_start_zombie_cleanup.py.
+        # The literal glob pattern 'sub_-*.yaml' (anything starting with sub_-)
+        # catches both `sub_-.yaml` and any future R110-388-style placeholders
+        # (e.g. sub_-demo.yaml) without affecting real `sub_mas-*.yaml` recipes.
+        if 'sub_-' in f: continue
         checked += 1
         try:
             d = yaml.safe_load(open(f))
