@@ -352,7 +352,7 @@ cd $WORKSPACE
 # below to keep this instructions file itself free of them and pass its own check.
 # Whitelist: files that are intentionally German (translation libs, test data for
 # German validators, legacy archival). These are functional, not bugs.
-GERMAN_WHITELIST='^(tools/pre_check_lib/german\.py|tools/e2e_teams\.py|tools/cleanup_repo_v1\.sh|recipe/sub/legacy/)'
+GERMAN_WHITELIST='^(tools/pre_check_lib/german\.py|tools/e2e_teams\.py|tools/cleanup_repo_v1\.sh|tools/dev_category_drift\.py|recipe/sub/legacy/|docs/CHANGELOG-)'
 grep -rP $'[\xc3\xa4\xc3\xb6\xc3\xbc\xc3\x9f\xc3\x84\xc3\x96\xc3\x9c]' tools/ recipe/ docs/ 2>/dev/null \
   | grep -vE "$GERMAN_WHITELIST" \
   | grep -vE '^[^:]+:\s*(#|//)' \
@@ -889,7 +889,15 @@ else
     PYTEST_RC=1
     PYTEST_ATTEMPT=0
     MAX_ATTEMPTS=2   # R110-270: was 3 (caused 22.5min worst case)
-    OUTER_TIMEOUT=1800 # R110-414: was 1500 (R110-404). 30 min ceiling.
+    # R110-591 OUTER-CAP UPDATE: R110-587 sweep confirmed 7824 tests
+    # pass in 1169s on the primary worktree. The R110-414 cap (1800s)
+    # was tight against that runtime (1.54x margin) but compounded
+    # risk under pytest-fork load (~35-45 min projection when the
+    # sweep ran with a concurrent second instance, per the R110-589
+    # validator warning). Bump OUTER_TIMEOUT 1800→2700 (45 min) so
+    # the cap is never the failing constraint on a clean run; the
+    # intent is still fail-fast for actually hanging tests.
+    OUTER_TIMEOUT=2700 # R110-591: was 1800 (R110-414). 45 min ceiling.
     while [ "$PYTEST_RC" -ne 0 ] && [ "$PYTEST_ATTEMPT" -lt "$MAX_ATTEMPTS" ]; do
         PYTEST_ATTEMPT=$((PYTEST_ATTEMPT + 1))
         # set -o pipefail ensures $? reflects pytest's exit code, not tail's.

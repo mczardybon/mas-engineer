@@ -36,8 +36,43 @@ import pytest
 
 
 # ═══════════════════════════════════════════════
-#  Module-level import
+#  Module-level fixtures
 # ═══════════════════════════════════════════════
+
+
+@pytest.fixture(autouse=True)
+def _preserve_cwd_after_each_test(monkeypatch):
+    """R110-591 cwd-polluter-robustness fixture.
+
+    The tests in this file (~54 occurrences) follow the pattern:
+
+        os.chdir(ws)
+        try:
+            ...do stuff with subprocess...
+        finally:
+            os.chdir("/")   # ← POLLUTION: hardcoded "/" leaks to next test
+
+    The hardcoded `os.chdir("/")` clobbers the global process cwd and
+    breaks any CWD-sensitive test that happens to run AFTER this file
+    in the same pytest invocation (e.g. test_e2e_run_all_coverage.py's
+    `find_all_recipes()` glob which uses a relative path).
+
+    This autouse fixture captures cwd at test-setup time and uses
+    pytest's `monkeypatch.chdir()` to RECORD that state so teardown
+    (which runs AFTER the test's try/finally has completed) restores
+    cwd to pre-test state — even if the test body did `os.chdir("/")`
+    in a finally block.
+
+    Cost: zero. The fixture uses only monkeypatch's built-in
+    restoration; no test-body changes are needed.
+
+    See R110-587 (test-interaction pattern) and R110-589 follow-up.
+    """
+    saved = os.getcwd()
+    # `monkeypatch.chdir(saved)` is a no-op visually but tells
+    # monkeypatch to track cwd and restore it on teardown.
+    monkeypatch.chdir(saved)
+    yield
 
 TOOLS_DIR = Path(__file__).parent.parent / "tools"
 
